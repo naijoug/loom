@@ -857,13 +857,13 @@
       "type": "color",
       "value": [
         {
-          "value": "#A855F7",
+          "value": "#0078D4",
           "theme": {
             "mode": "light"
           }
         },
         {
-          "value": "#A855F7",
+          "value": "#007ACC",
           "theme": {
             "mode": "dark"
           }
@@ -880,7 +880,7 @@
           }
         },
         {
-          "value": "#0A0A0A",
+          "value": "#1E1E1E",
           "theme": {
             "mode": "dark"
           }
@@ -891,13 +891,13 @@
       "type": "color",
       "value": [
         {
-          "value": "#F7F8FA",
+          "value": "#F3F3F3",
           "theme": {
             "mode": "light"
           }
         },
         {
-          "value": "#141415",
+          "value": "#252526",
           "theme": {
             "mode": "dark"
           }
@@ -908,13 +908,13 @@
       "type": "color",
       "value": [
         {
-          "value": "#1A1A1A",
+          "value": "#CCCCCC",
           "theme": {
             "mode": "light"
           }
         },
         {
-          "value": "#3F3F46",
+          "value": "#454545",
           "theme": {
             "mode": "dark"
           }
@@ -925,13 +925,13 @@
       "type": "color",
       "value": [
         {
-          "value": "#EEF0F2",
+          "value": "#E4E4E4",
           "theme": {
             "mode": "light"
           }
         },
         {
-          "value": "#27272A",
+          "value": "#333333",
           "theme": {
             "mode": "dark"
           }
@@ -942,13 +942,13 @@
       "type": "color",
       "value": [
         {
-          "value": "#E11D48",
+          "value": "#CD3131",
           "theme": {
             "mode": "light"
           }
         },
         {
-          "value": "#F43F5E",
+          "value": "#D16969",
           "theme": {
             "mode": "dark"
           }
@@ -959,13 +959,13 @@
       "type": "color",
       "value": [
         {
-          "value": "#888888",
+          "value": "#808080",
           "theme": {
             "mode": "light"
           }
         },
         {
-          "value": "#71717A",
+          "value": "#858585",
           "theme": {
             "mode": "dark"
           }
@@ -976,13 +976,13 @@
       "type": "color",
       "value": [
         {
-          "value": "#1A1A1A",
+          "value": "#333333",
           "theme": {
             "mode": "light"
           }
         },
         {
-          "value": "#FFFFFF",
+          "value": "#D4D4D4",
           "theme": {
             "mode": "dark"
           }
@@ -993,13 +993,13 @@
       "type": "color",
       "value": [
         {
-          "value": "#666666",
+          "value": "#616161",
           "theme": {
             "mode": "light"
           }
         },
         {
-          "value": "#A1A1AA",
+          "value": "#CCCCCC",
           "theme": {
             "mode": "dark"
           }
