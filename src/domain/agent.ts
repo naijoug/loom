@@ -21,4 +21,7 @@ export interface AgentConfig {
   canWriteFiles: boolean;
   canRunCommands: boolean;
   enabled: boolean;
+  available: boolean;
 }
+
+export type AgentConfigInput = Omit<AgentConfig, "id" | "available">;

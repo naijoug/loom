@@ -112,6 +112,48 @@
   line-height: 1.5;
 }
 
+.task-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid var(--theme-border-subtle);
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.workspace-input,
+.workspace-textarea,
+.command-input {
+  width: 100%;
+  border: 1px solid var(--theme-border-strong);
+  border-radius: 4px;
+  background: var(--theme-bg-primary);
+  color: var(--theme-text-primary);
+  font-family: var(--font-body);
+  font-size: 13px;
+  padding: 8px;
+  outline: none;
+}
+
+.workspace-textarea {
+  min-height: 84px;
+  resize: vertical;
+}
+
+.plan-preview {
+  margin: 10px 0 0;
+  white-space: pre-wrap;
+  color: var(--theme-text-primary);
+  font-family: var(--font-data);
+  font-size: 12px;
+}
+
+.inline-error {
+  color: var(--theme-error);
+  font-family: var(--font-body);
+  font-size: 12px;
+}
+
 /* Debug Pane specific styles */
 .terminal-container {
   flex: 1;
@@ -139,6 +181,13 @@
   white-space: pre-wrap;
   word-break: break-all;
   color: var(--theme-text-primary);
+}
+
+.repair-preview {
+  border-top: 1px solid var(--theme-border-strong);
+  margin-top: 12px;
+  padding-top: 12px;
+  color: var(--theme-text-secondary);
 }
 
 .primary-text {
@@ -206,6 +255,9 @@
 .debug-controls {
   display: flex;
   gap: 8px;
+  align-items: center;
+  flex: 1;
+  max-width: 560px;
 }
 
 .debug-btn {

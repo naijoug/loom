@@ -1,4 +1,5 @@
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { AppStateProvider } from "./state/AppStateContext";
 import { AppLayout } from "./layouts/AppLayout";
 import { Sidebar } from "./components/Sidebar";
 import { Header } from "./components/Header";
@@ -19,7 +20,9 @@ function AppContent() {
 function App() {
   return (
     <ThemeProvider>
-      <AppContent />
+      <AppStateProvider>
+        <AppContent />
+      </AppStateProvider>
     </ThemeProvider>
   );
 }

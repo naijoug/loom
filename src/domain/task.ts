@@ -15,12 +15,20 @@ export type TaskStatus =
 export interface TaskEvent {
   id: string;
   taskId: string;
-  timestamp: string;
+  timestampMs: number;
   actor: "user" | "system" | "agent";
   status: TaskStatus;
   inputSummary?: string;
   outputSummary?: string;
   evidenceRef?: string;
+}
+
+export interface UserFeedback {
+  id: string;
+  taskId: string;
+  commandRunId?: string;
+  content: string;
+  timestampMs: number;
 }
 
 export interface Task {
@@ -34,4 +42,15 @@ export interface Task {
   reviewAgentIds: string[];
   finalPlan?: string;
   events: TaskEvent[];
+  commandRuns: import("./command").CommandRun[];
+  feedback: UserFeedback[];
+  repairContextPreview?: string;
+  createdAtMs: number;
+  updatedAtMs: number;
+}
+
+export interface CreateTaskInput {
+  projectPath: string;
+  title: string;
+  rawRequirement: string;
 }

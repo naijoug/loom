@@ -1,23 +1,26 @@
 import { TaskFlow, type TaskStage } from "./TaskFlow";
 import { Button } from "../common/Button";
+import { useAppState } from "../../state/AppStateContext";
+import { deriveTaskStages } from "../../state/selectors";
 import "./Header.css";
 
-// Temporary mock data for UI visual completion
-const mockStages: TaskStage[] = [
-  { id: "planning", label: "Planning", status: "done" },
-  { id: "implementing", label: "Implementing", status: "active" },
-  { id: "debugging", label: "Debugging", status: "pending" },
-];
-
 export function Header() {
+  const { state } = useAppState();
+  const currentTask = state.tasks.find((task) => task.id === state.app.selectedTaskId) ?? null;
+  const currentProject = state.projects.current;
+  const stages: TaskStage[] = deriveTaskStages(currentTask?.status ?? null);
+  const breadcrumb = currentProject
+    ? `${currentProject.name} / ${currentTask?.title ?? "No active task"}`
+    : "No project selected";
+
   return (
     <div className="main-header">
       <div className="header-breadcrumb">
-        sample-project / MVP Core
+        {breadcrumb}
       </div>
       
       <div className="header-flow">
-        <TaskFlow stages={mockStages} />
+        <TaskFlow stages={stages} />
       </div>
 
       <div className="header-actions">

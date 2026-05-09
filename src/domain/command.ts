@@ -1,36 +1,51 @@
 export type CommandRunStatus = "queued" | "running" | "succeeded" | "failed" | "cancelled";
 
+export interface ErrorSummary {
+  exitCode?: number;
+  stderrTail: string[];
+  matchedLines: string[];
+  failed: boolean;
+}
+
 export interface CommandRun {
   id: string;
   taskId: string;
   command: string;
   cwd: string;
-  startedAt: string;
-  endedAt?: string;
+  startedAtMs: number;
+  endedAtMs?: number;
   status: CommandRunStatus;
   exitCode?: number;
   stdoutLogRef?: string;
   stderrLogRef?: string;
-  errorSummary?: string;
+  errorSummary?: ErrorSummary;
 }
 
-export interface SpikeRun {
-  runId: string;
-  command: string;
+export interface CommandSpec {
+  program: string;
+  args: string[];
   cwd: string;
-  pid?: number;
-  startedAtMs: number;
+  taskId?: string;
 }
 
-export interface SpikeStopResult {
+export interface CommandRunStopResult {
   runId: string;
   stopped: boolean;
   exitCode?: number;
 }
 
-export interface SpikeLogEvent {
+export interface CommandLogEvent {
+  taskId?: string;
   runId: string;
   stream: "stdout" | "stderr";
   line: string;
+  timestampMs: number;
+}
+
+export interface CommandFinishedEvent {
+  taskId: string;
+  runId: string;
+  status: CommandRunStatus;
+  exitCode?: number;
   timestampMs: number;
 }

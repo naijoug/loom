@@ -1,4 +1,9 @@
-mod spike_runner;
+mod agents;
+mod command_runner;
+mod models;
+mod projects;
+mod storage;
+mod tasks;
 
 use serde::Serialize;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -35,11 +40,23 @@ fn health_check() -> HealthCheckResult {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .manage(spike_runner::SpikeRegistry::default())
+        .manage(command_runner::CommandRegistry::default())
+        .manage(models::IdGenerator::default())
         .invoke_handler(tauri::generate_handler![
             health_check,
-            spike_runner::start_spike_run,
-            spike_runner::stop_spike_run
+            agents::create_agent,
+            agents::list_agents,
+            agents::run_dummy_planning,
+            agents::set_agent_enabled,
+            command_runner::command_runner_ready,
+            command_runner::start_command_run,
+            command_runner::stop_command_run,
+            projects::list_recent_projects,
+            projects::register_project,
+            tasks::append_feedback,
+            tasks::create_task,
+            tasks::generate_repair_context,
+            tasks::list_tasks
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
