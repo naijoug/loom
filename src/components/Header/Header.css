@@ -1,0 +1,88 @@
+.main-header {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 24px;
+}
+
+.header-breadcrumb {
+  font-family: var(--font-headings);
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--theme-text-primary);
+}
+
+.header-flow {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.task-flow-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.task-flow-node {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.task-flow-step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+}
+
+.step-separator {
+  color: var(--theme-border-strong);
+}
+
+.step-icon {
+  display: flex;
+}
+
+.done-icon {
+  color: var(--theme-text-muted);
+}
+
+.active-icon {
+  color: var(--theme-accent);
+}
+
+.pending-icon {
+  color: var(--theme-text-muted);
+}
+
+.step-label {
+  font-family: var(--font-body);
+  font-size: 12px;
+}
+
+.step-label.status-done {
+  color: var(--theme-text-muted);
+}
+
+.step-label.status-active {
+  color: var(--theme-text-primary);
+}
+
+.step-label.status-pending {
+  color: var(--theme-text-muted);
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spin-anim {
+  animation: spin 1.5s linear infinite;
+}

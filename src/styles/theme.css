@@ -1,0 +1,54 @@
+/* src/styles/theme.css */
+@import "@fontsource/geist-sans";
+@import "@fontsource/inter";
+@import "@fontsource/geist-mono";
+
+:root {
+  /* Global default theme (light mode) */
+  --theme-bg-primary: #FFFFFF;
+  --theme-bg-secondary: #F7F8FA;
+  --theme-text-primary: #1A1A1A;
+  --theme-text-secondary: #666666;
+  --theme-text-muted: #888888;
+  --theme-accent: #A855F7;
+  --theme-border-subtle: #EEF0F2;
+  --theme-border-strong: #1A1A1A;
+  --theme-error: #E11D48;
+
+  /* Font Families */
+  --font-headings: "Geist Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-data: "Geist Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+:root[data-theme="dark"] {
+  /* Dark mode theme */
+  --theme-bg-primary: #0A0A0A;
+  --theme-bg-secondary: #141415;
+  --theme-text-primary: #FFFFFF;
+  --theme-text-secondary: #A1A1AA;
+  --theme-text-muted: #71717A;
+  --theme-accent: #A855F7;
+  --theme-border-subtle: #27272A;
+  --theme-border-strong: #3F3F46;
+  --theme-error: #F43F5E;
+}
+
+html, body {
+  background-color: var(--theme-bg-primary);
+  color: var(--theme-text-primary);
+  font-family: var(--font-body);
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+#root {
+  height: 100%;
+  width: 100%;
+}

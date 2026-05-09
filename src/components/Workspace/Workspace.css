@@ -1,0 +1,224 @@
+.workspace-split {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.workspace-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+}
+
+.pane-left {
+  border-right: 1px solid var(--theme-border-subtle);
+}
+
+.pane-right {
+  /* Right pane layout handled inside pane-container */
+}
+
+.pane-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.pane-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid var(--theme-border-subtle);
+  flex-shrink: 0;
+}
+
+.pane-header-title {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--theme-text-muted);
+}
+
+.pane-content {
+  flex: 1;
+  overflow: auto;
+}
+
+/* Implementation Pane specific styles */
+.implementation-content {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.plan-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--theme-border-strong);
+  border-radius: 8px;
+}
+
+.plan-title {
+  font-family: var(--font-headings);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--theme-text-primary);
+}
+
+.plan-desc {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--theme-text-secondary);
+  line-height: 1.5;
+}
+
+.agent-msg-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.agent-msg-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.agent-icon {
+  color: var(--theme-accent);
+}
+
+.agent-name {
+  font-family: var(--font-headings);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--theme-text-primary);
+}
+
+.agent-msg-box {
+  background-color: var(--theme-bg-secondary);
+  border: 1px solid var(--theme-border-subtle);
+  border-radius: 8px;
+  padding: 12px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--theme-text-primary);
+  line-height: 1.5;
+}
+
+/* Debug Pane specific styles */
+.terminal-container {
+  flex: 1;
+  background-color: var(--theme-bg-secondary);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: auto;
+}
+
+.terminal-line {
+  font-family: var(--font-data);
+  font-size: 13px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.terminal-output {
+  margin: 0;
+  font-family: var(--font-data);
+  font-size: 13px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: var(--theme-text-primary);
+}
+
+.primary-text {
+  color: var(--theme-text-primary);
+}
+
+.secondary-text {
+  color: var(--theme-text-secondary);
+}
+
+.accent-text {
+  color: var(--theme-accent);
+}
+
+.error-text {
+  color: var(--theme-error);
+}
+
+.feedback-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-top: 1px solid var(--theme-border-subtle);
+  flex-shrink: 0;
+}
+
+.feedback-title {
+  font-family: var(--font-headings);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--theme-text-primary);
+}
+
+.feedback-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--theme-bg-primary);
+  border: 1px solid var(--theme-border-strong);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.feedback-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--theme-text-primary);
+  padding: 4px;
+}
+
+.feedback-input::placeholder {
+  color: var(--theme-text-muted);
+}
+
+.submit-btn {
+  /* Using standard common-btn from Button component */
+}
+
+/* Debug controls */
+.debug-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.debug-btn {
+  background: var(--theme-bg-primary);
+  border: 1px solid var(--theme-border-strong);
+  color: var(--theme-text-primary);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.debug-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
