@@ -21,6 +21,12 @@ Loom 是一个基于 Tauri 的桌面端应用，用于编排多个本地编程 A
 - 计划需要能被独立执行和独立 Review。
 - 每份计划应包含：目标、非目标、成功标准、当前状态、里程碑、具体任务、风险、待确认问题和验证策略。
 - MVP 计划默认使用 `docs/plans/YYYY-MM-DD/HH:mm-mvp.md`，除非用户指定更具体的主题。
+- `docs/PLANS.md` 是计划文档索引；每次生成新的计划文档时，除了写入 `docs/plans/YYYY-MM-DD/HH:mm-<topic>.md`，必须在同一轮变更中把该计划加入 `docs/PLANS.md`。
+- 更新 `docs/plans/` 下已有计划时，也必须同步更新 `docs/PLANS.md` 中对应条目的摘要或排序。
+- `docs/PLANS.md` 按 `docs/plans/YYYY-MM-DD/` 日期倒序排列，并用 `## YYYY-MM-dd` 分隔每天的计划。
+- 每天内的计划按文件名时间倒序排列，列表格式为：
+  - `HH:mm-xx.md`
+    > 用一句话总结这个计划干了什么。
 
 ## 开发约定
 
