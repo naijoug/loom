@@ -6,6 +6,24 @@
   width: 100%;
 }
 
+.settings-icon-button {
+  margin-left: auto;
+  width: 28px;
+  height: 28px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--theme-text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.settings-icon-button:hover {
+  color: var(--theme-text-primary);
+  background: var(--theme-border-subtle);
+}
+
 .brand-icon {
   color: var(--theme-text-primary);
 }
@@ -42,6 +60,13 @@
   font-weight: 400;
 }
 
+.nav-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .nav-list {
   list-style: none;
   padding: 0;
@@ -50,36 +75,13 @@
   flex-direction: column;
 }
 
-.project-form {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.project-path-input {
-  width: 100%;
-  min-width: 0;
-  border: 1px solid var(--theme-border-strong);
-  border-radius: 4px;
-  background: var(--theme-bg-primary);
-  color: var(--theme-text-primary);
-  font-family: var(--font-body);
-  font-size: 12px;
-  padding: 6px 8px;
-  outline: none;
-}
-
-.project-path-input::placeholder {
-  color: var(--theme-text-muted);
-}
-
 .project-add-button {
   width: 28px;
   height: 28px;
-  border: 1px solid var(--theme-border-strong);
+  border: 0;
   border-radius: 4px;
-  background: var(--theme-bg-primary);
-  color: var(--theme-text-primary);
+  background: transparent;
+  color: var(--theme-text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -90,6 +92,11 @@
 .project-add-button:disabled {
   cursor: not-allowed;
   opacity: 0.5;
+}
+
+.project-add-button:hover:not(:disabled) {
+  background: var(--theme-border-subtle);
+  color: var(--theme-text-primary);
 }
 
 .nav-empty,

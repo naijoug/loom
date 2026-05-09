@@ -1,7 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback } from "react";
-import type { AgentConfig, AgentConfigInput, Task } from "../domain";
+import type { AgentConfig, AgentConfigInput, PlanningDiscussionInput, Task } from "../domain";
 import { useAppState } from "../state/AppStateContext";
+import { hasTauriRuntime } from "./runtime";
 
 function toErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);
@@ -13,6 +14,11 @@ export function useAgentBridge() {
   const loadAgents = useCallback(async () => {
     dispatch({ type: "agents/loadStarted" });
     try {
+      if (!hasTauriRuntime()) {
+        dispatch({ type: "agents/loaded", agents: [] });
+        return;
+      }
+
       dispatch({ type: "agents/loaded", agents: await invoke<AgentConfig[]>("list_agents") });
     } catch (error) {
       dispatch({ type: "agents/loadFailed", error: toErrorMessage(error) });
@@ -52,5 +58,23 @@ export function useAgentBridge() {
     [dispatch],
   );
 
-  return { loadAgents, createAgent, runDummyPlanning };
+  const runPlanningDiscussion = useCallback(
+    async (input: PlanningDiscussionInput) => {
+      try {
+        if (!hasTauriRuntime()) {
+          throw new Error("Planning discussion requires the Tauri desktop runtime.");
+        }
+
+        const task = await invoke<Task>("run_planning_discussion", { input });
+        dispatch({ type: "tasks/upserted", task });
+        return task;
+      } catch (error) {
+        dispatch({ type: "tasks/loadFailed", error: toErrorMessage(error) });
+        return null;
+      }
+    },
+    [dispatch],
+  );
+
+  return { loadAgents, createAgent, runDummyPlanning, runPlanningDiscussion };
 }

@@ -70,6 +70,10 @@
   color: var(--theme-text-primary);
 }
 
+.step-label.status-running {
+  color: var(--theme-text-primary);
+}
+
 .step-label.status-pending {
   color: var(--theme-text-muted);
 }

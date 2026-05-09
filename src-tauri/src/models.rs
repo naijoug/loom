@@ -153,12 +153,64 @@ pub struct Task {
     pub primary_agent_id: Option<String>,
     pub review_agent_ids: Vec<String>,
     pub final_plan: Option<String>,
+    #[serde(default)]
+    pub final_plan_path: Option<String>,
+    #[serde(default)]
+    pub discussion_summary: Option<String>,
+    #[serde(default)]
+    pub planning_runs: Vec<PlanningRun>,
+    #[serde(default)]
+    pub agent_invocations: Vec<AgentInvocation>,
+    #[serde(default)]
+    pub plan_todos: Vec<PlanTodoItem>,
     pub events: Vec<TaskEvent>,
     pub command_runs: Vec<CommandRun>,
     pub feedback: Vec<UserFeedback>,
     pub repair_context_preview: Option<String>,
     pub created_at_ms: u128,
     pub updated_at_ms: u128,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlanningRun {
+    pub id: String,
+    pub task_id: String,
+    pub requirement: String,
+    pub selected_agent_ids: Vec<String>,
+    pub status: String,
+    pub summary: String,
+    pub started_at_ms: u128,
+    pub ended_at_ms: Option<u128>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AgentInvocation {
+    pub id: String,
+    pub planning_run_id: String,
+    pub task_id: String,
+    pub agent_id: String,
+    pub agent_name: String,
+    pub status: String,
+    pub prompt_summary: String,
+    pub raw_output: String,
+    pub output_summary: String,
+    pub evidence_ref: Option<String>,
+    pub started_at_ms: u128,
+    pub ended_at_ms: Option<u128>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlanTodoItem {
+    pub id: String,
+    pub task_id: String,
+    pub title: String,
+    pub description: String,
+    pub status: String,
+    pub order: u32,
+    pub plan_ref: Option<String>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -190,6 +242,15 @@ pub struct CreateTaskInput {
     pub project_path: String,
     pub title: String,
     pub raw_requirement: String,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlanningDiscussionInput {
+    pub project_path: String,
+    pub task_id: String,
+    pub requirement: String,
+    pub agent_ids: Vec<String>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]

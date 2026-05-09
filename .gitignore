@@ -37,6 +37,9 @@ out/
 coverage/
 *.tsbuildinfo
 
+# Generated design exports
+designs/exports/
+
 # Package manager caches
 .npm/
 .pnpm-store/

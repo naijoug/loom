@@ -50,6 +50,11 @@ pub fn create_task(ids: State<'_, IdGenerator>, input: CreateTaskInput) -> Resul
         primary_agent_id: None,
         review_agent_ids: Vec::new(),
         final_plan: None,
+        final_plan_path: None,
+        discussion_summary: None,
+        planning_runs: Vec::new(),
+        agent_invocations: Vec::new(),
+        plan_todos: Vec::new(),
         events: vec![TaskEvent {
             id: event_id,
             task_id: task_id.clone(),

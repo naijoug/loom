@@ -8,8 +8,10 @@ import type {
 } from "../domain";
 
 export interface AppSlice {
+  currentView: "workspace" | "settings";
   activeProjectId: string | null;
   selectedTaskId: string | null;
+  selectedTodoId: string | null;
   activeCommandRunId: string | null;
   isLoadingProjects: boolean;
   isLoadingAgents: boolean;
@@ -35,6 +37,7 @@ export interface AppState {
 }
 
 export type AppAction =
+  | { type: "app/viewSelected"; view: AppSlice["currentView"] }
   | { type: "projects/loadStarted" }
   | { type: "projects/loadFailed"; error: string }
   | { type: "projects/recentLoaded"; projects: ProjectSummary[] }
@@ -48,6 +51,7 @@ export type AppAction =
   | { type: "tasks/loadFailed"; error: string }
   | { type: "tasks/loaded"; tasks: Task[] }
   | { type: "tasks/upserted"; task: Task }
+  | { type: "tasks/todoSelected"; todoId: string }
   | { type: "commands/started"; run: CommandRun }
   | { type: "commands/logReceived"; event: CommandLogEvent }
   | { type: "commands/finished"; event: CommandFinishedEvent }
@@ -56,8 +60,10 @@ export type AppAction =
 
 export const initialAppState: AppState = {
   app: {
+    currentView: "workspace",
     activeProjectId: null,
     selectedTaskId: null,
+    selectedTodoId: null,
     activeCommandRunId: null,
     isLoadingProjects: false,
     isLoadingAgents: false,
@@ -79,6 +85,15 @@ export const initialAppState: AppState = {
 
 export function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
+    case "app/viewSelected":
+      return {
+        ...state,
+        app: {
+          ...state.app,
+          currentView: action.view,
+        },
+      };
+
     case "projects/loadStarted":
       return {
         ...state,
@@ -124,7 +139,9 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         app: {
           ...state.app,
           activeProjectId: action.project.id,
+          currentView: "workspace",
           selectedTaskId: null,
+          selectedTodoId: null,
           isLoadingProjects: false,
           projectError: null,
         },
@@ -147,6 +164,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           ...state.app,
           activeProjectId: action.projectId,
           selectedTaskId: null,
+          selectedTodoId: null,
           projectError: null,
         },
         projects: {
@@ -205,6 +223,8 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           isLoadingTasks: false,
           taskError: null,
           selectedTaskId: action.tasks[action.tasks.length - 1]?.id ?? state.app.selectedTaskId,
+          selectedTodoId:
+            action.tasks[action.tasks.length - 1]?.planTodos?.[0]?.id ?? state.app.selectedTodoId,
         },
         tasks: action.tasks,
         commandRuns: action.tasks.flatMap((task) => task.commandRuns),
@@ -223,11 +243,31 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           isLoadingTasks: false,
           taskError: null,
           selectedTaskId: action.task.id,
+          selectedTodoId: action.task.planTodos[0]?.id ?? state.app.selectedTodoId,
         },
         tasks,
         commandRuns: tasks.flatMap((task) => task.commandRuns),
       };
     }
+
+    case "tasks/todoSelected":
+      return {
+        ...state,
+        app: {
+          ...state.app,
+          selectedTodoId: action.todoId,
+        },
+        tasks: state.tasks.map((task) => ({
+          ...task,
+          planTodos: task.planTodos.map((todo) =>
+            todo.id === action.todoId
+              ? { ...todo, status: "implementing" }
+              : todo.status === "implementing"
+                ? { ...todo, status: "pending" }
+                : todo,
+          ),
+        })),
+      };
 
     case "commands/started":
       return {

@@ -12,6 +12,7 @@ export function Header() {
   const breadcrumb = currentProject
     ? `${currentProject.name} / ${currentTask?.title ?? "No active task"}`
     : "No project selected";
+  const canStopTask = currentTask && !["completed", "cancelled"].includes(currentTask.status);
 
   return (
     <div className="main-header">
@@ -19,12 +20,14 @@ export function Header() {
         {breadcrumb}
       </div>
       
-      <div className="header-flow">
-        <TaskFlow stages={stages} />
-      </div>
+      {currentProject && (
+        <div className="header-flow">
+          <TaskFlow stages={stages} />
+        </div>
+      )}
 
       <div className="header-actions">
-        <Button variant="danger">Stop Task</Button>
+        {canStopTask && <Button variant="danger">Stop Task</Button>}
       </div>
     </div>
   );

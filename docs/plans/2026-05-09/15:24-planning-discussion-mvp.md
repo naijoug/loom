@@ -2,9 +2,9 @@
 
 - **日期**：2026-05-09
 - **作者**：Codex
-- **状态**：draft
+- **状态**：in-progress
 - **关联设计**：`designs/loom.pen` 中 `appComp` 的计划阶段版本；导出图 `designs/exports/lGxnq.png`
-- **布局方向**：参考 Codex App，左侧为项目/任务导航，右侧为 Agent 讨论输出流，底部固定需求输入框与 `@agent` 选择入口。
+- **布局方向**：参考 Codex App，左侧只做项目维度列表，右侧为 Agent 讨论输出流，底部固定需求输入框与 `@agent` 选择入口。
 
 ## 目标
 
@@ -45,11 +45,23 @@
 
 ## 关键交互设计
 
-- **左侧导航**：只承载项目列表与最近任务入口，不在侧边栏里管理本轮参与 Agent。Agent 参与者应从右侧 composer 的 `@agent` mention 或选择器进入。
+- **左侧导航**：只承载项目列表和添加项目入口，不展示 Agents 分组，也不展示本轮参与 Agent。Agent 参与者只从右侧 composer 的 `@agent` mention 或选择器进入。
 - **计划讨论区**：右侧主体区域展示用户需求、各 Agent 的计划建议、风险审查、冲突点和最终汇总消息，形成一条连续讨论流。
 - **底部 composer**：固定在右侧底部，支持自然语言需求输入、`@codex` / `@claude-code` / `@amp` mention、Agent chip 展示和发送按钮。
 - **计划确认**：Agent 讨论完成后，顶部或最终计划消息提供“Confirm Plan”操作；确认后写入计划文档并生成 todo。
 - **实施入口**：进入实施界面后，左侧变为计划派生的 todo 列表；每项 todo 左侧有 icon 按钮用于启动该任务实施，右侧展示执行过程、日志、Agent 输出和补充输入框。
+- **状态显示原则**：没有项目、没有任务、任务已就绪但未执行时，不显示 loading/spinner；只有后端正在执行 planning / implementing / debugging / fixing / verifying 时才显示运行中状态。
+
+## 当前实施切片
+
+本次先交付可运行的最小纵向切片：
+
+- 左侧实际 UI 删除 Agents 管理区，只保留项目列表和添加项目。
+- 添加项目通过 PROJECTS 标题右侧 icon 打开系统目录选择器，不再手动输入 path。
+- 顶部栏背景与左侧导航保持同一 surface 颜色。
+- 计划阶段右侧使用讨论流 + 底部 composer，composer 支持 `@agent` 文本解析并生成 agent chip。
+- 后端新增正式 planning command，先复用 dummy/本地确定性输出形成多 Agent 讨论记录、最终计划和 todo；真实 CLI adapter 在后续切片接入。
+- 确认计划后任务进入 `ready_to_implement`，前端切到 todo/实施占位视图；todo icon 可把单项任务标记为实施中并在右侧显示 Agent 输出占位。
 
 ## 里程碑
 

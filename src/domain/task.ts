@@ -31,6 +31,46 @@ export interface UserFeedback {
   timestampMs: number;
 }
 
+export type AgentInvocationStatus = "pending" | "running" | "succeeded" | "failed";
+
+export interface AgentInvocation {
+  id: string;
+  planningRunId: string;
+  taskId: string;
+  agentId: string;
+  agentName: string;
+  status: AgentInvocationStatus;
+  promptSummary: string;
+  rawOutput: string;
+  outputSummary: string;
+  evidenceRef?: string;
+  startedAtMs: number;
+  endedAtMs?: number;
+}
+
+export interface PlanningRun {
+  id: string;
+  taskId: string;
+  requirement: string;
+  selectedAgentIds: string[];
+  status: "running" | "succeeded" | "failed";
+  summary: string;
+  startedAtMs: number;
+  endedAtMs?: number;
+}
+
+export type PlanTodoStatus = "pending" | "implementing" | "done" | "blocked";
+
+export interface PlanTodoItem {
+  id: string;
+  taskId: string;
+  title: string;
+  description: string;
+  status: PlanTodoStatus;
+  order: number;
+  planRef?: string;
+}
+
 export interface Task {
   id: string;
   projectPath: string;
@@ -41,6 +81,11 @@ export interface Task {
   primaryAgentId?: string;
   reviewAgentIds: string[];
   finalPlan?: string;
+  finalPlanPath?: string;
+  discussionSummary?: string;
+  planningRuns: PlanningRun[];
+  agentInvocations: AgentInvocation[];
+  planTodos: PlanTodoItem[];
   events: TaskEvent[];
   commandRuns: import("./command").CommandRun[];
   feedback: UserFeedback[];
@@ -53,4 +98,11 @@ export interface CreateTaskInput {
   projectPath: string;
   title: string;
   rawRequirement: string;
+}
+
+export interface PlanningDiscussionInput {
+  projectPath: string;
+  taskId: string;
+  requirement: string;
+  agentIds: string[];
 }

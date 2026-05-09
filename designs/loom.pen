@@ -104,7 +104,7 @@
                       "type": "text",
                       "id": "eQLD6",
                       "fill": "$theme-text-primary",
-                      "content": "sample-project",
+                      "content": "loom",
                       "fontFamily": "Inter",
                       "fontSize": 13,
                       "fontWeight": "normal"
@@ -135,42 +135,17 @@
                       "type": "text",
                       "id": "rRLiM",
                       "fill": "$theme-text-secondary",
-                      "content": "my-web-app",
+                      "content": "naijoug/skills",
                       "fontFamily": "Inter",
                       "fontSize": 13,
                       "fontWeight": "normal"
                     }
                   ]
-                }
-              ]
-            },
-            {
-              "type": "frame",
-              "id": "nQPrc",
-              "name": "nav2",
-              "width": "fill_container",
-              "layout": "vertical",
-              "gap": 8,
-              "padding": [
-                24,
-                16,
-                8,
-                16
-              ],
-              "children": [
-                {
-                  "type": "text",
-                  "id": "RORpK",
-                  "fill": "$theme-text-muted",
-                  "content": "AGENTS",
-                  "fontFamily": "Inter",
-                  "fontSize": 11,
-                  "fontWeight": "normal"
                 },
                 {
                   "type": "frame",
-                  "id": "Dhfi7",
-                  "name": "navItem3",
+                  "id": "vFfif",
+                  "name": "project row 3",
                   "width": "fill_container",
                   "gap": 8,
                   "padding": [
@@ -180,18 +155,20 @@
                   "children": [
                     {
                       "type": "icon_font",
-                      "id": "fpjQv",
+                      "id": "TBh6S",
+                      "name": "project3Icon",
                       "width": 16,
                       "height": 16,
-                      "iconFontName": "bot",
+                      "iconFontName": "folder",
                       "iconFontFamily": "lucide",
                       "fill": "$theme-text-muted"
                     },
                     {
                       "type": "text",
-                      "id": "bAK7y",
+                      "id": "Uz9MZ",
+                      "name": "project3Text",
                       "fill": "$theme-text-secondary",
-                      "content": "Codex",
+                      "content": "agent-playground",
                       "fontFamily": "Inter",
                       "fontSize": 13,
                       "fontWeight": "normal"
@@ -200,8 +177,8 @@
                 },
                 {
                   "type": "frame",
-                  "id": "bRLX4",
-                  "name": "navItem4",
+                  "id": "MQimh",
+                  "name": "project row 4",
                   "width": "fill_container",
                   "gap": 8,
                   "padding": [
@@ -211,18 +188,59 @@
                   "children": [
                     {
                       "type": "icon_font",
-                      "id": "u2DUr",
+                      "id": "Oxwhn",
+                      "name": "project4Icon",
                       "width": 16,
                       "height": 16,
-                      "iconFontName": "bot",
+                      "iconFontName": "folder",
                       "iconFontFamily": "lucide",
                       "fill": "$theme-text-muted"
                     },
                     {
                       "type": "text",
-                      "id": "KTVra",
+                      "id": "X9FUF7",
+                      "name": "project4Text",
                       "fill": "$theme-text-secondary",
-                      "content": "Claude Code",
+                      "content": "docs-site",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "a05hD",
+                  "name": "add project",
+                  "width": "fill_container",
+                  "cornerRadius": 4,
+                  "stroke": {
+                    "align": "inside",
+                    "thickness": 1,
+                    "fill": "$theme-border-subtle"
+                  },
+                  "gap": 8,
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "icon_font",
+                      "id": "b2Mv6G",
+                      "name": "projectAddIcon",
+                      "width": 16,
+                      "height": 16,
+                      "iconFontName": "plus",
+                      "iconFontFamily": "lucide",
+                      "fill": "$theme-text-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "NgOAY",
+                      "name": "projectAddText",
+                      "fill": "$theme-text-muted",
+                      "content": "Add project",
                       "fontFamily": "Inter",
                       "fontSize": 13,
                       "fontWeight": "normal"
@@ -264,7 +282,7 @@
                   "type": "text",
                   "id": "sqZtS",
                   "fill": "$theme-text-primary",
-                  "content": "sample-project / MVP Core",
+                  "content": "loom / Planning",
                   "fontFamily": "Geist",
                   "fontSize": 16,
                   "fontWeight": "600"
@@ -293,14 +311,14 @@
                           "id": "XyoCk",
                           "width": 14,
                           "height": 14,
-                          "iconFontName": "check",
+                          "iconFontName": "loader",
                           "iconFontFamily": "lucide",
-                          "fill": "$theme-text-muted"
+                          "fill": "$theme-accent"
                         },
                         {
                           "type": "text",
                           "id": "sJtE5",
-                          "fill": "$theme-text-muted",
+                          "fill": "$theme-text-primary",
                           "content": "Planning",
                           "fontFamily": "Inter",
                           "fontSize": 12,
@@ -333,14 +351,14 @@
                           "id": "J9uuCq",
                           "width": 14,
                           "height": 14,
-                          "iconFontName": "loader",
+                          "iconFontName": "circle",
                           "iconFontFamily": "lucide",
-                          "fill": "$theme-accent"
+                          "fill": "$theme-text-muted"
                         },
                         {
                           "type": "text",
                           "id": "gGSJe",
-                          "fill": "$theme-text-primary",
+                          "fill": "$theme-text-muted",
                           "content": "Implementing",
                           "fontFamily": "Inter",
                           "fontSize": 12,
@@ -405,7 +423,7 @@
                       "type": "text",
                       "id": "HjvmN",
                       "fill": "#FFFFFF",
-                      "content": "Stop Task",
+                      "content": "Confirm Plan",
                       "fontFamily": "Inter",
                       "fontSize": 12,
                       "fontWeight": "500"
@@ -424,14 +442,12 @@
                 {
                   "type": "frame",
                   "id": "qKt2O",
-                  "name": "leftPane",
+                  "name": "planning conversation",
                   "width": "fill_container",
                   "height": "fill_container",
                   "stroke": {
                     "align": "inside",
-                    "thickness": {
-                      "right": 1
-                    },
+                    "thickness": 0,
                     "fill": "$theme-border-subtle"
                   },
                   "layout": "vertical",
@@ -454,7 +470,7 @@
                           "type": "text",
                           "id": "DCba7",
                           "fill": "$theme-text-muted",
-                          "content": "IMPLEMENTATION",
+                          "content": "PLAN DISCUSSION",
                           "fontFamily": "Inter",
                           "fontSize": 11,
                           "fontWeight": "normal"
@@ -464,23 +480,27 @@
                     {
                       "type": "frame",
                       "id": "A8Xhn",
-                      "name": "leftContent",
+                      "name": "conversation stream",
                       "width": "fill_container",
                       "height": "fill_container",
                       "layout": "vertical",
-                      "gap": 24,
-                      "padding": 24,
+                      "gap": 16,
+                      "padding": [
+                        24,
+                        80
+                      ],
                       "children": [
                         {
                           "type": "frame",
                           "id": "DDNWD",
-                          "name": "planCard",
+                          "name": "user requirement",
                           "width": "fill_container",
+                          "fill": "$theme-bg-secondary",
                           "cornerRadius": 8,
                           "stroke": {
                             "align": "inside",
                             "thickness": 1,
-                            "fill": "$theme-border-strong"
+                            "fill": "$theme-border-subtle"
                           },
                           "layout": "vertical",
                           "gap": 12,
@@ -497,7 +517,7 @@
                                   "type": "text",
                                   "id": "Ft34T",
                                   "fill": "$theme-text-primary",
-                                  "content": "Current Plan",
+                                  "content": "You",
                                   "fontFamily": "Geist",
                                   "fontSize": 14,
                                   "fontWeight": "600"
@@ -510,7 +530,7 @@
                               "fill": "$theme-text-secondary",
                               "textGrowth": "fixed-width",
                               "width": "fill_container",
-                              "content": "Implement the user authentication flow using the existing database schema. Ensure tests are added.",
+                              "content": "需要实现第一步计划功能：输入需求后，@codex @claude-code @amp 参与讨论，生成计划文档；确认后进入待办任务列表。",
                               "fontFamily": "Inter",
                               "fontSize": 13,
                               "fontWeight": "normal"
@@ -545,7 +565,7 @@
                                   "type": "text",
                                   "id": "Rx8na",
                                   "fill": "$theme-text-primary",
-                                  "content": "Codex (Primary)",
+                                  "content": "codex · proposal",
                                   "fontFamily": "Geist",
                                   "fontSize": 13,
                                   "fontWeight": "600"
@@ -573,7 +593,75 @@
                                   "fill": "$theme-text-primary",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "I have added the login endpoint to src/api/auth.ts and created the corresponding unit tests.",
+                                  "content": "建议把计划阶段建模为 PlanningRun。每个 Agent 输出都进入任务事件，最终由汇总器生成 finalPlan、planPath 和 planTodos。",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Md7YS",
+                          "name": "agentMsg2",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 8,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "N3OW3",
+                              "name": "msg2Header",
+                              "gap": 8,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon_font",
+                                  "id": "Tm1d5",
+                                  "name": "msg2Icon",
+                                  "width": 16,
+                                  "height": 16,
+                                  "iconFontName": "bot",
+                                  "iconFontFamily": "lucide",
+                                  "fill": "$theme-accent"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "iJmvM",
+                                  "name": "msg2Name",
+                                  "fill": "$theme-text-primary",
+                                  "content": "claude-code · review",
+                                  "fontFamily": "Geist",
+                                  "fontSize": 13,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "SCFpE",
+                              "name": "msg2Box",
+                              "width": "fill_container",
+                              "fill": "$theme-bg-secondary",
+                              "cornerRadius": 8,
+                              "stroke": {
+                                "align": "inside",
+                                "thickness": 1,
+                                "fill": "$theme-border-subtle"
+                              },
+                              "layout": "vertical",
+                              "padding": 12,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "Ub4Dz",
+                                  "name": "msg2Text",
+                                  "fill": "$theme-text-primary",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "CLI 第一版使用 prompt-file 非交互协议。确认计划后不直接写代码，而是切换到 todo 实施界面，逐项启动实施。",
                                   "fontFamily": "Inter",
                                   "fontSize": 13,
                                   "fontWeight": "normal"
@@ -583,99 +671,13 @@
                           ]
                         }
                       ]
-                    }
-                  ]
-                },
-                {
-                  "type": "frame",
-                  "id": "P6KT4",
-                  "name": "rightPane",
-                  "width": "fill_container",
-                  "height": "fill_container",
-                  "layout": "vertical",
-                  "children": [
-                    {
-                      "type": "frame",
-                      "id": "xaNVo",
-                      "name": "rightHeader",
-                      "width": "fill_container",
-                      "stroke": {
-                        "align": "inside",
-                        "thickness": {
-                          "bottom": 1
-                        },
-                        "fill": "$theme-border-subtle"
-                      },
-                      "padding": 16,
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "U592PL",
-                          "fill": "$theme-text-muted",
-                          "content": "DEBUG / LOGS",
-                          "fontFamily": "Inter",
-                          "fontSize": 11,
-                          "fontWeight": "normal"
-                        }
-                      ]
                     },
                     {
                       "type": "frame",
-                      "id": "xtDMy",
-                      "name": "terminal",
+                      "id": "a9hhn",
+                      "name": "requirement composer",
                       "width": "fill_container",
-                      "height": "fill_container",
-                      "fill": "$theme-bg-secondary",
-                      "layout": "vertical",
-                      "gap": 8,
-                      "padding": 16,
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "DqmAU",
-                          "fill": "$theme-text-primary",
-                          "content": "$ pnpm run dev",
-                          "fontFamily": "Geist Mono",
-                          "fontSize": 13,
-                          "fontWeight": "normal"
-                        },
-                        {
-                          "type": "text",
-                          "id": "WPKy1",
-                          "fill": "$theme-text-secondary",
-                          "content": "VITE v4.3.9 ready in 250 ms",
-                          "fontFamily": "Geist Mono",
-                          "fontSize": 13,
-                          "fontWeight": "normal"
-                        },
-                        {
-                          "type": "text",
-                          "id": "ZGDqW",
-                          "fill": "$theme-accent",
-                          "content": "  ➜  Local:   http://localhost:5173/",
-                          "fontFamily": "Geist Mono",
-                          "fontSize": 13,
-                          "fontWeight": "normal"
-                        },
-                        {
-                          "type": "text",
-                          "id": "NQhdU",
-                          "name": "errorLog",
-                          "fill": "$theme-error",
-                          "textGrowth": "fixed-width",
-                          "width": "fill_container",
-                          "content": "ERROR: Failed to connect to database at api/auth.ts:42",
-                          "fontFamily": "Geist Mono",
-                          "fontSize": 13,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "HUzmC",
-                      "name": "feedback",
-                      "width": "fill_container",
+                      "fill": "$theme-bg-primary",
                       "stroke": {
                         "align": "inside",
                         "thickness": {
@@ -684,73 +686,214 @@
                         "fill": "$theme-border-subtle"
                       },
                       "layout": "vertical",
-                      "gap": 12,
-                      "padding": 16,
+                      "gap": 10,
+                      "padding": [
+                        14,
+                        80,
+                        18,
+                        80
+                      ],
                       "children": [
                         {
-                          "type": "text",
-                          "id": "IMVPs",
-                          "fill": "$theme-text-primary",
-                          "content": "Manual Feedback",
-                          "fontFamily": "Geist",
-                          "fontSize": 13,
-                          "fontWeight": "600"
-                        },
-                        {
                           "type": "frame",
-                          "id": "IwRSX",
-                          "name": "input",
+                          "id": "s1vPKp",
+                          "name": "composer box",
                           "width": "fill_container",
-                          "fill": "$theme-bg-primary",
+                          "fill": "$theme-bg-secondary",
                           "cornerRadius": 8,
                           "stroke": {
                             "align": "inside",
                             "thickness": 1,
                             "fill": "$theme-border-strong"
                           },
-                          "padding": 12,
+                          "layout": "vertical",
+                          "gap": 10,
+                          "padding": 14,
                           "children": [
                             {
                               "type": "text",
-                              "id": "O1eHtm",
-                              "fill": "$theme-text-muted",
-                              "content": "The database connection is failing because the env var is missing.",
+                              "id": "DVoJB",
+                              "name": "composerText",
+                              "fill": "$theme-text-primary",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "实现计划讨论 MVP：输入需求，多 Agent 讨论并生成计划文档。 @codex @claude-code @amp",
+                              "lineHeight": 1.45,
                               "fontFamily": "Inter",
                               "fontSize": 13,
                               "fontWeight": "normal"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "IXPm7",
-                          "name": "btn",
-                          "fill": "$theme-text-primary",
-                          "cornerRadius": 4,
-                          "gap": 6,
-                          "padding": [
-                            8,
-                            16
-                          ],
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "P7BlW",
-                              "fill": "$theme-bg-primary",
-                              "content": "Submit",
-                              "fontFamily": "Inter",
-                              "fontSize": 13,
-                              "fontWeight": "500"
                             },
                             {
-                              "type": "icon_font",
-                              "id": "QilNH",
-                              "width": 14,
-                              "height": 14,
-                              "iconFontName": "send",
-                              "iconFontFamily": "lucide",
-                              "fill": "$theme-bg-primary"
+                              "type": "frame",
+                              "id": "Zy1b9",
+                              "name": "composer actions",
+                              "width": "fill_container",
+                              "gap": 8,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "x1o6u9",
+                                  "name": "chipCodex",
+                                  "fill": "$theme-bg-primary",
+                                  "cornerRadius": 4,
+                                  "stroke": {
+                                    "align": "inside",
+                                    "thickness": 1,
+                                    "fill": "$theme-border-strong"
+                                  },
+                                  "gap": 6,
+                                  "padding": [
+                                    5,
+                                    8
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon_font",
+                                      "id": "R5W6H5",
+                                      "name": "chipCodexIcon",
+                                      "width": 12,
+                                      "height": 12,
+                                      "iconFontName": "at-sign",
+                                      "iconFontFamily": "lucide",
+                                      "fill": "$theme-accent"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "uWtOl",
+                                      "name": "chipCodexText",
+                                      "fill": "$theme-text-primary",
+                                      "content": "codex",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 12,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "hRo7P",
+                                  "name": "chipClaude",
+                                  "fill": "$theme-bg-primary",
+                                  "cornerRadius": 4,
+                                  "stroke": {
+                                    "align": "inside",
+                                    "thickness": 1,
+                                    "fill": "$theme-border-strong"
+                                  },
+                                  "gap": 6,
+                                  "padding": [
+                                    5,
+                                    8
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon_font",
+                                      "id": "X74tr",
+                                      "name": "chipClaudeIcon",
+                                      "width": 12,
+                                      "height": 12,
+                                      "iconFontName": "at-sign",
+                                      "iconFontFamily": "lucide",
+                                      "fill": "$theme-accent"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "qlCEt",
+                                      "name": "chipClaudeText",
+                                      "fill": "$theme-text-primary",
+                                      "content": "claude-code",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 12,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "htwTR",
+                                  "name": "chipAmp",
+                                  "fill": "$theme-bg-primary",
+                                  "cornerRadius": 4,
+                                  "stroke": {
+                                    "align": "inside",
+                                    "thickness": 1,
+                                    "fill": "$theme-border-strong"
+                                  },
+                                  "gap": 6,
+                                  "padding": [
+                                    5,
+                                    8
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon_font",
+                                      "id": "s6hNOT",
+                                      "name": "chipAmpIcon",
+                                      "width": 12,
+                                      "height": 12,
+                                      "iconFontName": "at-sign",
+                                      "iconFontFamily": "lucide",
+                                      "fill": "$theme-accent"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "jCI5M",
+                                      "name": "chipAmpText",
+                                      "fill": "$theme-text-primary",
+                                      "content": "amp",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 12,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "wivZx",
+                                  "name": "spacer",
+                                  "width": "fill_container",
+                                  "height": 1
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "Lx0iE",
+                                  "name": "sendBtn",
+                                  "fill": "$theme-accent",
+                                  "cornerRadius": 4,
+                                  "gap": 6,
+                                  "padding": [
+                                    7,
+                                    10
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon_font",
+                                      "id": "w1OoFB",
+                                      "name": "sendIcon",
+                                      "width": 13,
+                                      "height": 13,
+                                      "iconFontName": "send",
+                                      "iconFontFamily": "lucide",
+                                      "fill": "#FFFFFF"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "lzxOG",
+                                      "name": "sendText",
+                                      "fill": "#FFFFFF",
+                                      "content": "Discuss",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 12,
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                }
+                              ]
                             }
                           ]
                         }

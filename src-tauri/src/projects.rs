@@ -39,12 +39,11 @@ pub fn register_project(
 }
 
 fn canonical_project_path(path: &str) -> Result<PathBuf, String> {
-    let candidate = PathBuf::from(path.trim());
-
     if path.trim().is_empty() {
         return Err("project path is required".to_string());
     }
 
+    let candidate = expand_project_path(path.trim())?;
     let canonical = fs::canonicalize(&candidate)
         .map_err(|error| format!("failed to read project path: {error}"))?;
 
@@ -56,6 +55,23 @@ fn canonical_project_path(path: &str) -> Result<PathBuf, String> {
     }
 
     Ok(canonical)
+}
+
+fn expand_project_path(path: &str) -> Result<PathBuf, String> {
+    if path == "~" {
+        return std::env::var_os("HOME")
+            .map(PathBuf::from)
+            .ok_or_else(|| "failed to resolve home directory".to_string());
+    }
+
+    if let Some(rest) = path.strip_prefix("~/") {
+        let home = std::env::var_os("HOME")
+            .map(PathBuf::from)
+            .ok_or_else(|| "failed to resolve home directory".to_string())?;
+        return Ok(home.join(rest));
+    }
+
+    Ok(PathBuf::from(path))
 }
 
 fn analyze_project_path(

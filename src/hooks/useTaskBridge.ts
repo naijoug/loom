@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useCallback } from "react";
 import type { CreateTaskInput, Task } from "../domain";
 import { useAppState } from "../state/AppStateContext";
+import { hasTauriRuntime } from "./runtime";
 
 function toErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);
@@ -14,6 +15,11 @@ export function useTaskBridge() {
     async (projectPath: string) => {
       dispatch({ type: "tasks/loadStarted" });
       try {
+        if (!hasTauriRuntime()) {
+          dispatch({ type: "tasks/loaded", tasks: [] });
+          return;
+        }
+
         const tasks = await invoke<Task[]>("list_tasks", { projectPath });
         dispatch({ type: "tasks/loaded", tasks });
       } catch (error) {
@@ -27,6 +33,10 @@ export function useTaskBridge() {
     async (input: CreateTaskInput) => {
       dispatch({ type: "tasks/loadStarted" });
       try {
+        if (!hasTauriRuntime()) {
+          throw new Error("Task creation requires the Tauri desktop runtime.");
+        }
+
         const task = await invoke<Task>("create_task", { input });
         dispatch({ type: "tasks/upserted", task });
         return task;

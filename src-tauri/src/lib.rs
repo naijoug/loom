@@ -40,6 +40,7 @@ fn health_check() -> HealthCheckResult {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .manage(command_runner::CommandRegistry::default())
         .manage(models::IdGenerator::default())
         .invoke_handler(tauri::generate_handler![
@@ -47,6 +48,7 @@ pub fn run() {
             agents::create_agent,
             agents::list_agents,
             agents::run_dummy_planning,
+            agents::run_planning_discussion,
             agents::set_agent_enabled,
             command_runner::command_runner_ready,
             command_runner::start_command_run,
