@@ -3,6 +3,7 @@ import { Send, Square, Terminal } from "lucide-react";
 import { useCommandBridge } from "../../hooks/useCommandBridge";
 import { useTaskBridge } from "../../hooks/useTaskBridge";
 import { useAppState } from "../../state/AppStateContext";
+import { parseCommandLine, type ParsedCommandLine } from "../../utils/commandLine";
 import { Button } from "../common/Button";
 import "./Workspace.css";
 
@@ -21,6 +22,7 @@ export function DebugPane() {
       : undefined);
   const [command, setCommand] = useState("pnpm build");
   const [feedback, setFeedback] = useState("");
+  const [commandParseError, setCommandParseError] = useState<string | null>(null);
   const errorSummaryLines = activeRun?.errorSummary
     ? [
         `Error summary${typeof activeRun.errorSummary.exitCode === "number" ? ` (exit ${activeRun.errorSummary.exitCode})` : ""}`,
@@ -54,10 +56,22 @@ export function DebugPane() {
       return;
     }
 
-    const [program, ...args] = command.trim().split(/\s+/);
+    let parsed: ParsedCommandLine;
+    try {
+      parsed = parseCommandLine(command);
+      setCommandParseError(null);
+    } catch (error) {
+      setCommandParseError(error instanceof Error ? error.message : "Invalid command line");
+      return;
+    }
+
+    if (!parsed.program) {
+      return;
+    }
+
     await startCommandRun({
-      program,
-      args,
+      program: parsed.program,
+      args: parsed.args,
       cwd: project.path,
       taskId: task.id,
     });
@@ -113,6 +127,7 @@ export function DebugPane() {
       </div>
 
       <div className="terminal-container">
+        {commandParseError && <div className="terminal-line error-text">{commandParseError}</div>}
         {state.app.commandError && <div className="terminal-line error-text">{state.app.commandError}</div>}
         {activeRun && (
           <div className="terminal-line secondary-text">
