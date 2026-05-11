@@ -316,12 +316,33 @@ fn is_implementation_todo_heading(line: &str) -> bool {
         .trim_end_matches(':')
         .to_lowercase();
 
+    let normalized_heading = heading
+        .split(['/', '／', '-', '—', '（', '(', '：', ':'])
+        .map(str::trim)
+        .find(|part| !part.is_empty())
+        .unwrap_or(heading.as_str());
+
+    is_known_implementation_todo_heading(normalized_heading)
+        || (heading.contains("implementation")
+            && (heading.contains("todo")
+                || heading.contains("task")
+                || heading.contains("checklist")))
+        || (heading.contains("任务")
+            && (heading.contains("实施")
+                || heading.contains("实现")
+                || heading.contains("拆解")
+                || heading.contains("具体")))
+}
+
+fn is_known_implementation_todo_heading(heading: &str) -> bool {
     matches!(
-        heading.as_str(),
+        heading,
         "implementation todo"
             | "implementation todos"
             | "implementation tasks"
             | "tasks"
+            | "todo"
+            | "todos"
             | "具体任务"
             | "实施任务"
             | "任务拆解"
@@ -402,6 +423,24 @@ mod tests {
             vec![
                 "Run Agent review".to_string(),
                 "Verify evidence".to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn extracts_implementation_todos_from_bilingual_and_descriptive_headings() {
+        let bilingual_plan = "# 计划\n\n## 具体任务（Implementation Todo）\n\n- 记录 Review 证据\n- 运行最小验证\n\n## 风险\n\n- 无";
+        let descriptive_plan = "# Plan\n\n## Implementation Checklist - handoff\n\n- Capture selected Agent evidence\n- Confirm validation command\n\n## Notes\n\n- not a todo";
+
+        assert_eq!(
+            implementation_todo_lines(bilingual_plan),
+            vec!["记录 Review 证据".to_string(), "运行最小验证".to_string()]
+        );
+        assert_eq!(
+            implementation_todo_lines(descriptive_plan),
+            vec![
+                "Capture selected Agent evidence".to_string(),
+                "Confirm validation command".to_string()
             ]
         );
     }
