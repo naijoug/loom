@@ -160,13 +160,13 @@ pub fn generate_repair_context(project_path: String, task_id: String) -> Result<
         .last()
         .map(|feedback| feedback.content.clone());
     let context = format!(
-        "Task: {}\n\nRequirement:\n{}\n\nFinal plan:\n{}\n\nLatest failure:\n{}\n\nLatest feedback:\n{}",
+        "Task: {}\n\nRequirement:\n{}\n\nFinal plan:\n{}\n\nLatest failure:\n{}\n\nLatest feedback:\n{}\n\nRepair handoff checklist:\n- Reproduce or explain the failure using the command and log references above.\n- Apply the smallest safe fix for the current task.\n- Re-run the most relevant validation command and attach the result.",
         task.title,
         task.raw_requirement,
         task.final_plan.clone().unwrap_or_else(|| "(none)".to_string()),
         latest_failed_run
-            .and_then(|run| run.error_summary)
-            .map(format_error_summary)
+            .as_ref()
+            .map(format_failed_run_context)
             .unwrap_or_else(|| "(none)".to_string()),
         latest_feedback.unwrap_or_else(|| "(none)".to_string())
     );
@@ -242,6 +242,24 @@ pub fn finish_command_run(
 
 fn task_path(project_path: &Path, task_id: &str) -> PathBuf {
     storage::project_tasks_dir(project_path).join(format!("{task_id}.json"))
+}
+
+fn format_failed_run_context(run: &CommandRun) -> String {
+    let summary = run
+        .error_summary
+        .clone()
+        .map(format_error_summary)
+        .unwrap_or_else(|| "(none)".to_string());
+    format!(
+        "runId={}\ncommand={}\nstatus={}\nexitCode={:?}\nstdoutLog={}\nstderrLog={}\n{}",
+        run.id,
+        run.command,
+        run.status,
+        run.exit_code,
+        run.stdout_log_ref.as_deref().unwrap_or("(none)"),
+        run.stderr_log_ref.as_deref().unwrap_or("(none)"),
+        summary
+    )
 }
 
 fn format_error_summary(summary: ErrorSummary) -> String {
@@ -500,6 +518,34 @@ mod tests {
             implementation_todo_lines(backtick_plan),
             vec!["Confirm handoff".to_string()]
         );
+    }
+
+    #[test]
+    fn formats_failed_run_context_with_replay_evidence() {
+        let context = format_failed_run_context(&CommandRun {
+            id: "run-1".to_string(),
+            task_id: "task-1".to_string(),
+            command: "pnpm build".to_string(),
+            cwd: "/repo".to_string(),
+            started_at_ms: 1,
+            ended_at_ms: Some(2),
+            status: "failed".to_string(),
+            exit_code: Some(1),
+            stdout_log_ref: Some("/repo/.loom/logs/task-1/run-1.stdout.log".to_string()),
+            stderr_log_ref: Some("/repo/.loom/logs/task-1/run-1.stderr.log".to_string()),
+            error_summary: Some(ErrorSummary {
+                exit_code: Some(1),
+                stderr_tail: vec!["error: build failed".to_string()],
+                matched_lines: vec!["error: build failed".to_string()],
+                failed: true,
+            }),
+        });
+
+        assert!(context.contains("runId=run-1"));
+        assert!(context.contains("command=pnpm build"));
+        assert!(context.contains("stdoutLog=/repo/.loom/logs/task-1/run-1.stdout.log"));
+        assert!(context.contains("stderrLog=/repo/.loom/logs/task-1/run-1.stderr.log"));
+        assert!(context.contains("matchedLines=error: build failed"));
     }
 
     #[test]
