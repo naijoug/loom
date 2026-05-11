@@ -282,7 +282,7 @@ fn implementation_todo_lines(final_plan: &str) -> Vec<String> {
     for line in final_plan.lines() {
         let trimmed = line.trim();
         if trimmed.starts_with("## ") {
-            in_section = trimmed.eq_ignore_ascii_case("## Implementation Todo");
+            in_section = is_implementation_todo_heading(trimmed);
             continue;
         }
 
@@ -304,15 +304,34 @@ fn implementation_todo_lines(final_plan: &str) -> Vec<String> {
     todos
 }
 
+fn is_implementation_todo_heading(line: &str) -> bool {
+    let heading = line
+        .trim_start_matches('#')
+        .trim()
+        .trim_end_matches(':')
+        .to_lowercase();
+
+    matches!(
+        heading.as_str(),
+        "implementation todo"
+            | "implementation todos"
+            | "implementation tasks"
+            | "tasks"
+            | "具体任务"
+            | "实施任务"
+            | "任务拆解"
+            | "实现任务"
+            | "implementation task breakdown"
+    )
+}
+
 fn strip_todo_marker(line: &str) -> Option<&str> {
     let bullet = line.strip_prefix("- ").or_else(|| line.strip_prefix("* "));
     if let Some(value) = bullet {
         return Some(strip_checkbox_marker(value.trim()));
     }
 
-    let (number, rest) = line
-        .split_once(". ")
-        .or_else(|| line.split_once(") "))?;
+    let (number, rest) = line.split_once(". ").or_else(|| line.split_once(") "))?;
     if number.chars().all(|char| char.is_ascii_digit()) {
         Some(strip_checkbox_marker(rest.trim()))
     } else {
@@ -356,6 +375,16 @@ mod tests {
                 "Confirm handoff todos".to_string(),
                 "Persist review decision".to_string()
             ]
+        );
+    }
+
+    #[test]
+    fn extracts_implementation_todos_from_chinese_task_sections() {
+        let plan = "# 计划\n\n## 具体任务\n\n- [ ] 生成最终计划\n2) 调用主 Agent 实施\n\n## 验证策略\n\n- cargo test";
+
+        assert_eq!(
+            implementation_todo_lines(plan),
+            vec!["生成最终计划".to_string(), "调用主 Agent 实施".to_string()]
         );
     }
 
