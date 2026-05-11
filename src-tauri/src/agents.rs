@@ -1136,7 +1136,7 @@ fn stderr_tail(stderr: &str) -> Vec<String> {
         .collect()
 }
 
-fn redact_sensitive_text(input: &str) -> String {
+pub(crate) fn redact_sensitive_text(input: &str) -> String {
     let mut output = input
         .lines()
         .map(redact_sensitive_line)

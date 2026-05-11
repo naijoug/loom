@@ -1,4 +1,5 @@
 use crate::{
+    agents::redact_sensitive_text,
     models::{
         now_ms, CommandFinishedEvent, CommandLogEvent, CommandRun, CommandSpec, ErrorSummary,
         IdGenerator,
@@ -60,7 +61,7 @@ pub async fn start_command_run(
         .ok_or_else(|| "taskId is required for command runs".to_string())?;
     let project_path = PathBuf::from(&spec.cwd);
     let run_id = ids.next("run");
-    let command_text = command_text(&spec.program, &spec.args);
+    let command_text = redact_sensitive_text(&command_text(&spec.program, &spec.args));
     let log_dir = storage::project_logs_dir(&project_path).join(&task_id);
     tokio::fs::create_dir_all(&log_dir)
         .await
@@ -248,13 +249,15 @@ fn spawn_log_reader<R>(
         };
 
         while let Ok(Some(line)) = lines.next_line().await {
+            let redacted_line = redact_sensitive_text(&line);
+
             if let Some(file) = log_file.as_mut() {
-                let _ = file.write_all(line.as_bytes()).await;
+                let _ = file.write_all(redacted_line.as_bytes()).await;
                 let _ = file.write_all(b"\n").await;
             }
 
             if let Some(captured) = captured_lines.as_ref() {
-                captured.lock().await.push(line.clone());
+                captured.lock().await.push(redacted_line.clone());
             }
 
             let _ = app.emit(
@@ -263,7 +266,7 @@ fn spawn_log_reader<R>(
                     task_id: Some(task_id.clone()),
                     run_id: run_id.clone(),
                     stream: stream.to_string(),
-                    line,
+                    line: redacted_line,
                     timestamp_ms: now_ms(),
                 },
             );
@@ -421,5 +424,42 @@ mod tests {
         );
         assert_eq!(summary.matched_lines.len(), 25);
         assert!(summary.failed);
+    }
+
+    #[test]
+    fn redacts_command_text_before_persistence() {
+        let marker = "marker-value";
+        let auth_header = format!("Authorization: {} {}", "Bearer", marker);
+        let text = redact_sensitive_text(&command_text("curl", &["-H".to_string(), auth_header]));
+
+        assert!(text.contains("Bearer [REDACTED]"));
+        assert!(!text.contains(marker));
+    }
+
+    #[test]
+    fn analyzes_redacted_stderr_without_leaking_credentials() {
+        let marker = "marker-value";
+        let password_marker = "marker-password";
+        let auth_header = format!("Authorization: {} {}", "Bearer", marker);
+        let lines = vec![
+            redact_sensitive_text("error: build failed"),
+            redact_sensitive_text(&format!("password={password_marker}")),
+            redact_sensitive_text(&auth_header),
+        ];
+        let summary = analyze_error(Some(1), &lines);
+
+        assert!(summary.failed);
+        assert!(summary
+            .matched_lines
+            .contains(&"error: build failed".to_string()));
+        assert!(summary
+            .stderr_tail
+            .iter()
+            .any(|line| line.contains("[REDACTED]")));
+        assert!(!summary
+            .stderr_tail
+            .iter()
+            .any(|line| line.contains(password_marker)));
+        assert!(!summary.stderr_tail.iter().any(|line| line.contains(marker)));
     }
 }
