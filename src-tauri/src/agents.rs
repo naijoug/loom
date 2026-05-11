@@ -764,12 +764,6 @@ fn render_updated_plans_index(
     summary: &str,
 ) -> String {
     let entry = format!("- {file_name}\n  > {}", summary.trim());
-    if existing.contains(&format!("- {file_name}\n"))
-        || existing.trim_end().ends_with(&format!("- {file_name}"))
-    {
-        return ensure_trailing_newline(existing.trim_end());
-    }
-
     let mut lines: Vec<String> = existing.lines().map(str::to_string).collect();
     if lines.is_empty() {
         lines.push("# 计划文档索引".to_string());
@@ -777,6 +771,10 @@ fn render_updated_plans_index(
 
     let heading = format!("## {date}");
     if let Some(index) = lines.iter().position(|line| line.trim() == heading) {
+        if date_section_contains_plan(&lines, index, file_name) {
+            return ensure_trailing_newline(existing.trim_end());
+        }
+
         let mut insert_at = index + 1;
         if lines
             .get(insert_at)
@@ -788,11 +786,9 @@ fn render_updated_plans_index(
         return ensure_trailing_newline(&lines.join("\n"));
     }
 
-    let mut insert_at = 1;
-    while lines
-        .get(insert_at)
-        .is_some_and(|line| line.trim().is_empty())
-    {
+    let mut insert_at = plan_date_insert_index(&lines, date);
+    if insert_at == lines.len() && lines.last().is_some_and(|line| !line.trim().is_empty()) {
+        lines.push(String::new());
         insert_at += 1;
     }
     lines.insert(insert_at, format!("## {date}"));
@@ -801,6 +797,37 @@ fn render_updated_plans_index(
     lines.insert(insert_at + 3, String::new());
 
     ensure_trailing_newline(&lines.join("\n"))
+}
+
+fn date_section_contains_plan(lines: &[String], heading_index: usize, file_name: &str) -> bool {
+    let entry_marker = format!("- {file_name}");
+    lines
+        .iter()
+        .skip(heading_index + 1)
+        .take_while(|line| !line.trim_start().starts_with("## "))
+        .any(|line| line.trim() == entry_marker)
+}
+
+fn plan_date_insert_index(lines: &[String], date: &str) -> usize {
+    lines
+        .iter()
+        .enumerate()
+        .skip(1)
+        .find_map(|(index, line)| {
+            plan_heading_date(line)
+                .filter(|heading_date| date > *heading_date)
+                .map(|_| index)
+        })
+        .unwrap_or_else(|| lines.len())
+}
+
+fn plan_heading_date(line: &str) -> Option<&str> {
+    let value = line.trim().strip_prefix("## ")?;
+    (value.len() == 10
+        && value
+            .chars()
+            .all(|char| char.is_ascii_digit() || char == '-'))
+    .then_some(value)
 }
 
 fn ensure_trailing_newline(content: &str) -> String {
@@ -1469,7 +1496,7 @@ mod tests {
     }
 
     #[test]
-    fn plans_index_skips_duplicate_plan_file() {
+    fn plans_index_skips_duplicate_plan_file_in_same_date_section() {
         let existing =
             "# 计划文档索引\n\n## 2026-05-12\n\n- 05:10-plan-index-sync.md\n  > 原摘要。\n";
 
@@ -1481,6 +1508,39 @@ mod tests {
         );
 
         assert_eq!(updated.matches("05:10-plan-index-sync.md").count(), 1);
+    }
+
+    #[test]
+    fn plans_index_allows_same_file_name_on_different_dates() {
+        let existing = "# 计划文档索引\n\n## 2026-05-12\n\n- 05:10-plan-index-sync.md\n  > 今天的计划。\n\n## 2026-05-11\n\n- 17:52-real-cli-agent-adapter.md\n  > 昨天的计划。\n";
+
+        let updated = render_updated_plans_index(
+            existing,
+            "2026-05-11",
+            "05:10-plan-index-sync.md",
+            "允许不同日期下同名计划文件。",
+        );
+
+        assert_eq!(updated.matches("05:10-plan-index-sync.md").count(), 2);
+        assert!(updated.contains(
+            "## 2026-05-11\n\n- 05:10-plan-index-sync.md\n  > 允许不同日期下同名计划文件。\n- 17:52-real-cli-agent-adapter.md"
+        ));
+    }
+
+    #[test]
+    fn plans_index_inserts_missing_older_date_after_newer_dates() {
+        let existing = "# 计划文档索引\n\n## 2026-05-12\n\n- 05:10-new.md\n  > 新计划。\n\n## 2026-05-10\n\n- 23:00-old.md\n  > 旧计划。\n";
+
+        let updated = render_updated_plans_index(
+            existing,
+            "2026-05-11",
+            "04:00-middle.md",
+            "中间日期应保持日期倒序。",
+        );
+
+        assert!(updated.contains(
+            "## 2026-05-12\n\n- 05:10-new.md\n  > 新计划。\n\n## 2026-05-11\n\n- 04:00-middle.md\n  > 中间日期应保持日期倒序。\n\n## 2026-05-10"
+        ));
     }
 
     #[test]
