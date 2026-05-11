@@ -686,21 +686,33 @@ fn is_implementation_todo_heading(line: &str) -> bool {
             | "implementation tasks"
             | "implementation task list"
             | "implementation plan"
+            | "实施任务"
+            | "实施待办"
+            | "实现任务"
+            | "实现待办"
+            | "开发任务"
+            | "任务清单"
     )
 }
 
 fn strip_agent_todo_marker(line: &str) -> Option<&str> {
-    let bullet = line.strip_prefix("- ").or_else(|| line.strip_prefix("* "));
+    let bullet = line
+        .strip_prefix("- ")
+        .or_else(|| line.strip_prefix("* "))
+        .or_else(|| line.strip_prefix("• "));
     if let Some(value) = bullet {
         return Some(strip_agent_checkbox_marker(value.trim()));
     }
 
-    let (number, rest) = line.split_once(". ").or_else(|| line.split_once(") "))?;
-    if number.chars().all(|char| char.is_ascii_digit()) {
-        Some(strip_agent_checkbox_marker(rest.trim()))
-    } else {
-        None
+    for marker in [". ", ") ", "、"] {
+        if let Some((number, rest)) = line.split_once(marker) {
+            if number.chars().all(|char| char.is_ascii_digit()) {
+                return Some(strip_agent_checkbox_marker(rest.trim()));
+            }
+        }
     }
+
+    None
 }
 
 fn strip_agent_checkbox_marker(line: &str) -> &str {
@@ -1287,6 +1299,21 @@ mod tests {
                 "Persist evidence".to_string()
             ]
         );
+    }
+
+    #[test]
+    fn final_plan_parses_chinese_agent_todo_sections() {
+        let invocations = vec![test_invocation(
+            "hermes",
+            "succeeded",
+            "# 方案\n\n## 实施任务\n\n1、抽取任务桥接边界\n• [ ] 记录 Review 证据\n\n## 风险\n\n- 保持切片可回滚",
+        )];
+
+        let final_plan = render_final_plan("任务桥接", "支持中文计划", "summary", &invocations);
+
+        assert!(final_plan.contains("1. 抽取任务桥接边界"));
+        assert!(final_plan.contains("2. 记录 Review 证据"));
+        assert!(!final_plan.contains("Review successful Agent output"));
     }
 
     #[test]
