@@ -228,6 +228,11 @@
   color: var(--theme-text-muted);
 }
 
+.agent-chip-disabled {
+  border-style: dashed;
+  opacity: 0.72;
+}
+
 .agent-chip-meta {
   color: var(--theme-text-muted);
   font-size: 11px;

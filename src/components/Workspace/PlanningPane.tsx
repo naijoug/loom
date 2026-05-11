@@ -100,6 +100,14 @@ export function PlanningPane() {
       }),
     [mentionedAgentNames, state.agents],
   );
+  const unavailableMentionedAgents = useMemo(
+    () =>
+      state.agents.filter((agent) => {
+        const aliases = mentionAliases(agent);
+        return (!agent.enabled || !agent.available) && mentionedAgentNames.some((name) => aliases.has(name));
+      }),
+    [mentionedAgentNames, state.agents],
+  );
   const defaultPlanningAgents = useMemo(
     () => state.agents.filter((agent) => isRealPlanningAgent(agent)),
     [state.agents],
@@ -236,6 +244,20 @@ export function PlanningPane() {
                 <span className="agent-chip-meta">{adapterLabel(agent.adapterType)}</span>
               </span>
             ))}
+            {hasExplicitAgentMentions &&
+              unavailableMentionedAgents.map((agent) => (
+                <span
+                  className={`agent-chip agent-chip-disabled adapter-${agent.adapterType}`}
+                  key={agent.id}
+                  title={!agent.enabled ? "Agent is disabled" : "Agent command is unavailable"}
+                >
+                  <AtSign size={12} />
+                  {agent.name}
+                  <span className="agent-chip-meta">
+                    {!agent.enabled ? "disabled" : "unavailable"}
+                  </span>
+                </span>
+              ))}
             {selectedPlanningAgents.length === 0 && (
               <span className="agent-chip-hint">
                 {hasExplicitAgentMentions
