@@ -1,4 +1,4 @@
-import { Send, Terminal } from "lucide-react";
+import { ClipboardCheck, FileText, Send, Terminal } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useAppState } from "../../state/AppStateContext";
 import { Button } from "../common/Button";
@@ -10,6 +10,10 @@ export function ImplementationOutputPane() {
   const activeTodo = useMemo(
     () => task?.planTodos.find((todo) => todo.id === state.app.selectedTodoId) ?? task?.planTodos[0] ?? null,
     [state.app.selectedTodoId, task],
+  );
+  const activeTodoIndex = useMemo(
+    () => (activeTodo && task ? task.planTodos.findIndex((todo) => todo.id === activeTodo.id) : -1),
+    [activeTodo, task],
   );
   const [note, setNote] = useState("");
 
@@ -26,22 +30,39 @@ export function ImplementationOutputPane() {
 
         {activeTodo && (
           <>
+            <div className="implementation-brief">
+              <div className="implementation-brief-header">
+                <ClipboardCheck size={15} />
+                Todo {activeTodoIndex + 1} of {task?.planTodos.length ?? 0} · {activeTodo.status}
+              </div>
+              <div className="implementation-brief-title">{activeTodo.title}</div>
+              <div className="implementation-brief-copy">{activeTodo.description}</div>
+              {(activeTodo.planRef || task?.finalPlanPath) && (
+                <div className="implementation-plan-ref">
+                  <FileText size={13} />
+                  {activeTodo.planRef ?? task?.finalPlanPath}
+                </div>
+              )}
+            </div>
+
             <div className="conversation-message agent-message">
               <div className="message-author">
                 <Terminal size={14} />
-                codex · implementing
+                primary agent · ready for scoped execution
               </div>
               <div>
-                Preparing implementation for "{activeTodo.title}". This pane will stream the primary Agent
-                output, command evidence, and review notes for the selected todo.
+                Use this todo as the execution boundary: implement only the selected slice, capture command
+                evidence, then hand off to review before moving to the next item.
               </div>
             </div>
 
             <pre className="terminal-output implementation-terminal">
-{`$ run-agent --todo "${activeTodo.title}"
-reading final plan...
+{`$ loom-agent --todo "${activeTodo.title}"
+reading final plan: ${task?.finalPlanPath ?? "pending"}
+execution boundary: todo ${activeTodoIndex + 1}/${task?.planTodos.length ?? 0}
 selected todo: ${activeTodo.description}
-status: ${activeTodo.status}`}
+status: ${activeTodo.status}
+next checkpoint: run targeted verification and request review`}
             </pre>
           </>
         )}
