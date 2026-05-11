@@ -32,12 +32,20 @@ export function DebugPane() {
           : []),
       ]
     : [];
-  const logText = useMemo(() => {
-    if (state.commandLogs.length === 0) {
-      return "No command logs yet.";
+  const scopedLogs = useMemo(() => {
+    if (!activeRun) {
+      return state.commandLogs;
     }
 
-    return state.commandLogs
+    return state.commandLogs.filter((entry) => entry.runId === activeRun.id);
+  }, [activeRun, state.commandLogs]);
+
+  const logText = useMemo(() => {
+    if (scopedLogs.length === 0) {
+      return activeRun ? "No logs for the selected command run yet." : "No command logs yet.";
+    }
+
+    return scopedLogs
       .map((entry) => {
         const time = new Date(entry.timestampMs).toLocaleTimeString("en-US", {
           hour: "2-digit",
@@ -47,7 +55,7 @@ export function DebugPane() {
         return `${time} ${entry.stream.toUpperCase()} ${entry.line}`;
       })
       .join("\n");
-  }, [state.commandLogs]);
+  }, [activeRun, scopedLogs]);
 
   async function handleRunCommand(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
