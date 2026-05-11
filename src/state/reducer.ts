@@ -83,6 +83,20 @@ export const initialAppState: AppState = {
   commandLogs: [],
 };
 
+function selectedTaskAfterLoad(tasks: Task[], currentTaskId: string | null) {
+  return tasks.find((task) => task.id === currentTaskId) ?? tasks[tasks.length - 1] ?? null;
+}
+
+function selectedTodoIdForTask(task: Task | null, currentTodoId: string | null) {
+  if (!task) {
+    return null;
+  }
+
+  return task.planTodos.some((todo) => todo.id === currentTodoId)
+    ? currentTodoId
+    : task.planTodos[0]?.id ?? null;
+}
+
 export function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
     case "app/viewSelected":
@@ -215,20 +229,22 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         app: { ...state.app, isLoadingTasks: false, taskError: action.error },
       };
 
-    case "tasks/loaded":
+    case "tasks/loaded": {
+      const selectedTask = selectedTaskAfterLoad(action.tasks, state.app.selectedTaskId);
+
       return {
         ...state,
         app: {
           ...state.app,
           isLoadingTasks: false,
           taskError: null,
-          selectedTaskId: action.tasks[action.tasks.length - 1]?.id ?? state.app.selectedTaskId,
-          selectedTodoId:
-            action.tasks[action.tasks.length - 1]?.planTodos?.[0]?.id ?? state.app.selectedTodoId,
+          selectedTaskId: selectedTask?.id ?? null,
+          selectedTodoId: selectedTodoIdForTask(selectedTask, state.app.selectedTodoId),
         },
         tasks: action.tasks,
         commandRuns: action.tasks.flatMap((task) => task.commandRuns),
       };
+    }
 
     case "tasks/upserted": {
       const tasks = [
@@ -243,7 +259,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           isLoadingTasks: false,
           taskError: null,
           selectedTaskId: action.task.id,
-          selectedTodoId: action.task.planTodos[0]?.id ?? state.app.selectedTodoId,
+          selectedTodoId: selectedTodoIdForTask(action.task, state.app.selectedTodoId),
         },
         tasks,
         commandRuns: tasks.flatMap((task) => task.commandRuns),
