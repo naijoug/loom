@@ -166,6 +166,11 @@ pub async fn run_planning_discussion(
     .map_err(|error| format!("failed to create plans directory: {error}"))?;
     fs::write(&plan_path, &final_plan)
         .map_err(|error| format!("failed to write final plan: {error}"))?;
+    update_project_plans_index(
+        Path::new(&input.project_path),
+        &plan_path,
+        "通过多 Agent 讨论生成最终实施计划，等待人工确认后进入实施。",
+    )?;
 
     let finished_at_ms = now_ms();
     task.status = "plan_review".to_string();
@@ -720,6 +725,90 @@ fn next_project_plan_path(project_path: &Path, task_title: &str) -> Result<PathB
         &local_time_string(),
         task_title,
     )
+}
+
+fn update_project_plans_index(
+    project_path: &Path,
+    plan_path: &Path,
+    summary: &str,
+) -> Result<(), String> {
+    let date = plan_path
+        .parent()
+        .and_then(|parent| parent.file_name())
+        .and_then(|name| name.to_str())
+        .ok_or_else(|| format!("invalid plan date path: {}", plan_path.display()))?;
+    let file_name = plan_path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .ok_or_else(|| format!("invalid plan file name: {}", plan_path.display()))?;
+    let index_path = project_path.join("docs").join("PLANS.md");
+    let existing = if index_path.exists() {
+        fs::read_to_string(&index_path)
+            .map_err(|error| format!("failed to read plans index: {error}"))?
+    } else {
+        "# 计划文档索引\n".to_string()
+    };
+    let updated = render_updated_plans_index(&existing, date, file_name, summary);
+
+    if let Some(parent) = index_path.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|error| format!("failed to create plans index directory: {error}"))?;
+    }
+    fs::write(&index_path, updated).map_err(|error| format!("failed to write plans index: {error}"))
+}
+
+fn render_updated_plans_index(
+    existing: &str,
+    date: &str,
+    file_name: &str,
+    summary: &str,
+) -> String {
+    let entry = format!("- {file_name}\n  > {}", summary.trim());
+    if existing.contains(&format!("- {file_name}\n"))
+        || existing.trim_end().ends_with(&format!("- {file_name}"))
+    {
+        return ensure_trailing_newline(existing.trim_end());
+    }
+
+    let mut lines: Vec<String> = existing.lines().map(str::to_string).collect();
+    if lines.is_empty() {
+        lines.push("# 计划文档索引".to_string());
+    }
+
+    let heading = format!("## {date}");
+    if let Some(index) = lines.iter().position(|line| line.trim() == heading) {
+        let mut insert_at = index + 1;
+        if lines
+            .get(insert_at)
+            .is_some_and(|line| line.trim().is_empty())
+        {
+            insert_at += 1;
+        }
+        lines.insert(insert_at, entry);
+        return ensure_trailing_newline(&lines.join("\n"));
+    }
+
+    let mut insert_at = 1;
+    while lines
+        .get(insert_at)
+        .is_some_and(|line| line.trim().is_empty())
+    {
+        insert_at += 1;
+    }
+    lines.insert(insert_at, format!("## {date}"));
+    lines.insert(insert_at + 1, String::new());
+    lines.insert(insert_at + 2, entry);
+    lines.insert(insert_at + 3, String::new());
+
+    ensure_trailing_newline(&lines.join("\n"))
+}
+
+fn ensure_trailing_newline(content: &str) -> String {
+    let mut content = content.to_string();
+    if !content.ends_with('\n') {
+        content.push('\n');
+    }
+    content
 }
 
 fn next_project_plan_path_for_stamp(
@@ -1344,6 +1433,54 @@ mod tests {
         );
 
         fs::remove_dir_all(root).expect("test dir should be removed");
+    }
+
+    #[test]
+    fn plans_index_inserts_newest_plan_under_existing_date() {
+        let existing = "# 计划文档索引\n\n## 2026-05-12\n\n- 04:00-old.md\n  > 旧计划。\n\n## 2026-05-11\n\n- 17:52-real-cli-agent-adapter.md\n  > 已实施真实 CLI adapter。\n";
+
+        let updated = render_updated_plans_index(
+            existing,
+            "2026-05-12",
+            "05:10-plan-index-sync.md",
+            "自动维护计划索引。",
+        );
+
+        assert!(updated.contains(
+            "## 2026-05-12\n\n- 05:10-plan-index-sync.md\n  > 自动维护计划索引。\n- 04:00-old.md"
+        ));
+    }
+
+    #[test]
+    fn plans_index_adds_missing_date_near_top() {
+        let existing = "# 计划文档索引\n\n## 2026-05-11\n\n- 17:52-real-cli-agent-adapter.md\n  > 已实施真实 CLI adapter。\n";
+
+        let updated = render_updated_plans_index(
+            existing,
+            "2026-05-12",
+            "05:10-plan-index-sync.md",
+            "自动维护计划索引。",
+        );
+
+        assert!(
+            updated.starts_with("# 计划文档索引\n\n## 2026-05-12\n\n- 05:10-plan-index-sync.md")
+        );
+        assert!(updated.contains("\n## 2026-05-11\n"));
+    }
+
+    #[test]
+    fn plans_index_skips_duplicate_plan_file() {
+        let existing =
+            "# 计划文档索引\n\n## 2026-05-12\n\n- 05:10-plan-index-sync.md\n  > 原摘要。\n";
+
+        let updated = render_updated_plans_index(
+            existing,
+            "2026-05-12",
+            "05:10-plan-index-sync.md",
+            "新摘要不应重复写入。",
+        );
+
+        assert_eq!(updated.matches("05:10-plan-index-sync.md").count(), 1);
     }
 
     #[test]
