@@ -44,6 +44,9 @@ export interface AgentInvocation {
   rawOutput: string;
   outputSummary: string;
   evidenceRef?: string;
+  stderrTail: string[];
+  exitCode?: number;
+  timedOut: boolean;
   startedAtMs: number;
   endedAtMs?: number;
 }

@@ -208,6 +208,45 @@
   font-size: 12px;
 }
 
+.agent-chip.adapter-dummy {
+  border-style: dashed;
+  color: var(--theme-text-muted);
+}
+
+.agent-chip-meta {
+  color: var(--theme-text-muted);
+  font-size: 11px;
+}
+
+.agent-chip-hint {
+  color: var(--theme-text-muted);
+  font-family: var(--font-body);
+  font-size: 12px;
+}
+
+.evidence-ref {
+  color: var(--theme-text-muted);
+  font-family: var(--font-data);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.invocation-error {
+  margin: 0;
+  max-height: 160px;
+  overflow: auto;
+  border: 1px solid var(--theme-error);
+  border-radius: 6px;
+  padding: 8px;
+  background: var(--theme-bg-primary);
+  color: var(--theme-error);
+  font-family: var(--font-data);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 /* Implementation Pane specific styles */
 .implementation-content {
   padding: 24px;

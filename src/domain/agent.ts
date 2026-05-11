@@ -6,7 +6,14 @@ export type AgentCapability =
   | "testing"
   | "documentation";
 
-export type AgentAdapterType = "dummy" | "cli" | "mcp" | "http";
+export type AgentAdapterType =
+  | "dummy"
+  | "cli"
+  | "codex_cli"
+  | "claude_code_cli"
+  | "amp_cli"
+  | "mcp"
+  | "http";
 
 export type WorkingDirectoryPolicy = "project_root" | "agent_configured" | "custom";
 

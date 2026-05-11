@@ -47,7 +47,6 @@ pub fn run() {
             health_check,
             agents::create_agent,
             agents::list_agents,
-            agents::run_dummy_planning,
             agents::run_planning_discussion,
             agents::set_agent_enabled,
             command_runner::command_runner_ready,

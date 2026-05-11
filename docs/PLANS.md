@@ -1,9 +1,14 @@
 # 计划文档索引
 
+## 2026-05-11
+
+- 17:52-real-cli-agent-adapter.md
+  > 已实施第一阶段真实 CLI adapter，并在 2026-05-12 修正 Codex 当前参数、Amp execute mode 与 Settings 启停入口。
+
 ## 2026-05-09
 
 - 15:24-planning-discussion-mvp.md
-  > 实现计划讨论 MVP，让用户输入需求、选择多个本地 Agent 参与规划，并生成最终计划文档与实施 todo。
+  > 已完成计划讨论 MVP，并在真实 CLI adapter 切片中补齐 Codex、Claude Code 与 Amp planning 调用。
 - 14:01-functional-core.md
   > 将 Loom 从静态 UI 和 spike 验证推进到可登记项目、配置 Agent、创建任务、运行验证命令并持久化日志的功能内核。
 - 12:20-ui-refactor.md

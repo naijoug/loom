@@ -197,6 +197,12 @@ pub struct AgentInvocation {
     pub raw_output: String,
     pub output_summary: String,
     pub evidence_ref: Option<String>,
+    #[serde(default)]
+    pub stderr_tail: Vec<String>,
+    #[serde(default)]
+    pub exit_code: Option<i32>,
+    #[serde(default)]
+    pub timed_out: bool,
     pub started_at_ms: u128,
     pub ended_at_ms: Option<u128>,
 }

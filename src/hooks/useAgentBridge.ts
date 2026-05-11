@@ -40,18 +40,14 @@ export function useAgentBridge() {
     [dispatch],
   );
 
-  const runDummyPlanning = useCallback(
-    async (projectPath: string, taskId: string, agentId: string) => {
+  const setAgentEnabled = useCallback(
+    async (agentId: string, enabled: boolean) => {
       try {
-        const task = await invoke<Task>("run_dummy_planning", {
-          projectPath,
-          taskId,
-          agentId,
-        });
-        dispatch({ type: "tasks/upserted", task });
-        return task;
+        const agents = await invoke<AgentConfig[]>("set_agent_enabled", { agentId, enabled });
+        dispatch({ type: "agents/loaded", agents });
+        return agents;
       } catch (error) {
-        dispatch({ type: "tasks/loadFailed", error: toErrorMessage(error) });
+        dispatch({ type: "agents/loadFailed", error: toErrorMessage(error) });
         return null;
       }
     },
@@ -76,5 +72,5 @@ export function useAgentBridge() {
     [dispatch],
   );
 
-  return { loadAgents, createAgent, runDummyPlanning, runPlanningDiscussion };
+  return { loadAgents, createAgent, setAgentEnabled, runPlanningDiscussion };
 }

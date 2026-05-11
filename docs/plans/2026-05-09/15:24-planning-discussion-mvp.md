@@ -2,13 +2,13 @@
 
 - **日期**：2026-05-09
 - **作者**：Codex
-- **状态**：in-progress
+- **状态**：已实施；真实 CLI adapter 切片已在 2026-05-11 补齐
 - **关联设计**：`designs/loom.pen` 中 `appComp` 的计划阶段版本；导出图 `designs/exports/lGxnq.png`
 - **布局方向**：参考 Codex App，左侧只做项目维度列表，右侧为 Agent 讨论输出流，底部固定需求输入框与 `@agent` 选择入口。
 
 ## 目标
 
-实现 Loom 三步核心流程中的第一步：用户在主页面底部输入需求，通过输入框内的 `@codex`、`@claude-code`、`@amp` 等 mention 或显式选择控件邀请多个本地 Agent 参与计划讨论，系统在右侧输出完整讨论过程，保存每个 Agent 的原始输出与摘要，汇总生成最终计划文档，并把任务推进到可进入实施的 todo 列表。
+实现 Loom 三步核心流程中的第一步：用户在主页面底部输入需求，通过输入框内的 `@codex`、`@claude`、`@amp` 等 mention 或显式选择控件邀请多个本地 Agent 参与计划讨论，系统在右侧输出完整讨论过程，保存每个 Agent 的原始输出与摘要，汇总生成最终计划文档，并把任务推进到可进入实施的 todo 列表。
 
 本阶段完成后，用户能从“需求输入”走到“计划文档 + 实施 todo”。用户确认计划后进入实施界面：左侧显示待办任务列表，每个 todo 可通过 icon 按钮启动实施；右侧显示执行该 todo 的 Agent 输出过程。
 
@@ -34,20 +34,26 @@
 
 ## 当前状态
 
-- `src/components/Workspace/ImplementationPane.tsx`：已有项目分析、任务创建、dummy planning 按钮和最终计划预览，但还不是讨论式计划流程。
-- `src/hooks/useAgentBridge.ts`：已有 `list_agents`、`create_agent`、`run_dummy_planning` 桥接；缺少真实 planning run / 多 Agent 讨论桥接。
-- `src-tauri/src/agents.rs`：已有 Agent 配置保存、可用性检测和 `run_dummy_planning`；真实 CLI Agent 调用尚未抽象为 adapter。
-- `src-tauri/src/tasks.rs`：已有任务创建、事件追加、反馈和修复上下文；需要扩展 planning run、Agent invocation 和 final plan evidence。
-- `src/domain/task.ts` 与 `src-tauri/src/models.rs`：已有 `ready_to_implement`、`selectedPlanningAgentIds`、`finalPlan` 等字段，可作为计划阶段状态基础。
-- `src/state/reducer.ts`：已有统一状态层；需要增加 planning run lifecycle action。
+- 计划讨论 UI 已拆为右侧讨论流 + 底部 composer，支持 `@codex` / `@claude` / `@amp` mention 和 Agent chip。
+- `run_planning_discussion` 已成为正式 Tauri command，能按统一 adapter 契约调用 Codex CLI、Claude Code CLI（binary 为 `claude`）、Amp CLI 或 dummy fixture。
+- 每次 planning invocation 会保存 prompt、stdout、stderr evidence，记录状态、耗时、退出码、stderr tail 和 final plan path。
+- dummy Agent 仅作为 `adapterType: "dummy"` 的测试 fixture；旧 `run_dummy_planning` bridge 已移除。
+- 任务可从 planning 推进到 `ready_to_implement`，并展示 final plan 与 todo。
 - `docs/requirements.md`：明确要求多 Agent 讨论、共识/冲突/风险汇总和最终计划文档。
 - `designs/loom.pen`：已更新为 Codex App 风格计划阶段 UI，包括左侧项目列表、右侧讨论输出、底部 composer、`@agent` 选择和确认计划入口。
+
+## 实施结果（2026-05-11）
+
+- 真实 CLI adapter 已覆盖 Codex CLI、Claude Code CLI（命令名 `claude`）和 Amp CLI。
+- 旧 dummy-only planning 入口已经从前端 hook 和 Tauri command handler 中移除；dummy 仍保留在 adapter 内部作为测试 fixture。
+- README、计划索引和真实 CLI adapter 计划已同步当前能力边界。
+- 已通过 `pnpm build`、`cargo check --manifest-path src-tauri/Cargo.toml`、`cargo test --manifest-path src-tauri/Cargo.toml`。
 
 ## 关键交互设计
 
 - **左侧导航**：只承载项目列表和添加项目入口，不展示 Agents 分组，也不展示本轮参与 Agent。Agent 参与者只从右侧 composer 的 `@agent` mention 或选择器进入。
 - **计划讨论区**：右侧主体区域展示用户需求、各 Agent 的计划建议、风险审查、冲突点和最终汇总消息，形成一条连续讨论流。
-- **底部 composer**：固定在右侧底部，支持自然语言需求输入、`@codex` / `@claude-code` / `@amp` mention、Agent chip 展示和发送按钮。
+- **底部 composer**：固定在右侧底部，支持自然语言需求输入、`@codex` / `@claude` / `@amp` mention、Agent chip 展示和发送按钮。
 - **计划确认**：Agent 讨论完成后，顶部或最终计划消息提供“Confirm Plan”操作；确认后写入计划文档并生成 todo。
 - **实施入口**：进入实施界面后，左侧变为计划派生的 todo 列表；每项 todo 左侧有 icon 按钮用于启动该任务实施，右侧展示执行过程、日志、Agent 输出和补充输入框。
 - **状态显示原则**：没有项目、没有任务、任务已就绪但未执行时，不显示 loading/spinner；只有后端正在执行 planning / implementing / debugging / fixing / verifying 时才显示运行中状态。
@@ -60,7 +66,7 @@
 - 添加项目通过 PROJECTS 标题右侧 icon 打开系统目录选择器，不再手动输入 path。
 - 顶部栏背景与左侧导航保持同一 surface 颜色。
 - 计划阶段右侧使用讨论流 + 底部 composer，composer 支持 `@agent` 文本解析并生成 agent chip。
-- 后端新增正式 planning command，先复用 dummy/本地确定性输出形成多 Agent 讨论记录、最终计划和 todo；真实 CLI adapter 在后续切片接入。
+- 后端新增正式 planning command，通过真实 CLI adapter 或 dummy fixture 形成多 Agent 讨论记录、最终计划和 todo。
 - 确认计划后任务进入 `ready_to_implement`，前端切到 todo/实施占位视图；todo icon 可把单项任务标记为实施中并在右侧显示 Agent 输出占位。
 
 ## 里程碑
@@ -130,7 +136,7 @@
 
 ## 待确认问题
 
-- [ ] 第一版真实 Agent 是否只要求支持 codex 和 claude-code，还是需要同时覆盖 amp。
+- [x] 第一版真实 Agent 同时覆盖 Codex CLI、Claude Code CLI（binary 为 `claude`）和 Amp CLI。
 - [ ] “进入实施任务”后 todo 是否允许逐项实施，还是先进入整个计划级实施。
 - [ ] 最终计划是否需要用户显式确认后才进入 `ready_to_implement`，还是自动生成后即可进入。
 
