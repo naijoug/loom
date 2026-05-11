@@ -227,7 +227,8 @@ async fn run_planning_agent(
     let prompt_path = evidence_dir.join(format!("{}.prompt.md", agent.id));
     let stdout_path = evidence_dir.join(format!("{}.stdout.md", agent.id));
     let stderr_path = evidence_dir.join(format!("{}.stderr.log", agent.id));
-    fs::write(&prompt_path, &prompt.content)
+    let redacted_prompt = redact_sensitive_text(&prompt.content);
+    fs::write(&prompt_path, &redacted_prompt)
         .map_err(|error| format!("failed to write planning prompt: {error}"))?;
 
     if effective_adapter_type(agent) == ADAPTER_DUMMY {
@@ -252,7 +253,7 @@ async fn run_planning_agent(
     }
 
     let profile = build_cli_profile(agent, project_path, &prompt_path)?;
-    let result = run_cli_profile(&profile, project_path, &prompt.content).await;
+    let result = run_cli_profile(&profile, project_path, &redacted_prompt).await;
 
     match result {
         Ok(mut result) => {
@@ -265,7 +266,7 @@ async fn run_planning_agent(
         }
         Err(error) => {
             let started_at_ms = now_ms();
-            let stderr = error;
+            let stderr = redact_sensitive_text(&error);
             fs::write(&stdout_path, "")
                 .map_err(|error| format!("failed to write empty planning stdout: {error}"))?;
             fs::write(&stderr_path, &stderr)
@@ -358,6 +359,8 @@ async fn run_cli_profile(
     let stderr = stderr_task
         .await
         .map_err(|error| format!("failed to join stderr reader: {error}"))?;
+    let stdout = redact_sensitive_text(&stdout);
+    let stderr = redact_sensitive_text(&stderr);
     let exit_code = status.code();
     let stderr_only_error = status.success()
         && stdout.trim().is_empty()
@@ -1005,6 +1008,68 @@ fn stderr_tail(stderr: &str) -> Vec<String> {
         .collect()
 }
 
+fn redact_sensitive_text(input: &str) -> String {
+    let mut output = input
+        .lines()
+        .map(redact_sensitive_line)
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    if input.ends_with('\n') {
+        output.push('\n');
+    }
+
+    redact_bearer_tokens(&output)
+}
+
+fn redact_sensitive_line(line: &str) -> String {
+    let lower = line.to_ascii_lowercase();
+    let sensitive_keys = [
+        "api_key",
+        "apikey",
+        "access_token",
+        "auth_token",
+        "token",
+        "secret",
+        "password",
+        "passwd",
+    ];
+
+    if !sensitive_keys.iter().any(|key| lower.contains(key)) {
+        return line.to_string();
+    }
+
+    match line
+        .char_indices()
+        .find(|(_, character)| matches!(character, '=' | ':'))
+    {
+        Some((index, separator)) => format!("{}{} [REDACTED]", &line[..index], separator),
+        None => "[REDACTED sensitive line]".to_string(),
+    }
+}
+
+fn redact_bearer_tokens(input: &str) -> String {
+    let mut output = String::with_capacity(input.len());
+    let mut remaining = input;
+
+    while let Some(index) = remaining.to_ascii_lowercase().find("bearer ") {
+        output.push_str(&remaining[..index]);
+        output.push_str(&remaining[index..index + 7]);
+        output.push_str("[REDACTED]");
+
+        let token_start = index + 7;
+        let token_end = remaining[token_start..]
+            .char_indices()
+            .find(|(_, character)| character.is_whitespace())
+            .map(|(offset, _)| token_start + offset)
+            .unwrap_or(remaining.len());
+        remaining = &remaining[token_end..];
+    }
+
+    output.push_str(remaining);
+    output
+}
+
 #[cfg(not(windows))]
 fn shell_escape(value: &str) -> String {
     format!("'{}'", value.replace('\'', "'\\''"))
@@ -1321,6 +1386,40 @@ mod tests {
         assert_eq!(result.status, "succeeded");
         assert_eq!(result.exit_code, Some(0));
         assert!(result.stdout.contains("hello from prompt"));
+    }
+
+    #[test]
+    fn redacts_sensitive_tokens_from_planning_logs() {
+        let bearer_line = format!("Authorization: {} {}", "Bearer", "samplecredential");
+        let input = format!("api_key=sk-live-123\n{bearer_line}\nkeep this line");
+        let redacted = redact_sensitive_text(&input);
+
+        assert!(redacted.contains("api_key= [REDACTED]"));
+        assert!(redacted.contains("Bearer [REDACTED]"));
+        assert!(redacted.contains("keep this line"));
+        assert!(!redacted.contains("sk-live-123"));
+        assert!(!redacted.contains("samplecredential"));
+    }
+
+    #[tokio::test]
+    async fn cli_profile_redacts_stdout_and_stderr_before_storage() {
+        let profile = CliProfile {
+            command: "sh".to_string(),
+            args: vec![
+                "-c".to_string(),
+                "printf 'token=secret-stdout\\n'; printf 'password=hunter2\\n' >&2".to_string(),
+            ],
+            stdin_prompt: false,
+        };
+
+        let result = run_cli_profile(&profile, Path::new("."), "")
+            .await
+            .expect("shell profile should run");
+
+        assert!(!result.stdout.contains("secret-stdout"));
+        assert!(!result.stderr.contains("hunter2"));
+        assert!(result.stdout.contains("token= [REDACTED]"));
+        assert!(result.stderr.contains("password= [REDACTED]"));
     }
 
     #[tokio::test]
