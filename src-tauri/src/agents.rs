@@ -775,7 +775,7 @@ fn render_updated_plans_index(
     file_name: &str,
     summary: &str,
 ) -> String {
-    let entry = format!("- {file_name}\n  > {}", summary.trim());
+    let entry = format!("- `{file_name}`\n  > {}", summary.trim());
     let mut lines: Vec<String> = existing.lines().map(str::to_string).collect();
     if lines.is_empty() {
         lines.push("# 计划文档索引".to_string());
@@ -787,13 +787,7 @@ fn render_updated_plans_index(
             return ensure_trailing_newline(existing.trim_end());
         }
 
-        let mut insert_at = index + 1;
-        if lines
-            .get(insert_at)
-            .is_some_and(|line| line.trim().is_empty())
-        {
-            insert_at += 1;
-        }
+        let insert_at = date_section_plan_insert_index(&lines, index, file_name);
         lines.insert(insert_at, entry);
         return ensure_trailing_newline(&lines.join("\n"));
     }
@@ -812,12 +806,47 @@ fn render_updated_plans_index(
 }
 
 fn date_section_contains_plan(lines: &[String], heading_index: usize, file_name: &str) -> bool {
-    let entry_marker = format!("- {file_name}");
     lines
         .iter()
         .skip(heading_index + 1)
         .take_while(|line| !line.trim_start().starts_with("## "))
-        .any(|line| line.trim() == entry_marker)
+        .any(|line| plan_entry_file_name(line).is_some_and(|entry| entry == file_name))
+}
+
+fn date_section_plan_insert_index(
+    lines: &[String],
+    heading_index: usize,
+    file_name: &str,
+) -> usize {
+    let section_end = lines
+        .iter()
+        .enumerate()
+        .skip(heading_index + 1)
+        .find_map(|(index, line)| line.trim_start().starts_with("## ").then_some(index))
+        .unwrap_or_else(|| lines.len());
+
+    for (index, line) in lines
+        .iter()
+        .enumerate()
+        .skip(heading_index + 1)
+        .take(section_end.saturating_sub(heading_index + 1))
+    {
+        if let Some(existing_file_name) = plan_entry_file_name(line) {
+            if file_name > existing_file_name {
+                return index;
+            }
+        }
+    }
+
+    section_end
+}
+
+fn plan_entry_file_name(line: &str) -> Option<&str> {
+    let value = line.trim().strip_prefix("- ")?.trim();
+    value
+        .strip_prefix('`')
+        .and_then(|rest| rest.split_once('`').map(|(file_name, _)| file_name))
+        .or_else(|| value.split_whitespace().next())
 }
 
 fn plan_date_insert_index(lines: &[String], date: &str) -> usize {
@@ -1491,7 +1520,7 @@ mod tests {
 
     #[test]
     fn plans_index_inserts_newest_plan_under_existing_date() {
-        let existing = "# 计划文档索引\n\n## 2026-05-12\n\n- 04:00-old.md\n  > 旧计划。\n\n## 2026-05-11\n\n- 17:52-real-cli-agent-adapter.md\n  > 已实施真实 CLI adapter。\n";
+        let existing = "# 计划文档索引\n\n## 2026-05-12\n\n- `04:00-old.md`\n  > 旧计划。\n\n## 2026-05-11\n\n- `17:52-real-cli-agent-adapter.md`\n  > 已实施真实 CLI adapter。\n";
 
         let updated = render_updated_plans_index(
             existing,
@@ -1501,13 +1530,29 @@ mod tests {
         );
 
         assert!(updated.contains(
-            "## 2026-05-12\n\n- 05:10-plan-index-sync.md\n  > 自动维护计划索引。\n- 04:00-old.md"
+            "## 2026-05-12\n\n- `05:10-plan-index-sync.md`\n  > 自动维护计划索引。\n- `04:00-old.md`"
+        ));
+    }
+
+    #[test]
+    fn plans_index_keeps_existing_date_entries_in_time_desc_order() {
+        let existing = "# 计划文档索引\n\n## 2026-05-12\n\n- `08:00-newer.md`\n  > 较新的计划。\n- `04:00-older.md`\n  > 较旧的计划。\n";
+
+        let updated = render_updated_plans_index(
+            existing,
+            "2026-05-12",
+            "06:30-middle.md",
+            "中间时间应插入到对应位置。",
+        );
+
+        assert!(updated.contains(
+            "- `08:00-newer.md`\n  > 较新的计划。\n- `06:30-middle.md`\n  > 中间时间应插入到对应位置。\n- `04:00-older.md`"
         ));
     }
 
     #[test]
     fn plans_index_adds_missing_date_near_top() {
-        let existing = "# 计划文档索引\n\n## 2026-05-11\n\n- 17:52-real-cli-agent-adapter.md\n  > 已实施真实 CLI adapter。\n";
+        let existing = "# 计划文档索引\n\n## 2026-05-11\n\n- `17:52-real-cli-agent-adapter.md`\n  > 已实施真实 CLI adapter。\n";
 
         let updated = render_updated_plans_index(
             existing,
@@ -1517,7 +1562,7 @@ mod tests {
         );
 
         assert!(
-            updated.starts_with("# 计划文档索引\n\n## 2026-05-12\n\n- 05:10-plan-index-sync.md")
+            updated.starts_with("# 计划文档索引\n\n## 2026-05-12\n\n- `05:10-plan-index-sync.md`")
         );
         assert!(updated.contains("\n## 2026-05-11\n"));
     }
@@ -1525,7 +1570,7 @@ mod tests {
     #[test]
     fn plans_index_skips_duplicate_plan_file_in_same_date_section() {
         let existing =
-            "# 计划文档索引\n\n## 2026-05-12\n\n- 05:10-plan-index-sync.md\n  > 原摘要。\n";
+            "# 计划文档索引\n\n## 2026-05-12\n\n- `05:10-plan-index-sync.md`\n  > 原摘要。\n";
 
         let updated = render_updated_plans_index(
             existing,
@@ -1539,7 +1584,7 @@ mod tests {
 
     #[test]
     fn plans_index_allows_same_file_name_on_different_dates() {
-        let existing = "# 计划文档索引\n\n## 2026-05-12\n\n- 05:10-plan-index-sync.md\n  > 今天的计划。\n\n## 2026-05-11\n\n- 17:52-real-cli-agent-adapter.md\n  > 昨天的计划。\n";
+        let existing = "# 计划文档索引\n\n## 2026-05-12\n\n- `05:10-plan-index-sync.md`\n  > 今天的计划。\n\n## 2026-05-11\n\n- `17:52-real-cli-agent-adapter.md`\n  > 昨天的计划。\n";
 
         let updated = render_updated_plans_index(
             existing,
@@ -1550,13 +1595,13 @@ mod tests {
 
         assert_eq!(updated.matches("05:10-plan-index-sync.md").count(), 2);
         assert!(updated.contains(
-            "## 2026-05-11\n\n- 05:10-plan-index-sync.md\n  > 允许不同日期下同名计划文件。\n- 17:52-real-cli-agent-adapter.md"
+            "## 2026-05-11\n\n- `17:52-real-cli-agent-adapter.md`\n  > 昨天的计划。\n- `05:10-plan-index-sync.md`\n  > 允许不同日期下同名计划文件。"
         ));
     }
 
     #[test]
     fn plans_index_inserts_missing_older_date_after_newer_dates() {
-        let existing = "# 计划文档索引\n\n## 2026-05-12\n\n- 05:10-new.md\n  > 新计划。\n\n## 2026-05-10\n\n- 23:00-old.md\n  > 旧计划。\n";
+        let existing = "# 计划文档索引\n\n## 2026-05-12\n\n- `05:10-new.md`\n  > 新计划。\n\n## 2026-05-10\n\n- `23:00-old.md`\n  > 旧计划。\n";
 
         let updated = render_updated_plans_index(
             existing,
@@ -1566,7 +1611,7 @@ mod tests {
         );
 
         assert!(updated.contains(
-            "## 2026-05-12\n\n- 05:10-new.md\n  > 新计划。\n\n## 2026-05-11\n\n- 04:00-middle.md\n  > 中间日期应保持日期倒序。\n\n## 2026-05-10"
+            "## 2026-05-12\n\n- `05:10-new.md`\n  > 新计划。\n\n## 2026-05-11\n\n- `04:00-middle.md`\n  > 中间日期应保持日期倒序。\n\n## 2026-05-10"
         ));
     }
 
