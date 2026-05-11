@@ -1,11 +1,14 @@
 import { ClipboardCheck, FileText, Send, Terminal } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type FormEvent } from "react";
+import { useTaskBridge } from "../../hooks/useTaskBridge";
 import { useAppState } from "../../state/AppStateContext";
 import { Button } from "../common/Button";
 import "./Workspace.css";
 
 export function ImplementationOutputPane() {
   const { state } = useAppState();
+  const { appendFeedback } = useTaskBridge();
+  const project = state.projects.current;
   const task = state.tasks.find((candidate) => candidate.id === state.app.selectedTaskId) ?? null;
   const activeTodo = useMemo(
     () => task?.planTodos.find((todo) => todo.id === state.app.selectedTodoId) ?? task?.planTodos[0] ?? null,
@@ -16,6 +19,20 @@ export function ImplementationOutputPane() {
     [activeTodo, task],
   );
   const [note, setNote] = useState("");
+
+  async function handleGuidanceSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!project || !task || !activeTodo || !note.trim()) {
+      return;
+    }
+
+    const scopedGuidance = `Implementation guidance for todo ${activeTodoIndex + 1}: ${activeTodo.title}\n\n${note.trim()}`;
+    const updated = await appendFeedback(project.path, task.id, undefined, scopedGuidance);
+    if (updated) {
+      setNote("");
+    }
+  }
 
   return (
     <div className="pane-container">
@@ -68,17 +85,23 @@ next checkpoint: run targeted verification and request review`}
         )}
       </div>
 
-      <div className="implementation-composer">
+      <form className="implementation-composer" onSubmit={handleGuidanceSubmit}>
         <input
           className="feedback-input"
           value={note}
           onChange={(event) => setNote(event.target.value)}
-          placeholder="Add implementation guidance or @review-agent"
+          placeholder="Add scoped implementation guidance or @review-agent"
+          disabled={!project || !task || !activeTodo}
         />
-        <Button type="button" variant="primary" iconRight={<Send size={14} />} disabled={!note.trim()}>
+        <Button
+          type="submit"
+          variant="primary"
+          iconRight={<Send size={14} />}
+          disabled={!project || !task || !activeTodo || !note.trim()}
+        >
           Send
         </Button>
-      </div>
+      </form>
     </div>
   );
 }
