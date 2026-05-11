@@ -8,6 +8,12 @@ function toErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);
 }
 
+function assertTauriRuntime(action: string) {
+  if (!hasTauriRuntime()) {
+    throw new Error(`${action} requires the Tauri desktop runtime.`);
+  }
+}
+
 export function useAgentBridge() {
   const { dispatch } = useAppState();
 
@@ -29,6 +35,8 @@ export function useAgentBridge() {
     async (input: AgentConfigInput) => {
       dispatch({ type: "agents/loadStarted" });
       try {
+        assertTauriRuntime("Creating an Agent");
+
         const agent = await invoke<AgentConfig>("create_agent", { input });
         dispatch({ type: "agents/created", agent });
         return agent;
@@ -42,7 +50,10 @@ export function useAgentBridge() {
 
   const setAgentEnabled = useCallback(
     async (agentId: string, enabled: boolean) => {
+      dispatch({ type: "agents/loadStarted" });
       try {
+        assertTauriRuntime("Updating an Agent");
+
         const agents = await invoke<AgentConfig[]>("set_agent_enabled", { agentId, enabled });
         dispatch({ type: "agents/loaded", agents });
         return agents;
@@ -56,10 +67,9 @@ export function useAgentBridge() {
 
   const runPlanningDiscussion = useCallback(
     async (input: PlanningDiscussionInput) => {
+      dispatch({ type: "tasks/loadStarted" });
       try {
-        if (!hasTauriRuntime()) {
-          throw new Error("Planning discussion requires the Tauri desktop runtime.");
-        }
+        assertTauriRuntime("Planning discussion");
 
         const task = await invoke<Task>("run_planning_discussion", { input });
         dispatch({ type: "tasks/upserted", task });
