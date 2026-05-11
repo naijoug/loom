@@ -281,7 +281,7 @@ fn implementation_todo_lines(final_plan: &str) -> Vec<String> {
 
     for line in final_plan.lines() {
         let trimmed = line.trim();
-        if trimmed.starts_with("## ") {
+        if is_markdown_heading(trimmed) {
             in_section = is_implementation_todo_heading(trimmed);
             continue;
         }
@@ -302,6 +302,11 @@ fn implementation_todo_lines(final_plan: &str) -> Vec<String> {
     }
 
     todos
+}
+
+fn is_markdown_heading(line: &str) -> bool {
+    let marker_count = line.chars().take_while(|char| *char == '#').count();
+    (2..=6).contains(&marker_count) && line.as_bytes().get(marker_count) == Some(&b' ')
 }
 
 fn is_implementation_todo_heading(line: &str) -> bool {
@@ -385,6 +390,19 @@ mod tests {
         assert_eq!(
             implementation_todo_lines(plan),
             vec!["生成最终计划".to_string(), "调用主 Agent 实施".to_string()]
+        );
+    }
+
+    #[test]
+    fn extracts_implementation_todos_from_subheadings() {
+        let plan = "# Plan\n\n### Implementation Tasks\n\n- Run Agent review\n- Verify evidence\n\n#### Notes\n\n- This note is not an implementation todo";
+
+        assert_eq!(
+            implementation_todo_lines(plan),
+            vec![
+                "Run Agent review".to_string(),
+                "Verify evidence".to_string()
+            ]
         );
     }
 
