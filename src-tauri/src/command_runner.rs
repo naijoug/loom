@@ -382,7 +382,14 @@ fn is_error_line(line: &str) -> bool {
     }
 
     lower.starts_with("[error]")
+        || lower.starts_with("traceback ")
+        || lower.starts_with("uncaught ")
+        || lower.starts_with("unhandled ")
+        || lower.starts_with("exception ")
+        || lower.starts_with("internal server error")
         || lower.contains(": error ")
+        || lower.contains(" error:")
+        || lower.contains("failed to compile")
         || lower.contains("thread '") && lower.contains(" panicked at ")
 }
 
@@ -402,6 +409,12 @@ mod tests {
             "Failed assertion",
             "panic: abort",
             "fatal linker error",
+            "Traceback (most recent call last):",
+            "Uncaught TypeError: Cannot read properties of undefined",
+            "Unhandled Runtime Error",
+            "Exception in thread main",
+            "Internal server error: module failed",
+            "Build failed to compile",
         ] {
             assert!(is_error_line(line), "{line} should match");
         }
