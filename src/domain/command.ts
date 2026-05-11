@@ -47,5 +47,6 @@ export interface CommandFinishedEvent {
   runId: string;
   status: CommandRunStatus;
   exitCode?: number;
+  errorSummary?: ErrorSummary;
   timestampMs: number;
 }

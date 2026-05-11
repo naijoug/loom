@@ -12,9 +12,24 @@ export function DebugPane() {
   const { appendFeedback, generateRepairContext } = useTaskBridge();
   const project = state.projects.current;
   const task = state.tasks.find((candidate) => candidate.id === state.app.selectedTaskId) ?? null;
-  const activeRun = state.commandRuns.find((run) => run.id === state.app.activeCommandRunId);
+  const activeRun =
+    state.commandRuns.find((run) => run.id === state.app.activeCommandRunId) ??
+    (task
+      ? state.commandRuns
+          .filter((run) => run.taskId === task.id)
+          .sort((left, right) => right.startedAtMs - left.startedAtMs)[0]
+      : undefined);
   const [command, setCommand] = useState("pnpm build");
   const [feedback, setFeedback] = useState("");
+  const errorSummaryLines = activeRun?.errorSummary
+    ? [
+        `Error summary${typeof activeRun.errorSummary.exitCode === "number" ? ` (exit ${activeRun.errorSummary.exitCode})` : ""}`,
+        ...activeRun.errorSummary.matchedLines.slice(0, 8),
+        ...(activeRun.errorSummary.matchedLines.length === 0
+          ? activeRun.errorSummary.stderrTail.slice(-8)
+          : []),
+      ]
+    : [];
   const logText = useMemo(() => {
     if (state.commandLogs.length === 0) {
       return "No command logs yet.";
@@ -104,6 +119,9 @@ export function DebugPane() {
             [{activeRun.status}] {activeRun.command}
             {typeof activeRun.exitCode === "number" ? ` exit=${activeRun.exitCode}` : ""}
           </div>
+        )}
+        {errorSummaryLines.length > 0 && (
+          <pre className="terminal-output error-summary-preview">{errorSummaryLines.join("\n")}</pre>
         )}
         <pre className="terminal-output">{logText}</pre>
         {task?.repairContextPreview && (

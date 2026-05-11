@@ -57,6 +57,7 @@ export function useCommandBridge() {
             runId,
             status: "cancelled",
             exitCode: result.exitCode,
+            errorSummary: undefined,
             timestampMs: Date.now(),
           },
         });

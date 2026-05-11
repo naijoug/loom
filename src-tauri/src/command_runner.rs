@@ -313,7 +313,7 @@ fn spawn_command_monitor(
                     &run_id,
                     command_status,
                     exit_code,
-                    error_summary,
+                    error_summary.clone(),
                 );
                 let _ = app.emit(
                     "loom://command-finished",
@@ -322,6 +322,7 @@ fn spawn_command_monitor(
                         run_id: run_id.clone(),
                         status: command_status.to_string(),
                         exit_code,
+                        error_summary,
                         timestamp_ms: now_ms(),
                     },
                 );

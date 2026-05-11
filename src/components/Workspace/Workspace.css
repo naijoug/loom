@@ -497,6 +497,14 @@
   color: var(--theme-text-secondary);
 }
 
+.error-summary-preview {
+  border: 1px solid color-mix(in srgb, var(--theme-error) 42%, transparent);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background-color: color-mix(in srgb, var(--theme-error) 10%, transparent);
+  color: var(--theme-error);
+}
+
 .primary-text {
   color: var(--theme-text-primary);
 }

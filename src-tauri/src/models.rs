@@ -129,6 +129,7 @@ pub struct CommandFinishedEvent {
     pub run_id: String,
     pub status: String,
     pub exit_code: Option<i32>,
+    pub error_summary: Option<ErrorSummary>,
     pub timestamp_ms: u128,
 }
 

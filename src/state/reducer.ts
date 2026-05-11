@@ -300,6 +300,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
                 ...run,
                 status: action.event.status,
                 exitCode: action.event.exitCode,
+                errorSummary: action.event.errorSummary,
                 endedAtMs: action.event.timestampMs,
               }
             : run,
