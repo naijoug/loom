@@ -1,4 +1,4 @@
-import { ClipboardCheck, FileText, Send, Terminal } from "lucide-react";
+import { ClipboardCheck, FileText, Send, ShieldCheck, Terminal } from "lucide-react";
 import { useMemo, useState, type FormEvent } from "react";
 import { useTaskBridge } from "../../hooks/useTaskBridge";
 import { useAppState } from "../../state/AppStateContext";
@@ -18,6 +18,18 @@ export function ImplementationOutputPane() {
     () => (activeTodo && task ? task.planTodos.findIndex((todo) => todo.id === activeTodo.id) : -1),
     [activeTodo, task],
   );
+  const reviewChecklist = useMemo(() => {
+    if (!task || !activeTodo) {
+      return [];
+    }
+
+    return [
+      `Scope: only implement todo ${activeTodoIndex + 1} and keep unrelated files unchanged.`,
+      `Evidence: run the smallest relevant verification and attach command output to the task record.`,
+      `Review: compare the diff against ${activeTodo.planRef ?? task.finalPlanPath ?? "the confirmed final plan"}.`,
+      "Handoff: record accepted risks, blockers, or the next repair loop before selecting another todo.",
+    ];
+  }, [activeTodo, activeTodoIndex, task]);
   const [note, setNote] = useState("");
 
   async function handleGuidanceSubmit(event: FormEvent<HTMLFormElement>) {
@@ -73,12 +85,25 @@ export function ImplementationOutputPane() {
               </div>
             </div>
 
+            <div className="implementation-review-card">
+              <div className="implementation-review-header">
+                <ShieldCheck size={15} />
+                Review handoff checklist
+              </div>
+              <ol className="implementation-review-list">
+                {reviewChecklist.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ol>
+            </div>
+
             <pre className="terminal-output implementation-terminal">
 {`$ loom-agent --todo "${activeTodo.title}"
 reading final plan: ${task?.finalPlanPath ?? "pending"}
 execution boundary: todo ${activeTodoIndex + 1}/${task?.planTodos.length ?? 0}
 selected todo: ${activeTodo.description}
 status: ${activeTodo.status}
+review handoff: scope, evidence, diff review, blockers
 next checkpoint: run targeted verification and request review`}
             </pre>
           </>
