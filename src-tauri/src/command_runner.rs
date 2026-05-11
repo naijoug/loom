@@ -367,11 +367,20 @@ fn analyze_error(exit_code: Option<i32>, stderr_lines: &[String]) -> ErrorSummar
 
 fn is_error_line(line: &str) -> bool {
     let lower = line.trim_start().to_ascii_lowercase();
-    ["error", "fail", "failed", "panic", "fatal"]
+    if ["error", "fail", "failed", "panic", "fatal"]
         .iter()
         .any(|prefix| {
-            lower.starts_with(&format!("{prefix}:")) || lower.starts_with(&format!("{prefix} "))
+            lower.starts_with(&format!("{prefix}:"))
+                || lower.starts_with(&format!("{prefix} "))
+                || lower.starts_with(&format!("{prefix}["))
         })
+    {
+        return true;
+    }
+
+    lower.starts_with("[error]")
+        || lower.contains(": error ")
+        || lower.contains("thread '") && lower.contains(" panicked at ")
 }
 
 #[cfg(test)]
@@ -382,6 +391,10 @@ mod tests {
     fn matches_error_summary_prefixes_case_insensitively() {
         for line in [
             "ERROR: failed build",
+            "error[E0308]: mismatched types",
+            "[ERROR] build failed",
+            "src/main.ts(1,1): error TS2304: Cannot find name",
+            "thread 'main' panicked at src/main.rs:1:1",
             "fail test case",
             "Failed assertion",
             "panic: abort",
