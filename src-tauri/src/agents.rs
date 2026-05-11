@@ -619,8 +619,22 @@ fn planning_evidence_dir(project_path: &Path, task_id: &str, planning_run_id: &s
 }
 
 fn next_project_plan_path(project_path: &Path, task_title: &str) -> Result<PathBuf, String> {
-    let plans_dir = storage::project_plans_dir(project_path);
-    let base_name = format!("{}-{}", local_date_string(), slugify_plan_title(task_title));
+    next_project_plan_path_for_stamp(
+        project_path,
+        &local_date_string(),
+        &local_time_string(),
+        task_title,
+    )
+}
+
+fn next_project_plan_path_for_stamp(
+    project_path: &Path,
+    local_date: &str,
+    local_time: &str,
+    task_title: &str,
+) -> Result<PathBuf, String> {
+    let plans_dir = storage::project_plans_dir(project_path).join(local_date);
+    let base_name = format!("{}-{}", local_time, slugify_plan_title(task_title));
     let mut candidate = plans_dir.join(format!("{base_name}.md"));
     let mut suffix = 2;
 
@@ -662,6 +676,10 @@ fn local_date_string() -> String {
     platform_local_date().unwrap_or_else(|| utc_date_string(SystemTime::now()))
 }
 
+fn local_time_string() -> String {
+    platform_local_time().unwrap_or_else(|| utc_time_string(SystemTime::now()))
+}
+
 #[cfg(not(windows))]
 fn platform_local_date() -> Option<String> {
     Command::new("date")
@@ -686,6 +704,30 @@ fn platform_local_date() -> Option<String> {
         .filter(|value| value.len() == 10)
 }
 
+#[cfg(not(windows))]
+fn platform_local_time() -> Option<String> {
+    Command::new("date")
+        .arg("+%H:%M")
+        .output()
+        .ok()
+        .filter(|output| output.status.success())
+        .and_then(|output| String::from_utf8(output.stdout).ok())
+        .map(|value| value.trim().to_string())
+        .filter(|value| value.len() == 5)
+}
+
+#[cfg(windows)]
+fn platform_local_time() -> Option<String> {
+    Command::new("powershell")
+        .args(["-NoProfile", "-Command", "Get-Date -Format HH:mm"])
+        .output()
+        .ok()
+        .filter(|output| output.status.success())
+        .and_then(|output| String::from_utf8(output.stdout).ok())
+        .map(|value| value.trim().to_string())
+        .filter(|value| value.len() == 5)
+}
+
 fn utc_date_string(time: SystemTime) -> String {
     let seconds = time
         .duration_since(UNIX_EPOCH)
@@ -694,6 +736,17 @@ fn utc_date_string(time: SystemTime) -> String {
     let days = seconds.div_euclid(86_400);
     let (year, month, day) = civil_from_days(days);
     format!("{year:04}-{month:02}-{day:02}")
+}
+
+fn utc_time_string(time: SystemTime) -> String {
+    let seconds = time
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_secs() as i64)
+        .unwrap_or_default();
+    let seconds_in_day = seconds.rem_euclid(86_400);
+    let hour = seconds_in_day.div_euclid(3_600);
+    let minute = seconds_in_day.rem_euclid(3_600).div_euclid(60);
+    format!("{hour:02}:{minute:02}")
 }
 
 // Howard Hinnant's civil-from-days algorithm, using days since Unix epoch.
@@ -1007,31 +1060,63 @@ mod tests {
     }
 
     #[test]
-    fn fallback_utc_date_formats_iso_day() {
+    fn fallback_utc_date_and_time_format_plan_stamp_parts() {
         assert_eq!(utc_date_string(UNIX_EPOCH), "1970-01-01");
+        assert_eq!(utc_time_string(UNIX_EPOCH), "00:00");
         assert_eq!(
             utc_date_string(UNIX_EPOCH + Duration::from_secs(86_400 * 20_000)),
             "2024-10-04"
         );
+        assert_eq!(
+            utc_time_string(UNIX_EPOCH + Duration::from_secs(23 * 3_600 + 59 * 60)),
+            "23:59"
+        );
     }
 
     #[test]
-    fn next_project_plan_path_uses_docs_plans_and_date_slug() {
+    fn next_project_plan_path_uses_date_directory_time_and_slug() {
         let root = std::env::temp_dir().join(format!("loom-plan-path-test-{}", now_ms()));
-        fs::create_dir_all(root.join("docs").join("plans")).expect("test dir should be created");
-
-        let path = next_project_plan_path(&root, "Real CLI Agent Adapter")
-            .expect("plan path should be generated");
+        let path = next_project_plan_path_for_stamp(
+            &root,
+            "2026-05-12",
+            "04:00",
+            "Real CLI Agent Adapter",
+        )
+        .expect("plan path should be generated");
 
         assert_eq!(
             path.parent(),
-            Some(root.join("docs").join("plans")).as_deref()
+            Some(root.join("docs").join("plans").join("2026-05-12")).as_deref()
         );
-        assert!(path
-            .file_name()
-            .and_then(|name| name.to_str())
-            .unwrap_or_default()
-            .ends_with("-real-cli-agent-adapter.md"));
+        assert_eq!(
+            path.file_name().and_then(|name| name.to_str()),
+            Some("04:00-real-cli-agent-adapter.md")
+        );
+    }
+
+    #[test]
+    fn next_project_plan_path_suffixes_colliding_same_minute_plan() {
+        let root = std::env::temp_dir().join(format!("loom-plan-path-collision-test-{}", now_ms()));
+        let plans_dir = root.join("docs").join("plans").join("2026-05-12");
+        fs::create_dir_all(&plans_dir).expect("test dir should be created");
+        fs::write(
+            plans_dir.join("04:00-real-cli-agent-adapter.md"),
+            "existing",
+        )
+        .expect("collision file should be written");
+
+        let path = next_project_plan_path_for_stamp(
+            &root,
+            "2026-05-12",
+            "04:00",
+            "Real CLI Agent Adapter",
+        )
+        .expect("plan path should be generated");
+
+        assert_eq!(
+            path.file_name().and_then(|name| name.to_str()),
+            Some("04:00-real-cli-agent-adapter-2.md")
+        );
 
         fs::remove_dir_all(root).expect("test dir should be removed");
     }

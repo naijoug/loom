@@ -3,7 +3,7 @@
 - **日期**：2026-05-11
 - **作者**：Codex
 - **状态**：已实施；本地构建、Rust 检查和 adapter 单元测试通过
-- **最近更新**：2026-05-12 修正真实接入链路：Codex 使用当前 CLI 参数、Amp 使用 execute mode、Settings 可查看和启停真实 CLI profile
+- **最近更新**：2026-05-12 修正真实接入链路：Codex 使用当前 CLI 参数、Amp 使用 execute mode、Settings 可查看和启停真实 CLI profile；最终计划路径按 `docs/plans/YYYY-MM-DD/HH:mm-topic.md` 生成
 
 ## 目标
 
@@ -60,7 +60,7 @@
 - Amp Free 环境下 `amp -x` 会返回 stderr-only 402 错误且 exit code 为 0；后端现在把 stderr-only `Error:` / `error:` 归类为 failed invocation。
 - Planning discussion 成功后现在进入 `plan_review`，前端展示最终计划预览和 `Confirm Plan`；只有用户确认后才派生 todo 并进入 `ready_to_implement`。
 - 新增 `confirm_plan` Tauri command，从最终计划的 `## Implementation Todo` 段落提取 todo；失败计划没有 todo 时不能确认。
-- 最终计划文档主路径改为选定项目的 `docs/plans/YYYY-MM-dd-xxx.md`；`.loom/planning` 仅保存 prompt/stdout/stderr evidence。
+- 最终计划文档主路径改为选定项目的 `docs/plans/YYYY-MM-DD/HH:mm-xxx.md`；同一分钟内重名时追加 `-2` 等后缀；`.loom/planning` 仅保存 prompt/stdout/stderr evidence。
 - Planning composer 默认使用全部可用真实 planning Agent（Codex CLI、Claude Code CLI、Amp CLI）；使用 `@codex` / `@claude-code` / `@amp` 可收窄到指定 Agent。
 - 真实 CLI smoke 结果：Codex CLI 返回 `LOOM_CODEX_OK`，Claude Code CLI 返回 `LOOM_CLAUDE_OK`，Amp CLI 启动成功但因当前账号缺少 paid credits 返回 402。
 - 新增 Rust 单元测试覆盖 Codex 当前参数、Amp execute mode、旧 dummy 配置归一化、指定 Agent 不回退、stderr-only 错误判失败、最终计划 todo 提取。
