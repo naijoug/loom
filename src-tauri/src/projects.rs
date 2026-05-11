@@ -94,7 +94,7 @@ fn analyze_project_path(
             detected_stacks.insert("Vite".to_string());
         }
 
-        collect_package_commands(package, &mut suggested_commands);
+        collect_package_commands(package, project_path, &mut suggested_commands);
     }
 
     if project_path.join("Cargo.toml").exists()
@@ -158,15 +158,43 @@ fn dependency_exists(package: &Value, name: &str) -> bool {
         .any(|dependencies| dependencies.contains_key(name))
 }
 
-fn collect_package_commands(package: &Value, commands: &mut Vec<String>) {
+fn collect_package_commands(package: &Value, project_path: &Path, commands: &mut Vec<String>) {
     let Some(scripts) = package.get("scripts").and_then(Value::as_object) else {
         return;
     };
 
+    let package_manager = detect_package_manager(package, project_path);
     for preferred in ["build", "test", "lint", "dev"] {
         if scripts.contains_key(preferred) {
-            push_unique(commands, format!("pnpm {preferred}"));
+            push_unique(commands, format!("{package_manager} {preferred}"));
         }
+    }
+}
+
+fn detect_package_manager(package: &Value, project_path: &Path) -> &'static str {
+    if let Some(package_manager) = package.get("packageManager").and_then(Value::as_str) {
+        if package_manager.starts_with("pnpm@") {
+            return "pnpm";
+        }
+        if package_manager.starts_with("yarn@") {
+            return "yarn";
+        }
+        if package_manager.starts_with("bun@") {
+            return "bun";
+        }
+        if package_manager.starts_with("npm@") {
+            return "npm run";
+        }
+    }
+
+    if project_path.join("pnpm-lock.yaml").exists() {
+        "pnpm"
+    } else if project_path.join("yarn.lock").exists() {
+        "yarn"
+    } else if project_path.join("bun.lockb").exists() || project_path.join("bun.lock").exists() {
+        "bun"
+    } else {
+        "npm run"
     }
 }
 
@@ -249,5 +277,40 @@ mod tests {
         assert!(summary
             .suggested_commands
             .contains(&"cargo check --manifest-path src-tauri/Cargo.toml".to_string()));
+    }
+
+    #[test]
+    fn package_command_suggestions_use_declared_package_manager() {
+        let package = serde_json::json!({
+            "packageManager": "npm@10.8.2",
+            "scripts": {
+                "build": "vite build",
+                "lint": "eslint ."
+            }
+        });
+        let mut commands = Vec::new();
+
+        collect_package_commands(&package, Path::new("/tmp/loom-no-lock"), &mut commands);
+
+        assert_eq!(commands, vec!["npm run build", "npm run lint"]);
+    }
+
+    #[test]
+    fn package_command_suggestions_use_lockfile_package_manager() {
+        let package = serde_json::json!({
+            "scripts": {
+                "build": "vite build"
+            }
+        });
+        let temp_dir =
+            std::env::temp_dir().join(format!("loom-projects-test-{}", std::process::id()));
+        fs::create_dir_all(&temp_dir).expect("temp dir should be created");
+        fs::write(temp_dir.join("yarn.lock"), "").expect("lockfile should be created");
+        let mut commands = Vec::new();
+
+        collect_package_commands(&package, &temp_dir, &mut commands);
+
+        fs::remove_dir_all(&temp_dir).expect("temp dir should be cleaned up");
+        assert_eq!(commands, vec!["yarn build"]);
     }
 }
