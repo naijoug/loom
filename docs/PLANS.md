@@ -3,7 +3,7 @@
 ## 2026-05-11
 
 - 17:52-real-cli-agent-adapter.md
-  > 已实施第一阶段真实 CLI adapter，并在 2026-05-12 修正 Codex 当前参数、Amp execute mode 与 Settings 启停入口。
+  > 已实施第一阶段真实 CLI adapter，并在 2026-05-12 补齐真实 CLI smoke、计划确认流程、`docs/plans/YYYY-MM-dd-xxx.md` 输出和多轮前端/Rust 夜间验证记录。
 
 ## 2026-05-09
 

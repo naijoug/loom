@@ -1,6 +1,6 @@
 use crate::{
     models::{
-        now_ms, AgentConfig, AgentConfigInput, AgentInvocation, IdGenerator, PlanTodoItem,
+        now_ms, AgentConfig, AgentConfigInput, AgentInvocation, IdGenerator,
         PlanningDiscussionInput, PlanningRun, TaskEvent,
     },
     storage, tasks,
@@ -9,7 +9,7 @@ use std::{
     fs,
     path::{Path, PathBuf},
     process::Command,
-    time::Duration,
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use tauri::{AppHandle, State};
 use tokio::{
@@ -157,8 +157,7 @@ pub async fn run_planning_discussion(
     let discussion_summary = summarize_discussion(&selected_agents, &requirement, &invocations);
     let final_plan =
         render_final_plan(&task.title, &requirement, &discussion_summary, &invocations);
-    let plan_path = storage::project_plans_dir(Path::new(&input.project_path))
-        .join(format!("{}-final-plan.md", task.id));
+    let plan_path = next_project_plan_path(Path::new(&input.project_path), &task.title)?;
     fs::create_dir_all(
         plan_path
             .parent()
@@ -168,17 +167,8 @@ pub async fn run_planning_discussion(
     fs::write(&plan_path, &final_plan)
         .map_err(|error| format!("failed to write final plan: {error}"))?;
 
-    let plan_todos = if successful_invocations > 0 {
-        derive_plan_todos(&ids, &task.id, &plan_path.display().to_string())
-    } else {
-        Vec::new()
-    };
     let finished_at_ms = now_ms();
-    task.status = if successful_invocations > 0 {
-        "ready_to_implement".to_string()
-    } else {
-        "plan_review".to_string()
-    };
+    task.status = "plan_review".to_string();
     task.raw_requirement = requirement.clone();
     task.final_plan = Some(final_plan);
     task.final_plan_path = Some(plan_path.display().to_string());
@@ -202,7 +192,7 @@ pub async fn run_planning_discussion(
         ended_at_ms: Some(finished_at_ms),
     });
     task.agent_invocations.extend(invocations);
-    task.plan_todos = plan_todos;
+    task.plan_todos = Vec::new();
     task.updated_at_ms = finished_at_ms;
     task.events.push(TaskEvent {
         id: ids.next("event"),
@@ -212,7 +202,7 @@ pub async fn run_planning_discussion(
         status: task.status.clone(),
         input_summary: Some(prompt_summary),
         output_summary: Some(if successful_invocations > 0 {
-            "Planning discussion generated a final plan and implementation todo list.".to_string()
+            "Planning discussion generated a final plan for review.".to_string()
         } else {
             "Planning discussion failed for all selected real agents.".to_string()
         }),
@@ -592,6 +582,9 @@ fn render_final_plan(
     discussion_summary: &str,
     invocations: &[AgentInvocation],
 ) -> String {
+    let has_successful_agent = invocations
+        .iter()
+        .any(|invocation| invocation.status == "succeeded");
     let agent_notes = invocations
         .iter()
         .map(|invocation| {
@@ -602,43 +595,20 @@ fn render_final_plan(
         })
         .collect::<Vec<_>>()
         .join("\n");
+    let implementation_todo = if has_successful_agent {
+        "1. Implement the planning Agent adapter contract.\n2. Persist planning runs and Agent invocation evidence.\n3. Generate the final plan document and todo list.\n4. Add the implementation handoff view."
+    } else {
+        "No implementation todo items were generated because all selected planning agents failed."
+    };
+    let acceptance_criteria = if has_successful_agent {
+        "- The planning discussion is visible in the right-side conversation stream.\n- The final plan is written to `docs/plans/` in the selected project.\n- The user can confirm the plan and move the task to `ready_to_implement` with actionable todo items."
+    } else {
+        "- Failed Agent diagnostics are visible in the right-side conversation stream.\n- The final plan is written to `docs/plans/` in the selected project for troubleshooting.\n- The task remains in plan review until a successful planning run is available."
+    };
 
     format!(
-        "# {task_title} — Final Plan\n\n## Requirement\n\n{requirement}\n\n## Discussion Summary\n\n{discussion_summary}\n\n## Agent Notes\n\n{agent_notes}\n\n## Implementation Todo\n\n1. Implement the planning Agent adapter contract.\n2. Persist planning runs and Agent invocation evidence.\n3. Generate the final plan document and todo list.\n4. Add the implementation handoff view.\n\n## Acceptance Criteria\n\n- The planning discussion is visible in the right-side conversation stream.\n- The final plan is written to `.loom/plans/`.\n- The task reaches `ready_to_implement` with actionable todo items.\n"
+        "# {task_title} — Final Plan\n\n## Requirement\n\n{requirement}\n\n## Discussion Summary\n\n{discussion_summary}\n\n## Agent Notes\n\n{agent_notes}\n\n## Implementation Todo\n\n{implementation_todo}\n\n## Acceptance Criteria\n\n{acceptance_criteria}\n"
     )
-}
-
-fn derive_plan_todos(
-    ids: &State<'_, IdGenerator>,
-    task_id: &str,
-    plan_ref: &str,
-) -> Vec<PlanTodoItem> {
-    [
-        (
-            "Agent adapter 最小执行协议",
-            "实现计划阶段的 Agent 调用契约，第一版保留非交互 prompt-file 路径。",
-        ),
-        (
-            "规划讨论事件与原始输出持久化",
-            "保存 PlanningRun、AgentInvocation、原始输出、摘要和 evidenceRef。",
-        ),
-        (
-            "最终计划生成与进入实施按钮",
-            "写入最终计划 Markdown，派生 todo，并让任务进入 ready_to_implement。",
-        ),
-    ]
-    .into_iter()
-    .enumerate()
-    .map(|(index, (title, description))| PlanTodoItem {
-        id: ids.next("todo"),
-        task_id: task_id.to_string(),
-        title: title.to_string(),
-        description: description.to_string(),
-        status: "pending".to_string(),
-        order: index as u32,
-        plan_ref: Some(plan_ref.to_string()),
-    })
-    .collect()
 }
 
 fn planning_evidence_dir(project_path: &Path, task_id: &str, planning_run_id: &str) -> PathBuf {
@@ -646,6 +616,100 @@ fn planning_evidence_dir(project_path: &Path, task_id: &str, planning_run_id: &s
         .join("planning")
         .join(task_id)
         .join(planning_run_id)
+}
+
+fn next_project_plan_path(project_path: &Path, task_title: &str) -> Result<PathBuf, String> {
+    let plans_dir = storage::project_plans_dir(project_path);
+    let base_name = format!("{}-{}", local_date_string(), slugify_plan_title(task_title));
+    let mut candidate = plans_dir.join(format!("{base_name}.md"));
+    let mut suffix = 2;
+
+    while candidate.exists() {
+        candidate = plans_dir.join(format!("{base_name}-{suffix}.md"));
+        suffix += 1;
+    }
+
+    Ok(candidate)
+}
+
+fn slugify_plan_title(title: &str) -> String {
+    let mut slug = String::new();
+    let mut previous_dash = false;
+
+    for character in title.chars().flat_map(char::to_lowercase) {
+        if character.is_ascii_alphanumeric() {
+            slug.push(character);
+            previous_dash = false;
+        } else if !previous_dash && !slug.is_empty() {
+            slug.push('-');
+            previous_dash = true;
+        }
+
+        if slug.len() >= 64 {
+            break;
+        }
+    }
+
+    let slug = slug.trim_matches('-').to_string();
+    if slug.is_empty() {
+        "plan".to_string()
+    } else {
+        slug
+    }
+}
+
+fn local_date_string() -> String {
+    platform_local_date().unwrap_or_else(|| utc_date_string(SystemTime::now()))
+}
+
+#[cfg(not(windows))]
+fn platform_local_date() -> Option<String> {
+    Command::new("date")
+        .arg("+%Y-%m-%d")
+        .output()
+        .ok()
+        .filter(|output| output.status.success())
+        .and_then(|output| String::from_utf8(output.stdout).ok())
+        .map(|value| value.trim().to_string())
+        .filter(|value| value.len() == 10)
+}
+
+#[cfg(windows)]
+fn platform_local_date() -> Option<String> {
+    Command::new("powershell")
+        .args(["-NoProfile", "-Command", "Get-Date -Format yyyy-MM-dd"])
+        .output()
+        .ok()
+        .filter(|output| output.status.success())
+        .and_then(|output| String::from_utf8(output.stdout).ok())
+        .map(|value| value.trim().to_string())
+        .filter(|value| value.len() == 10)
+}
+
+fn utc_date_string(time: SystemTime) -> String {
+    let seconds = time
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_secs() as i64)
+        .unwrap_or_default();
+    let days = seconds.div_euclid(86_400);
+    let (year, month, day) = civil_from_days(days);
+    format!("{year:04}-{month:02}-{day:02}")
+}
+
+// Howard Hinnant's civil-from-days algorithm, using days since Unix epoch.
+fn civil_from_days(days_since_epoch: i64) -> (i32, u32, u32) {
+    let z = days_since_epoch + 719_468;
+    let era = if z >= 0 { z } else { z - 146_096 }.div_euclid(146_097);
+    let doe = z - era * 146_097;
+    let yoe = (doe - doe / 1_460 + doe / 36_524 - doe / 146_096).div_euclid(365);
+    let mut year = yoe + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2).div_euclid(153);
+    let day = doy - (153 * mp + 2).div_euclid(5) + 1;
+    let month = mp + if mp < 10 { 3 } else { -9 };
+    year += if month <= 2 { 1 } else { 0 };
+
+    (year as i32, month as u32, day as u32)
 }
 
 fn load_agents(app: &AppHandle) -> Result<Vec<AgentConfig>, String> {
@@ -931,6 +995,45 @@ mod tests {
 
         assert_eq!(selected.len(), 1);
         assert_eq!(selected[0].id, "agent-codex");
+    }
+
+    #[test]
+    fn slugifies_plan_title_for_project_docs_plans_filename() {
+        assert_eq!(
+            slugify_plan_title("Real CLI Agent Adapter!"),
+            "real-cli-agent-adapter"
+        );
+        assert_eq!(slugify_plan_title("计划功能"), "plan");
+    }
+
+    #[test]
+    fn fallback_utc_date_formats_iso_day() {
+        assert_eq!(utc_date_string(UNIX_EPOCH), "1970-01-01");
+        assert_eq!(
+            utc_date_string(UNIX_EPOCH + Duration::from_secs(86_400 * 20_000)),
+            "2024-10-04"
+        );
+    }
+
+    #[test]
+    fn next_project_plan_path_uses_docs_plans_and_date_slug() {
+        let root = std::env::temp_dir().join(format!("loom-plan-path-test-{}", now_ms()));
+        fs::create_dir_all(root.join("docs").join("plans")).expect("test dir should be created");
+
+        let path = next_project_plan_path(&root, "Real CLI Agent Adapter")
+            .expect("plan path should be generated");
+
+        assert_eq!(
+            path.parent(),
+            Some(root.join("docs").join("plans")).as_deref()
+        );
+        assert!(path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or_default()
+            .ends_with("-real-cli-agent-adapter.md"));
+
+        fs::remove_dir_all(root).expect("test dir should be removed");
     }
 
     #[test]

@@ -26,8 +26,8 @@
 - Agent 的讨论输出按消息流显示在右侧主体区域，而不是分散在左右两个工作区。
 - 后端能按统一 adapter 协议调用至少一个真实 CLI Agent；无真实 Agent 时 dummy adapter 仍可验证完整流程。
 - 每个 Agent 的输入、输出、退出状态、摘要和 evidenceRef 被持久化到任务历史。
-- 系统生成最终计划 Markdown，并写入项目 `.loom/plans/<task-id>-final-plan.md`。
-- 任务状态从 `drafting_requirements` / `planning` 推进到 `ready_to_implement`。
+- 系统生成最终计划 Markdown，并写入选定项目的 `docs/plans/YYYY-MM-dd-xxx.md`。
+- 任务状态从 `drafting_requirements` / `planning` 推进到 `plan_review`，用户确认计划后进入 `ready_to_implement`。
 - UI 显示最终计划摘要和 todo 列表，并提供确认计划/进入实施按钮。
 - 进入实施后，左侧为 todo 列表，右侧为当前 todo 的 Agent 实施输出和补充输入框。
 - `pnpm build`、`cargo check`、相关 Rust 单元测试通过。
@@ -38,7 +38,7 @@
 - `run_planning_discussion` 已成为正式 Tauri command，能按统一 adapter 契约调用 Codex CLI、Claude Code CLI（binary 为 `claude`）、Amp CLI 或 dummy fixture。
 - 每次 planning invocation 会保存 prompt、stdout、stderr evidence，记录状态、耗时、退出码、stderr tail 和 final plan path。
 - dummy Agent 仅作为 `adapterType: "dummy"` 的测试 fixture；旧 `run_dummy_planning` bridge 已移除。
-- 任务可从 planning 推进到 `ready_to_implement`，并展示 final plan 与 todo。
+- 任务可从 planning 推进到 `plan_review`，展示 final plan；用户确认后生成 todo 并进入 `ready_to_implement`。
 - `docs/requirements.md`：明确要求多 Agent 讨论、共识/冲突/风险汇总和最终计划文档。
 - `designs/loom.pen`：已更新为 Codex App 风格计划阶段 UI，包括左侧项目列表、右侧讨论输出、底部 composer、`@agent` 选择和确认计划入口。
 
@@ -79,7 +79,7 @@
 |---|------|-------------|------|------|
 | 1.1 | 增加 `PlanningRun`、`AgentInvocation`、`PlanTodoItem` 类型 | `src/domain/task.ts`, `src-tauri/src/models.rs` | 无 | TypeScript 与 Rust camelCase DTO 字段一致 |
 | 1.2 | 扩展 `Task`：保存 planningRuns、planTodos、finalPlanPath、discussionSummary | `src/domain/task.ts`, `src-tauri/src/models.rs` | 1.1 | 创建任务后 JSON 可读回新增字段默认值 |
-| 1.3 | 增加 reducer action：planning started / invocation updated / plan generated | `src/state/reducer.ts` | 1.1 | UI 状态能从 running 到 ready_to_implement |
+| 1.3 | 增加 reducer action：planning started / invocation updated / plan generated | `src/state/reducer.ts` | 1.1 | UI 状态能从 running 到 plan_review，再经确认进入 ready_to_implement |
 
 ### M2 — Agent adapter 最小调用协议
 
@@ -98,9 +98,9 @@
 | # | 任务 | 文件 / 符号 | 依赖 | 验证 |
 |---|------|-------------|------|------|
 | 3.1 | 实现 deterministic summarizer：提取共识、冲突、风险、待确认问题 | `src-tauri/src/agents.rs` 或 `planning.rs` | M2 | 多份 dummy/fixture 输出能生成稳定摘要 |
-| 3.2 | 生成最终 Markdown 计划文档 | `src-tauri/src/tasks.rs`, `src-tauri/src/storage.rs` | 3.1 | `.loom/plans/<task-id>-final-plan.md` 存在且包含要求章节 |
+| 3.2 | 生成最终 Markdown 计划文档 | `src-tauri/src/tasks.rs`, `src-tauri/src/storage.rs` | 3.1 | `docs/plans/YYYY-MM-dd-xxx.md` 存在且包含要求章节 |
 | 3.3 | 从最终计划派生实施 todo 列表 | `src-tauri/src/models.rs`, `src-tauri/src/tasks.rs` | 3.2 | todo 至少包含标题、状态、排序、planRef |
-| 3.4 | 计划成功后设置任务状态为 `ready_to_implement` | `src-tauri/src/tasks.rs` | 3.2, 3.3 | Header 流程条进入实施前状态，按钮可用 |
+| 3.4 | 计划成功后设置任务状态为 `plan_review`，确认后进入 `ready_to_implement` | `src-tauri/src/tasks.rs` | 3.2, 3.3 | Header 流程条停留在规划 Review，确认按钮可用 |
 
 ### M4 — 主页面计划 UI 接入
 
@@ -131,18 +131,18 @@
 | 不同 Agent CLI 输入输出协议差异过大 | 高 | 高 | 第一版只支持非交互 prompt-file；adapter 失败只记录，不阻断其它 Agent |
 | 计划汇总质量不稳定 | 中 | 中 | 先用结构化 prompt + deterministic 汇总模板，后续再引入专门汇总 Agent |
 | 前端计划和实施职责混在一个组件 | 中 | 中 | 拆出 `PlanningPane`，保留 `ImplementationPane` 给第二阶段 |
-| 写入用户项目 `.loom/` 可能产生脏文件 | 中 | 中 | 所有计划/输出都集中在 `.loom/plans` 和任务事件，UI 显示路径 |
+| 写入用户项目 `docs/plans` 和 `.loom/` 可能产生脏文件 | 中 | 中 | 最终计划写入 `docs/plans`，raw evidence 集中在 `.loom/planning`，UI 显示路径 |
 | 真实 CLI 调用耗时长或失败 | 中 | 中 | invocation 有状态、耗时、stderr 摘要；允许部分成功生成计划 |
 
 ## 待确认问题
 
 - [x] 第一版真实 Agent 同时覆盖 Codex CLI、Claude Code CLI（binary 为 `claude`）和 Amp CLI。
 - [ ] “进入实施任务”后 todo 是否允许逐项实施，还是先进入整个计划级实施。
-- [ ] 最终计划是否需要用户显式确认后才进入 `ready_to_implement`，还是自动生成后即可进入。
+- [x] 最终计划需要用户显式确认后才进入 `ready_to_implement`。
 
 ## 验证策略
 
 - 数据层：用 Rust 单元测试覆盖 Agent invocation 序列化、计划文档写入、todo 派生和失败 Agent 记录。
 - 前端：运行 `pnpm build` 验证类型和组件集成；手动检查空项目、无 Agent、运行中、失败、完成状态。
 - 后端：运行 `cargo check` 与 `cargo test`。
-- 端到端：登记当前 Loom 项目，输入需求，选择 dummy + 一个可用真实 Agent，生成计划文档，确认 `.loom/plans/<task-id>-final-plan.md` 存在，UI 显示 todo 并能点击进入实施入口。
+- 端到端：登记当前 Loom 项目，输入需求，选择一个或多个可用真实 Agent，生成计划文档，确认 `docs/plans/YYYY-MM-dd-xxx.md` 存在，UI 显示 todo 并能点击进入实施入口。

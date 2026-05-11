@@ -58,8 +58,26 @@
 - Planning composer 支持 `@claude-code`、`@claude`、`@codex`、`@codex-cli`、`@amp`、`@amp-cli` 等明确别名，不再依赖模糊字符串包含。
 - 后端在用户指定 Agent 时只运行指定 Agent；如果指定 Agent 不可用，不再静默回退到其它启用 Agent。
 - Amp Free 环境下 `amp -x` 会返回 stderr-only 402 错误且 exit code 为 0；后端现在把 stderr-only `Error:` / `error:` 归类为 failed invocation。
+- Planning discussion 成功后现在进入 `plan_review`，前端展示最终计划预览和 `Confirm Plan`；只有用户确认后才派生 todo 并进入 `ready_to_implement`。
+- 新增 `confirm_plan` Tauri command，从最终计划的 `## Implementation Todo` 段落提取 todo；失败计划没有 todo 时不能确认。
+- 最终计划文档主路径改为选定项目的 `docs/plans/YYYY-MM-dd-xxx.md`；`.loom/planning` 仅保存 prompt/stdout/stderr evidence。
+- Planning composer 默认使用全部可用真实 planning Agent（Codex CLI、Claude Code CLI、Amp CLI）；使用 `@codex` / `@claude-code` / `@amp` 可收窄到指定 Agent。
 - 真实 CLI smoke 结果：Codex CLI 返回 `LOOM_CODEX_OK`，Claude Code CLI 返回 `LOOM_CLAUDE_OK`，Amp CLI 启动成功但因当前账号缺少 paid credits 返回 402。
-- 新增 Rust 单元测试覆盖 Codex 当前参数、Amp execute mode、旧 dummy 配置归一化、指定 Agent 不回退、stderr-only 错误判失败。
+- 新增 Rust 单元测试覆盖 Codex 当前参数、Amp execute mode、旧 dummy 配置归一化、指定 Agent 不回退、stderr-only 错误判失败、最终计划 todo 提取。
+
+## 夜间验证记录（2026-05-12 02:50）
+
+- 本轮未覆盖用户未提交代码改动，只做验证与计划记录补充。
+- `npm run build` 通过，确认当前 Planning review / Confirm Plan 前端改动可完成 TypeScript 与 Vite 生产构建。
+- `cargo test --manifest-path src-tauri/Cargo.toml` 通过：19 个 Rust 单元测试全部通过，覆盖真实 CLI profile、失败判定、计划路径和 Confirm Plan todo 提取。
+- `cargo check --manifest-path src-tauri/Cargo.toml` 通过，确认当前 Tauri/Rust 代码可编译。
+
+## 夜间验证记录（2026-05-12 03:00）
+
+- 当前仓库仍存在未提交实现改动，本轮未覆盖代码文件，只做只读验证与计划证据补充。
+- `npm run build` 通过，确认 PlanningPane / useTaskBridge / Workspace 样式当前改动仍能完成 TypeScript 与 Vite 生产构建。
+- `cargo test --manifest-path src-tauri/Cargo.toml` 通过：19 个 Rust 单元测试全部通过，继续覆盖真实 CLI profile、stderr-only 失败判定、项目计划路径和 Confirm Plan todo 提取。
+- `cargo check --manifest-path src-tauri/Cargo.toml` 通过，确认当前 Tauri command / storage / tasks / agents 改动可编译。
 
 ## 关键设计
 
@@ -222,6 +240,6 @@ CLI 调用规则：
   6. 输入需求并同时 `@codex`、`@claude`、`@amp` 启动 planning discussion。
   7. 若本机只安装其中一部分真实 Agent，则记录缺失原因并用已安装的真实 Agent 完成降级验收。
   8. 确认 `.loom/planning/<task>/<run>/` 下存在 prompt、stdout、stderr evidence。
-  9. 确认 `.loom/plans/<task-id>-final-plan.md` 存在。
-  10. 确认任务进入 `ready_to_implement` 并显示 todo。
+  9. 确认选定项目下的 `docs/plans/YYYY-MM-dd-xxx.md` 存在。
+  10. 点击 `Confirm Plan` 后，确认任务进入 `ready_to_implement` 并显示 todo。
 - **回滚策略**：保留 dummy adapter 和旧任务数据结构兼容；若真实 CLI adapter 不稳定，可临时关闭真实 Agent 入口，但不删除已生成 evidence。

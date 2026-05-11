@@ -1,7 +1,7 @@
 use crate::{
     models::{
-        now_ms, CommandRun, CreateTaskInput, ErrorSummary, FeedbackInput, IdGenerator, Task,
-        TaskEvent, UserFeedback,
+        now_ms, CommandRun, CreateTaskInput, ErrorSummary, FeedbackInput, IdGenerator,
+        PlanTodoItem, Task, TaskEvent, UserFeedback,
     },
     storage,
 };
@@ -71,6 +71,49 @@ pub fn create_task(ids: State<'_, IdGenerator>, input: CreateTaskInput) -> Resul
         created_at_ms: timestamp_ms,
         updated_at_ms: timestamp_ms,
     };
+    save_task(&task)?;
+
+    Ok(task)
+}
+
+#[tauri::command]
+pub fn confirm_plan(
+    ids: State<'_, IdGenerator>,
+    project_path: String,
+    task_id: String,
+) -> Result<Task, String> {
+    let mut task = load_task(Path::new(&project_path), &task_id)?;
+    let final_plan = task
+        .final_plan
+        .clone()
+        .ok_or_else(|| "cannot confirm plan before a final plan exists".to_string())?;
+    let plan_ref = task.final_plan_path.clone().unwrap_or_else(|| {
+        storage::project_plans_dir(Path::new(&project_path))
+            .join(format!("{}-final-plan.md", task.id))
+            .display()
+            .to_string()
+    });
+    let plan_todos = derive_plan_todos(&ids, &task.id, &plan_ref, &final_plan);
+
+    if plan_todos.is_empty() {
+        return Err("cannot confirm plan because it has no implementation todo items".to_string());
+    }
+
+    task.status = "ready_to_implement".to_string();
+    task.plan_todos = plan_todos;
+    task.updated_at_ms = now_ms();
+    task.events.push(TaskEvent {
+        id: ids.next("event"),
+        task_id: task.id.clone(),
+        timestamp_ms: task.updated_at_ms,
+        actor: "user".to_string(),
+        status: task.status.clone(),
+        input_summary: Some("Plan confirmed".to_string()),
+        output_summary: Some(
+            "Implementation todo items generated from the final plan.".to_string(),
+        ),
+        evidence_ref: task.final_plan_path.clone(),
+    });
     save_task(&task)?;
 
     Ok(task)
@@ -208,4 +251,118 @@ fn format_error_summary(summary: ErrorSummary) -> String {
         summary.matched_lines.join("\n"),
         summary.stderr_tail.join("\n")
     )
+}
+
+fn derive_plan_todos(
+    ids: &State<'_, IdGenerator>,
+    task_id: &str,
+    plan_ref: &str,
+    final_plan: &str,
+) -> Vec<PlanTodoItem> {
+    implementation_todo_lines(final_plan)
+        .into_iter()
+        .take(12)
+        .enumerate()
+        .map(|(index, title)| PlanTodoItem {
+            id: ids.next("todo"),
+            task_id: task_id.to_string(),
+            description: format!("From final plan: {title}"),
+            title,
+            status: "pending".to_string(),
+            order: index as u32,
+            plan_ref: Some(plan_ref.to_string()),
+        })
+        .collect()
+}
+
+fn implementation_todo_lines(final_plan: &str) -> Vec<String> {
+    let mut in_section = false;
+    let mut todos = Vec::new();
+
+    for line in final_plan.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("## ") {
+            in_section = trimmed.eq_ignore_ascii_case("## Implementation Todo");
+            continue;
+        }
+
+        if !in_section {
+            continue;
+        }
+
+        if let Some(todo) = strip_todo_marker(trimmed) {
+            if !todo.is_empty()
+                && !todo
+                    .to_lowercase()
+                    .starts_with("no implementation todo items")
+            {
+                todos.push(todo.to_string());
+            }
+        }
+    }
+
+    todos
+}
+
+fn strip_todo_marker(line: &str) -> Option<&str> {
+    let bullet = line.strip_prefix("- ").or_else(|| line.strip_prefix("* "));
+    if let Some(value) = bullet {
+        return Some(strip_checkbox_marker(value.trim()));
+    }
+
+    let (number, rest) = line
+        .split_once(". ")
+        .or_else(|| line.split_once(") "))?;
+    if number.chars().all(|char| char.is_ascii_digit()) {
+        Some(strip_checkbox_marker(rest.trim()))
+    } else {
+        None
+    }
+}
+
+fn strip_checkbox_marker(line: &str) -> &str {
+    ["[ ] ", "[x] ", "[X] "]
+        .iter()
+        .find_map(|marker| line.strip_prefix(marker))
+        .unwrap_or(line)
+        .trim()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn extracts_implementation_todos_from_final_plan() {
+        let plan = "# Plan\n\n## Implementation Todo\n\n1. Wire planning review\n2. Persist todos\n\n## Acceptance Criteria\n\n- Done";
+
+        assert_eq!(
+            implementation_todo_lines(plan),
+            vec![
+                "Wire planning review".to_string(),
+                "Persist todos".to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn extracts_implementation_todos_from_markdown_checklists_and_parentheses() {
+        let plan = "# Plan\n\n## Implementation Todo\n\n- [ ] Review selected Agent evidence\n2) [x] Confirm handoff todos\n* Persist review decision\n\n## Acceptance Criteria\n\n- Done";
+
+        assert_eq!(
+            implementation_todo_lines(plan),
+            vec![
+                "Review selected Agent evidence".to_string(),
+                "Confirm handoff todos".to_string(),
+                "Persist review decision".to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn ignores_failed_plan_without_todos() {
+        let plan = "# Plan\n\n## Implementation Todo\n\nNo implementation todo items were generated because all selected planning agents failed.";
+
+        assert!(implementation_todo_lines(plan).is_empty());
+    }
 }

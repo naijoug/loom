@@ -151,6 +151,21 @@
   color: var(--theme-text-secondary);
 }
 
+.final-plan-preview {
+  max-height: 280px;
+  overflow: auto;
+  margin: 0;
+  border: 1px solid var(--theme-border-subtle);
+  border-radius: 6px;
+  background: var(--theme-bg-secondary);
+  color: var(--theme-text-secondary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  padding: 12px;
+}
+
 .planning-composer {
   display: flex;
   flex-direction: column;

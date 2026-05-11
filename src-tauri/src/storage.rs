@@ -135,7 +135,7 @@ pub fn project_logs_dir(project_path: &Path) -> PathBuf {
 }
 
 pub fn project_plans_dir(project_path: &Path) -> PathBuf {
-    project_loom_dir(project_path).join("plans")
+    project_path.join("docs").join("plans")
 }
 
 pub fn atomic_write_json<T>(path: &Path, value: &T) -> Result<(), String>

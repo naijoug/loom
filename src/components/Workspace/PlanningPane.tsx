@@ -64,10 +64,18 @@ function adapterLabel(adapterType: string) {
   }
 }
 
+function isRealPlanningAgent(agent: { adapterType: string; enabled: boolean; available: boolean }) {
+  return (
+    agent.enabled &&
+    agent.available &&
+    ["codex_cli", "claude_code_cli", "amp_cli"].includes(agent.adapterType)
+  );
+}
+
 export function PlanningPane() {
   const { state } = useAppState();
   const { loadAgents, runPlanningDiscussion } = useAgentBridge();
-  const { createTask, loadTasks } = useTaskBridge();
+  const { confirmPlan, createTask, loadTasks } = useTaskBridge();
   const project = state.projects.current;
   const task = state.tasks.find((candidate) => candidate.id === state.app.selectedTaskId) ?? null;
   const [requirement, setRequirement] = useState("");
@@ -82,13 +90,21 @@ export function PlanningPane() {
     }
   }, [loadTasks, project]);
 
-  const mentionedAgents = useMemo(() => {
-    const names = extractMentionNames(requirement);
-    return state.agents.filter((agent) => {
-      const aliases = mentionAliases(agent);
-      return agent.enabled && agent.available && names.some((name) => aliases.has(name));
-    });
-  }, [requirement, state.agents]);
+  const mentionedAgentNames = useMemo(() => extractMentionNames(requirement), [requirement]);
+  const hasExplicitAgentMentions = mentionedAgentNames.length > 0;
+  const mentionedAgents = useMemo(
+    () =>
+      state.agents.filter((agent) => {
+        const aliases = mentionAliases(agent);
+        return agent.enabled && agent.available && mentionedAgentNames.some((name) => aliases.has(name));
+      }),
+    [mentionedAgentNames, state.agents],
+  );
+  const defaultPlanningAgents = useMemo(
+    () => state.agents.filter((agent) => isRealPlanningAgent(agent)),
+    [state.agents],
+  );
+  const selectedPlanningAgents = hasExplicitAgentMentions ? mentionedAgents : defaultPlanningAgents;
 
   const conversationEvents = task?.agentInvocations ?? [];
 
@@ -115,8 +131,16 @@ export function PlanningPane() {
       projectPath: project.path,
       taskId: activeTask.id,
       requirement: requirement.trim(),
-      agentIds: mentionedAgents.map((agent) => agent.id),
+      agentIds: selectedPlanningAgents.map((agent) => agent.id),
     });
+  }
+
+  async function handleConfirmPlan() {
+    if (!project || !task?.finalPlan) {
+      return;
+    }
+
+    await confirmPlan(project.path, task.id);
   }
 
   if (!project) {
@@ -170,15 +194,26 @@ export function PlanningPane() {
           <div className="conversation-message final-message">
             <div className="message-author">
               <CheckCircle2 size={14} />
-              Final plan ready
+              {task.status === "plan_review" ? "Final plan ready for review" : "Final plan confirmed"}
             </div>
             <div>{task.discussionSummary}</div>
+            {task.finalPlan && <pre className="final-plan-preview">{task.finalPlan}</pre>}
             {task.planTodos.length > 0 && (
               <ol className="todo-preview-list">
                 {task.planTodos.map((todo) => (
                   <li key={todo.id}>{todo.title}</li>
                 ))}
               </ol>
+            )}
+            {task.status === "plan_review" && task.finalPlan && (
+              <Button
+                type="button"
+                variant="primary"
+                onClick={handleConfirmPlan}
+                disabled={state.app.isLoadingTasks}
+              >
+                Confirm Plan
+              </Button>
             )}
           </div>
         )}
@@ -189,29 +224,38 @@ export function PlanningPane() {
           className="composer-input"
           value={requirement}
           onChange={(event) => setRequirement(event.target.value)}
-          placeholder="Describe the requirement. Mention agents with @codex, @claude-code, @claude, @amp."
+          placeholder="Describe the requirement. By default Loom uses all available real planning Agents; mention @codex, @claude-code, or @amp to narrow it."
           disabled={state.app.isLoadingTasks}
         />
         <div className="composer-toolbar">
           <div className="agent-chip-row">
-            {mentionedAgents.map((agent) => (
+            {selectedPlanningAgents.map((agent) => (
               <span className={`agent-chip adapter-${agent.adapterType}`} key={agent.id}>
                 <AtSign size={12} />
                 {agent.name}
                 <span className="agent-chip-meta">{adapterLabel(agent.adapterType)}</span>
               </span>
             ))}
-            {mentionedAgents.length === 0 && (
+            {selectedPlanningAgents.length === 0 && (
               <span className="agent-chip-hint">
-                Mention an available real Agent: @codex, @claude-code, @claude, or @amp.
+                {hasExplicitAgentMentions
+                  ? "No enabled available Agent matches the @mention; Loom will not fall back silently."
+                  : "Enable Codex, Claude Code, or Amp in Settings, or mention a specific Agent."}
               </span>
+            )}
+            {!hasExplicitAgentMentions && selectedPlanningAgents.length > 0 && (
+              <span className="agent-chip-hint">Defaulting to all available real planning Agents.</span>
             )}
           </div>
           <Button
             type="submit"
             variant="primary"
             iconRight={<Send size={14} />}
-            disabled={!requirement.trim() || mentionedAgents.length === 0 || state.app.isLoadingTasks}
+            disabled={
+              !requirement.trim() ||
+              selectedPlanningAgents.length === 0 ||
+              state.app.isLoadingTasks
+            }
           >
             Discuss
           </Button>

@@ -64,6 +64,20 @@ export function useTaskBridge() {
     [dispatch],
   );
 
+  const confirmPlan = useCallback(
+    async (projectPath: string, taskId: string) => {
+      try {
+        const task = await invoke<Task>("confirm_plan", { projectPath, taskId });
+        dispatch({ type: "tasks/upserted", task });
+        return task;
+      } catch (error) {
+        dispatch({ type: "tasks/loadFailed", error: toErrorMessage(error) });
+        return null;
+      }
+    },
+    [dispatch],
+  );
+
   const generateRepairContext = useCallback(
     async (projectPath: string, taskId: string) => {
       try {
@@ -78,5 +92,5 @@ export function useTaskBridge() {
     [dispatch],
   );
 
-  return { loadTasks, createTask, appendFeedback, generateRepairContext };
+  return { loadTasks, createTask, confirmPlan, appendFeedback, generateRepairContext };
 }
