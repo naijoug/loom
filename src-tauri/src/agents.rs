@@ -595,10 +595,20 @@ fn render_final_plan(
         })
         .collect::<Vec<_>>()
         .join("\n");
-    let implementation_todo = if has_successful_agent {
-        "1. Implement the planning Agent adapter contract.\n2. Persist planning runs and Agent invocation evidence.\n3. Generate the final plan document and todo list.\n4. Add the implementation handoff view."
+    let agent_todos = collect_implementation_todos_from_invocations(invocations);
+    let implementation_todo = if !agent_todos.is_empty() {
+        agent_todos
+            .iter()
+            .enumerate()
+            .map(|(index, todo)| format!("{}. {}", index + 1, todo))
+            .collect::<Vec<_>>()
+            .join("\n")
+    } else if has_successful_agent {
+        "1. Review successful Agent output and select the implementation slice.\n2. Persist planning runs and Agent invocation evidence.\n3. Generate the final plan document and todo list.\n4. Add the implementation handoff view."
+            .to_string()
     } else {
         "No implementation todo items were generated because all selected planning agents failed."
+            .to_string()
     };
     let acceptance_criteria = if has_successful_agent {
         "- The planning discussion is visible in the right-side conversation stream.\n- The final plan is written to `docs/plans/` in the selected project.\n- The user can confirm the plan and move the task to `ready_to_implement` with actionable todo items."
@@ -609,6 +619,88 @@ fn render_final_plan(
     format!(
         "# {task_title} — Final Plan\n\n## Requirement\n\n{requirement}\n\n## Discussion Summary\n\n{discussion_summary}\n\n## Agent Notes\n\n{agent_notes}\n\n## Implementation Todo\n\n{implementation_todo}\n\n## Acceptance Criteria\n\n{acceptance_criteria}\n"
     )
+}
+
+fn collect_implementation_todos_from_invocations(invocations: &[AgentInvocation]) -> Vec<String> {
+    let mut todos = Vec::new();
+
+    for invocation in invocations
+        .iter()
+        .filter(|invocation| invocation.status == "succeeded")
+    {
+        for todo in implementation_todos_from_agent_output(&invocation.raw_output) {
+            let duplicate = todos
+                .iter()
+                .any(|existing: &String| existing.eq_ignore_ascii_case(&todo));
+            if !duplicate {
+                todos.push(todo);
+            }
+            if todos.len() >= 8 {
+                return todos;
+            }
+        }
+    }
+
+    todos
+}
+
+fn implementation_todos_from_agent_output(output: &str) -> Vec<String> {
+    let mut in_section = false;
+    let mut todos = Vec::new();
+
+    for line in output.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with('#') {
+            in_section = is_implementation_todo_heading(trimmed);
+            continue;
+        }
+
+        if !in_section {
+            continue;
+        }
+
+        if let Some(todo) = strip_agent_todo_marker(trimmed) {
+            if !todo.is_empty() && !todo.to_lowercase().starts_with("no implementation todo") {
+                todos.push(todo.to_string());
+            }
+        }
+    }
+
+    todos
+}
+
+fn is_implementation_todo_heading(line: &str) -> bool {
+    let heading = line.trim_start_matches('#').trim().to_lowercase();
+    matches!(
+        heading.as_str(),
+        "implementation todo"
+            | "implementation todos"
+            | "implementation tasks"
+            | "implementation task list"
+            | "implementation plan"
+    )
+}
+
+fn strip_agent_todo_marker(line: &str) -> Option<&str> {
+    let bullet = line.strip_prefix("- ").or_else(|| line.strip_prefix("* "));
+    if let Some(value) = bullet {
+        return Some(strip_agent_checkbox_marker(value.trim()));
+    }
+
+    let (number, rest) = line.split_once(". ").or_else(|| line.split_once(") "))?;
+    if number.chars().all(|char| char.is_ascii_digit()) {
+        Some(strip_agent_checkbox_marker(rest.trim()))
+    } else {
+        None
+    }
+}
+
+fn strip_agent_checkbox_marker(line: &str) -> &str {
+    ["[ ] ", "[x] ", "[X] "]
+        .iter()
+        .find_map(|marker| line.strip_prefix(marker))
+        .unwrap_or(line)
+        .trim()
 }
 
 fn planning_evidence_dir(project_path: &Path, task_id: &str, planning_run_id: &str) -> PathBuf {
@@ -938,6 +1030,26 @@ mod tests {
         }
     }
 
+    fn test_invocation(agent_name: &str, status: &str, raw_output: &str) -> AgentInvocation {
+        AgentInvocation {
+            id: format!("invocation-{agent_name}"),
+            planning_run_id: "planning-run-test".to_string(),
+            task_id: "task-test".to_string(),
+            agent_id: format!("agent-{agent_name}"),
+            agent_name: agent_name.to_string(),
+            status: status.to_string(),
+            prompt_summary: "test prompt".to_string(),
+            raw_output: raw_output.to_string(),
+            output_summary: "test summary".to_string(),
+            evidence_ref: None,
+            stderr_tail: Vec::new(),
+            exit_code: Some(0),
+            timed_out: false,
+            started_at_ms: 1,
+            ended_at_ms: Some(2),
+        }
+    }
+
     #[test]
     fn renders_prompt_with_requirement_and_project_path() {
         let prompt = render_planning_prompt("Add adapter", "/tmp/project", "Use real CLIs");
@@ -946,6 +1058,54 @@ mod tests {
         assert!(prompt.content.contains("/tmp/project"));
         assert!(prompt.content.contains("Use real CLIs"));
         assert!(prompt.content.contains("do not modify files"));
+    }
+
+    #[test]
+    fn final_plan_uses_successful_agent_implementation_todos() {
+        let invocations = vec![
+            test_invocation(
+                "codex",
+                "succeeded",
+                "# Plan\n\n## Implementation Tasks\n\n1. Add task bridge\n- [ ] Persist review evidence\n\n## Risks\n\n- keep small",
+            ),
+            test_invocation(
+                "claude",
+                "failed",
+                "## Implementation Todo\n\n1. Should be ignored because invocation failed",
+            ),
+        ];
+
+        let final_plan = render_final_plan("Task Bridge", "Ship bridge", "summary", &invocations);
+
+        assert!(final_plan.contains("1. Add task bridge"));
+        assert!(final_plan.contains("2. Persist review evidence"));
+        assert!(!final_plan.contains("Should be ignored"));
+        assert!(!final_plan.contains("Review successful Agent output"));
+    }
+
+    #[test]
+    fn final_plan_deduplicates_agent_todos() {
+        let invocations = vec![
+            test_invocation(
+                "codex",
+                "succeeded",
+                "## Implementation Todo\n\n- Add task bridge\n- Add validation",
+            ),
+            test_invocation(
+                "claude",
+                "succeeded",
+                "## Implementation Todo\n\n1. add task bridge\n2. Persist evidence",
+            ),
+        ];
+
+        assert_eq!(
+            collect_implementation_todos_from_invocations(&invocations),
+            vec![
+                "Add task bridge".to_string(),
+                "Add validation".to_string(),
+                "Persist evidence".to_string()
+            ]
+        );
     }
 
     #[test]
