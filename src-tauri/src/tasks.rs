@@ -277,12 +277,21 @@ fn derive_plan_todos(
 
 fn implementation_todo_lines(final_plan: &str) -> Vec<String> {
     let mut in_section = false;
+    let mut section_level: Option<usize> = None;
     let mut todos = Vec::new();
 
     for line in final_plan.lines() {
         let trimmed = line.trim();
-        if is_markdown_heading(trimmed) {
+        if let Some(level) = markdown_heading_level(trimmed) {
+            if in_section
+                && section_level
+                    .is_some_and(|section_level| level > section_level && section_level <= 2)
+            {
+                continue;
+            }
+
             in_section = is_implementation_todo_heading(trimmed);
+            section_level = in_section.then_some(level);
             continue;
         }
 
@@ -304,9 +313,13 @@ fn implementation_todo_lines(final_plan: &str) -> Vec<String> {
     todos
 }
 
-fn is_markdown_heading(line: &str) -> bool {
+fn markdown_heading_level(line: &str) -> Option<usize> {
     let marker_count = line.chars().take_while(|char| *char == '#').count();
-    (2..=6).contains(&marker_count) && line.as_bytes().get(marker_count) == Some(&b' ')
+    if (2..=6).contains(&marker_count) && line.as_bytes().get(marker_count) == Some(&b' ') {
+        Some(marker_count)
+    } else {
+        None
+    }
 }
 
 fn is_implementation_todo_heading(line: &str) -> bool {
@@ -441,6 +454,19 @@ mod tests {
             vec![
                 "Capture selected Agent evidence".to_string(),
                 "Confirm validation command".to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn keeps_collecting_todos_inside_child_headings() {
+        let plan = "# Plan\n\n## Implementation Todo\n\n### Backend\n\n- Persist review evidence\n\n### Frontend\n\n- Show review handoff state\n\n## Acceptance Criteria\n\n- Not a todo";
+
+        assert_eq!(
+            implementation_todo_lines(plan),
+            vec![
+                "Persist review evidence".to_string(),
+                "Show review handoff state".to_string()
             ]
         );
     }
