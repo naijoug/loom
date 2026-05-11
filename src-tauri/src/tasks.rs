@@ -323,11 +323,7 @@ fn markdown_heading_level(line: &str) -> Option<usize> {
 }
 
 fn is_implementation_todo_heading(line: &str) -> bool {
-    let heading = line
-        .trim_start_matches('#')
-        .trim()
-        .trim_end_matches(':')
-        .to_lowercase();
+    let heading = normalize_plan_heading(line);
 
     let normalized_heading = heading
         .split(['/', '／', '-', '—', '（', '(', '：', ':'])
@@ -345,6 +341,23 @@ fn is_implementation_todo_heading(line: &str) -> bool {
                 || heading.contains("实现")
                 || heading.contains("拆解")
                 || heading.contains("具体")))
+}
+
+fn normalize_plan_heading(line: &str) -> String {
+    let heading = line
+        .trim_start_matches('#')
+        .trim()
+        .trim_end_matches(':')
+        .trim();
+    let heading = heading
+        .trim_matches(|char| matches!(char, '*' | '_' | '`'))
+        .trim_start_matches(|char: char| {
+            !char.is_alphanumeric() && !matches!(char, '\u{4e00}'..='\u{9fff}')
+        })
+        .trim()
+        .trim_matches(|char| matches!(char, '*' | '_' | '`'));
+
+    heading.to_lowercase()
 }
 
 fn is_known_implementation_todo_heading(heading: &str) -> bool {
@@ -468,6 +481,24 @@ mod tests {
                 "Persist review evidence".to_string(),
                 "Show review handoff state".to_string()
             ]
+        );
+    }
+
+    #[test]
+    fn extracts_implementation_todos_from_formatted_headings() {
+        let emoji_plan = "# Plan\n\n## ✅ **Implementation Todo**\n\n- Capture review evidence\n- Run validation\n\n## Notes\n\n- not a todo";
+        let backtick_plan = "# Plan\n\n## `Implementation Tasks`: \n\n- Confirm handoff\n\n## Acceptance Criteria\n\n- not a todo";
+
+        assert_eq!(
+            implementation_todo_lines(emoji_plan),
+            vec![
+                "Capture review evidence".to_string(),
+                "Run validation".to_string()
+            ]
+        );
+        assert_eq!(
+            implementation_todo_lines(backtick_plan),
+            vec!["Confirm handoff".to_string()]
         );
     }
 
