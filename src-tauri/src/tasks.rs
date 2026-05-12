@@ -397,6 +397,16 @@ fn is_known_implementation_todo_heading(heading: &str) -> bool {
             | "任务拆解"
             | "实现任务"
             | "implementation task breakdown"
+            | "implementation steps"
+            | "implementation step"
+            | "action items"
+            | "action item"
+            | "next steps"
+            | "next step"
+            | "实施步骤"
+            | "执行步骤"
+            | "行动项"
+            | "下一步"
     )
 }
 
@@ -542,6 +552,24 @@ mod tests {
         assert_eq!(
             implementation_todo_lines(backtick_plan),
             vec!["Confirm handoff".to_string()]
+        );
+    }
+
+    #[test]
+    fn extracts_implementation_todos_from_steps_and_action_items_headings() {
+        let steps_plan = "# Plan\n\n## Implementation Steps\n\n1. Select primary Agent\n2. Run scoped verification\n\n## Notes\n\n- not a todo";
+        let action_items_plan = "# 计划\n\n## 行动项\n\n- 保存 Review 结果\n- 记录验收证据\n\n## 验证策略\n\n- cargo test";
+
+        assert_eq!(
+            implementation_todo_lines(steps_plan),
+            vec![
+                "Select primary Agent".to_string(),
+                "Run scoped verification".to_string()
+            ]
+        );
+        assert_eq!(
+            implementation_todo_lines(action_items_plan),
+            vec!["保存 Review 结果".to_string(), "记录验收证据".to_string()]
         );
     }
 
