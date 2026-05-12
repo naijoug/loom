@@ -546,12 +546,17 @@ fn is_known_implementation_todo_heading(heading: &str) -> bool {
             | "implementation plan"
             | "implementation milestone"
             | "implementation milestones"
+            | "milestone"
+            | "milestones"
             | "action items"
             | "action item"
             | "next steps"
             | "next step"
             | "实施步骤"
             | "执行步骤"
+            | "实施里程碑"
+            | "实现里程碑"
+            | "里程碑"
             | "行动项"
             | "下一步"
     )
@@ -744,6 +749,9 @@ mod tests {
     fn extracts_implementation_todos_from_plan_and_milestone_headings() {
         let implementation_plan = "# Plan\n\n## Implementation Plan\n\n- Persist selected todo evidence\n- Request review handoff\n\n## Acceptance Criteria\n\n- not a todo";
         let implementation_milestones = "# 计划\n\n## 实施里程碑\n\n1. 生成任务拆解\n2. 运行最小验证\n\n## 验证策略\n\n- cargo test";
+        let standalone_milestones = "# Plan\n\n## Milestones\n\n- Build review handoff\n- Verify debug loop\n\n## Risks\n\n- Keep scope small";
+        let chinese_standalone_milestones =
+            "# 计划\n\n## 里程碑\n\n- 串联 Agent 编排\n- 保存验收证据\n\n## 风险\n\n- 避免过度实现";
 
         assert_eq!(
             implementation_todo_lines(implementation_plan),
@@ -755,6 +763,17 @@ mod tests {
         assert_eq!(
             implementation_todo_lines(implementation_milestones),
             vec!["生成任务拆解".to_string(), "运行最小验证".to_string()]
+        );
+        assert_eq!(
+            implementation_todo_lines(standalone_milestones),
+            vec![
+                "Build review handoff".to_string(),
+                "Verify debug loop".to_string()
+            ]
+        );
+        assert_eq!(
+            implementation_todo_lines(chinese_standalone_milestones),
+            vec!["串联 Agent 编排".to_string(), "保存验收证据".to_string()]
         );
     }
 
