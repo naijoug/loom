@@ -120,6 +120,65 @@ pub fn confirm_plan(
 }
 
 #[tauri::command]
+pub fn start_todo(
+    ids: State<'_, IdGenerator>,
+    project_path: String,
+    task_id: String,
+    todo_id: String,
+) -> Result<Task, String> {
+    let mut task = load_task(Path::new(&project_path), &task_id)?;
+    apply_start_todo(&mut task, &todo_id, ids.next("event"))?;
+    save_task(&task)?;
+
+    Ok(task)
+}
+
+fn apply_start_todo(task: &mut Task, todo_id: &str, event_id: String) -> Result<(), String> {
+    let selected_title = task
+        .plan_todos
+        .iter()
+        .find(|todo| todo.id == todo_id)
+        .map(|todo| todo.title.clone())
+        .ok_or_else(|| "cannot start todo because it does not exist".to_string())?;
+
+    task.status = "implementing".to_string();
+    task.plan_todos = task
+        .plan_todos
+        .drain(..)
+        .map(|todo| {
+            if todo.id == todo_id {
+                PlanTodoItem {
+                    status: "implementing".to_string(),
+                    ..todo
+                }
+            } else if todo.status == "implementing" {
+                PlanTodoItem {
+                    status: "pending".to_string(),
+                    ..todo
+                }
+            } else {
+                todo
+            }
+        })
+        .collect();
+    task.updated_at_ms = now_ms();
+    task.events.push(TaskEvent {
+        id: event_id,
+        task_id: task.id.clone(),
+        timestamp_ms: task.updated_at_ms,
+        actor: "user".to_string(),
+        status: task.status.clone(),
+        input_summary: Some(format!("Started implementation todo: {selected_title}")),
+        output_summary: Some(
+            "Implementation scope selected and ready for Agent handoff.".to_string(),
+        ),
+        evidence_ref: task.final_plan_path.clone(),
+    });
+
+    Ok(())
+}
+
+#[tauri::command]
 pub fn append_feedback(ids: State<'_, IdGenerator>, input: FeedbackInput) -> Result<Task, String> {
     let mut task = load_task(Path::new(&input.project_path), &input.task_id)?;
     let feedback = UserFeedback {
@@ -595,6 +654,109 @@ mod tests {
             implementation_todo_lines(implementation_milestones),
             vec!["生成任务拆解".to_string(), "运行最小验证".to_string()]
         );
+    }
+
+    #[test]
+    fn start_todo_persists_scope_and_resets_previous_implementing_item() {
+        let mut task = Task {
+            id: "task-1".to_string(),
+            project_path: "/repo".to_string(),
+            title: "Ship scoped implementation".to_string(),
+            raw_requirement: "Implement one todo at a time".to_string(),
+            status: "ready_to_implement".to_string(),
+            selected_planning_agent_ids: Vec::new(),
+            primary_agent_id: None,
+            review_agent_ids: Vec::new(),
+            final_plan: Some("# Plan".to_string()),
+            final_plan_path: Some("/repo/docs/plans/plan.md".to_string()),
+            discussion_summary: None,
+            planning_runs: Vec::new(),
+            agent_invocations: Vec::new(),
+            plan_todos: vec![
+                PlanTodoItem {
+                    id: "todo-1".to_string(),
+                    task_id: "task-1".to_string(),
+                    title: "Old scope".to_string(),
+                    description: "Old scope".to_string(),
+                    status: "implementing".to_string(),
+                    order: 0,
+                    plan_ref: None,
+                },
+                PlanTodoItem {
+                    id: "todo-2".to_string(),
+                    task_id: "task-1".to_string(),
+                    title: "New scope".to_string(),
+                    description: "New scope".to_string(),
+                    status: "pending".to_string(),
+                    order: 1,
+                    plan_ref: None,
+                },
+            ],
+            events: Vec::new(),
+            command_runs: Vec::new(),
+            feedback: Vec::new(),
+            repair_context_preview: None,
+            created_at_ms: 1,
+            updated_at_ms: 1,
+        };
+
+        apply_start_todo(&mut task, "todo-2", "event-1".to_string()).unwrap();
+
+        assert_eq!(task.status, "implementing");
+        assert_eq!(task.plan_todos[0].status, "pending");
+        assert_eq!(task.plan_todos[1].status, "implementing");
+        assert_eq!(task.events.len(), 1);
+        assert_eq!(task.events[0].status, "implementing");
+        assert_eq!(
+            task.events[0].evidence_ref.as_deref(),
+            Some("/repo/docs/plans/plan.md")
+        );
+        assert!(task.events[0]
+            .input_summary
+            .as_deref()
+            .unwrap_or_default()
+            .contains("New scope"));
+    }
+
+    #[test]
+    fn start_todo_rejects_unknown_todo_without_mutating_task() {
+        let mut task = Task {
+            id: "task-1".to_string(),
+            project_path: "/repo".to_string(),
+            title: "Ship scoped implementation".to_string(),
+            raw_requirement: "Implement one todo at a time".to_string(),
+            status: "ready_to_implement".to_string(),
+            selected_planning_agent_ids: Vec::new(),
+            primary_agent_id: None,
+            review_agent_ids: Vec::new(),
+            final_plan: None,
+            final_plan_path: None,
+            discussion_summary: None,
+            planning_runs: Vec::new(),
+            agent_invocations: Vec::new(),
+            plan_todos: vec![PlanTodoItem {
+                id: "todo-1".to_string(),
+                task_id: "task-1".to_string(),
+                title: "Known scope".to_string(),
+                description: "Known scope".to_string(),
+                status: "pending".to_string(),
+                order: 0,
+                plan_ref: None,
+            }],
+            events: Vec::new(),
+            command_runs: Vec::new(),
+            feedback: Vec::new(),
+            repair_context_preview: None,
+            created_at_ms: 1,
+            updated_at_ms: 1,
+        };
+
+        let error = apply_start_todo(&mut task, "missing", "event-1".to_string()).unwrap_err();
+
+        assert!(error.contains("does not exist"));
+        assert_eq!(task.status, "ready_to_implement");
+        assert_eq!(task.plan_todos[0].status, "pending");
+        assert!(task.events.is_empty());
     }
 
     #[test]

@@ -1,10 +1,13 @@
 import { Circle, Play, PlayCircle } from "lucide-react";
+import { useTaskBridge } from "../../hooks/useTaskBridge";
 import { useAppState } from "../../state/AppStateContext";
 import "./Workspace.css";
 
 export function ImplementationPane() {
-  const { state, dispatch } = useAppState();
+  const { state } = useAppState();
+  const { startTodo } = useTaskBridge();
   const task = state.tasks.find((candidate) => candidate.id === state.app.selectedTaskId) ?? null;
+  const projectPath = state.projects.current?.path ?? null;
   const taskId = task?.id ?? null;
   const todos = task?.planTodos ?? [];
 
@@ -29,7 +32,7 @@ export function ImplementationPane() {
               className={`todo-row${active ? " active" : ""}`}
               onClick={() => {
                 if (taskId) {
-                  dispatch({ type: "tasks/todoSelected", taskId, todoId: todo.id });
+                  void startTodo(projectPath, taskId, todo.id);
                 }
               }}
             >

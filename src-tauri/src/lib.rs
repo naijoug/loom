@@ -58,7 +58,8 @@ pub fn run() {
             tasks::confirm_plan,
             tasks::create_task,
             tasks::generate_repair_context,
-            tasks::list_tasks
+            tasks::list_tasks,
+            tasks::start_todo
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
