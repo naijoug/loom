@@ -296,24 +296,29 @@ fn derive_plan_todos(
 fn implementation_todo_lines(final_plan: &str) -> Vec<String> {
     let mut in_section = false;
     let mut section_level: Option<usize> = None;
+    let mut ignored_child_level: Option<usize> = None;
     let mut todos = Vec::new();
 
     for line in final_plan.lines() {
         let trimmed = line.trim();
         if let Some(level) = markdown_heading_level(trimmed) {
-            if in_section
-                && section_level
-                    .is_some_and(|section_level| level > section_level && section_level <= 2)
-            {
+            if in_section && section_level.is_some_and(|section_level| level > section_level) {
+                if ignored_child_level.is_some_and(|ignored_level| level <= ignored_level) {
+                    ignored_child_level = None;
+                }
+                if ignored_child_level.is_none() && is_non_todo_child_heading(trimmed) {
+                    ignored_child_level = Some(level);
+                }
                 continue;
             }
 
             in_section = is_implementation_todo_heading(trimmed);
             section_level = in_section.then_some(level);
+            ignored_child_level = None;
             continue;
         }
 
-        if !in_section {
+        if !in_section || ignored_child_level.is_some() {
             continue;
         }
 
@@ -392,6 +397,13 @@ fn is_known_implementation_todo_heading(heading: &str) -> bool {
             | "任务拆解"
             | "实现任务"
             | "implementation task breakdown"
+    )
+}
+
+fn is_non_todo_child_heading(line: &str) -> bool {
+    matches!(
+        normalize_plan_heading(line).as_str(),
+        "note" | "notes" | "备注" | "说明" | "acceptance criteria" | "验收标准" | "验证策略"
     )
 }
 
@@ -498,6 +510,19 @@ mod tests {
             vec![
                 "Persist review evidence".to_string(),
                 "Show review handoff state".to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn keeps_collecting_todos_inside_child_headings_for_subsection_todo_sections() {
+        let plan = "# Plan\n\n### Implementation Tasks\n\n#### Backend\n\n- Persist command evidence\n\n#### Frontend\n\n- Display repair handoff\n\n### Acceptance Criteria\n\n- Not a todo";
+
+        assert_eq!(
+            implementation_todo_lines(plan),
+            vec![
+                "Persist command evidence".to_string(),
+                "Display repair handoff".to_string()
             ]
         );
     }
