@@ -274,11 +274,13 @@ pub fn generate_repair_context(project_path: String, task_id: String) -> Result<
         .feedback
         .last()
         .map(|feedback| feedback.content.clone());
+    let current_todo_context = format_current_todo_context(&task.plan_todos);
     let context = format!(
-        "Task: {}\n\nRequirement:\n{}\n\nFinal plan:\n{}\n\nLatest failure:\n{}\n\nLatest feedback:\n{}\n\nRepair handoff checklist:\n- Reproduce or explain the failure using the command and log references above.\n- Apply the smallest safe fix for the current task.\n- Re-run the most relevant validation command and attach the result.",
+        "Task: {}\n\nRequirement:\n{}\n\nFinal plan:\n{}\n\nCurrent implementation scope:\n{}\n\nLatest failure:\n{}\n\nLatest feedback:\n{}\n\nRepair handoff checklist:\n- Reproduce or explain the failure using the command and log references above.\n- Keep the fix scoped to the current implementation todo unless the evidence proves a wider issue.\n- Re-run the most relevant validation command and attach the result.",
         task.title,
         task.raw_requirement,
         task.final_plan.clone().unwrap_or_else(|| "(none)".to_string()),
+        current_todo_context,
         latest_failed_run
             .as_ref()
             .map(format_failed_run_context)
@@ -375,6 +377,30 @@ fn format_failed_run_context(run: &CommandRun) -> String {
         run.stderr_log_ref.as_deref().unwrap_or("(none)"),
         summary
     )
+}
+
+fn format_current_todo_context(todos: &[PlanTodoItem]) -> String {
+    if let Some(todo) = todos.iter().find(|todo| todo.status == "implementing") {
+        return format!(
+            "id={}\ntitle={}\nstatus={}\nplanRef={}",
+            todo.id,
+            todo.title,
+            todo.status,
+            todo.plan_ref.as_deref().unwrap_or("(none)")
+        );
+    }
+
+    if let Some(todo) = todos.iter().find(|todo| todo.status == "pending") {
+        return format!(
+            "No todo is currently marked implementing. Next pending todo:\nid={}\ntitle={}\nstatus={}\nplanRef={}",
+            todo.id,
+            todo.title,
+            todo.status,
+            todo.plan_ref.as_deref().unwrap_or("(none)")
+        );
+    }
+
+    "(none)".to_string()
 }
 
 fn format_error_summary(summary: ErrorSummary) -> String {
@@ -879,6 +905,57 @@ mod tests {
         assert_eq!(task.status, "ready_to_implement");
         assert_eq!(task.plan_todos[0].status, "pending");
         assert!(task.events.is_empty());
+    }
+
+    #[test]
+    fn formats_current_todo_context_for_repair_handoff() {
+        let todos = vec![
+            PlanTodoItem {
+                id: "todo-1".to_string(),
+                task_id: "task-1".to_string(),
+                title: "Build unrelated screen".to_string(),
+                description: "Unrelated".to_string(),
+                status: "pending".to_string(),
+                order: 0,
+                plan_ref: Some("/repo/docs/plans/plan.md".to_string()),
+            },
+            PlanTodoItem {
+                id: "todo-2".to_string(),
+                task_id: "task-1".to_string(),
+                title: "Fix failing debug validation".to_string(),
+                description: "Scoped fix".to_string(),
+                status: "implementing".to_string(),
+                order: 1,
+                plan_ref: Some("/repo/docs/plans/plan.md".to_string()),
+            },
+        ];
+
+        let context = format_current_todo_context(&todos);
+
+        assert!(context.contains("id=todo-2"));
+        assert!(context.contains("title=Fix failing debug validation"));
+        assert!(context.contains("status=implementing"));
+        assert!(context.contains("planRef=/repo/docs/plans/plan.md"));
+        assert!(!context.contains("Build unrelated screen"));
+    }
+
+    #[test]
+    fn formats_pending_todo_context_when_no_scope_is_started() {
+        let todos = vec![PlanTodoItem {
+            id: "todo-1".to_string(),
+            task_id: "task-1".to_string(),
+            title: "Start scoped implementation".to_string(),
+            description: "Pending scope".to_string(),
+            status: "pending".to_string(),
+            order: 0,
+            plan_ref: None,
+        }];
+
+        let context = format_current_todo_context(&todos);
+
+        assert!(context.contains("No todo is currently marked implementing"));
+        assert!(context.contains("id=todo-1"));
+        assert!(context.contains("planRef=(none)"));
     }
 
     #[test]
