@@ -539,17 +539,23 @@ fn is_non_todo_child_heading(line: &str) -> bool {
 }
 
 fn strip_todo_marker(line: &str) -> Option<&str> {
-    let bullet = line.strip_prefix("- ").or_else(|| line.strip_prefix("* "));
+    let bullet = line
+        .strip_prefix("- ")
+        .or_else(|| line.strip_prefix("* "))
+        .or_else(|| line.strip_prefix("+ "));
     if let Some(value) = bullet {
         return Some(strip_checkbox_marker(value.trim()));
     }
 
-    let (number, rest) = line.split_once(". ").or_else(|| line.split_once(") "))?;
-    if number.chars().all(|char| char.is_ascii_digit()) {
-        Some(strip_checkbox_marker(rest.trim()))
-    } else {
-        None
+    for separator in [". ", ") ", "、", "．"] {
+        if let Some((number, rest)) = line.split_once(separator) {
+            if number.chars().all(|char| char.is_ascii_digit()) {
+                return Some(strip_checkbox_marker(rest.trim()));
+            }
+        }
     }
+
+    None
 }
 
 fn strip_checkbox_marker(line: &str) -> &str {
@@ -587,6 +593,20 @@ mod tests {
                 "Review selected Agent evidence".to_string(),
                 "Confirm handoff todos".to_string(),
                 "Persist review decision".to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn extracts_implementation_todos_from_agent_bullet_variants() {
+        let plan = "# Plan\n\n## Implementation Todo\n\n+ Normalize plus bullets\n1、支持中文编号\n2．Handle fullwidth ordered lists\n\n## Acceptance Criteria\n\n- Done";
+
+        assert_eq!(
+            implementation_todo_lines(plan),
+            vec![
+                "Normalize plus bullets".to_string(),
+                "支持中文编号".to_string(),
+                "Handle fullwidth ordered lists".to_string()
             ]
         );
     }
