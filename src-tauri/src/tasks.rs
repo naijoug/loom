@@ -193,12 +193,18 @@ fn apply_start_todo(task: &mut Task, todo_id: &str, event_id: String) -> Result<
 }
 
 fn apply_complete_todo(task: &mut Task, todo_id: &str, event_id: String) -> Result<(), String> {
-    let selected_title = task
+    let selected_todo = task
         .plan_todos
         .iter()
         .find(|todo| todo.id == todo_id)
-        .map(|todo| todo.title.clone())
         .ok_or_else(|| "cannot complete todo because it does not exist".to_string())?;
+    if selected_todo.status != "implementing" {
+        return Err(format!(
+            "cannot complete todo because it is {} instead of implementing",
+            selected_todo.status
+        ));
+    }
+    let selected_title = selected_todo.title.clone();
 
     task.plan_todos = task
         .plan_todos
@@ -901,6 +907,47 @@ mod tests {
             .as_deref()
             .unwrap_or_default()
             .contains("Verified scope"));
+    }
+
+    #[test]
+    fn complete_todo_rejects_pending_scope_without_mutating_task() {
+        let mut task = Task {
+            id: "task-1".to_string(),
+            project_path: "/repo".to_string(),
+            title: "Ship scoped implementation".to_string(),
+            raw_requirement: "Implement one todo at a time".to_string(),
+            status: "ready_to_implement".to_string(),
+            selected_planning_agent_ids: Vec::new(),
+            primary_agent_id: None,
+            review_agent_ids: Vec::new(),
+            final_plan: Some("# Plan".to_string()),
+            final_plan_path: Some("/repo/docs/plans/plan.md".to_string()),
+            discussion_summary: None,
+            planning_runs: Vec::new(),
+            agent_invocations: Vec::new(),
+            plan_todos: vec![PlanTodoItem {
+                id: "todo-1".to_string(),
+                task_id: "task-1".to_string(),
+                title: "Pending scope".to_string(),
+                description: "Pending scope".to_string(),
+                status: "pending".to_string(),
+                order: 0,
+                plan_ref: None,
+            }],
+            events: Vec::new(),
+            command_runs: Vec::new(),
+            feedback: Vec::new(),
+            repair_context_preview: None,
+            created_at_ms: 1,
+            updated_at_ms: 1,
+        };
+
+        let error = apply_complete_todo(&mut task, "todo-1", "event-1".to_string()).unwrap_err();
+
+        assert!(error.contains("instead of implementing"));
+        assert_eq!(task.status, "ready_to_implement");
+        assert_eq!(task.plan_todos[0].status, "pending");
+        assert!(task.events.is_empty());
     }
 
     #[test]
