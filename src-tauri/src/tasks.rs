@@ -133,6 +133,20 @@ pub fn start_todo(
     Ok(task)
 }
 
+#[tauri::command]
+pub fn complete_todo(
+    ids: State<'_, IdGenerator>,
+    project_path: String,
+    task_id: String,
+    todo_id: String,
+) -> Result<Task, String> {
+    let mut task = load_task(Path::new(&project_path), &task_id)?;
+    apply_complete_todo(&mut task, &todo_id, ids.next("event"))?;
+    save_task(&task)?;
+
+    Ok(task)
+}
+
 fn apply_start_todo(task: &mut Task, todo_id: &str, event_id: String) -> Result<(), String> {
     let selected_title = task
         .plan_todos
@@ -172,6 +186,48 @@ fn apply_start_todo(task: &mut Task, todo_id: &str, event_id: String) -> Result<
         output_summary: Some(
             "Implementation scope selected and ready for Agent handoff.".to_string(),
         ),
+        evidence_ref: task.final_plan_path.clone(),
+    });
+
+    Ok(())
+}
+
+fn apply_complete_todo(task: &mut Task, todo_id: &str, event_id: String) -> Result<(), String> {
+    let selected_title = task
+        .plan_todos
+        .iter()
+        .find(|todo| todo.id == todo_id)
+        .map(|todo| todo.title.clone())
+        .ok_or_else(|| "cannot complete todo because it does not exist".to_string())?;
+
+    task.plan_todos = task
+        .plan_todos
+        .drain(..)
+        .map(|todo| {
+            if todo.id == todo_id {
+                PlanTodoItem {
+                    status: "done".to_string(),
+                    ..todo
+                }
+            } else {
+                todo
+            }
+        })
+        .collect();
+    task.status = if task.plan_todos.iter().all(|todo| todo.status == "done") {
+        "reviewing".to_string()
+    } else {
+        "implementing".to_string()
+    };
+    task.updated_at_ms = now_ms();
+    task.events.push(TaskEvent {
+        id: event_id,
+        task_id: task.id.clone(),
+        timestamp_ms: task.updated_at_ms,
+        actor: "user".to_string(),
+        status: task.status.clone(),
+        input_summary: Some(format!("Completed implementation todo: {selected_title}")),
+        output_summary: Some("Todo marked done and ready for review evidence handoff.".to_string()),
         evidence_ref: task.final_plan_path.clone(),
     });
 
@@ -716,6 +772,52 @@ mod tests {
             .as_deref()
             .unwrap_or_default()
             .contains("New scope"));
+    }
+
+    #[test]
+    fn complete_todo_marks_item_done_and_moves_all_done_tasks_to_review() {
+        let mut task = Task {
+            id: "task-1".to_string(),
+            project_path: "/repo".to_string(),
+            title: "Ship scoped implementation".to_string(),
+            raw_requirement: "Implement one todo at a time".to_string(),
+            status: "implementing".to_string(),
+            selected_planning_agent_ids: Vec::new(),
+            primary_agent_id: None,
+            review_agent_ids: Vec::new(),
+            final_plan: Some("# Plan".to_string()),
+            final_plan_path: Some("/repo/docs/plans/plan.md".to_string()),
+            discussion_summary: None,
+            planning_runs: Vec::new(),
+            agent_invocations: Vec::new(),
+            plan_todos: vec![PlanTodoItem {
+                id: "todo-1".to_string(),
+                task_id: "task-1".to_string(),
+                title: "Verified scope".to_string(),
+                description: "Verified scope".to_string(),
+                status: "implementing".to_string(),
+                order: 0,
+                plan_ref: None,
+            }],
+            events: Vec::new(),
+            command_runs: Vec::new(),
+            feedback: Vec::new(),
+            repair_context_preview: None,
+            created_at_ms: 1,
+            updated_at_ms: 1,
+        };
+
+        apply_complete_todo(&mut task, "todo-1", "event-1".to_string()).unwrap();
+
+        assert_eq!(task.status, "reviewing");
+        assert_eq!(task.plan_todos[0].status, "done");
+        assert_eq!(task.events.len(), 1);
+        assert_eq!(task.events[0].status, "reviewing");
+        assert!(task.events[0]
+            .input_summary
+            .as_deref()
+            .unwrap_or_default()
+            .contains("Verified scope"));
     }
 
     #[test]

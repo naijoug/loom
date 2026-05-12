@@ -52,6 +52,7 @@ export type AppAction =
   | { type: "tasks/loaded"; tasks: Task[] }
   | { type: "tasks/upserted"; task: Task }
   | { type: "tasks/todoSelected"; taskId: string; todoId: string }
+  | { type: "tasks/todoCompleted"; taskId: string; todoId: string }
   | { type: "commands/started"; run: CommandRun }
   | { type: "commands/logReceived"; event: CommandLogEvent }
   | { type: "commands/finished"; event: CommandFinishedEvent }
@@ -287,6 +288,30 @@ export function appReducer(state: AppState, action: AppAction): AppState {
                   ? { ...todo, status: "pending" }
                   : todo,
             ),
+          };
+        }),
+      };
+
+    case "tasks/todoCompleted":
+      return {
+        ...state,
+        app: {
+          ...state.app,
+          selectedTodoId: action.todoId,
+        },
+        tasks: state.tasks.map((task) => {
+          if (task.id !== action.taskId) {
+            return task;
+          }
+
+          const planTodos = task.planTodos.map((todo) =>
+            todo.id === action.todoId ? { ...todo, status: "done" as const } : todo,
+          );
+
+          return {
+            ...task,
+            status: planTodos.every((todo) => todo.status === "done") ? "reviewing" : task.status,
+            planTodos,
           };
         }),
       };

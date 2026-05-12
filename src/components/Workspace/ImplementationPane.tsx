@@ -1,11 +1,11 @@
-import { Circle, Play, PlayCircle } from "lucide-react";
+import { CheckCircle2, Circle, Play, PlayCircle } from "lucide-react";
 import { useTaskBridge } from "../../hooks/useTaskBridge";
 import { useAppState } from "../../state/AppStateContext";
 import "./Workspace.css";
 
 export function ImplementationPane() {
   const { state } = useAppState();
-  const { startTodo } = useTaskBridge();
+  const { startTodo, completeTodo } = useTaskBridge();
   const task = state.tasks.find((candidate) => candidate.id === state.app.selectedTaskId) ?? null;
   const projectPath = state.projects.current?.path ?? null;
   const taskId = task?.id ?? null;
@@ -26,25 +26,38 @@ export function ImplementationPane() {
           const active = todo.id === state.app.selectedTodoId || todo.status === "implementing";
 
           return (
-            <button
-              type="button"
-              key={todo.id}
-              className={`todo-row${active ? " active" : ""}`}
-              onClick={() => {
-                if (taskId) {
-                  void startTodo(projectPath, taskId, todo.id);
-                }
-              }}
-            >
-              <span className="todo-start-icon" title="Start implementation">
-                {active ? <PlayCircle size={16} /> : <Play size={16} />}
-              </span>
-              <span className="todo-copy">
-                <span className="todo-title">{todo.title}</span>
-                <span className="todo-description">{todo.description}</span>
-              </span>
-              <Circle size={10} className={`todo-status-dot status-${todo.status}`} />
-            </button>
+            <div key={todo.id} className={`todo-row${active ? " active" : ""}`}>
+              <button
+                type="button"
+                className="todo-start-button"
+                onClick={() => {
+                  if (taskId) {
+                    void startTodo(projectPath, taskId, todo.id);
+                  }
+                }}
+              >
+                <span className="todo-start-icon" title="Start implementation">
+                  {active ? <PlayCircle size={16} /> : <Play size={16} />}
+                </span>
+                <span className="todo-copy">
+                  <span className="todo-title">{todo.title}</span>
+                  <span className="todo-description">{todo.description}</span>
+                </span>
+              </button>
+              <button
+                type="button"
+                className="todo-complete-button"
+                title="Mark todo done after verification evidence is captured"
+                disabled={todo.status === "done"}
+                onClick={() => {
+                  if (taskId) {
+                    void completeTodo(projectPath, taskId, todo.id);
+                  }
+                }}
+              >
+                {todo.status === "done" ? <CheckCircle2 size={15} /> : <Circle size={10} />}
+              </button>
+            </div>
           );
         })}
       </div>

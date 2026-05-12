@@ -98,6 +98,26 @@ export function useTaskBridge() {
     [dispatch],
   );
 
+  const completeTodo = useCallback(
+    async (projectPath: string | null, taskId: string, todoId: string) => {
+      dispatch({ type: "tasks/todoCompleted", taskId, todoId });
+
+      if (!projectPath || !hasTauriRuntime()) {
+        return null;
+      }
+
+      try {
+        const task = await invoke<Task>("complete_todo", { projectPath, taskId, todoId });
+        dispatch({ type: "tasks/upserted", task });
+        return task;
+      } catch (error) {
+        dispatch({ type: "tasks/loadFailed", error: toErrorMessage(error) });
+        return null;
+      }
+    },
+    [dispatch],
+  );
+
   const generateRepairContext = useCallback(
     async (projectPath: string, taskId: string) => {
       try {
@@ -112,5 +132,5 @@ export function useTaskBridge() {
     [dispatch],
   );
 
-  return { loadTasks, createTask, confirmPlan, startTodo, appendFeedback, generateRepairContext };
+  return { loadTasks, createTask, confirmPlan, startTodo, completeTodo, appendFeedback, generateRepairContext };
 }
