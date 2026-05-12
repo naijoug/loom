@@ -287,8 +287,26 @@ pub fn generate_repair_context(project_path: String, task_id: String) -> Result<
             .unwrap_or_else(|| "(none)".to_string()),
         latest_feedback.unwrap_or_else(|| "(none)".to_string())
     );
+    let evidence_ref = latest_failed_run
+        .as_ref()
+        .map(|run| run.id.clone())
+        .or_else(|| task.feedback.last().map(|feedback| feedback.id.clone()));
     task.repair_context_preview = Some(context);
+    task.status = "fixing".to_string();
     task.updated_at_ms = now_ms();
+    task.events.push(TaskEvent {
+        id: format!("event-{}-repair-context", task.updated_at_ms),
+        task_id: task.id.clone(),
+        timestamp_ms: task.updated_at_ms,
+        actor: "system".to_string(),
+        status: task.status.clone(),
+        input_summary: Some("Generated repair context for Agent handoff".to_string()),
+        output_summary: Some(
+            "Latest failure, user feedback, and current implementation scope were packaged for a scoped fix."
+                .to_string(),
+        ),
+        evidence_ref,
+    });
     save_task(&task)?;
 
     Ok(task)
