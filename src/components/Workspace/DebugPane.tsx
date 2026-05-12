@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from "react";
-import { Send, Square, Terminal } from "lucide-react";
+import { Send, Square, Terminal, Wrench } from "lucide-react";
 import { useCommandBridge } from "../../hooks/useCommandBridge";
 import { useTaskBridge } from "../../hooks/useTaskBridge";
 import { useAppState } from "../../state/AppStateContext";
@@ -103,6 +103,14 @@ export function DebugPane() {
     }
   }
 
+  async function handleGenerateRepairContext() {
+    if (!project || !task) {
+      return;
+    }
+
+    await generateRepairContext(project.path, task.id);
+  }
+
   return (
     <div className="pane-container">
       <div className="pane-header">
@@ -153,7 +161,23 @@ export function DebugPane() {
       </div>
 
       <div className="feedback-container">
-        <div className="feedback-title">Manual Feedback</div>
+        <div className="feedback-header">
+          <div>
+            <div className="feedback-title">Manual Feedback</div>
+            <div className="feedback-subtitle">
+              Package the latest failed command, selected todo, and feedback for the next Agent fix.
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            iconLeft={<Wrench size={14} />}
+            disabled={!project || !task}
+            onClick={handleGenerateRepairContext}
+          >
+            Repair Handoff
+          </Button>
+        </div>
         <div className="feedback-input-wrapper">
           <input 
             type="text" 

@@ -687,11 +687,26 @@
   flex-shrink: 0;
 }
 
+.feedback-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .feedback-title {
   font-family: var(--font-headings);
   font-size: 13px;
   font-weight: 600;
   color: var(--theme-text-primary);
+}
+
+.feedback-subtitle {
+  margin-top: 4px;
+  max-width: 560px;
+  color: var(--theme-text-muted);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .feedback-input-wrapper {
