@@ -784,7 +784,9 @@ fn render_updated_plans_index(
     let heading = format!("## {date}");
     if let Some(index) = lines.iter().position(|line| line.trim() == heading) {
         if date_section_contains_plan(&lines, index, file_name) {
-            return ensure_trailing_newline(existing.trim_end());
+            return ensure_trailing_newline(&update_date_section_plan_summary(
+                &lines, index, file_name, summary,
+            ));
         }
 
         let insert_at = date_section_plan_insert_index(&lines, index, file_name);
@@ -811,6 +813,45 @@ fn date_section_contains_plan(lines: &[String], heading_index: usize, file_name:
         .skip(heading_index + 1)
         .take_while(|line| !line.trim_start().starts_with("## "))
         .any(|line| plan_entry_file_name(line).is_some_and(|entry| entry == file_name))
+}
+
+fn update_date_section_plan_summary(
+    lines: &[String],
+    heading_index: usize,
+    file_name: &str,
+    summary: &str,
+) -> String {
+    let mut updated = lines.to_vec();
+    let section_end = lines
+        .iter()
+        .enumerate()
+        .skip(heading_index + 1)
+        .find_map(|(index, line)| line.trim_start().starts_with("## ").then_some(index))
+        .unwrap_or_else(|| lines.len());
+
+    if let Some(entry_index) = lines
+        .iter()
+        .enumerate()
+        .skip(heading_index + 1)
+        .take(section_end.saturating_sub(heading_index + 1))
+        .find_map(|(index, line)| {
+            plan_entry_file_name(line)
+                .is_some_and(|entry| entry == file_name)
+                .then_some(index)
+        })
+    {
+        let summary_line = format!("  > {}", summary.trim());
+        if updated
+            .get(entry_index + 1)
+            .is_some_and(|line| line.trim_start().starts_with("> "))
+        {
+            updated[entry_index + 1] = summary_line;
+        } else {
+            updated.insert(entry_index + 1, summary_line);
+        }
+    }
+
+    updated.join("\n")
 }
 
 fn date_section_plan_insert_index(
@@ -1568,7 +1609,7 @@ mod tests {
     }
 
     #[test]
-    fn plans_index_skips_duplicate_plan_file_in_same_date_section() {
+    fn plans_index_updates_duplicate_plan_file_summary_in_same_date_section() {
         let existing =
             "# 计划文档索引\n\n## 2026-05-12\n\n- `05:10-plan-index-sync.md`\n  > 原摘要。\n";
 
@@ -1576,10 +1617,13 @@ mod tests {
             existing,
             "2026-05-12",
             "05:10-plan-index-sync.md",
-            "新摘要不应重复写入。",
+            "新摘要应覆盖旧摘要，而不是重复写入。",
         );
 
         assert_eq!(updated.matches("05:10-plan-index-sync.md").count(), 1);
+        assert!(updated
+            .contains("- `05:10-plan-index-sync.md`\n  > 新摘要应覆盖旧摘要，而不是重复写入。"));
+        assert!(!updated.contains("原摘要。"));
     }
 
     #[test]
