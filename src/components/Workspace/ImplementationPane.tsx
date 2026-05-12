@@ -5,6 +5,7 @@ import "./Workspace.css";
 export function ImplementationPane() {
   const { state, dispatch } = useAppState();
   const task = state.tasks.find((candidate) => candidate.id === state.app.selectedTaskId) ?? null;
+  const taskId = task?.id ?? null;
   const todos = task?.planTodos ?? [];
 
   return (
@@ -26,7 +27,11 @@ export function ImplementationPane() {
               type="button"
               key={todo.id}
               className={`todo-row${active ? " active" : ""}`}
-              onClick={() => dispatch({ type: "tasks/todoSelected", todoId: todo.id })}
+              onClick={() => {
+                if (taskId) {
+                  dispatch({ type: "tasks/todoSelected", taskId, todoId: todo.id });
+                }
+              }}
             >
               <span className="todo-start-icon" title="Start implementation">
                 {active ? <PlayCircle size={16} /> : <Play size={16} />}

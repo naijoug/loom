@@ -51,7 +51,7 @@ export type AppAction =
   | { type: "tasks/loadFailed"; error: string }
   | { type: "tasks/loaded"; tasks: Task[] }
   | { type: "tasks/upserted"; task: Task }
-  | { type: "tasks/todoSelected"; todoId: string }
+  | { type: "tasks/todoSelected"; taskId: string; todoId: string }
   | { type: "commands/started"; run: CommandRun }
   | { type: "commands/logReceived"; event: CommandLogEvent }
   | { type: "commands/finished"; event: CommandFinishedEvent }
@@ -273,16 +273,22 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           ...state.app,
           selectedTodoId: action.todoId,
         },
-        tasks: state.tasks.map((task) => ({
-          ...task,
-          planTodos: task.planTodos.map((todo) =>
-            todo.id === action.todoId
-              ? { ...todo, status: "implementing" }
-              : todo.status === "implementing"
-                ? { ...todo, status: "pending" }
-                : todo,
-          ),
-        })),
+        tasks: state.tasks.map((task) => {
+          if (task.id !== action.taskId) {
+            return task;
+          }
+
+          return {
+            ...task,
+            planTodos: task.planTodos.map((todo) =>
+              todo.id === action.todoId
+                ? { ...todo, status: "implementing" }
+                : todo.status === "implementing"
+                  ? { ...todo, status: "pending" }
+                  : todo,
+            ),
+          };
+        }),
       };
 
     case "commands/started":
