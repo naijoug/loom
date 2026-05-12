@@ -358,12 +358,15 @@ fn is_implementation_todo_heading(line: &str) -> bool {
         || (heading.contains("implementation")
             && (heading.contains("todo")
                 || heading.contains("task")
-                || heading.contains("checklist")))
+                || heading.contains("checklist")
+                || heading.contains("plan")
+                || heading.contains("milestone")))
         || (heading.contains("任务")
             && (heading.contains("实施")
                 || heading.contains("实现")
                 || heading.contains("拆解")
                 || heading.contains("具体")))
+        || (heading.contains("里程碑") && (heading.contains("实施") || heading.contains("实现")))
 }
 
 fn normalize_plan_heading(line: &str) -> String {
@@ -399,6 +402,9 @@ fn is_known_implementation_todo_heading(heading: &str) -> bool {
             | "implementation task breakdown"
             | "implementation steps"
             | "implementation step"
+            | "implementation plan"
+            | "implementation milestone"
+            | "implementation milestones"
             | "action items"
             | "action item"
             | "next steps"
@@ -570,6 +576,24 @@ mod tests {
         assert_eq!(
             implementation_todo_lines(action_items_plan),
             vec!["保存 Review 结果".to_string(), "记录验收证据".to_string()]
+        );
+    }
+
+    #[test]
+    fn extracts_implementation_todos_from_plan_and_milestone_headings() {
+        let implementation_plan = "# Plan\n\n## Implementation Plan\n\n- Persist selected todo evidence\n- Request review handoff\n\n## Acceptance Criteria\n\n- not a todo";
+        let implementation_milestones = "# 计划\n\n## 实施里程碑\n\n1. 生成任务拆解\n2. 运行最小验证\n\n## 验证策略\n\n- cargo test";
+
+        assert_eq!(
+            implementation_todo_lines(implementation_plan),
+            vec![
+                "Persist selected todo evidence".to_string(),
+                "Request review handoff".to_string()
+            ]
+        );
+        assert_eq!(
+            implementation_todo_lines(implementation_milestones),
+            vec!["生成任务拆解".to_string(), "运行最小验证".to_string()]
         );
     }
 
