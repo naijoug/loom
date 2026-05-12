@@ -164,7 +164,7 @@ fn collect_package_commands(package: &Value, project_path: &Path, commands: &mut
     };
 
     let package_manager = detect_package_manager(package, project_path);
-    for preferred in ["build", "test", "lint", "dev"] {
+    for preferred in ["build", "typecheck", "check", "test", "lint", "dev"] {
         if scripts.contains_key(preferred) {
             push_unique(commands, format!("{package_manager} {preferred}"));
         }
@@ -285,6 +285,8 @@ mod tests {
             "packageManager": "npm@10.8.2",
             "scripts": {
                 "build": "vite build",
+                "typecheck": "tsc --noEmit",
+                "check": "tsc && vite build",
                 "lint": "eslint ."
             }
         });
@@ -292,7 +294,15 @@ mod tests {
 
         collect_package_commands(&package, Path::new("/tmp/loom-no-lock"), &mut commands);
 
-        assert_eq!(commands, vec!["npm run build", "npm run lint"]);
+        assert_eq!(
+            commands,
+            vec![
+                "npm run build",
+                "npm run typecheck",
+                "npm run check",
+                "npm run lint"
+            ]
+        );
     }
 
     #[test]
