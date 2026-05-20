@@ -39,6 +39,25 @@ function renderHighlightedLogLine(line: string, normalizedFilter: string): React
   return segments;
 }
 
+function countTextMatches(line: string, normalizedFilter: string): number {
+  if (!normalizedFilter) {
+    return 0;
+  }
+
+  const lowerLine = line.toLowerCase();
+  let count = 0;
+  let cursor = 0;
+  let matchIndex = lowerLine.indexOf(normalizedFilter, cursor);
+
+  while (matchIndex !== -1) {
+    count += 1;
+    cursor = matchIndex + normalizedFilter.length;
+    matchIndex = lowerLine.indexOf(normalizedFilter, cursor);
+  }
+
+  return count;
+}
+
 export function DebugPane() {
   const { state } = useAppState();
   const { startCommandRun, stopCommandRun } = useCommandBridge();
@@ -90,6 +109,19 @@ export function DebugPane() {
     });
   }, [logFilter, logStreamFilter, scopedLogs]);
 
+  const textMatchCount = useMemo(() => {
+    const normalizedFilter = logFilter.trim().toLowerCase();
+
+    if (!normalizedFilter) {
+      return 0;
+    }
+
+    return visibleLogs.reduce(
+      (total, entry) => total + countTextMatches(entry.line, normalizedFilter),
+      0,
+    );
+  }, [logFilter, visibleLogs]);
+
   const hasActiveLogFilters = logFilter.trim().length > 0 || logStreamFilter !== "all";
 
   const logText = useMemo<ReactNode>(() => {
@@ -127,8 +159,14 @@ export function DebugPane() {
 
   const logFilterSummary = useMemo(() => {
     const streamLabel = logStreamFilter === "all" ? "all streams" : logStreamFilter.toUpperCase();
-    return `${visibleLogs.length}/${scopedLogs.length} ${streamLabel}`;
-  }, [logStreamFilter, scopedLogs.length, visibleLogs.length]);
+    const lineSummary = `${visibleLogs.length}/${scopedLogs.length} ${streamLabel}`;
+
+    if (!logFilter.trim()) {
+      return lineSummary;
+    }
+
+    return `${lineSummary} · ${textMatchCount} ${textMatchCount === 1 ? "match" : "matches"}`;
+  }, [logFilter, logStreamFilter, scopedLogs.length, textMatchCount, visibleLogs.length]);
 
   async function handleRunCommand(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
