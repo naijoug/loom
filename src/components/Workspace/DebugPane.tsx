@@ -22,6 +22,7 @@ export function DebugPane() {
       : undefined);
   const [command, setCommand] = useState("pnpm build");
   const [feedback, setFeedback] = useState("");
+  const [logFilter, setLogFilter] = useState("");
   const [commandParseError, setCommandParseError] = useState<string | null>(null);
   const errorSummaryLines = activeRun?.errorSummary
     ? [
@@ -45,7 +46,16 @@ export function DebugPane() {
       return activeRun ? "No logs for the selected command run yet." : "No command logs yet.";
     }
 
-    return scopedLogs
+    const normalizedFilter = logFilter.trim().toLowerCase();
+    const visibleLogs = normalizedFilter
+      ? scopedLogs.filter((entry) => entry.line.toLowerCase().includes(normalizedFilter))
+      : scopedLogs;
+
+    if (visibleLogs.length === 0) {
+      return `No log lines match "${logFilter.trim()}".`;
+    }
+
+    return visibleLogs
       .map((entry) => {
         const time = new Date(entry.timestampMs).toLocaleTimeString("en-US", {
           hour: "2-digit",
@@ -55,7 +65,18 @@ export function DebugPane() {
         return `${time} ${entry.stream.toUpperCase()} ${entry.line}`;
       })
       .join("\n");
-  }, [activeRun, scopedLogs]);
+  }, [activeRun, logFilter, scopedLogs]);
+
+  const logFilterSummary = useMemo(() => {
+    const normalizedFilter = logFilter.trim().toLowerCase();
+
+    if (!normalizedFilter) {
+      return `${scopedLogs.length} line${scopedLogs.length === 1 ? "" : "s"}`;
+    }
+
+    const matchCount = scopedLogs.filter((entry) => entry.line.toLowerCase().includes(normalizedFilter)).length;
+    return `${matchCount}/${scopedLogs.length} matching`;
+  }, [logFilter, scopedLogs]);
 
   async function handleRunCommand(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -143,6 +164,17 @@ export function DebugPane() {
       </div>
 
       <div className="terminal-container">
+        <div className="log-filter-row">
+          <input
+            type="search"
+            className="log-filter-input"
+            value={logFilter}
+            onChange={(event) => setLogFilter(event.target.value)}
+            placeholder="Filter visible logs by text"
+            aria-label="Filter command logs by text"
+          />
+          <span className="log-filter-summary">{logFilterSummary}</span>
+        </div>
         {commandParseError && <div className="terminal-line error-text">{commandParseError}</div>}
         {state.app.commandError && <div className="terminal-line error-text">{state.app.commandError}</div>}
         {activeRun && (

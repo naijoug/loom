@@ -662,6 +662,36 @@
   word-break: break-all;
 }
 
+.log-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.log-filter-input {
+  flex: 1;
+  min-width: 160px;
+  border: 1px solid var(--theme-border-strong);
+  border-radius: 6px;
+  background: var(--theme-bg-primary);
+  color: var(--theme-text-primary);
+  font-family: var(--font-body);
+  font-size: 12px;
+  outline: none;
+  padding: 7px 9px;
+}
+
+.log-filter-input::placeholder {
+  color: var(--theme-text-muted);
+}
+
+.log-filter-summary {
+  color: var(--theme-text-muted);
+  font-family: var(--font-data);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
 .terminal-output {
   margin: 0;
   font-family: var(--font-data);
