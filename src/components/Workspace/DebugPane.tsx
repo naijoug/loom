@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Send, Square, Terminal, Wrench } from "lucide-react";
 import { useCommandBridge } from "../../hooks/useCommandBridge";
 import { useTaskBridge } from "../../hooks/useTaskBridge";
@@ -25,6 +25,12 @@ export function DebugPane() {
   const [logFilter, setLogFilter] = useState("");
   const [logStreamFilter, setLogStreamFilter] = useState<"all" | "stdout" | "stderr">("all");
   const [commandParseError, setCommandParseError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLogFilter("");
+    setLogStreamFilter("all");
+  }, [activeRun?.id]);
+
   const errorSummaryLines = activeRun?.errorSummary
     ? [
         `Error summary${typeof activeRun.errorSummary.exitCode === "number" ? ` (exit ${activeRun.errorSummary.exitCode})` : ""}`,
