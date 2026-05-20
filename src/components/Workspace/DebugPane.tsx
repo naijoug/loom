@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { Send, Square, Terminal, Wrench } from "lucide-react";
 import { useCommandBridge } from "../../hooks/useCommandBridge";
 import { useTaskBridge } from "../../hooks/useTaskBridge";
@@ -6,6 +6,38 @@ import { useAppState } from "../../state/AppStateContext";
 import { parseCommandLine, type ParsedCommandLine } from "../../utils/commandLine";
 import { Button } from "../common/Button";
 import "./Workspace.css";
+
+function renderHighlightedLogLine(line: string, normalizedFilter: string): ReactNode {
+  if (!normalizedFilter) {
+    return line;
+  }
+
+  const lowerLine = line.toLowerCase();
+  const segments: ReactNode[] = [];
+  let cursor = 0;
+  let matchIndex = lowerLine.indexOf(normalizedFilter, cursor);
+
+  while (matchIndex !== -1) {
+    if (matchIndex > cursor) {
+      segments.push(line.slice(cursor, matchIndex));
+    }
+
+    const matchEnd = matchIndex + normalizedFilter.length;
+    segments.push(
+      <mark className="log-filter-highlight" key={`${matchIndex}-${matchEnd}`}>
+        {line.slice(matchIndex, matchEnd)}
+      </mark>,
+    );
+    cursor = matchEnd;
+    matchIndex = lowerLine.indexOf(normalizedFilter, cursor);
+  }
+
+  if (cursor < line.length) {
+    segments.push(line.slice(cursor));
+  }
+
+  return segments;
+}
 
 export function DebugPane() {
   const { state } = useAppState();
@@ -60,7 +92,7 @@ export function DebugPane() {
 
   const hasActiveLogFilters = logFilter.trim().length > 0 || logStreamFilter !== "all";
 
-  const logText = useMemo(() => {
+  const logText = useMemo<ReactNode>(() => {
     if (scopedLogs.length === 0) {
       return activeRun ? "No logs for the selected command run yet." : "No command logs yet.";
     }
@@ -73,16 +105,24 @@ export function DebugPane() {
         : `No ${streamLabel} log lines for the selected command run.`;
     }
 
-    return visibleLogs
-      .map((entry) => {
-        const time = new Date(entry.timestampMs).toLocaleTimeString("en-US", {
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-        });
-        return `${time} ${entry.stream.toUpperCase()} ${entry.line}`;
-      })
-      .join("\n");
+    const normalizedFilter = logFilter.trim().toLowerCase();
+
+    return visibleLogs.map((entry, index) => {
+      const time = new Date(entry.timestampMs).toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
+      const prefix = `${time} ${entry.stream.toUpperCase()} `;
+
+      return (
+        <span key={`${entry.runId}-${entry.timestampMs}-${entry.stream}-${index}`}>
+          {prefix}
+          {renderHighlightedLogLine(entry.line, normalizedFilter)}
+          {index < visibleLogs.length - 1 ? "\n" : null}
+        </span>
+      );
+    });
   }, [activeRun, logFilter, logStreamFilter, scopedLogs.length, visibleLogs]);
 
   const logFilterSummary = useMemo(() => {

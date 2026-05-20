@@ -723,6 +723,13 @@
   color: var(--theme-text-primary);
 }
 
+.log-filter-highlight {
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--theme-accent) 28%, transparent);
+  color: var(--theme-text-primary);
+  padding: 0 2px;
+}
+
 .repair-preview {
   border-top: 1px solid var(--theme-border-strong);
   margin-top: 12px;
