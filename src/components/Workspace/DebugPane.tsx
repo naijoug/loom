@@ -23,6 +23,7 @@ export function DebugPane() {
   const [command, setCommand] = useState("pnpm build");
   const [feedback, setFeedback] = useState("");
   const [logFilter, setLogFilter] = useState("");
+  const [logStreamFilter, setLogStreamFilter] = useState<"all" | "stdout" | "stderr">("all");
   const [commandParseError, setCommandParseError] = useState<string | null>(null);
   const errorSummaryLines = activeRun?.errorSummary
     ? [
@@ -41,18 +42,27 @@ export function DebugPane() {
     return state.commandLogs.filter((entry) => entry.runId === activeRun.id);
   }, [activeRun, state.commandLogs]);
 
+  const visibleLogs = useMemo(() => {
+    const normalizedFilter = logFilter.trim().toLowerCase();
+
+    return scopedLogs.filter((entry) => {
+      const matchesStream = logStreamFilter === "all" || entry.stream === logStreamFilter;
+      const matchesText = !normalizedFilter || entry.line.toLowerCase().includes(normalizedFilter);
+      return matchesStream && matchesText;
+    });
+  }, [logFilter, logStreamFilter, scopedLogs]);
+
   const logText = useMemo(() => {
     if (scopedLogs.length === 0) {
       return activeRun ? "No logs for the selected command run yet." : "No command logs yet.";
     }
 
-    const normalizedFilter = logFilter.trim().toLowerCase();
-    const visibleLogs = normalizedFilter
-      ? scopedLogs.filter((entry) => entry.line.toLowerCase().includes(normalizedFilter))
-      : scopedLogs;
-
     if (visibleLogs.length === 0) {
-      return `No log lines match "${logFilter.trim()}".`;
+      const textFilter = logFilter.trim();
+      const streamLabel = logStreamFilter === "all" ? "any stream" : logStreamFilter.toUpperCase();
+      return textFilter
+        ? `No ${streamLabel} log lines match "${textFilter}".`
+        : `No ${streamLabel} log lines for the selected command run.`;
     }
 
     return visibleLogs
@@ -65,18 +75,12 @@ export function DebugPane() {
         return `${time} ${entry.stream.toUpperCase()} ${entry.line}`;
       })
       .join("\n");
-  }, [activeRun, logFilter, scopedLogs]);
+  }, [activeRun, logFilter, logStreamFilter, scopedLogs.length, visibleLogs]);
 
   const logFilterSummary = useMemo(() => {
-    const normalizedFilter = logFilter.trim().toLowerCase();
-
-    if (!normalizedFilter) {
-      return `${scopedLogs.length} line${scopedLogs.length === 1 ? "" : "s"}`;
-    }
-
-    const matchCount = scopedLogs.filter((entry) => entry.line.toLowerCase().includes(normalizedFilter)).length;
-    return `${matchCount}/${scopedLogs.length} matching`;
-  }, [logFilter, scopedLogs]);
+    const streamLabel = logStreamFilter === "all" ? "all streams" : logStreamFilter.toUpperCase();
+    return `${visibleLogs.length}/${scopedLogs.length} ${streamLabel}`;
+  }, [logStreamFilter, scopedLogs.length, visibleLogs.length]);
 
   async function handleRunCommand(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -173,6 +177,16 @@ export function DebugPane() {
             placeholder="Filter visible logs by text"
             aria-label="Filter command logs by text"
           />
+          <select
+            className="log-filter-select"
+            value={logStreamFilter}
+            onChange={(event) => setLogStreamFilter(event.target.value as "all" | "stdout" | "stderr")}
+            aria-label="Filter command logs by stream"
+          >
+            <option value="all">All streams</option>
+            <option value="stdout">STDOUT</option>
+            <option value="stderr">STDERR</option>
+          </select>
           <span className="log-filter-summary">{logFilterSummary}</span>
         </div>
         {commandParseError && <div className="terminal-line error-text">{commandParseError}</div>}

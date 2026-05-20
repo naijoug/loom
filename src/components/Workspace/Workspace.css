@@ -668,9 +668,8 @@
   gap: 8px;
 }
 
-.log-filter-input {
-  flex: 1;
-  min-width: 160px;
+.log-filter-input,
+.log-filter-select {
   border: 1px solid var(--theme-border-strong);
   border-radius: 6px;
   background: var(--theme-bg-primary);
@@ -679,6 +678,17 @@
   font-size: 12px;
   outline: none;
   padding: 7px 9px;
+}
+
+.log-filter-input {
+  flex: 1;
+  min-width: 160px;
+}
+
+.log-filter-select {
+  flex: 0 0 auto;
+  min-width: 116px;
+  cursor: pointer;
 }
 
 .log-filter-input::placeholder {
