@@ -52,6 +52,8 @@ export function DebugPane() {
     });
   }, [logFilter, logStreamFilter, scopedLogs]);
 
+  const hasActiveLogFilters = logFilter.trim().length > 0 || logStreamFilter !== "all";
+
   const logText = useMemo(() => {
     if (scopedLogs.length === 0) {
       return activeRun ? "No logs for the selected command run yet." : "No command logs yet.";
@@ -187,6 +189,17 @@ export function DebugPane() {
             <option value="stdout">STDOUT</option>
             <option value="stderr">STDERR</option>
           </select>
+          <button
+            type="button"
+            className="log-filter-clear"
+            disabled={!hasActiveLogFilters}
+            onClick={() => {
+              setLogFilter("");
+              setLogStreamFilter("all");
+            }}
+          >
+            Clear
+          </button>
           <span className="log-filter-summary">{logFilterSummary}</span>
         </div>
         {commandParseError && <div className="terminal-line error-text">{commandParseError}</div>}

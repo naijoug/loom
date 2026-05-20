@@ -669,7 +669,8 @@
 }
 
 .log-filter-input,
-.log-filter-select {
+.log-filter-select,
+.log-filter-clear {
   border: 1px solid var(--theme-border-strong);
   border-radius: 6px;
   background: var(--theme-bg-primary);
@@ -689,6 +690,16 @@
   flex: 0 0 auto;
   min-width: 116px;
   cursor: pointer;
+}
+
+.log-filter-clear {
+  flex: 0 0 auto;
+  cursor: pointer;
+}
+
+.log-filter-clear:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .log-filter-input::placeholder {
