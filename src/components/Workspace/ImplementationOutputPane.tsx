@@ -5,6 +5,10 @@ import { useAppState } from "../../state/AppStateContext";
 import { Button } from "../common/Button";
 import "./Workspace.css";
 
+function summarizeCommand(command: string) {
+  return command.length > 180 ? `${command.slice(0, 180)}...` : command;
+}
+
 export function ImplementationOutputPane() {
   const { state } = useAppState();
   const { appendFeedback } = useTaskBridge();
@@ -18,6 +22,35 @@ export function ImplementationOutputPane() {
     () => (activeTodo && task ? task.planTodos.findIndex((todo) => todo.id === activeTodo.id) : -1),
     [activeTodo, task],
   );
+  const activeRun = useMemo(() => {
+    if (!task) {
+      return null;
+    }
+
+    return (
+      state.commandRuns.find((run) => run.id === state.app.activeCommandRunId) ??
+      state.commandRuns
+        .filter((run) => run.taskId === task.id)
+        .sort((left, right) => right.startedAtMs - left.startedAtMs)[0] ??
+      null
+    );
+  }, [state.app.activeCommandRunId, state.commandRuns, task]);
+  const activeRunLogs = useMemo(() => {
+    if (!activeRun) {
+      return "";
+    }
+
+    const logs = state.commandLogs.filter((entry) => entry.runId === activeRun.id);
+    if (logs.length === 0) {
+      return activeRun.status === "running"
+        ? "Agent process started. Waiting for output..."
+        : "No live logs were captured for this run.";
+    }
+
+    return logs
+      .map((entry) => `${entry.stream.toUpperCase()} ${entry.line}`)
+      .join("\n");
+  }, [activeRun, state.commandLogs]);
   const reviewChecklist = useMemo(() => {
     if (!task || !activeTodo) {
       return [];
@@ -106,6 +139,20 @@ status: ${activeTodo.status}
 review handoff: scope, evidence, diff review, blockers
 next checkpoint: run targeted verification and request review`}
             </pre>
+
+            {activeRun && (
+              <div className="implementation-review-card">
+                <div className="implementation-review-header">
+                  <Terminal size={15} />
+                  Agent run · {activeRun.status}
+                </div>
+                <div className="implementation-brief-copy">
+                  {summarizeCommand(activeRun.command)}
+                  {typeof activeRun.exitCode === "number" ? ` · exit ${activeRun.exitCode}` : ""}
+                </div>
+                <pre className="terminal-output implementation-terminal">{activeRunLogs}</pre>
+              </div>
+            )}
           </>
         )}
       </div>

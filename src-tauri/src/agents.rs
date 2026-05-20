@@ -81,6 +81,42 @@ pub fn create_agent(
 }
 
 #[tauri::command]
+pub fn update_agent(
+    app: AppHandle,
+    agent_id: String,
+    input: AgentConfigInput,
+) -> Result<Vec<AgentConfig>, String> {
+    let mut agents = load_agents(&app)?;
+    let mut updated = AgentConfig {
+        id: agent_id.clone(),
+        name: input.name,
+        command: input.command,
+        args: input.args,
+        working_directory_policy: input.working_directory_policy,
+        capabilities: input.capabilities,
+        adapter_type: input.adapter_type,
+        can_write_files: input.can_write_files,
+        can_run_commands: input.can_run_commands,
+        enabled: input.enabled,
+        available: false,
+    };
+    updated.available = command_available(&updated);
+    apply_agent_update(&mut agents, &agent_id, updated)?;
+    save_agents(&app, &agents)?;
+
+    Ok(agents)
+}
+
+#[tauri::command]
+pub fn delete_agent(app: AppHandle, agent_id: String) -> Result<Vec<AgentConfig>, String> {
+    let mut agents = load_agents(&app)?;
+    delete_agent_config(&mut agents, &agent_id)?;
+    save_agents(&app, &agents)?;
+
+    Ok(agents)
+}
+
+#[tauri::command]
 pub fn set_agent_enabled(
     app: AppHandle,
     agent_id: String,
@@ -94,6 +130,38 @@ pub fn set_agent_enabled(
 
     save_agents(&app, &agents)?;
     Ok(agents)
+}
+
+fn apply_agent_update(
+    agents: &mut [AgentConfig],
+    agent_id: &str,
+    updated: AgentConfig,
+) -> Result<(), String> {
+    if is_default_agent_id(agent_id) {
+        return Err("built-in Agent profiles can only be enabled or disabled".to_string());
+    }
+
+    let Some(agent) = agents.iter_mut().find(|agent| agent.id == agent_id) else {
+        return Err("agent not found".to_string());
+    };
+
+    *agent = updated;
+    Ok(())
+}
+
+fn delete_agent_config(agents: &mut Vec<AgentConfig>, agent_id: &str) -> Result<(), String> {
+    if is_default_agent_id(agent_id) {
+        return Err("built-in Agent profiles can only be disabled, not deleted".to_string());
+    }
+
+    let initial_len = agents.len();
+    agents.retain(|agent| agent.id != agent_id);
+
+    if agents.len() == initial_len {
+        return Err("agent not found".to_string());
+    }
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -1171,6 +1239,13 @@ fn merge_missing_default_agents(agents: &mut Vec<AgentConfig>) {
     }
 }
 
+fn is_default_agent_id(agent_id: &str) -> bool {
+    matches!(
+        agent_id,
+        "agent-codex" | "agent-claude" | "agent-amp" | "agent-dummy"
+    )
+}
+
 fn command_available(agent: &AgentConfig) -> bool {
     if agent.adapter_type == ADAPTER_DUMMY {
         return true;
@@ -1452,6 +1527,92 @@ mod tests {
         assert_eq!(dummy.name, "Dummy Agent (test)");
         assert!(!dummy.enabled);
         assert_eq!(dummy.capabilities, vec!["planning".to_string()]);
+    }
+
+    #[test]
+    fn updates_custom_agent_config() {
+        let mut agents = vec![AgentConfig {
+            id: "agent-custom".to_string(),
+            name: "Custom".to_string(),
+            command: "custom".to_string(),
+            args: Vec::new(),
+            working_directory_policy: "project_root".to_string(),
+            capabilities: vec!["planning".to_string()],
+            adapter_type: ADAPTER_CLI.to_string(),
+            can_write_files: false,
+            can_run_commands: false,
+            enabled: true,
+            available: false,
+        }];
+        let updated = AgentConfig {
+            id: "agent-custom".to_string(),
+            name: "Custom Writer".to_string(),
+            command: "custom-agent".to_string(),
+            args: vec!["--json".to_string()],
+            working_directory_policy: "custom".to_string(),
+            capabilities: vec!["implementation".to_string(), "review".to_string()],
+            adapter_type: ADAPTER_CLI.to_string(),
+            can_write_files: true,
+            can_run_commands: true,
+            enabled: false,
+            available: true,
+        };
+
+        apply_agent_update(&mut agents, "agent-custom", updated).unwrap();
+
+        assert_eq!(agents[0].name, "Custom Writer");
+        assert_eq!(agents[0].args, vec!["--json".to_string()]);
+        assert_eq!(
+            agents[0].capabilities,
+            vec!["implementation".to_string(), "review".to_string()]
+        );
+        assert!(agents[0].can_write_files);
+        assert!(!agents[0].enabled);
+    }
+
+    #[test]
+    fn rejects_edit_and_delete_for_builtin_agents() {
+        let mut agents = discover_default_agents();
+        let codex = agents
+            .iter()
+            .find(|agent| agent.id == "agent-codex")
+            .cloned()
+            .expect("default codex profile should exist");
+
+        assert_eq!(
+            apply_agent_update(&mut agents, "agent-codex", codex).unwrap_err(),
+            "built-in Agent profiles can only be enabled or disabled"
+        );
+        assert_eq!(
+            delete_agent_config(&mut agents, "agent-codex").unwrap_err(),
+            "built-in Agent profiles can only be disabled, not deleted"
+        );
+        assert!(agents.iter().any(|agent| agent.id == "agent-codex"));
+    }
+
+    #[test]
+    fn deletes_custom_agent_config() {
+        let mut agents = vec![
+            test_agent("codex", ADAPTER_CODEX, Vec::new()),
+            AgentConfig {
+                id: "agent-custom".to_string(),
+                name: "Custom".to_string(),
+                command: "custom".to_string(),
+                args: Vec::new(),
+                working_directory_policy: "project_root".to_string(),
+                capabilities: vec!["planning".to_string()],
+                adapter_type: ADAPTER_CLI.to_string(),
+                can_write_files: false,
+                can_run_commands: false,
+                enabled: true,
+                available: false,
+            },
+        ];
+
+        delete_agent_config(&mut agents, "agent-custom").unwrap();
+
+        assert_eq!(agents.len(), 1);
+        assert!(agents.iter().all(|agent| agent.id != "agent-custom"));
     }
 
     #[test]

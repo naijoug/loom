@@ -1,5 +1,10 @@
 # 计划文档索引
 
+## 2026-05-13
+
+- 09:02-final-shape-roadmap.md
+  > 重新规划 Loom 最终形态的剩余功能路线，并将下一步实施重点收敛到 Agent 配置闭环、Review、调试修复、权限审计和任务总结。
+
 ## 2026-05-11
 
 - 17:52-real-cli-agent-adapter.md

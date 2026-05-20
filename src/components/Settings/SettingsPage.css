@@ -118,6 +118,98 @@
   border-top: 1px solid var(--theme-border-subtle);
 }
 
+.settings-agent-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border-top: 1px solid var(--theme-border-subtle);
+  background: color-mix(in srgb, var(--theme-bg-secondary) 54%, transparent);
+}
+
+.settings-form-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.settings-form-actions {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.settings-field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--theme-text-muted);
+  font-family: var(--font-body);
+  font-size: 11px;
+}
+
+.settings-field-wide {
+  grid-column: 1 / -1;
+}
+
+.settings-field input,
+.settings-field select,
+.settings-field textarea {
+  width: 100%;
+  border: 1px solid var(--theme-border-strong);
+  border-radius: 4px;
+  background: var(--theme-bg-primary);
+  color: var(--theme-text-primary);
+  font-family: var(--font-body);
+  font-size: 12px;
+  line-height: 1.4;
+  outline: none;
+  padding: 8px;
+}
+
+.settings-field textarea {
+  min-height: 70px;
+  resize: vertical;
+  font-family: var(--font-mono);
+}
+
+.settings-field input:focus,
+.settings-field select:focus,
+.settings-field textarea:focus {
+  border-color: var(--theme-accent);
+}
+
+.settings-check-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+
+.settings-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--theme-text-secondary);
+  font-family: var(--font-body);
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.settings-check input {
+  width: 13px;
+  height: 13px;
+  margin: 0;
+}
+
 .settings-card-row.split {
   align-items: center;
   justify-content: space-between;
@@ -205,6 +297,10 @@
   color: var(--theme-text-primary);
 }
 
+.settings-icon-control.danger:hover {
+  color: var(--theme-error);
+}
+
 .settings-text-control {
   border: 0;
   border-radius: 4px;
@@ -229,4 +325,21 @@
   color: #b42318;
   font-family: var(--font-body);
   font-size: 12px;
+}
+
+@media (max-width: 920px) {
+  .settings-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-form-header,
+  .settings-card-row.split {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .settings-form-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
 }

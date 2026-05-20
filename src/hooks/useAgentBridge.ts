@@ -65,6 +65,40 @@ export function useAgentBridge() {
     [dispatch],
   );
 
+  const updateAgent = useCallback(
+    async (agentId: string, input: AgentConfigInput) => {
+      dispatch({ type: "agents/loadStarted" });
+      try {
+        assertTauriRuntime("Updating an Agent");
+
+        const agents = await invoke<AgentConfig[]>("update_agent", { agentId, input });
+        dispatch({ type: "agents/loaded", agents });
+        return agents;
+      } catch (error) {
+        dispatch({ type: "agents/loadFailed", error: toErrorMessage(error) });
+        return null;
+      }
+    },
+    [dispatch],
+  );
+
+  const deleteAgent = useCallback(
+    async (agentId: string) => {
+      dispatch({ type: "agents/loadStarted" });
+      try {
+        assertTauriRuntime("Deleting an Agent");
+
+        const agents = await invoke<AgentConfig[]>("delete_agent", { agentId });
+        dispatch({ type: "agents/loaded", agents });
+        return agents;
+      } catch (error) {
+        dispatch({ type: "agents/loadFailed", error: toErrorMessage(error) });
+        return null;
+      }
+    },
+    [dispatch],
+  );
+
   const runPlanningDiscussion = useCallback(
     async (input: PlanningDiscussionInput) => {
       dispatch({ type: "tasks/loadStarted" });
@@ -82,5 +116,5 @@ export function useAgentBridge() {
     [dispatch],
   );
 
-  return { loadAgents, createAgent, setAgentEnabled, runPlanningDiscussion };
+  return { loadAgents, createAgent, setAgentEnabled, updateAgent, deleteAgent, runPlanningDiscussion };
 }

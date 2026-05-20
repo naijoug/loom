@@ -46,9 +46,11 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             health_check,
             agents::create_agent,
+            agents::delete_agent,
             agents::list_agents,
             agents::run_planning_discussion,
             agents::set_agent_enabled,
+            agents::update_agent,
             command_runner::command_runner_ready,
             command_runner::start_command_run,
             command_runner::stop_command_run,
