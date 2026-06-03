@@ -163,6 +163,10 @@ pub struct Task {
     #[serde(default)]
     pub agent_invocations: Vec<AgentInvocation>,
     #[serde(default)]
+    pub plan_reviews: Vec<PlanReview>,
+    #[serde(default)]
+    pub planning_decisions: Vec<PlanningDecision>,
+    #[serde(default)]
     pub plan_todos: Vec<PlanTodoItem>,
     pub events: Vec<TaskEvent>,
     pub command_runs: Vec<CommandRun>,
@@ -170,6 +174,37 @@ pub struct Task {
     pub repair_context_preview: Option<String>,
     pub created_at_ms: u128,
     pub updated_at_ms: u128,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlanReview {
+    pub id: String,
+    pub planning_run_id: String,
+    pub task_id: String,
+    pub reviewer_agent_id: String,
+    pub reviewer_agent_name: String,
+    pub target_agent_id: String,
+    pub target_agent_name: String,
+    pub status: String,
+    pub finding: String,
+    pub severity: String,
+    pub accepted: bool,
+    pub raw_output: String,
+    pub evidence_ref: Option<String>,
+    pub started_at_ms: u128,
+    pub ended_at_ms: Option<u128>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlanningDecision {
+    pub id: String,
+    pub task_id: String,
+    pub title: String,
+    pub content: String,
+    pub status: String,
+    pub created_at_ms: u128,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -258,6 +293,15 @@ pub struct PlanningDiscussionInput {
     pub task_id: String,
     pub requirement: String,
     pub agent_ids: Vec<String>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlanningDecisionInput {
+    pub project_path: String,
+    pub task_id: String,
+    pub title: String,
+    pub content: String,
 }
 
 #[derive(Clone, Serialize, Deserialize)]

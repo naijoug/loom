@@ -51,6 +51,33 @@ export interface AgentInvocation {
   endedAtMs?: number;
 }
 
+export interface PlanReview {
+  id: string;
+  planningRunId: string;
+  taskId: string;
+  reviewerAgentId: string;
+  reviewerAgentName: string;
+  targetAgentId: string;
+  targetAgentName: string;
+  status: AgentInvocationStatus;
+  finding: string;
+  severity: "info" | "risk" | "blocker";
+  accepted: boolean;
+  rawOutput: string;
+  evidenceRef?: string;
+  startedAtMs: number;
+  endedAtMs?: number;
+}
+
+export interface PlanningDecision {
+  id: string;
+  taskId: string;
+  title: string;
+  content: string;
+  status: "open" | "accepted";
+  createdAtMs: number;
+}
+
 export interface PlanningRun {
   id: string;
   taskId: string;
@@ -88,6 +115,8 @@ export interface Task {
   discussionSummary?: string;
   planningRuns: PlanningRun[];
   agentInvocations: AgentInvocation[];
+  planReviews: PlanReview[];
+  planningDecisions: PlanningDecision[];
   planTodos: PlanTodoItem[];
   events: TaskEvent[];
   commandRuns: import("./command").CommandRun[];
@@ -108,4 +137,11 @@ export interface PlanningDiscussionInput {
   taskId: string;
   requirement: string;
   agentIds: string[];
+}
+
+export interface PlanningDecisionInput {
+  projectPath: string;
+  taskId: string;
+  title: string;
+  content: string;
 }

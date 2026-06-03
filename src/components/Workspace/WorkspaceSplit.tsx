@@ -1,9 +1,6 @@
 import {
   Activity,
-  Bot,
   ClipboardCheck,
-  GitBranch,
-  ListChecks,
   MessagesSquare,
   Radar,
   ShieldCheck,
@@ -11,7 +8,7 @@ import {
 } from "lucide-react";
 import { ImplementationPane } from "./ImplementationPane";
 import { ImplementationOutputPane } from "./ImplementationOutputPane";
-import { PlanningPane } from "./PlanningPane";
+import { PlanningWizard } from "./PlanningWizard";
 import { DebugPane } from "./DebugPane";
 import type { Task, TaskStatus } from "../../domain";
 import { useAppState } from "../../state/AppStateContext";
@@ -142,57 +139,6 @@ function CommandOverview({ task }: { task: Task | null }) {
   );
 }
 
-function DecisionLedger({ task }: { task: Task | null }) {
-  if (!task) {
-    return (
-      <div className="decision-ledger empty-ledger">
-        <Radar size={18} />
-        <div>
-          <h3>Planning room is idle</h3>
-          <p>Describe a goal on the left to invite planning Agents and build the implementation brief.</p>
-        </div>
-      </div>
-    );
-  }
-
-  const recentInvocations = task.agentInvocations.slice(-4).reverse();
-
-  return (
-    <div className="decision-ledger">
-      <div className="ledger-section">
-        <div className="ledger-title">
-          <ListChecks size={15} />
-          Consensus brief
-        </div>
-        <p>{task.discussionSummary ?? "Waiting for Agents to compare plans, conflicts, risks, and open questions."}</p>
-        {task.finalPlanPath && (
-          <div className="ledger-ref">
-            <GitBranch size={13} />
-            {task.finalPlanPath}
-          </div>
-        )}
-      </div>
-
-      <div className="ledger-section">
-        <div className="ledger-title">
-          <Bot size={15} />
-          Recent Agent signals
-        </div>
-        {recentInvocations.length === 0 && (
-          <p>No planning Agent output has been captured for this task yet.</p>
-        )}
-        {recentInvocations.map((invocation) => (
-          <div className="agent-signal" key={invocation.id}>
-            <span>{invocation.agentName}</span>
-            <strong>{invocation.status}</strong>
-            <p>{invocation.outputSummary || invocation.promptSummary}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export function WorkspaceSplit() {
   const { state } = useAppState();
   const task = state.tasks.find((candidate) => candidate.id === state.app.selectedTaskId) ?? null;
@@ -209,24 +155,28 @@ export function WorkspaceSplit() {
     return (
       <div className="workspace-empty-state redesigned-empty">
         <Radar size={28} />
-        <div className="workspace-empty-title">Open a project to start orchestration</div>
+        <div className="workspace-empty-title">先打开一个项目</div>
         <div className="workspace-empty-copy">
-          Loom will map the stack, surface Agent options, and keep every command, review, and repair loop traceable.
+          Loom 会识别项目、加载 Agent，并把计划、互评、人工决策和最终文档记录下来。
         </div>
       </div>
     );
+  }
+
+  if (!inExecution) {
+    return <PlanningWizard />;
   }
 
   return (
     <div className="command-center">
       <section className="command-column mission-column">
         <div className="column-label">Mission setup</div>
-        {inExecution ? <ImplementationPane /> : <PlanningPane />}
+        <ImplementationPane />
       </section>
 
       <section className="command-column command-column-main">
         <CommandOverview task={task} />
-        {inExecution ? <ImplementationOutputPane /> : <DecisionLedger task={task} />}
+        <ImplementationOutputPane />
       </section>
 
       <section className="command-column evidence-column">

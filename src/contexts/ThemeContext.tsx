@@ -7,14 +7,29 @@ interface ThemeContextType {
   toggleTheme: () => void;
 }
 
+interface ThemeProviderProps {
+  children: ReactNode;
+  forcedTheme?: Theme;
+}
+
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-export function ThemeProvider({ children }: { children: ReactNode }) {
+export function ThemeProvider({ children, forcedTheme }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(() => {
+    if (forcedTheme) {
+      return forcedTheme;
+    }
+
     const saved = localStorage.getItem("loom-theme");
     if (saved) return saved as Theme;
     return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   });
+
+  useEffect(() => {
+    if (forcedTheme) {
+      setTheme(forcedTheme);
+    }
+  }, [forcedTheme]);
 
   // Apply theme to DOM
   useEffect(() => {
@@ -26,6 +41,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     
     const handleChange = (e: MediaQueryListEvent) => {
+      if (forcedTheme) {
+        return;
+      }
+
       const saved = localStorage.getItem("loom-theme");
       if (!saved) {
         setTheme(e.matches ? "dark" : "light");
@@ -34,9 +53,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
     mediaQuery.addEventListener("change", handleChange);
     return () => mediaQuery.removeEventListener("change", handleChange);
-  }, []);
+  }, [forcedTheme]);
 
   const toggleTheme = () => {
+    if (forcedTheme) {
+      return;
+    }
+
     setTheme((prev) => {
       const nextTheme = prev === "light" ? "dark" : "light";
       localStorage.setItem("loom-theme", nextTheme);

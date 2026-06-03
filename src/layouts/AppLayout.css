@@ -39,3 +39,13 @@
   display: flex;
   overflow: hidden;
 }
+
+@media (max-width: 760px) {
+  .app-sidebar {
+    display: none;
+  }
+
+  .app-content {
+    min-width: 0;
+  }
+}

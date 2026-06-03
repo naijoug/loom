@@ -1,7 +1,7 @@
 use crate::{
     models::{
         now_ms, CommandRun, CreateTaskInput, ErrorSummary, FeedbackInput, IdGenerator,
-        PlanTodoItem, Task, TaskEvent, UserFeedback,
+        PlanTodoItem, PlanningDecision, PlanningDecisionInput, Task, TaskEvent, UserFeedback,
     },
     storage,
 };
@@ -54,6 +54,8 @@ pub fn create_task(ids: State<'_, IdGenerator>, input: CreateTaskInput) -> Resul
         discussion_summary: None,
         planning_runs: Vec::new(),
         agent_invocations: Vec::new(),
+        plan_reviews: Vec::new(),
+        planning_decisions: Vec::new(),
         plan_todos: Vec::new(),
         events: vec![TaskEvent {
             id: event_id,
@@ -74,6 +76,66 @@ pub fn create_task(ids: State<'_, IdGenerator>, input: CreateTaskInput) -> Resul
     save_task(&task)?;
 
     Ok(task)
+}
+
+#[tauri::command]
+pub fn record_planning_decision(
+    ids: State<'_, IdGenerator>,
+    input: PlanningDecisionInput,
+) -> Result<Task, String> {
+    let mut task = load_task(Path::new(&input.project_path), &input.task_id)?;
+    let timestamp_ms = now_ms();
+    let decision = PlanningDecision {
+        id: ids.next("decision"),
+        task_id: task.id.clone(),
+        title: input.title.clone(),
+        content: input.content.clone(),
+        status: "accepted".to_string(),
+        created_at_ms: timestamp_ms,
+    };
+
+    task.planning_decisions.push(decision);
+    task.final_plan = task
+        .final_plan
+        .clone()
+        .map(|plan| render_plan_with_human_decisions(&plan, &task.planning_decisions));
+    if let (Some(path), Some(plan)) = (&task.final_plan_path, &task.final_plan) {
+        fs::write(path, plan)
+            .map_err(|error| format!("failed to write decision to plan: {error}"))?;
+    }
+    task.events.push(TaskEvent {
+        id: ids.next("event"),
+        task_id: task.id.clone(),
+        timestamp_ms,
+        actor: "user".to_string(),
+        status: task.status.clone(),
+        input_summary: Some(input.title),
+        output_summary: Some(input.content),
+        evidence_ref: task.final_plan_path.clone(),
+    });
+    task.updated_at_ms = timestamp_ms;
+    save_task(&task)?;
+
+    Ok(task)
+}
+
+fn render_plan_with_human_decisions(plan: &str, decisions: &[PlanningDecision]) -> String {
+    let base = plan
+        .split("\n## Human Decisions\n")
+        .next()
+        .unwrap_or(plan)
+        .trim_end();
+    let decision_section = if decisions.is_empty() {
+        "- No human decisions captured yet.".to_string()
+    } else {
+        decisions
+            .iter()
+            .map(|decision| format!("- **{}**: {}", decision.title, decision.content))
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
+
+    format!("{base}\n\n## Human Decisions\n\n{decision_section}\n")
 }
 
 #[tauri::command]
@@ -817,6 +879,8 @@ mod tests {
             discussion_summary: None,
             planning_runs: Vec::new(),
             agent_invocations: Vec::new(),
+            plan_reviews: Vec::new(),
+            planning_decisions: Vec::new(),
             plan_todos: vec![
                 PlanTodoItem {
                     id: "todo-1".to_string(),
@@ -879,6 +943,8 @@ mod tests {
             discussion_summary: None,
             planning_runs: Vec::new(),
             agent_invocations: Vec::new(),
+            plan_reviews: Vec::new(),
+            planning_decisions: Vec::new(),
             plan_todos: vec![PlanTodoItem {
                 id: "todo-1".to_string(),
                 task_id: "task-1".to_string(),
@@ -925,6 +991,8 @@ mod tests {
             discussion_summary: None,
             planning_runs: Vec::new(),
             agent_invocations: Vec::new(),
+            plan_reviews: Vec::new(),
+            planning_decisions: Vec::new(),
             plan_todos: vec![PlanTodoItem {
                 id: "todo-1".to_string(),
                 task_id: "task-1".to_string(),
@@ -966,6 +1034,8 @@ mod tests {
             discussion_summary: None,
             planning_runs: Vec::new(),
             agent_invocations: Vec::new(),
+            plan_reviews: Vec::new(),
+            planning_decisions: Vec::new(),
             plan_todos: vec![PlanTodoItem {
                 id: "todo-1".to_string(),
                 task_id: "task-1".to_string(),

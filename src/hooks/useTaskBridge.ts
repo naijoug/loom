@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback } from "react";
-import type { CreateTaskInput, Task } from "../domain";
+import type { CreateTaskInput, PlanningDecisionInput, Task } from "../domain";
 import { useAppState } from "../state/AppStateContext";
 import { hasTauriRuntime } from "./runtime";
 
@@ -54,6 +54,20 @@ export function useTaskBridge() {
         const task = await invoke<Task>("append_feedback", {
           input: { projectPath, taskId, commandRunId, content },
         });
+        dispatch({ type: "tasks/upserted", task });
+        return task;
+      } catch (error) {
+        dispatch({ type: "tasks/loadFailed", error: toErrorMessage(error) });
+        return null;
+      }
+    },
+    [dispatch],
+  );
+
+  const recordPlanningDecision = useCallback(
+    async (input: PlanningDecisionInput) => {
+      try {
+        const task = await invoke<Task>("record_planning_decision", { input });
         dispatch({ type: "tasks/upserted", task });
         return task;
       } catch (error) {
@@ -132,5 +146,14 @@ export function useTaskBridge() {
     [dispatch],
   );
 
-  return { loadTasks, createTask, confirmPlan, startTodo, completeTodo, appendFeedback, generateRepairContext };
+  return {
+    loadTasks,
+    createTask,
+    confirmPlan,
+    startTodo,
+    completeTodo,
+    appendFeedback,
+    recordPlanningDecision,
+    generateRepairContext,
+  };
 }

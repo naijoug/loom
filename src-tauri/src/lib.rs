@@ -49,6 +49,7 @@ pub fn run() {
             agents::delete_agent,
             agents::list_agents,
             agents::run_planning_discussion,
+            agents::run_plan_reviews,
             agents::set_agent_enabled,
             agents::update_agent,
             command_runner::command_runner_ready,
@@ -62,6 +63,7 @@ pub fn run() {
             tasks::create_task,
             tasks::generate_repair_context,
             tasks::list_tasks,
+            tasks::record_planning_decision,
             tasks::start_todo
         ])
         .run(tauri::generate_context!())

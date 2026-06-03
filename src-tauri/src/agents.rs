@@ -1,7 +1,7 @@
 use crate::{
     models::{
-        now_ms, AgentConfig, AgentConfigInput, AgentInvocation, IdGenerator,
-        PlanningDiscussionInput, PlanningRun, TaskEvent,
+        now_ms, AgentConfig, AgentConfigInput, AgentInvocation, IdGenerator, PlanReview,
+        PlanningDecision, PlanningDiscussionInput, PlanningRun, TaskEvent,
     },
     storage, tasks,
 };
@@ -44,6 +44,16 @@ struct PlanningInvocationResult {
     evidence_ref: Option<String>,
     exit_code: Option<i32>,
     timed_out: bool,
+    started_at_ms: u128,
+    ended_at_ms: u128,
+}
+
+struct PlanReviewInvocationResult {
+    status: String,
+    raw_output: String,
+    finding: String,
+    severity: String,
+    evidence_ref: Option<String>,
     started_at_ms: u128,
     ended_at_ms: u128,
 }
@@ -265,6 +275,11 @@ pub async fn run_planning_discussion(
         ended_at_ms: Some(finished_at_ms),
     });
     task.agent_invocations.extend(invocations);
+    task.plan_reviews = task
+        .plan_reviews
+        .into_iter()
+        .filter(|review| review.planning_run_id != planning_run_id)
+        .collect();
     task.plan_todos = Vec::new();
     task.updated_at_ms = finished_at_ms;
     task.events.push(TaskEvent {
@@ -284,6 +299,185 @@ pub async fn run_planning_discussion(
     tasks::save_task(&task)?;
 
     Ok(task)
+}
+
+#[tauri::command]
+pub async fn run_plan_reviews(
+    app: AppHandle,
+    ids: State<'_, IdGenerator>,
+    project_path: String,
+    task_id: String,
+) -> Result<crate::models::Task, String> {
+    let agents = load_agents(&app)?;
+    let mut task = tasks::load_task(Path::new(&project_path), &task_id)?;
+    let planning_run = task
+        .planning_runs
+        .last()
+        .cloned()
+        .ok_or_else(|| "cannot run plan reviews before a planning run exists".to_string())?;
+    let selected_agents = resolve_planning_agents(&agents, &planning_run.selected_agent_ids);
+    let successful_invocations = task
+        .agent_invocations
+        .iter()
+        .filter(|invocation| {
+            invocation.planning_run_id == planning_run.id && invocation.status == "succeeded"
+        })
+        .cloned()
+        .collect::<Vec<_>>();
+
+    if successful_invocations.len() < 2 {
+        return Err("plan review requires at least two successful agent proposals".to_string());
+    }
+
+    let mut reviews = Vec::new();
+    for reviewer in selected_agents.iter().filter(|agent| {
+        successful_invocations
+            .iter()
+            .any(|invocation| invocation.agent_id == agent.id)
+    }) {
+        for target in successful_invocations
+            .iter()
+            .filter(|invocation| invocation.agent_id != reviewer.id)
+        {
+            let result = run_plan_review_agent(
+                reviewer,
+                Path::new(&project_path),
+                &task.id,
+                &planning_run.id,
+                target,
+            )
+            .await?;
+
+            reviews.push(PlanReview {
+                id: ids.next("review"),
+                planning_run_id: planning_run.id.clone(),
+                task_id: task.id.clone(),
+                reviewer_agent_id: reviewer.id.clone(),
+                reviewer_agent_name: reviewer.name.clone(),
+                target_agent_id: target.agent_id.clone(),
+                target_agent_name: target.agent_name.clone(),
+                status: result.status,
+                finding: result.finding,
+                severity: result.severity,
+                accepted: false,
+                raw_output: result.raw_output,
+                evidence_ref: result.evidence_ref,
+                started_at_ms: result.started_at_ms,
+                ended_at_ms: Some(result.ended_at_ms),
+            });
+        }
+    }
+
+    task.plan_reviews = task
+        .plan_reviews
+        .into_iter()
+        .filter(|review| review.planning_run_id != planning_run.id)
+        .collect();
+    task.plan_reviews.extend(reviews);
+    task.final_plan = task.final_plan.clone().map(|plan| {
+        render_reviewed_final_plan(&plan, &task.plan_reviews, &task.planning_decisions)
+    });
+    if let (Some(path), Some(plan)) = (&task.final_plan_path, &task.final_plan) {
+        fs::write(path, plan).map_err(|error| format!("failed to write reviewed plan: {error}"))?;
+    }
+    task.status = "plan_review".to_string();
+    task.updated_at_ms = now_ms();
+    task.events.push(TaskEvent {
+        id: ids.next("event"),
+        task_id: task.id.clone(),
+        timestamp_ms: task.updated_at_ms,
+        actor: "agent".to_string(),
+        status: task.status.clone(),
+        input_summary: Some("Ran agent-to-agent plan reviews".to_string()),
+        output_summary: Some(format!(
+            "{} mutual review records captured.",
+            task.plan_reviews
+                .iter()
+                .filter(|review| review.planning_run_id == planning_run.id)
+                .count()
+        )),
+        evidence_ref: task.final_plan_path.clone(),
+    });
+    tasks::save_task(&task)?;
+
+    Ok(task)
+}
+
+async fn run_plan_review_agent(
+    reviewer: &AgentConfig,
+    project_path: &Path,
+    task_id: &str,
+    planning_run_id: &str,
+    target: &AgentInvocation,
+) -> Result<PlanReviewInvocationResult, String> {
+    let evidence_dir =
+        planning_evidence_dir(project_path, task_id, planning_run_id).join("reviews");
+    fs::create_dir_all(&evidence_dir)
+        .map_err(|error| format!("failed to create review evidence directory: {error}"))?;
+
+    let review_id = format!("{}-reviews-{}", reviewer.id, target.agent_id);
+    let prompt_path = evidence_dir.join(format!("{review_id}.prompt.md"));
+    let stdout_path = evidence_dir.join(format!("{review_id}.stdout.md"));
+    let stderr_path = evidence_dir.join(format!("{review_id}.stderr.log"));
+    let prompt = render_plan_review_prompt(reviewer, target);
+    let redacted_prompt = redact_sensitive_text(&prompt.content);
+    fs::write(&prompt_path, &redacted_prompt)
+        .map_err(|error| format!("failed to write review prompt: {error}"))?;
+
+    if effective_adapter_type(reviewer) == ADAPTER_DUMMY {
+        let started_at_ms = now_ms();
+        let output = deterministic_plan_review_output(reviewer, target);
+        fs::write(&stdout_path, &output)
+            .map_err(|error| format!("failed to write dummy review output: {error}"))?;
+        fs::write(&stderr_path, "")
+            .map_err(|error| format!("failed to write dummy review stderr: {error}"))?;
+
+        return Ok(PlanReviewInvocationResult {
+            status: "succeeded".to_string(),
+            finding: summarize_review_output(&output),
+            severity: infer_review_severity(&output),
+            raw_output: output,
+            evidence_ref: Some(stdout_path.display().to_string()),
+            started_at_ms,
+            ended_at_ms: now_ms(),
+        });
+    }
+
+    let profile = build_cli_profile(reviewer, project_path, &prompt_path)?;
+    match run_cli_profile(&profile, project_path, &redacted_prompt).await {
+        Ok(result) => {
+            fs::write(&stdout_path, &result.stdout)
+                .map_err(|error| format!("failed to write review stdout: {error}"))?;
+            fs::write(&stderr_path, &result.stderr)
+                .map_err(|error| format!("failed to write review stderr: {error}"))?;
+            Ok(PlanReviewInvocationResult {
+                status: result.status,
+                finding: summarize_review_output(&result.stdout),
+                severity: infer_review_severity(&result.stdout),
+                raw_output: result.stdout,
+                evidence_ref: Some(stdout_path.display().to_string()),
+                started_at_ms: result.started_at_ms,
+                ended_at_ms: result.ended_at_ms,
+            })
+        }
+        Err(error) => {
+            let started_at_ms = now_ms();
+            let stderr = redact_sensitive_text(&error);
+            fs::write(&stdout_path, "")
+                .map_err(|error| format!("failed to write empty review stdout: {error}"))?;
+            fs::write(&stderr_path, &stderr)
+                .map_err(|error| format!("failed to write review stderr: {error}"))?;
+            Ok(PlanReviewInvocationResult {
+                status: "failed".to_string(),
+                finding: format!("{} failed to review {}.", reviewer.name, target.agent_name),
+                severity: "blocker".to_string(),
+                raw_output: stderr,
+                evidence_ref: Some(stderr_path.display().to_string()),
+                started_at_ms,
+                ended_at_ms: now_ms(),
+            })
+        }
+    }
 }
 
 async fn run_planning_agent(
@@ -518,11 +712,31 @@ fn render_planning_prompt(
     }
 }
 
+fn render_plan_review_prompt(reviewer: &AgentConfig, target: &AgentInvocation) -> PlanningPrompt {
+    PlanningPrompt {
+        content: format!(
+            "# Loom Plan Review Request\n\n## Reviewer\n\n{}\n\n## Plan Under Review\n\nAgent: {}\nStatus: {}\nEvidence: {}\n\n## Target Plan Output\n\n{}\n\n## Review Instructions\n\n- Review this plan as another planning Agent, not as the implementer.\n- Identify concrete gaps, contradictions, risks, and test weaknesses.\n- Call out points you agree with.\n- Keep the review scoped to planning; do not modify files.\n\n## Expected Output\n\nUse these sections:\n\n1. Agreement\n2. Concerns\n3. Missing details\n4. Suggested changes\n5. Severity: info|risk|blocker\n",
+            reviewer.name,
+            target.agent_name,
+            target.status,
+            target.evidence_ref.clone().unwrap_or_else(|| "(none)".to_string()),
+            target.raw_output
+        ),
+    }
+}
+
 fn deterministic_planning_output(agent: &AgentConfig, prompt: &PlanningPrompt) -> String {
     format!(
         "Agent: {}\nAdapter: dummy\n\nPlan:\n- Capture the raw requirement and selected planning agents.\n- Persist each agent discussion output with an evidence reference.\n- Generate a final Markdown plan and derive implementation todo items.\n\nRisk:\n- Keep dummy output clearly marked as test-only.\n- Do not treat this output as real Agent reasoning.\n\nPrompt excerpt:\n{}",
         agent.name,
         prompt.content.lines().take(12).collect::<Vec<_>>().join("\n")
+    )
+}
+
+fn deterministic_plan_review_output(reviewer: &AgentConfig, target: &AgentInvocation) -> String {
+    format!(
+        "Reviewer: {}\nTarget: {}\n\nAgreement:\n- The target plan gives a usable implementation direction.\n\nConcerns:\n- Confirm that scope stays tied to the planning MVP before implementation work begins.\n\nMissing details:\n- Add explicit verification steps and human decision points.\n\nSuggested changes:\n- Split final plan generation from mutual review evidence.\n\nSeverity: risk\n",
+        reviewer.name, target.agent_name
     )
 }
 
@@ -623,6 +837,35 @@ fn summarize_cli_output(output: &str) -> String {
         .unwrap_or_else(|| "Agent completed without text output.".to_string())
 }
 
+fn summarize_review_output(output: &str) -> String {
+    output
+        .lines()
+        .map(str::trim)
+        .find(|line| {
+            !line.is_empty()
+                && !line.ends_with(':')
+                && !line.to_lowercase().starts_with("severity:")
+        })
+        .map(|line| line.trim_start_matches("- ").chars().take(180).collect())
+        .unwrap_or_else(|| "Review completed without a concise finding.".to_string())
+}
+
+fn infer_review_severity(output: &str) -> String {
+    let lower = output.to_lowercase();
+    if lower.contains("severity: blocker") || lower.contains("blocker") || lower.contains("阻塞")
+    {
+        "blocker".to_string()
+    } else if lower.contains("severity: risk")
+        || lower.contains("risk")
+        || lower.contains("concern")
+        || lower.contains("风险")
+    {
+        "risk".to_string()
+    } else {
+        "info".to_string()
+    }
+}
+
 fn summarize_discussion(
     agents: &[AgentConfig],
     requirement: &str,
@@ -694,6 +937,49 @@ fn render_final_plan(
 
     format!(
         "# {task_title} — Final Plan\n\n## Requirement\n\n{requirement}\n\n## Discussion Summary\n\n{discussion_summary}\n\n## Agent Notes\n\n{agent_notes}\n\n## Implementation Todo\n\n{implementation_todo}\n\n## Acceptance Criteria\n\n{acceptance_criteria}\n"
+    )
+}
+
+fn render_reviewed_final_plan(
+    plan: &str,
+    reviews: &[PlanReview],
+    decisions: &[PlanningDecision],
+) -> String {
+    let base = plan
+        .split("\n## Mutual Plan Reviews\n")
+        .next()
+        .unwrap_or(plan)
+        .trim_end();
+    let review_section = if reviews.is_empty() {
+        "- No mutual review records captured yet.".to_string()
+    } else {
+        reviews
+            .iter()
+            .map(|review| {
+                format!(
+                    "- **{} → {}** [{} / {}]: {}",
+                    review.reviewer_agent_name,
+                    review.target_agent_name,
+                    review.status,
+                    review.severity,
+                    review.finding
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
+    let decision_section = if decisions.is_empty() {
+        "- No human decisions captured yet.".to_string()
+    } else {
+        decisions
+            .iter()
+            .map(|decision| format!("- **{}**: {}", decision.title, decision.content))
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
+
+    format!(
+        "{base}\n\n## Mutual Plan Reviews\n\n{review_section}\n\n## Human Decisions\n\n{decision_section}\n"
     )
 }
 

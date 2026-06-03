@@ -10,10 +10,11 @@ const AppStateContext = createContext<AppStateContextValue | null>(null);
 
 interface AppStateProviderProps {
   children: ReactNode;
+  initialStateOverride?: AppState;
 }
 
-export function AppStateProvider({ children }: AppStateProviderProps) {
-  const [state, dispatch] = useReducer(appReducer, initialAppState);
+export function AppStateProvider({ children, initialStateOverride }: AppStateProviderProps) {
+  const [state, dispatch] = useReducer(appReducer, initialStateOverride ?? initialAppState);
   const value = useMemo(() => ({ state, dispatch }), [state]);
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;

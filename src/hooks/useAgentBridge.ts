@@ -116,5 +116,30 @@ export function useAgentBridge() {
     [dispatch],
   );
 
-  return { loadAgents, createAgent, setAgentEnabled, updateAgent, deleteAgent, runPlanningDiscussion };
+  const runPlanReviews = useCallback(
+    async (projectPath: string, taskId: string) => {
+      dispatch({ type: "tasks/loadStarted" });
+      try {
+        assertTauriRuntime("Plan review");
+
+        const task = await invoke<Task>("run_plan_reviews", { projectPath, taskId });
+        dispatch({ type: "tasks/upserted", task });
+        return task;
+      } catch (error) {
+        dispatch({ type: "tasks/loadFailed", error: toErrorMessage(error) });
+        return null;
+      }
+    },
+    [dispatch],
+  );
+
+  return {
+    loadAgents,
+    createAgent,
+    setAgentEnabled,
+    updateAgent,
+    deleteAgent,
+    runPlanningDiscussion,
+    runPlanReviews,
+  };
 }

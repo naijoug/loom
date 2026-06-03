@@ -25,18 +25,18 @@
 }
 
 :root[data-theme="dark"] {
-  --theme-bg-primary: #191816;
-  --theme-bg-secondary: #23211E;
-  --theme-workspace: #11100F;
-  --theme-text-primary: #F0EDE5;
-  --theme-text-secondary: #C9C1B2;
-  --theme-text-muted: #918879;
-  --theme-accent: #6EA5A7;
-  --theme-success: #7FAE75;
-  --theme-warning: #D29A4D;
-  --theme-border-subtle: #34302A;
-  --theme-border-strong: #514A40;
-  --theme-error: #E27A70;
+  --theme-bg-primary: #151A17;
+  --theme-bg-secondary: #1B211E;
+  --theme-workspace: #0C100E;
+  --theme-text-primary: #E8ECE8;
+  --theme-text-secondary: #B9C2BC;
+  --theme-text-muted: #8E9A94;
+  --theme-accent: #35AEB4;
+  --theme-success: #66C483;
+  --theme-warning: #D6A14A;
+  --theme-border-subtle: #27302C;
+  --theme-border-strong: #3A4741;
+  --theme-error: #E47167;
 }
 
 html, body {
