@@ -4,16 +4,19 @@
 @import "@fontsource/geist-mono";
 
 :root {
-  /* VS Code Light+ inspired theme */
-  --theme-bg-primary: #FFFFFF;
-  --theme-bg-secondary: #F3F3F3;
-  --theme-text-primary: #333333;
-  --theme-text-secondary: #616161;
-  --theme-text-muted: #808080;
-  --theme-accent: #0078D4; /* VS Code Blue */
-  --theme-border-subtle: #E4E4E4;
-  --theme-border-strong: #CCCCCC;
-  --theme-error: #CD3131; /* Softer, muted red */
+  /* Neutral command-center theme */
+  --theme-bg-primary: #FCFCFA;
+  --theme-bg-secondary: #F3F2EE;
+  --theme-workspace: #ECEBE4;
+  --theme-text-primary: #24211D;
+  --theme-text-secondary: #5D5851;
+  --theme-text-muted: #827B71;
+  --theme-accent: #2F6F73;
+  --theme-success: #3D7C45;
+  --theme-warning: #B47122;
+  --theme-border-subtle: #DFDCD2;
+  --theme-border-strong: #C5BFAF;
+  --theme-error: #B8443D;
 
   /* Font Families */
   --font-headings: "Geist Sans", ui-sans-serif, system-ui, sans-serif;
@@ -22,16 +25,18 @@
 }
 
 :root[data-theme="dark"] {
-  /* VS Code Dark+ inspired theme */
-  --theme-bg-primary: #1E1E1E;
-  --theme-bg-secondary: #252526;
-  --theme-text-primary: #D4D4D4;
-  --theme-text-secondary: #CCCCCC;
-  --theme-text-muted: #858585;
-  --theme-accent: #007ACC; /* VS Code Blue */
-  --theme-border-subtle: #333333;
-  --theme-border-strong: #454545;
-  --theme-error: #D16969; /* Softer, muted coral/red */
+  --theme-bg-primary: #191816;
+  --theme-bg-secondary: #23211E;
+  --theme-workspace: #11100F;
+  --theme-text-primary: #F0EDE5;
+  --theme-text-secondary: #C9C1B2;
+  --theme-text-muted: #918879;
+  --theme-accent: #6EA5A7;
+  --theme-success: #7FAE75;
+  --theme-warning: #D29A4D;
+  --theme-border-subtle: #34302A;
+  --theme-border-strong: #514A40;
+  --theme-error: #E27A70;
 }
 
 html, body {

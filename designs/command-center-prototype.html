@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Loom Command Center Prototype</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #11100f;
+        --panel: #191816;
+        --panel-2: #23211e;
+        --line: #34302a;
+        --line-strong: #514a40;
+        --text: #f0ede5;
+        --muted: #918879;
+        --subtle: #c9c1b2;
+        --accent: #6ea5a7;
+        --success: #7fae75;
+        --warning: #d29a4d;
+        --error: #e27a70;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--bg);
+        color: var(--text);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      .app {
+        display: grid;
+        grid-template-columns: 268px 1fr;
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      .sidebar {
+        border-right: 1px solid var(--line);
+        background: var(--panel);
+        padding: 18px 14px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 34px;
+        font-weight: 760;
+      }
+
+      .logo {
+        width: 25px;
+        height: 25px;
+        border: 2px solid var(--text);
+        border-radius: 8px;
+        transform: rotate(45deg);
+      }
+
+      .nav-title {
+        margin: 24px 0 10px;
+        color: var(--muted);
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 11px;
+        text-transform: uppercase;
+      }
+
+      .nav-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        padding: 10px 11px;
+        color: var(--subtle);
+        font-size: 13px;
+      }
+
+      .nav-item.active {
+        border-color: var(--line-strong);
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      .main {
+        display: grid;
+        grid-template-rows: 68px 1fr;
+        min-width: 0;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        border-bottom: 1px solid var(--line);
+        background: var(--panel);
+        padding: 0 20px;
+      }
+
+      .breadcrumb {
+        width: 280px;
+        font-weight: 700;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .flow {
+        display: flex;
+        gap: 8px;
+        min-width: 0;
+        overflow: hidden;
+      }
+
+      .flow span {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--panel-2);
+        padding: 6px 10px;
+        color: var(--muted);
+        font-size: 12px;
+        white-space: nowrap;
+      }
+
+      .flow .active {
+        border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+        color: var(--text);
+      }
+
+      .desk {
+        display: grid;
+        grid-template-columns: minmax(320px, 0.92fr) minmax(460px, 1.35fr) minmax(360px, 0.98fr);
+        min-height: 0;
+        gap: 1px;
+        background: var(--line);
+        overflow: hidden;
+      }
+
+      .col {
+        min-width: 0;
+        min-height: 0;
+        overflow: hidden;
+        background: var(--panel);
+      }
+
+      .label {
+        display: flex;
+        align-items: center;
+        height: 34px;
+        border-bottom: 1px solid var(--line);
+        padding: 0 16px;
+        color: var(--muted);
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 11px;
+        text-transform: uppercase;
+      }
+
+      .section {
+        border-bottom: 1px solid var(--line);
+        padding: 14px;
+      }
+
+      .section h2,
+      .section h3 {
+        margin: 0;
+      }
+
+      .section h2 {
+        font-size: 18px;
+      }
+
+      .section h3 {
+        font-size: 13px;
+      }
+
+      .section p {
+        margin: 7px 0 0;
+        color: var(--subtle);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .textarea {
+        min-height: 118px;
+        border: 1px solid var(--line-strong);
+        border-radius: 8px;
+        background: var(--bg);
+        padding: 12px;
+        color: var(--subtle);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .chips,
+      .actions,
+      .todo-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 12px;
+      }
+
+      .chip,
+      .button,
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: 1px solid var(--line-strong);
+        border-radius: 999px;
+        padding: 6px 9px;
+        color: var(--subtle);
+        font-size: 12px;
+      }
+
+      .button.primary {
+        border-color: var(--accent);
+        background: color-mix(in srgb, var(--accent) 18%, var(--bg));
+        color: var(--text);
+      }
+
+      .todo {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel-2);
+        padding: 12px;
+        margin-top: 10px;
+      }
+
+      .todo.active {
+        border-color: var(--accent);
+      }
+
+      .workspace {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        padding: 16px;
+        background: var(--bg);
+        overflow: auto;
+      }
+
+      .overview,
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 16px;
+      }
+
+      .overview-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .eyebrow {
+        color: var(--muted);
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 11px;
+        text-transform: uppercase;
+      }
+
+      .overview h1 {
+        margin: 5px 0 0;
+        font-size: 22px;
+        line-height: 1.15;
+      }
+
+      .stage-grid,
+      .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      .stage,
+      .metric {
+        min-height: 70px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel-2);
+        padding: 10px;
+      }
+
+      .stage {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .stage.active {
+        border-color: var(--accent);
+        background: color-mix(in srgb, var(--accent) 12%, var(--panel));
+        color: var(--text);
+      }
+
+      .stage.done {
+        color: var(--success);
+      }
+
+      .metric span {
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .metric strong {
+        display: block;
+        margin-top: 5px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px;
+      }
+
+      .card-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 700;
+        font-size: 13px;
+      }
+
+      .signal {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 5px 10px;
+        border-top: 1px solid var(--line);
+        margin-top: 12px;
+        padding-top: 12px;
+      }
+
+      .signal strong {
+        color: var(--muted);
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 11px;
+        text-transform: uppercase;
+      }
+
+      .terminal {
+        height: 410px;
+        overflow: hidden;
+        background: #0d0c0b;
+        padding: 14px;
+        color: #d9d1c2;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px;
+        line-height: 1.55;
+        white-space: pre-wrap;
+      }
+
+      .error {
+        color: var(--error);
+      }
+
+      .feedback {
+        border-top: 1px solid var(--line);
+        padding: 14px;
+      }
+
+      .input {
+        border: 1px solid var(--line-strong);
+        border-radius: 8px;
+        background: var(--bg);
+        padding: 10px;
+        color: var(--subtle);
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand"><div class="logo"></div><span>LOOM</span></div>
+        <div class="nav-title">Projects</div>
+        <div class="nav-item active"><span>loom</span><span>tauri</span></div>
+        <div class="nav-item"><span>agent-adapters</span><span>git</span></div>
+        <div class="nav-title">Agents</div>
+        <div class="nav-item"><span>Codex</span><span>write</span></div>
+        <div class="nav-item"><span>Claude Code</span><span>review</span></div>
+        <div class="nav-item"><span>Amp</span><span>debug</span></div>
+      </aside>
+      <main class="main">
+        <header class="topbar">
+          <div class="breadcrumb">loom / Real CLI adapter MVP</div>
+          <div class="flow">
+            <span>Discuss + plan</span>
+            <span class="active">Implement + review</span>
+            <span>Debug + repair</span>
+            <span>Verify + summarize</span>
+          </div>
+        </header>
+        <section class="desk">
+          <aside class="col">
+            <div class="label">Mission setup</div>
+            <div class="section">
+              <h2>Primary execution</h2>
+              <p>Codex is implementing todo 2 from the confirmed plan. Claude Code is assigned to review.</p>
+              <div class="chips">
+                <span class="chip">Codex · primary</span>
+                <span class="chip">Claude · review</span>
+                <span class="chip">Amp · debug</span>
+              </div>
+            </div>
+            <div class="section">
+              <h3>Implementation queue</h3>
+              <div class="todo">
+                <strong>Adapter config schema</strong>
+                <p>Persist command, args, capabilities, permissions, and working directory policy.</p>
+                <div class="todo-meta"><span class="pill">done</span></div>
+              </div>
+              <div class="todo active">
+                <strong>Real CLI invocation</strong>
+                <p>Run selected Agent commands with project context and capture output as task evidence.</p>
+                <div class="todo-meta"><span class="pill">implementing</span><span class="button primary">Start</span></div>
+              </div>
+              <div class="todo">
+                <strong>Review handoff</strong>
+                <p>Classify review results into blockers, suggestions, and accepted risk.</p>
+                <div class="todo-meta"><span class="pill">pending</span></div>
+              </div>
+            </div>
+          </aside>
+          <section class="workspace">
+            <div class="overview">
+              <div class="overview-head">
+                <div>
+                  <div class="eyebrow">Current operating state</div>
+                  <h1>Implement real CLI Agent adapter</h1>
+                </div>
+                <span class="pill">implementing</span>
+              </div>
+              <div class="stage-grid">
+                <div class="stage done"><span>01</span><strong>Discuss + plan</strong></div>
+                <div class="stage active"><span>02</span><strong>Implement + review</strong></div>
+                <div class="stage"><span>03</span><strong>Debug + repair</strong></div>
+                <div class="stage"><span>04</span><strong>Verify + summarize</strong></div>
+              </div>
+              <div class="metric-grid">
+                <div class="metric"><span>Agent calls</span><strong>3/4</strong></div>
+                <div class="metric"><span>Implementation</span><strong>1/3</strong></div>
+                <div class="metric"><span>Review risk</span><strong>clear</strong></div>
+                <div class="metric"><span>Latest run</span><strong>failed · exit 1</strong></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-title">Current todo brief</div>
+              <p>Implement only the real CLI invocation slice. Keep adapters behind the existing interface and preserve all command evidence.</p>
+            </div>
+            <div class="card">
+              <div class="card-title">Recent Agent signals</div>
+              <div class="signal"><span>Codex</span><strong>running</strong><p>Applying the adapter bridge and command capture path.</p></div>
+              <div class="signal"><span>Claude Code</span><strong>queued</strong><p>Review scope: permission policy, process lifecycle, and output redaction.</p></div>
+              <div class="signal"><span>Amp</span><strong>succeeded</strong><p>Suggested testing command discovery edge cases before debug loop handoff.</p></div>
+            </div>
+          </section>
+          <aside class="col">
+            <div class="label">Evidence + repair</div>
+            <div class="section">
+              <h3>Command runner</h3>
+              <div class="actions">
+                <span class="input">pnpm build</span>
+                <span class="button primary">Run</span>
+                <span class="button">Stop</span>
+              </div>
+            </div>
+            <pre class="terminal">$ pnpm build
+src-tauri/src/agent_adapter.rs:88:12
+<span class="error">error[E0308]: mismatched types</span>
+expected `CommandSpec`, found `AgentCommandSpec`
+
+stdout 1779 modules transformed
+stderr adapter compile failed
+
+Repair context:
+- active todo: Real CLI invocation
+- failed command: pnpm build
+- suspected fix: normalize adapter command DTO before runner handoff</pre>
+            <div class="feedback">
+              <h3>Manual feedback</h3>
+              <p>Attach a symptom, screenshot note, or reproduction step to the next repair handoff.</p>
+              <div class="actions">
+                <span class="input">The spawned command loses cwd when args contain spaces.</span>
+                <span class="button primary">Submit</span>
+              </div>
+            </div>
+          </aside>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

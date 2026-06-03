@@ -3,11 +3,11 @@
   height: 100vh;
   width: 100%;
   overflow: hidden;
-  background-color: var(--theme-bg-primary);
+  background-color: var(--theme-workspace);
 }
 
 .app-sidebar {
-  width: 240px;
+  width: 268px;
   flex-shrink: 0;
   height: 100%;
   background-color: var(--theme-bg-secondary);
@@ -25,12 +25,12 @@
 }
 
 .app-header {
-  height: 64px;
+  min-height: 68px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  padding: 0 24px;
-  background-color: var(--theme-bg-secondary);
+  padding: 0 20px;
+  background-color: var(--theme-bg-primary);
   border-bottom: 1px solid var(--theme-border-subtle);
 }
 

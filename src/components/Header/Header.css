@@ -2,26 +2,41 @@
   display: flex;
   align-items: center;
   width: 100%;
-  gap: 24px;
+  min-width: 0;
+  gap: 18px;
 }
 
 .header-breadcrumb {
+  min-width: 180px;
+  max-width: 320px;
   font-family: var(--font-headings);
   font-weight: 600;
   font-size: 16px;
   color: var(--theme-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .header-flow {
   flex: 1;
   display: flex;
   align-items: center;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .task-flow-container {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+  overflow: auto;
+  scrollbar-width: none;
+}
+
+.task-flow-container::-webkit-scrollbar {
+  display: none;
 }
 
 .task-flow-node {
@@ -34,7 +49,10 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 8px;
+  border: 1px solid var(--theme-border-subtle);
+  border-radius: 999px;
+  background: var(--theme-bg-secondary);
+  padding: 5px 9px;
 }
 
 .step-separator {
@@ -60,6 +78,7 @@
 .step-label {
   font-family: var(--font-body);
   font-size: 12px;
+  white-space: nowrap;
 }
 
 .step-label.status-done {
