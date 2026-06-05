@@ -1,0 +1,275 @@
+<!doctype html>
+<html data-theme="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=1440, initial-scale=1"/>
+<title>Loom — Command Center</title>
+<link rel="stylesheet" href="app.css"/>
+<style>
+  [data-go],[data-theme-set],.btn,.nav,.it,.tk,.send,.ichip,.seg b,.sw-c,.tcard,.pgh,.padd,.add,.linkrow,.cls{ cursor:pointer; }
+  .tk[data-go]:hover,.trow[data-go]:hover,.nav:hover,.it:hover,.linkrow:hover{ background:var(--hover); }
+  .crumb .lk{ cursor:pointer; } .crumb .lk:hover{ color:var(--accent); }
+  .ministeps .s[data-go]{ cursor:pointer; }
+  .pgh.curproj{ color:var(--text); } .pgh.curproj .ic{ color:var(--accent); }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+let THEME='dark', CUR='planning';
+const goByStatus={prog:'task-prog',test:'task-test',done:'task-done',block:'board',todo:'task-prog'};
+const LOGO=`<svg viewBox="0 0 24 24" style="stroke:#fff;stroke-width:2;fill:none"><path d="M4 4v16M10 4v16M16 4v16M4 8h16M4 14h16"/></svg>`;
+const I={
+ folder:`<svg viewBox="0 0 24 24" fill="none" style="stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round"><path d="M4 5h5l2 3h9v11H4z"/></svg>`,
+ search:`<svg viewBox="0 0 24 24" fill="none" style="stroke:currentColor;stroke-width:2;stroke-linecap:round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>`,
+ settings:`<svg viewBox="0 0 24 24" fill="none" style="stroke:currentColor;stroke-width:1.9;stroke-linecap:round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="2" y1="14" x2="6" y2="14"/><line x1="10" y1="8" x2="14" y2="8"/><line x1="18" y1="16" x2="22" y2="16"/></svg>`,
+ general:`<svg viewBox="0 0 24 24" fill="none" style="stroke:currentColor;stroke-width:1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 0 1-4 0a1.6 1.6 0 0 0-2.7-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3 15H3a2 2 0 0 1 0-4a1.6 1.6 0 0 0 1.2-2.7l-.1-.1A2 2 0 1 1 6.9 5.4l.1.1A1.6 1.6 0 0 0 9 4.6a2 2 0 0 1 4 0a1.6 1.6 0 0 0 2.7 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.6 1.6 0 0 0 21 11a2 2 0 0 1 0 4z"/></svg>`,
+ appear:`<svg viewBox="0 0 24 24" fill="none" style="stroke:currentColor;stroke-width:1.8"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" style="fill:currentColor;stroke:none"/></svg>`,
+ agents:`<svg viewBox="0 0 24 24" fill="none" style="stroke:currentColor;stroke-width:1.8;stroke-linecap:round"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V5M9 3h6"/><circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/></svg>`,
+ shield:`<svg viewBox="0 0 24 24" fill="none" style="stroke:currentColor;stroke-width:1.8;stroke-linejoin:round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
+ bell:`<svg viewBox="0 0 24 24" fill="none" style="stroke:currentColor;stroke-width:1.8;stroke-linecap:round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>`,
+ info:`<svg viewBox="0 0 24 24" fill="none" style="stroke:currentColor;stroke-width:1.8;stroke-linecap:round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><line x1="12" y1="8" x2="12" y2="8"/></svg>`,
+ read:`<svg viewBox="0 0 24 24" fill="none" style="stroke:currentColor;stroke-width:1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>`,
+ edit:`<svg viewBox="0 0 24 24" fill="none" style="stroke:currentColor;stroke-width:1.8;stroke-linecap:round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>`,
+ run:`<svg viewBox="0 0 24 24" fill="none" style="stroke:currentColor;stroke-width:1.8;stroke-linecap:round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>`,
+};
+function SI(k){const w=s=>`<span class="si">${s}</span>`;const c=`fill="none" stroke-width="1.6"`;const m={
+  todo:`<svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.4" ${c} style="stroke:var(--text-3)"/></svg>`,
+  prog:`<svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.4" ${c} style="stroke:var(--accent)"/><path d="M7 7 L7 1.6 A5.4 5.4 0 0 1 12.4 7 Z" style="fill:var(--accent)"/></svg>`,
+  test:`<svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.4" ${c} style="stroke:var(--amber)"/><circle cx="7" cy="7" r="2" style="fill:var(--amber)"/></svg>`,
+  done:`<svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="6" style="fill:var(--green)"/><path d="M4.2 7.2 6 9 9.8 5.2" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  block:`<svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="6" style="fill:var(--red)"/><line x1="7" y1="3.6" x2="7" y2="8" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><circle cx="7" cy="10.3" r="0.9" fill="#fff"/></svg>`,
+ };return w(m[k]||m.todo);}
+const AV=(k,l)=>`<span class="av ${k}">${l}</span>`;
+
+/* ---------- projects data ---------- */
+const PROJECTS={
+ loom:{label:'loom', title:'Add log search & filter',
+   nav:[['t-search','prog','Add log search & filter','3m'],['t-api','block','API 504 on /v1/assets','5h'],['t-ios','test','Fix iOS GA reporting','2h'],['t-launch','done','Optimize launch screen bg','1d']],
+   board:[['prog','LOOM-12','Wire stream filter into reducer',['backend'],['claude','Cl']],['todo','LOOM-13','Add regex toggle to search bar',['ui'],null],['todo','LOOM-15','Debounce input (300ms)',['ui'],null],['todo','LOOM-16','Persist filter state across sessions',['state'],null],['test','LOOM-08','Match highlighting in log view',['ui'],['claude','Cl']],['block','LOOM-19','Web-worker regex — API 504 on fixtures',['perf'],['codex','Co']],['done','LOOM-10','Scaffold search component',['ui'],['claude','Cl']],['done','LOOM-11','Add filter state to store',['state'],['codex','Co']]]},
+ speaker:{label:'speaker', title:'Children Three Kingdoms · audio',
+   nav:[['sp-1','prog','TTS narration pipeline','2h'],['sp-2','todo','Chapter splitter','1d']],
+   board:[['prog','SPK-4','TTS narration pipeline',['audio'],['claude','Cl']],['todo','SPK-5','Chapter splitter from EPUB',['parser'],null],['test','SPK-3','Pinyin disambiguation',['nlp'],['codex','Co']],['done','SPK-2','Voice preset: storyteller',['audio'],['codex','Co']]]},
+};
+const PORDER=['loom','speaker'];
+
+function sidebar(active, proj='loom'){
+  const rows=PORDER.map(pid=>{
+    const P=PROJECTS[pid];
+    const head=`<div class="pgh ${active===pid?'curproj':''}" data-go="b-${pid}"><span class="ic" style="width:15px">${I.folder}</span>${P.label}<span class="x"></span><span class="ct">${P.nav.length}</span><span class="add" data-go="nt-${pid}" title="New task in ${P.label}">＋</span></div>`;
+    const tasks = pid===proj ? P.nav.map(([id,st,t,tm])=>`<div class="tk ${active===id?'active':''}" data-go="${goByStatus[st]}">${SI(st)}<span class="tkt">${t}</span><span class="tkm">${tm}</span></div>`).join('') : '';
+    return head+tasks;
+  }).join('');
+  return `<aside class="side">
+    <div class="logo"><span class="mark">${LOGO}</span><b>Loom</b></div>
+    <div class="side-top"><div class="side-search"><span class="ic" style="width:14px">${I.search}</span>Search tasks…</div></div>
+    <div class="padd" data-go="add-project"><span class="ic" style="width:14px">${I.folder}</span>＋ Add project</div>
+    <div class="projlist">${rows}</div>
+    <div class="nav ${active==='settings'?'active':''}" data-go="settings" style="margin-top:6px"><span class="ic">${I.settings}</span>Settings</div>
+  </aside>`;
+}
+function shell(active, topLeft, topRight, content, proj='loom'){
+  return `<div class="app">${sidebar(active,proj)}
+    <main class="main"><div class="topbar">${topLeft}<div class="spacer"></div>${topRight}</div>
+      <div class="content">${content}</div></main></div>`;
+}
+const crumb=(...p)=>`<div class="crumb">`+p.map((x,i)=>(i?`<span class="sepc">›</span>`:'')+x).join("")+`</div>`;
+const LOOMLK=`<span class="lk" data-go="b-loom">loom</span>`;
+const MS={Plan:'planning',Implement:'task-prog',Test:'task-test',Done:'task-done'};
+const mini=(arr)=>`<div class="ministeps">`+arr.map((s,i)=>(i?`<span class="sepm">·</span>`:'')+
+  `<span class="s ${s[1]}" data-go="${MS[s[0]]||''}">${s[1]==='ok'?'✓':(s[1]==='on'?'●':'○')} ${s[0]}</span>`).join("")+`</div>`;
+
+/* ===== BOARD (generic, per project) ===== */
+const trow=(st,id,title,labels,asg,run)=>`<div class="trow" ${['prog','test','done'].includes(st)?`data-go="${goByStatus[st]}"`:''}>${SI(st)}<span class="pid">${id}</span>
+  <span class="pri ${st==='block'?'hi':'lo'}"><i></i><i></i><i></i></span><span class="ttl">${title}</span>
+  <span class="meta">${labels.map(l=>`<span class="tag n">${l}</span>`).join("")}${run?`<button class="btn sm" data-go="task-prog">▶ Run</button>`:''}${asg?AV(asg[0],asg[1]):'<span class="av" style="background:var(--surface-2);color:var(--text-3);border:1px dashed var(--border-strong)">·</span>'}</span></div>`;
+const bgroup=(icon,name,ct,rows)=>`<div class="bgroup"><div class="bgh">${SI(icon)}${name}<span class="ct">${ct}</span><span class="x"></span></div>${rows}</div>`;
+const STN={prog:'In Progress',todo:'Todo',test:'Testing',block:'Blocked',done:'Done'};
+const boardGroups=pid=>['prog','todo','test','block','done'].map(st=>{const it=PROJECTS[pid].board.filter(t=>t[0]===st);return it.length?bgroup(st,STN[st],it.length,it.map(([s,id,ti,la,asg])=>trow(s,id,ti,la,asg,s==='todo')).join('')):''}).join('');
+const boardContentOf=pid=>{const P=PROJECTS[pid];return `<section class="panel" style="height:100%"><div class="pb">
+  <div class="btoolbar"><div class="h" style="font-size:15px">${P.title}</div><span class="chip">${P.board.length} tasks</span><div style="flex:1"></div><span class="chip">⚲ Filter</span><span class="chip">⇅ Status</span></div>
+  ${boardGroups(pid)}</div></section>`;};
+const boardRightOf=pid=>`<span class="seg view"><b class="on">List</b><b>Board</b></span><button class="btn" data-go="nt-${pid}">＋ New task</button>`;
+const board=pid=>shell(pid, crumb(`<span class="lk" data-go="b-${pid}">${PROJECTS[pid].label}</span>`,`<span>Tasks</span>`), boardRightOf(pid), boardContentOf(pid), pid);
+
+/* New-task modal (project-scoped, no project dropdown; suggests primary agent) */
+const ntModal=pid=>shell(pid, crumb(`<span class="lk" data-go="b-${pid}">${PROJECTS[pid].label}</span>`,`<span>Tasks</span>`), boardRightOf(pid), boardContentOf(pid)+`
+  <div class="scrim"><div class="modal">
+    <div class="mh"><span class="t">New task</span><span class="muted" style="font-size:12.5px">in <span class="ic" style="width:13px;vertical-align:-2px;color:var(--text-2)">${I.folder}</span> ${PROJECTS[pid].label}</span><div class="x"></div><span class="cls" data-go="b-${pid}">✕</span></div>
+    <div class="mb">
+      <div><div class="label" style="margin:0 0 6px">Task title</div><div class="inp ph">e.g. Add log search &amp; filter to the debug panel</div></div>
+      <div><div class="label" style="margin:0 0 6px">Description</div><div class="inp ph" style="min-height:62px">What should change, constraints, acceptance…</div></div>
+      <div><div class="label" style="margin:0 0 6px">Invite agents to discuss</div>
+        <div class="row wrap gap6"><span class="ichip">${AV("codex","Co")}Codex ✓</span><span class="ichip">${AV("claude","Cl")}Claude ✓</span><span class="ichip">${AV("hermes","He")}Hermes ✓</span><span class="chip" style="border-style:dashed">OpenClaw ＋</span></div>
+        <div class="row gap8" style="margin-top:9px;font-size:12px;color:var(--text-2)"><span class="dim">Suggested primary</span>${AV("claude","Cl")}<b style="color:var(--text)">Claude Code</b><span class="dim">· strongest for Implement</span></div></div>
+    </div>
+    <div class="mf"><button class="btn" data-go="b-${pid}">Cancel</button><button class="btn primary" data-go="planning">Start discussion →</button></div>
+  </div></div>`, pid);
+
+/* Add-project modal */
+const addProjectModal = shell("loom", crumb(LOOMLK,`<span>Tasks</span>`), boardRightOf("loom"), boardContentOf("loom")+`
+  <div class="scrim"><div class="modal">
+    <div class="mh"><span class="t">Add project</span><div class="x"></div><span class="cls" data-go="b-loom">✕</span></div>
+    <div class="mb">
+      <div><div class="label" style="margin:0 0 6px">Open a local directory</div><div class="row gap8"><div class="inp" style="flex:1;font-family:var(--mono);font-size:12px">~/Workspace/naijoug/vistory-app</div><button class="btn">Browse…</button></div></div>
+      <div><div class="label" style="margin:0 0 6px">Recent</div>
+        <div class="lrow"><span class="ic" style="width:14px;color:var(--text-2)">${I.folder}</span><span class="mono" style="font-size:12px">~/work/checkout-service</span></div>
+        <div class="lrow"><span class="ic" style="width:14px;color:var(--text-2)">${I.folder}</span><span class="mono" style="font-size:12px">~/research/speaker-tts</span></div></div>
+      <div class="card"><div class="between"><div class="label" style="margin:0">Detected</div><span class="tag g">analyzed</span></div>
+        <div class="row wrap gap6" style="margin-top:8px"><span class="chip">Vite + React</span><span class="chip">Node API</span><span class="chip mono">pnpm</span></div>
+        <div class="row gap8 mono" style="font-size:11px;color:var(--text-2);margin-top:8px"><span class="tag g">● main</span>clean · full-stack (frontend + backend)</div></div>
+    </div>
+    <div class="mf"><button class="btn" data-go="b-loom">Cancel</button><button class="btn primary" data-go="b-loom">Add project →</button></div>
+  </div></div>`, "loom");
+
+/* ① PLANNING */
+const msg=(av,nm,role,tx)=>`<div class="msg"><div class="av ${av}">${nm.slice(0,2)}</div><div class="body"><div class="nm">${nm}${role?`<span class="role">${role}</span>`:''}</div><div class="tx">${tx}</div></div></div>`;
+const planning = shell("t-search", crumb(LOOMLK, `<span>New discussion</span>`),
+  `<span class="pill run"><span class="led"></span>3 agents in discussion</span>`,
+  `<div class="cols" style="grid-template-columns:1fr 312px">
+    <section class="panel"><div class="chatwrap"><div class="chat"><div class="chatcol">
+      <div class="msg"><div class="av user">ME</div><div class="body"><div class="nm">You</div><div class="tx">Add log search &amp; filter to the debug panel. Real-time, regex-capable, must handle 100k+ lines without freezing the UI.</div></div></div>
+      ${msg("codex","Codex","planning","Proposed plan: add a search input to the debug header, a regex toggle, and match highlighting. I'd filter <b>client-side</b> for instant feedback.<ul><li>Search input + debounce (300ms)</li><li>Regex toggle</li><li>Highlight matches in the log view</li></ul>")}
+      ${msg("claude","Claude Code","planning","Agree on the UX. For 100k+ lines I'd push filtering <b>stream-side</b> and virtualize rendering — client-side regex on every keystroke will jank the main thread.")}
+      ${msg("hermes","Hermes","reviewing","Risk: regex over very large buffers can still block. Recommend a web worker + a max-buffer policy. Also: should search history persist across sessions?")}
+      <div class="sysline">Consensus forming — 3 agreed points · 2 open conflicts</div>
+    </div></div>
+    <div class="composer"><div class="cph">Message the room — describe changes, answer questions, or @mention an agent…</div>
+      <div class="cbar"><div class="invite"><span class="ichip">${AV("codex","Co")}Codex ✕</span><span class="ichip">${AV("claude","Cl")}Claude ✕</span><span class="ichip">${AV("hermes","He")}Hermes ✕</span><span class="chip" style="border-style:dashed">＋ Invite agent</span></div><span class="send">↑</span></div>
+    </div></div></section>
+    <section class="panel"><div class="ph"><span class="t">Discussion</span><div class="x"></div><span class="chip">Round 2</span></div>
+      <div class="pb" style="display:flex;flex-direction:column;gap:12px">
+        <div class="label" style="margin:0">Participants</div>
+        ${[["codex","Codex","Plan, Code"],["claude","Claude Code","Implement"],["hermes","Hermes","Review"]].map(([a,n,r])=>`<div class="row gap8">${AV(a,n.slice(0,2))}<div style="flex:1"><div style="font-size:12.5px;font-weight:600">${n}</div><div class="dim" style="font-size:11px">${r}</div></div><span class="statedot sd-run"></span></div>`).join("")}
+        <hr/><div class="label" style="margin:0">Emerging plan</div>
+        <div class="acc g" style="font-size:12.5px"><b style="color:var(--green)">Consensus · 3</b><div class="muted" style="margin-top:3px">search input · regex toggle · highlight matches</div></div>
+        <div class="acc a" style="font-size:12.5px"><b style="color:var(--amber)">Conflicts · 2</b><div class="muted" style="margin-top:3px">client vs stream-side filter · view mode</div></div>
+        <div class="acc r" style="font-size:12.5px"><b style="color:var(--red)">Risks · 1</b><div class="muted" style="margin-top:3px">large-buffer regex on main thread</div></div>
+        <button class="btn primary" data-go="b-loom" style="width:100%;justify-content:center;height:36px;margin-top:4px">Create tasks from plan →</button>
+      </div></section>
+  </div>`);
+
+/* ③ IN PROGRESS */
+const tool=(icon,k,sub,body,badge)=>`<div class="tool"><div class="th"><span class="ic" style="width:15px">${icon}</span><span class="k">${k}</span><span class="muted">${sub||''}</span>${badge?`<span class="badge ${badge[1]}">${badge[0]}</span>`:''}</div>${body?`<div class="tb">${body}</div>`:''}</div>`;
+const taskProg = shell("t-search", crumb(LOOMLK,`<span class="pid">LOOM-12</span> Wire stream filter`),
+  `${mini([["Plan","ok"],["Implement","on"],["Test",""],["Done",""]])}<span class="pill run" style="margin-left:14px"><span class="led"></span>Claude Code running</span><button class="btn">⏸ Pause</button>`,
+  `<div class="cols" style="grid-template-columns:1fr 320px">
+    <section class="panel"><div class="chatwrap"><div class="chat"><div class="sess">
+      <div class="turn"><div class="av user">ME</div><div class="body"><div class="nm">Task</div><div class="tx">Connect the data stream to the filter reducer; handle edge cases for large binary objects. Don't block the main thread.</div></div></div>
+      <div class="turn">${AV("claude","Cl")}<div class="body"><div class="nm">Claude Code <span class="role">agent loop</span></div>
+        <div class="think">Reading the reducer to understand the current filter flow and where the stream is consumed.</div>
+        ${tool(I.read,"Read","src/state/reducer.ts · 1–80","export const filterReducer = (state, action) => { …",["✓ 80 lines","tag g"])}
+        ${tool(I.edit,"Edit","src/components/Workspace/DebugPane.tsx",`<span class="add">+ const filtered = useStreamFilter(query, { worker: true })</span>\n<span class="del">- const filtered = logs.filter(...)</span>`,["+84 −12","tag"])}
+        <div class="think" style="margin-top:9px">Wiring debounce + moving regex match into the worker. Running the focused test.</div>
+        ${tool(I.run,"Run","pnpm test -- DebugPane",`RUN  v1.6.0\n<span style="color:var(--red)">FAIL  DebugPane › renders state transitions</span>\nTests: 1 failed, 48 passed`,["exit 1","tag r"])}
+        <div class="tx" style="margin-top:10px">Implemented stream-side filtering via a web worker. One test fails — the empty-state renders 3 stale alerts. I can fix the mount guard next.</div>
+      </div></div>
+    </div></div>
+    <div class="composer"><div class="cph">Steer Claude Code — add a constraint, answer, or approve next step…</div>
+      <div class="cbar"><span class="chip">${AV("claude","Cl")}Claude Code · Extra High</span><span class="send">↑</span></div></div>
+    </div></section>
+    <section class="panel"><div class="ph"><span class="t">Task</span><div class="x"></div><span class="pill run" style="padding:2px 8px"><span class="led"></span>In Progress</span></div>
+      <div class="pb" style="display:flex;flex-direction:column;gap:12px">
+        <div><div class="label" style="margin:0 0 4px">Assignee</div><div class="row gap8">${AV("claude","Cl")}<b style="font-size:13px">Claude Code</b><button class="btn sm" style="margin-left:auto">Switch</button></div></div>
+        <div><div class="label" style="margin:0 0 6px">Subtasks</div>${[["ok","Read current filter flow"],["ok","Move filter into worker"],["run","Wire debounce"],["q","Fix empty-state guard"]].map(([s,t])=>`<div class="row gap8" style="padding:4px 0;font-size:12.5px">${SI(s==='ok'?'done':s==='run'?'prog':'todo')}<span style="${s==='ok'?'color:var(--text-2);text-decoration:line-through':''}">${t}</span></div>`).join("")}</div>
+        <div><div class="label" style="margin:0 0 6px">Files changed</div>
+          <div class="between" style="font-size:12px;padding:3px 0"><span class="mono">DebugPane.tsx</span><span><span class="add">+84</span> <span class="del">−12</span></span></div>
+          <div class="between" style="font-size:12px;padding:3px 0"><span class="mono">reducer.ts</span><span><span class="add">+20</span> <span class="del">−3</span></span></div></div>
+        <button class="btn primary" data-go="task-test" style="width:100%;justify-content:center">Mark ready for testing →</button>
+      </div></section>
+  </div>`);
+
+/* ④ TESTING */
+const tline=(tx,cls)=>`<div class="ln"><span class="tx ${cls==='m'?'muted':''}" style="${cls==='e'?'color:var(--red)':cls==='ok'?'color:var(--green)':cls==='w'?'color:var(--amber)':''}">${tx}</span></div>`;
+const taskTest = shell("t-search", crumb(LOOMLK,`<span class="pid">LOOM-12</span> Wire stream filter`),
+  `${mini([["Implement","ok"],["Test","on"],["Done",""]])}<span class="pill err" style="margin-left:14px"><span class="led"></span>Backend error — repairing</span><button class="btn">↻ Re-run</button>`,
+  `<div class="cols" style="grid-template-columns:1fr 340px">
+    <div class="terms">
+      <div class="termcard"><div class="tch"><span class="dotpid" style="background:var(--green)"></span>Frontend · <span class="mono" style="font-weight:400">pnpm dev</span><span class="chip mono" style="margin-left:auto">localhost:1420</span><span class="pill ok" style="padding:1px 7px"><span class="led"></span>running</span></div>
+        <div class="tcb">${tline("  VITE v5.2.0  ready in 412 ms","m")}${tline("  ➜  Local:   http://localhost:1420/","")}${tline("  [hmr] DebugPane.tsx updated","ok")}${tline("  [vite] page reload src/state/reducer.ts","m")}${tline("  ⚠ filter worker posted 100k rows (38ms)","w")}${tline("  ➜  ready — waiting for backend /v1/logs…","m")}</div></div>
+      <div class="termcard"><div class="tch"><span class="dotpid" style="background:var(--red)"></span>Backend · <span class="mono" style="font-weight:400">cargo tauri dev</span><span class="chip mono" style="margin-left:auto">127.0.0.1:8787</span><span class="pill err" style="padding:1px 7px"><span class="led"></span>exit 1</span></div>
+        <div class="tcb">${tline("   Compiling loom-core v0.3.1","m")}${tline("    Finished dev [unoptimized] in 6.21s","m")}${tline("   Running `target/debug/loom`","m")}${tline("  INFO  serving /v1/logs on 8787","")}${tline("  ERROR thread 'main' panicked at src/handlers/logs.rs:88:24","e")}${tline("        called `Result::unwrap()` on an `Err`: BufferOverflow { cap: 65536 }","e")}${tline("  note: run with `RUST_BACKTRACE=1` …","m")}${tline("  → process exited with code 1","e")}</div></div>
+    </div>
+    <section class="panel"><div class="ph">${AV("claude","Cl")}<span class="t" style="margin-left:2px">Debug agent</span><div class="x"></div><span class="seg" style="margin:0"><b class="on">Auto</b><b>Manual</b></span></div>
+      <div class="pb" style="display:flex;flex-direction:column;gap:12px">
+        <div class="card" style="border-left:3px solid var(--red)"><div class="label" style="margin:0;color:var(--red)">Detected error</div><div style="font-size:12.5px;margin-top:6px"><b>BufferOverflow</b> in backend log handler</div><div class="mono dim" style="font-size:11px;margin-top:4px">src/handlers/logs.rs:88</div><div class="muted" style="font-size:12px;margin-top:6px">Fixed 64k buffer can't hold the 100k-row stream the new filter requests; <span class="mono">.unwrap()</span> panics instead of growing.</div></div>
+        <div class="card"><div class="label" style="margin:0 0 6px">Proposed fix</div><div class="term" style="border-radius:8px"><div style="padding:8px 10px">${tline('<span class="del">- let buf = Vec::with_capacity(65536);</span>',"")}${tline('<span class="add">+ let buf = Vec::with_capacity(cap.max(rows));</span>',"")}</div></div><button class="btn primary" data-go="task-done" style="width:100%;justify-content:center;margin-top:10px">Apply fix &amp; restart backend</button></div>
+        <div><div class="label" style="margin:0 0 6px">Test cycles</div><div class="tl"><div class="tev r"><span class="m"></span><div class="tt">Cycle 1 — backend panic</div><div class="tm">13:41:02 · BufferOverflow</div></div><div class="tev a"><span class="m"></span><div class="tt">Cycle 2 — applying fix</div><div class="tm">13:48:20 · restart backend</div></div></div></div>
+      </div></section>
+  </div>`);
+
+/* ⑤ DONE */
+const tev=(cls,t,m)=>`<div class="tev ${cls}"><span class="m"></span><div class="tt">${t}</div><div class="tm">${m}</div></div>`;
+const taskDone = shell("t-search", crumb(LOOMLK,`<span class="pid">LOOM-12</span> Wire stream filter`),
+  `${mini([["Implement","ok"],["Test","ok"],["Done","ok"]])}<span class="pill ok" style="margin-left:14px"><span class="led"></span>Done · 2 repair cycles</span><button class="btn">Export report</button>`,
+  `<div class="cols" style="grid-template-columns:1fr 300px">
+    <section class="panel"><div class="pb" style="display:flex;flex-direction:column;gap:14px">
+      <div class="h">Add log search &amp; filter to debug panel</div>
+      <div class="card"><div class="label" style="margin:0 0 8px">What was delivered</div>${["Stream-side search index for 100k+ line logs","Regex toggle + match highlighting","Debounced input via web worker (no main-thread jank)","Persisted filter state across sessions"].map(t=>`<div class="row gap8" style="padding:5px 0;font-size:13px"><span style="color:var(--green)">✓</span>${t}</div>`).join("")}</div>
+      <div class="cols" style="grid-template-columns:1fr 1fr;gap:14px">
+        <div class="card"><div class="label" style="margin:0 0 8px">Changed files</div>${[["DebugPane.tsx","+84","−12"],["reducer.ts","+20","−3"],["logs.rs","+11","−4"],["DebugPane.test.tsx","NEW",""]].map(([f,a,d])=>`<div class="between" style="padding:5px 0;font-size:12px"><span class="mono">${f}</span><span>${d?`<span class="add">${a}</span> <span class="del">${d}</span>`:`<span class="tag g">${a}</span>`}</span></div>`).join("")}</div>
+        <div class="card"><div class="label" style="margin:0 0 8px">Verification</div>${[["pnpm test","49 passed"],["cargo test","passed"],["tsc --noEmit","passed"]].map(([c,r])=>`<div class="between" style="padding:5px 0;font-size:12px"><span class="mono">${c}</span><span style="color:var(--green)">${r} ✓</span></div>`).join("")}</div></div>
+      <div class="card" style="border-left:3px solid var(--amber);background:var(--amber-soft)"><div class="label" style="margin:0 0 6px;color:var(--amber)">Follow-ups</div><div style="font-size:12.5px">→ Monitor memory on >100k streams in staging.</div></div>
+    </div></section>
+    <section class="panel"><div class="ph"><span class="t">Timeline</span><div class="x"></div><button class="btn sm primary" data-go="nt-loom">Start follow-up</button></div>
+      <div class="pb"><div class="tl">${tev("b","Plan confirmed","12:41")}${tev("b","Implementation · Claude Code","12:45")}${tev("r","Review · 1 blocker","13:18")}${tev("g","Blocker fixed","13:24")}${tev("r","Backend panic","13:41")}${tev("a","Repair cycle 1–2","13:48")}${tev("g","All checks passed","14:02")}${tev("g","Task done","14:03")}</div></div></section>
+  </div>`);
+
+/* ===== SETTINGS ===== */
+const SETNAV=[["general","General",I.general],["appearance","Appearance",I.appear],["agents","Agents",I.agents],["safety","Commands & Safety",I.shield],["notif","Notifications",I.bell],["about","About",I.info]];
+const setGo={general:'settings',appearance:'settings-appearance',agents:'settings-agents',safety:'settings-safety',notif:'settings-notif',about:'settings-about'};
+const setNavHtml=a=>SETNAV.map(([k,t,ic])=>`<div class="it ${k===a?'active':''}" data-go="${setGo[k]}"><span class="ic">${ic}</span>${t}</div>`).join("");
+const fld=(t,d,ctrl)=>`<div class="field"><div><div class="fl">${t}</div>${d?`<div class="fd">${d}</div>`:''}</div>${ctrl}</div>`;
+const sw=on=>`<span class="sw ${on?'on':''}"></span>`;
+const sel=v=>`<span class="select">${v} <span class="cv">▾</span></span>`;
+const seg3=(a,b,c,on)=>`<span class="seg tri"><b class="${on===0?'on':''}">${a}</b><b class="${on===1?'on':''}">${b}</b>${c?`<b class="${on===2?'on':''}">${c}</b>`:''}</span>`;
+const policy=(name,val)=>`<div class="field"><div class="fl" style="${val==='Block'?'color:var(--red)':val==='Allow'?'':'color:var(--amber)'}">${name}</div><span class="seg tri"><b class="${val==='Ask'?'on':''}">Ask</b><b class="${val==='Allow'?'on':''}">Allow</b><b class="${val==='Block'?'on':''}">Block</b></span></div>`;
+function generalBody(){return `<div class="setbody"><div class="setsec-title">General</div>
+  <div class="setcard"><div class="h2">Workspace</div>${fld("Workspace name","","<span class='inp' style='font-size:12.5px'>Loom</span>")}${fld("Default project location","New projects open from here.","<span class='row gap8'><span class='chip mono'>~/Workspace</span><button class='btn sm'>Change</button></span>")}</div>
+  <div class="setcard"><div class="h2">Startup</div>${fld("Restore last session on launch","Reopen projects, tasks and panels.",sw(1))}${fld("Reopen last active task",null,sw(1))}${fld("Launch Loom at login",null,sw(0))}</div>
+  <div class="setcard"><div class="h2">Behavior</div>${fld("Max parallel agents","How many agent sessions can run at once.",seg3("1","2","3",2))}${fld("Confirm before running commands",null,sw(1))}${fld("Language",null,sel("English (US)"))}</div>
+  <div class="setcard"><div class="h2">Privacy &amp; data</div>${fld("Share anonymous usage data",null,sw(0))}${fld("Local cache","Logs, analysis and session history · 248 MB","<button class='btn sm'>Clear cache</button>")}</div></div>`;}
+function safetyBody(){return `<div class="setbody"><div class="setsec-title">Commands &amp; Safety</div>
+  <div class="setcard"><div class="h2">Command presets (defaults)</div><table><tbody>${[["Install","pnpm install"],["Dev server","pnpm tauri dev"],["Test","pnpm test"],["Typecheck","tsc --noEmit"],["Lint","pnpm lint"]].map(([k,c])=>`<tr><td style="width:130px;color:var(--text-2)">${k}</td><td><span class="chip mono">${c}</span></td><td style="text-align:right;width:50px"><span class="dim">✎</span></td></tr>`).join("")}</tbody></table></div>
+  <div class="setcard"><div class="h2">High-risk action policy</div>${policy("Delete files","Ask")}${policy("Reset git","Block")}${policy("Install dependencies","Ask")}${policy("Network &amp; production access","Block")}</div>
+  <div class="setcard"><div class="h2">Execution guards</div>${fld("Command timeout","Kill long-running commands after…",sel("10 min"))}${fld("Allowed working directories",null,"<span class='row gap6'><span class='chip mono'>project root</span><span class='chip mono'>~/.loom/tmp</span><span class='chip' style='border-style:dashed'>＋ Add</span></span>")}${fld("Redact secrets from logs","Mask tokens, keys and env values.",sw(1))}</div></div>`;}
+function notifBody(){return `<div class="setbody"><div class="setsec-title">Notifications</div>
+  <div class="setcard"><div class="h2">Notify me when</div>${fld("Task completed",null,sw(1))}${fld("Task blocked or errored",null,sw(1))}${fld("Review needed",null,sw(1))}${fld("Test failed",null,sw(1))}${fld("Agent is waiting for input",null,sw(1))}</div>
+  <div class="setcard"><div class="h2">Delivery</div>${fld("Desktop notifications",null,sw(1))}${fld("Play sound",null,sw(1))}${fld("Quiet hours","Silence notifications overnight.","<span class='row gap8'>"+sw(0)+sel("22:00 – 08:00")+"</span>")}</div></div>`;}
+function aboutBody(){return `<div class="setbody"><div class="setsec-title">About</div>
+  <div class="setcard"><div style="padding:18px;display:flex;align-items:center;gap:14px"><div class="bigmark">${LOGO}</div><div><div style="font-size:18px;font-weight:720">Loom</div><div class="muted" style="font-size:12.5px">Multi-agent local development workbench</div><div class="row gap8" style="margin-top:7px"><span class="chip mono">v0.4.0</span><span class="chip mono">build 2026.06.05</span><span class="tag g">Up to date</span></div></div><div style="flex:1"></div><button class="btn">Check for updates</button></div></div>
+  <div class="setcard"><div class="h2">Update channel</div>${fld("Channel",null,seg3("Stable","Beta","",0))}${fld("Auto-install updates",null,sw(1))}</div>
+  <div class="setcard"><div class="h2">Resources</div>${["Documentation","Changelog","GitHub repository","Report an issue","License (MIT)"].map(t=>`<div class="linkrow"><span>${t}</span><span class="go">↗</span></div>`).join("")}</div></div>`;}
+const SETBODY={general:generalBody,safety:safetyBody,notif:notifBody,about:aboutBody};
+function appearanceBody(theme){const on=t=>theme===t?'on':'';return `<div class="setbody"><div class="setsec-title">Appearance</div>
+  <div class="setcard"><div class="h2">Theme</div><div class="themes">
+    <div class="tcard ${on('light')}" data-theme-set="light"><div class="prev pv-light"><div class="ps"></div><div class="pm"><div class="bar a"></div><div class="bar b"></div><div class="bar c" style="width:60%"></div></div></div><div class="cap">Light <span class="rb"></span></div></div>
+    <div class="tcard ${on('dark')}" data-theme-set="dark"><div class="prev pv-dark"><div class="ps"></div><div class="pm"><div class="bar a"></div><div class="bar b"></div><div class="bar c" style="width:60%"></div></div></div><div class="cap">Dark <span class="rb"></span></div></div>
+    <div class="tcard"><div class="prev pv-sys"><div class="ps"></div><div class="pm"><div class="bar a"></div><div class="bar b"></div><div class="bar c" style="width:60%"></div></div></div><div class="cap">System <span class="rb"></span></div></div></div></div>
+  <div class="setcard"><div class="h2">Accent color</div>${fld("Highlight &amp; primary action color","Active state, links and primary buttons.","<div class='swatches'><span class='sw-c on' style='background:#3485D1'></span><span class='sw-c' style='background:#0D9488'></span><span class='sw-c' style='background:#7C5CFC'></span><span class='sw-c' style='background:#2E9E5B'></span><span class='sw-c' style='background:#D97706'></span></div>")}</div>
+  <div class="setcard"><div class="h2">Typography</div>${fld("Interface font","Navigation, labels and body text.",sel("System (SF Pro)"))}${fld("Monospace font","Logs, commands, paths and code.",sel("JetBrains Mono"))}${fld("Font size","Base UI text size.","<span class='row gap8'>"+seg3("Small","Default","Large",1)+"<span class='mono dim' style='font-size:12px'>14px</span></span>")}${fld("Density","Row height &amp; padding for dense use.",seg3("Compact","Cozy","",0))}<div class="fontprev">The quick brown fox jumps. <span class="mono">$ pnpm tauri dev — log search 100k+ lines</span></div></div></div>`;}
+function agentsBody(){
+  const ar=(name,cmd,adapter,caps,fw,cx,stat,sc,ver,def,exp)=>`<tr><td><div style="font-weight:600">${name}</div><div class="mono" style="font-size:11px;color:var(--text-2)">${cmd}</div></td><td><span class="chip">${adapter}</span></td><td><div class="row wrap gap6">${caps.map(c=>`<span class="tag n">${c}</span>`).join("")}</div></td><td><div class="row gap8"><span class="row gap6" style="font-size:11px;color:var(--text-2)"><span class="sw ${fw?'on':''}"></span>File</span><span class="row gap6" style="font-size:11px;color:var(--text-2)"><span class="sw ${cx?'on':''}"></span>Cmd</span></div></td><td><span class="pill ${sc}" style="padding:2px 8px"><span class="led"></span>${stat}</span> <span class="mono dim" style="font-size:11px">${ver}</span></td><td>${def?`<span class="tag">${def}</span>`:'<span class="dim">None</span>'}</td><td style="text-align:right"><span class="dim">✎</span></td></tr>${exp?`<tr class="exp"><td colspan="7"><div class="cols" style="grid-template-columns:1fr 1fr;gap:18px;padding:4px 2px 8px"><div><div class="label">Executable path</div><span class="chip mono">/usr/local/bin/claude</span><div class="label" style="margin-top:12px">Working directory</div><div class="row gap8"><span class="row gap6"><span class="statedot sd-run"></span>Project root</span><span class="row gap6 dim"><span class="statedot sd-q"></span>Per-task temp</span></div></div><div><div class="label">Protocol</div><div class="muted" style="font-size:var(--fs-sm)">Streaming CLI with JSON framing.</div><div class="row gap8" style="margin-top:14px"><button class="btn sm">↻ Test connection</button><span class="pill ok" style="padding:2px 8px"><span class="led"></span>412 ms</span></div></div></div></td></tr>`:''}`;
+  return `<div class="setbody"><div class="between"><div><div class="setsec-title">Agents</div><div class="sub">Local AI coding agents available to orchestrate</div></div><div class="row gap8"><button class="btn">Detect installed</button><button class="btn primary">＋ Add Agent</button></div></div>
+    <div class="tiles"><div class="tile"><div class="k">Total</div><div class="v">5</div></div><div class="tile"><div class="k">Available</div><div class="v" style="color:var(--green)">4</div></div><div class="tile"><div class="k">Unreachable</div><div class="v" style="color:var(--red)">1</div></div><div class="tile"><div class="k">Coverage</div><div class="v">4/4 <small>phases</small></div></div></div>
+    <div class="setcard"><div class="h2">Installed agents</div><table><thead><tr><th>Agent &amp; executable</th><th>Adapter</th><th>Capabilities</th><th>Permissions</th><th>Status</th><th>Default</th><th></th></tr></thead><tbody>${ar("Codex","codex","MCP",["Plan","Code","Test"],true,false,"Available","ok","v1.4.2","PLAN")}${ar("Claude Code","claude","CLI",["Plan","Code","Review","Debug"],true,true,"Available","ok","v1.4.2","IMPLEMENT",true)}${ar("OpenClaw","openclaw run","JSON",["Code","Test"],false,false,"Available","ok","v0.9.1","")}${ar("Hermes","hermes","Plugin",["Review","Doc"],true,false,"Available","ok","v2.1.0","REVIEW")}${ar("dummy (fixture)","dummy","CLI",["Test"],false,false,"Unreachable","err","—","")}</tbody></table></div></div>`;}
+function settings(tab,theme){const body = tab==='appearance'?appearanceBody(theme): tab==='agents'?agentsBody(): (SETBODY[tab]||generalBody)();
+  const right=`<span class="seg"><b class="${theme==='light'?'on':''}" data-theme-set="light">Light</b><b class="${theme==='dark'?'on':''}" data-theme-set="dark">Dark</b></span>`;
+  return shell("settings", crumb(`<span>Settings</span>`), right, `<div class="setcols"><div class="setnav">${setNavHtml(tab)}</div>${body}</div>`);}
+
+const route=()=>{const h=(location.hash||"#planning").slice(1).split("/");
+  CUR=h[0]||"planning"; THEME=h[1]||THEME||"dark"; document.documentElement.setAttribute("data-theme",THEME);
+  const M={planning,"task-prog":taskProg,"task-test":taskTest,"task-done":taskDone,"add-project":()=>addProjectModal,
+    board:()=>board('loom'),"new-task":()=>ntModal('loom'),
+    settings:()=>settings('general',THEME),"settings-appearance":()=>settings('appearance',THEME),"settings-agents":()=>settings('agents',THEME),
+    "settings-safety":()=>settings('safety',THEME),"settings-notif":()=>settings('notif',THEME),"settings-about":()=>settings('about',THEME)};
+  PORDER.forEach(p=>{M['b-'+p]=()=>board(p); M['nt-'+p]=()=>ntModal(p);});
+  let v=M[CUR]||planning; if(typeof v==='function') v=v();
+  document.getElementById("app").innerHTML=v;};
+document.addEventListener("click",e=>{
+  const t=e.target.closest("[data-theme-set]"); if(t){THEME=t.getAttribute("data-theme-set"); location.hash="#"+CUR+"/"+THEME; return;}
+  const g=e.target.closest("[data-go]"); if(g){const d=g.getAttribute("data-go"); if(d) location.hash="#"+d+"/"+THEME;}});
+addEventListener("hashchange",route); route();
+</script>
+</body>
+</html>

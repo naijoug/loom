@@ -1,0 +1,100 @@
+<!doctype html>
+<html data-theme="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="app.css"/>
+<style>
+  body{ padding:34px 38px; }
+  .ft{ font-size:22px; font-weight:720; letter-spacing:-.02em; }
+  .fsub{ color:var(--text-2); font-size:13.5px; margin-top:4px; }
+  .pipe{ display:flex; align-items:stretch; gap:0; margin:26px 0 22px; }
+  .node{ flex:1; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 14px 13px; position:relative; }
+  .node .nb{ display:inline-grid; place-items:center; width:22px;height:22px;border-radius:7px;
+    background:var(--accent-fill); color:var(--accent-ink); font-size:12px; font-weight:700; }
+  .node .nt{ font-size:14px; font-weight:680; margin-top:9px; }
+  .node .nd{ color:var(--text-2); font-size:12px; margin-top:5px; line-height:1.5; }
+  .node .st{ position:absolute; top:13px; right:13px; }
+  .conn{ flex:0 0 96px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; padding-top:8px; }
+  .conn .lab{ font-size:10.5px; font-weight:600; color:var(--accent); text-align:center; line-height:1.3; }
+  .conn .ar{ color:var(--text-3); font-size:20px; line-height:1; }
+  .conn .sub{ font-size:10px; color:var(--text-3); font-family:var(--mono); }
+  .ent,.ext{ flex:0 0 96px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px; }
+  .pchip{ display:inline-flex;align-items:center;gap:6px; padding:5px 11px; border-radius:999px; background:var(--accent-fill); color:var(--accent-ink); font-size:12px; font-weight:600; }
+  .grid3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
+  .ic2{ width:13px;height:13px; display:inline-flex; vertical-align:-2px; }
+  .ic2 svg{ width:13px;height:13px; }
+  .rule{ display:flex; gap:9px; font-size:12.5px; padding:5px 0; }
+  .rule .k{ flex:0 0 18px; color:var(--accent); font-weight:700; }
+  .legend{ display:flex; flex-wrap:wrap; gap:14px; }
+  .lz{ display:flex; align-items:center; gap:7px; font-size:12px; color:var(--text-2); }
+  .loopnote{ display:inline-flex; align-items:center; gap:6px; font-size:11px; color:var(--amber); margin-top:8px; }
+</style>
+</head>
+<body>
+<div class="ft">Loom — 界面切换逻辑 · Navigation flow</div>
+<div class="fsub">一个 <b>Task</b> 同时只有一个状态；状态决定打开哪个详情视图。<b>Task Board 是路由中枢</b>，面包屑 mini-stepper 在同一任务的阶段间切换。</div>
+
+<div class="pipe" id="pipe"></div>
+
+<div class="grid3">
+  <div class="card">
+    <div class="label" style="margin:0 0 8px">① 向前推进 · 每屏的主操作</div>
+    <div class="rule"><span class="k">▶</span><div><b>New task</b> → 打开 <b>Plan 聊天室</b></div></div>
+    <div class="rule"><span class="k">▶</span><div>Plan 里 <b>Create tasks from plan</b> → 生成任务 → <b>Task Board</b></div></div>
+    <div class="rule"><span class="k">▶</span><div>Board 上 <b>▶ Run</b> 某 Todo → 状态 Todo→In&nbsp;Progress → 打开 <b>Agent session</b></div></div>
+    <div class="rule"><span class="k">▶</span><div>session 里 <b>Mark ready for testing</b> → 状态→Testing → <b>多终端测试</b></div></div>
+    <div class="rule"><span class="k">▶</span><div>Testing 全部通过 → 状态→Done → <b>总结</b>；严重失败 → Blocked（回 Board）</div></div>
+    <div class="rule"><span class="k">▶</span><div><b>Done</b> 的 <b>Start follow-up</b> → 新开一个 Plan 聊天室</div></div>
+  </div>
+  <div class="card">
+    <div class="label" style="margin:0 0 8px">② 随处跳转 · 侧栏 &amp; 面包屑</div>
+    <div class="rule"><span class="k">1</span><div><b>左侧项目列表</b>：点<b>任务</b>→按其状态打开对应详情；点<b>项目名</b>→该项目 Board。（随机访问）</div></div>
+    <div class="rule"><span class="k">2</span><div><b>面包屑 mini-stepper</b>（Plan ✓ · Implement ● · Test ○ · Done ○）：反映该任务状态，可回看同一任务的早前阶段。</div></div>
+    <div class="rule"><span class="k">3</span><div><b>Board = 状态编辑器</b>：在看板上改任务状态，即决定它打开哪个详情视图（“根据完成状态修改状态”）。</div></div>
+    <div class="loopnote">↻ Testing 内部还有 fix → restart → re-test 的 debug 循环，不切换主界面。</div>
+  </div>
+  <div class="card">
+    <div class="label" style="margin:0 0 8px">③ 三种 session 都属于「一个任务」</div>
+    <div class="rule"><span class="k">●</span><div><b>Plan</b> = 讨论 session（多 Agent 聊天）→ 产出任务</div></div>
+    <div class="rule"><span class="k">●</span><div><b>In Progress</b> = 执行 session（agent loop：think→read/edit/run→diff）</div></div>
+    <div class="rule"><span class="k">●</span><div><b>Testing</b> = 调试 session（前后端终端 + Debug agent 循环）</div></div>
+    <hr/>
+    <div class="label" style="margin:0 0 8px">任务状态 · Status</div>
+    <div class="legend" id="legend"></div>
+  </div>
+</div>
+
+<script>
+const SI=(k)=>{const c=`fill="none" stroke-width="1.6"`;const m={
+ todo:`<svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.4" ${c} style="stroke:var(--text-3)"/></svg>`,
+ prog:`<svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.4" ${c} style="stroke:var(--accent)"/><path d="M7 7 L7 1.6 A5.4 5.4 0 0 1 12.4 7 Z" style="fill:var(--accent)"/></svg>`,
+ test:`<svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.4" ${c} style="stroke:var(--amber)"/><circle cx="7" cy="7" r="2" style="fill:var(--amber)"/></svg>`,
+ done:`<svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="6" style="fill:var(--green)"/><path d="M4.2 7.2 6 9 9.8 5.2" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+ block:`<svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="6" style="fill:var(--red)"/><line x1="7" y1="3.6" x2="7" y2="8" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><circle cx="7" cy="10.3" r="0.9" fill="#fff"/></svg>`,
+};return `<span class="ic2">${m[k]}</span>`;};
+
+const node=(n,t,d,st)=>`<div class="node"><span class="st">${st}</span><span class="nb">${n}</span><div class="nt">${t}</div><div class="nd">${d}</div></div>`;
+const conn=(lab,sub)=>`<div class="conn"><div class="lab">${lab}</div><div class="ar">→</div>${sub?`<div class="sub">${sub}</div>`:''}</div>`;
+
+document.getElementById('pipe').innerHTML =
+  `<div class="ent"><span class="pchip">＋ Task<br>（项目内）</span><div class="ar" style="color:var(--text-3);font-size:20px">→</div></div>`+
+  node("1","Plan · 聊天室","多 Agent 讨论，@邀请，大输入框",SI('prog'))+
+  conn("Create tasks<br>from plan")+
+  node("2","Task Board","Linear 列表，按状态分组（中枢）",SI('todo'))+
+  conn("▶ Run","Todo→Prog")+
+  node("3","In Progress","Agent session · 可见 agent loop",SI('prog'))+
+  conn("Mark ready<br>for testing")+
+  node("4","Testing","前后端双终端 + Debug agent",SI('test'))+
+  conn("All checks<br>pass")+
+  node("5","Done","交付总结 · 验证证据 · 时间线",SI('done'))+
+  `<div class="ext"><div class="ar" style="color:var(--text-3);font-size:20px">↩</div><span class="chip">Follow-up</span></div>`;
+
+document.getElementById('legend').innerHTML =
+  [['todo','Todo'],['prog','In Progress'],['test','Testing'],['done','Done'],['block','Blocked']]
+  .map(([k,t])=>`<span class="lz">${SI(k)}${t}</span>`).join('');
+
+const theme=(location.hash||'#dark').slice(1)||'dark';
+document.documentElement.setAttribute('data-theme',theme);
+</script>
+</body>
+</html>
