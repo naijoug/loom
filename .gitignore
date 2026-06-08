@@ -72,6 +72,7 @@ venv/
 .codex/
 
 # Temporary files
+.tmp/
 tmp/
 temp/
 .cache/

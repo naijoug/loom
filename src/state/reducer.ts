@@ -7,8 +7,10 @@ import type {
   Task,
 } from "../domain";
 
+export type AppView = "workspace" | "board" | "planning" | "task-detail" | "settings";
+
 export interface AppSlice {
-  currentView: "workspace" | "settings";
+  currentView: AppView;
   activeProjectId: string | null;
   selectedTaskId: string | null;
   selectedTodoId: string | null;
@@ -33,7 +35,11 @@ export interface AppState {
   agents: AgentConfig[];
   tasks: Task[];
   commandRuns: CommandRun[];
-  commandLogs: CommandLogEvent[];
+  commandLogs: Record<string, CommandLogEvent[]>;
+}
+
+function normalizeAppView(view: AppView): AppView {
+  return view;
 }
 
 export type AppAction =
@@ -51,6 +57,7 @@ export type AppAction =
   | { type: "tasks/loadFailed"; error: string }
   | { type: "tasks/loaded"; tasks: Task[] }
   | { type: "tasks/upserted"; task: Task }
+  | { type: "tasks/selected"; taskId: string }
   | { type: "tasks/todoSelected"; taskId: string; todoId: string }
   | { type: "tasks/todoCompleted"; taskId: string; todoId: string }
   | { type: "commands/started"; run: CommandRun }
@@ -81,7 +88,7 @@ export const initialAppState: AppState = {
   agents: [],
   tasks: [],
   commandRuns: [],
-  commandLogs: [],
+  commandLogs: {},
 };
 
 function selectedTaskAfterLoad(tasks: Task[], currentTaskId: string | null) {
@@ -105,7 +112,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         ...state,
         app: {
           ...state.app,
-          currentView: action.view,
+          currentView: normalizeAppView(action.view),
         },
       };
 
@@ -154,7 +161,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         app: {
           ...state.app,
           activeProjectId: action.project.id,
-          currentView: "workspace",
+          currentView: "board",
           selectedTaskId: null,
           selectedTodoId: null,
           isLoadingProjects: false,
@@ -166,7 +173,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         },
         tasks: [],
         commandRuns: [],
-        commandLogs: [],
+        commandLogs: {},
       };
     }
 
@@ -178,6 +185,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         app: {
           ...state.app,
           activeProjectId: action.projectId,
+          currentView: "board",
           selectedTaskId: null,
           selectedTodoId: null,
           projectError: null,
@@ -188,7 +196,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         },
         tasks: [],
         commandRuns: [],
-        commandLogs: [],
+        commandLogs: {},
       };
     }
 
@@ -267,6 +275,20 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       };
     }
 
+    case "tasks/selected": {
+      const task = state.tasks.find((candidate) => candidate.id === action.taskId) ?? null;
+
+      return {
+        ...state,
+        app: {
+          ...state.app,
+          currentView: "task-detail",
+          selectedTaskId: action.taskId,
+          selectedTodoId: selectedTodoIdForTask(task, state.app.selectedTodoId),
+        },
+      };
+    }
+
     case "tasks/todoSelected":
       return {
         ...state,
@@ -325,13 +347,23 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           commandError: null,
         },
         commandRuns: [...state.commandRuns.filter((run) => run.id !== action.run.id), action.run],
+        commandLogs: {
+          ...state.commandLogs,
+          [action.run.id]: state.commandLogs[action.run.id] ?? [],
+        },
       };
 
-    case "commands/logReceived":
+    case "commands/logReceived": {
+      const runLogs = state.commandLogs[action.event.runId] ?? [];
+
       return {
         ...state,
-        commandLogs: [...state.commandLogs.slice(-299), action.event],
+        commandLogs: {
+          ...state.commandLogs,
+          [action.event.runId]: [...runLogs.slice(-299), action.event],
+        },
       };
+    }
 
     case "commands/finished":
       return {
@@ -363,7 +395,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     case "commands/cleared":
       return {
         ...state,
-        commandLogs: [],
+        commandLogs: {},
       };
 
     default:

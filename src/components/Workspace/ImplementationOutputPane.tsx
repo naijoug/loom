@@ -40,7 +40,7 @@ export function ImplementationOutputPane() {
       return "";
     }
 
-    const logs = state.commandLogs.filter((entry) => entry.runId === activeRun.id);
+    const logs = state.commandLogs[activeRun.id] ?? [];
     if (logs.length === 0) {
       return activeRun.status === "running"
         ? "Agent process started. Waiting for output..."

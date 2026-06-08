@@ -18,13 +18,12 @@ export function useAgentBridge() {
   const { dispatch } = useAppState();
 
   const loadAgents = useCallback(async () => {
+    if (!hasTauriRuntime()) {
+      return;
+    }
+
     dispatch({ type: "agents/loadStarted" });
     try {
-      if (!hasTauriRuntime()) {
-        dispatch({ type: "agents/loaded", agents: [] });
-        return;
-      }
-
       dispatch({ type: "agents/loaded", agents: await invoke<AgentConfig[]>("list_agents") });
     } catch (error) {
       dispatch({ type: "agents/loadFailed", error: toErrorMessage(error) });

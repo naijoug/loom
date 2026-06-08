@@ -1,5 +1,10 @@
 # 计划文档索引
 
+## 2026-06-05
+
+- 18:47-redesign-impl.md
+  > 把 designs/redesign-2026-06 新 IA 与视觉落到现有 Tauri+React 应用：前端重构覆盖项目侧栏、计划聊天室、loom/speaker Linear 看板、状态化任务详情、多终端测试、6 页设置和 token 迁移，并补闭环后端命令、日志分桶、主 Agent 持久化、Tauri devUrl/preview 修复、真实桌面交互验证、command runner 真实进程闭环 smoke、Codex/Claude 真实 CLI smoke、Amp paid-credits 失败路径识别，以及 `pnpm test` / `pnpm smoke` / `pnpm smoke:interaction` / `pnpm smoke:visual` 自我验收路径。
+
 ## 2026-05-13
 
 - 09:02-final-shape-roadmap.md

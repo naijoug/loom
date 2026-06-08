@@ -9,8 +9,11 @@ export function Header() {
   const currentTask = state.tasks.find((task) => task.id === state.app.selectedTaskId) ?? null;
   const currentProject = state.projects.current;
   const stages: TaskStage[] = deriveTaskStages(currentTask?.status ?? null);
+  const isBoard = state.app.currentView === "board";
   const breadcrumb = currentProject
-    ? `${currentProject.name} / ${currentTask?.title ?? "No active task"}`
+    ? isBoard
+      ? `${currentProject.name} › Tasks`
+      : `${currentProject.name} › ${currentTask?.title ?? "No active task"}`
     : "No project selected";
   const canStopTask = currentTask && !["completed", "cancelled"].includes(currentTask.status);
 
@@ -20,14 +23,14 @@ export function Header() {
         {breadcrumb}
       </div>
       
-      {currentProject && (
+      {currentProject && !isBoard && (
         <div className="header-flow">
           <TaskFlow stages={stages} />
         </div>
       )}
 
       <div className="header-actions">
-        {canStopTask && <Button variant="danger">Stop Task</Button>}
+        {canStopTask && !isBoard && <Button variant="danger">Stop Task</Button>}
       </div>
     </div>
   );

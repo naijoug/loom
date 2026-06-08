@@ -1,52 +1,127 @@
-/* src/styles/theme.css */
 @import "@fontsource/geist-sans";
 @import "@fontsource/inter";
 @import "@fontsource/geist-mono";
 
+:root,
+:root[data-theme="dark"],
+[data-theme="dark"] {
+  --bg: #181818;
+  --bg-2: #1F1F1F;
+  --sidebar: #272727;
+  --surface: #222222;
+  --surface-2: #2D2D2D;
+  --inset: #303030;
+  --selected: #3B3D41;
+  --hover: #2E2E2E;
+  --border: #2F2F2F;
+  --border-strong: #3A3A3C;
+
+  --text: #ECECEC;
+  --text-2: #A3A4A5;
+  --text-3: #6E6F70;
+
+  --accent: #97C9F8;
+  --accent-ink: #0B1F33;
+  --accent-fill: #2F6FB0;
+  --accent-soft: rgba(151, 201, 248, 0.14);
+
+  --green: #4FB477;
+  --green-soft: rgba(79, 180, 119, 0.16);
+  --amber: #D6A23C;
+  --amber-soft: rgba(214, 162, 60, 0.16);
+  --red: #E2645C;
+  --red-soft: rgba(226, 100, 92, 0.16);
+  --add: #4FB477;
+  --del: #E2645C;
+  --agent-codex: #10A37F;
+  --agent-claude: #D97757;
+  --agent-hermes: #7C5CFC;
+
+  --shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  --bg: #FFFFFF;
+  --bg-2: #FAFAFA;
+  --sidebar: #D7D7D7;
+  --surface: #FFFFFF;
+  --surface-2: #FFFFFF;
+  --inset: #EFEFEF;
+  --selected: #CECFD1;
+  --hover: #CFCFCF;
+  --border: #D4D4D5;
+  --border-strong: #C2C2C4;
+
+  --text: #1A1A1A;
+  --text-2: #6B6B6D;
+  --text-3: #9A9A9C;
+
+  --accent: #3485D1;
+  --accent-ink: #FFFFFF;
+  --accent-fill: #3485D1;
+  --accent-soft: rgba(52, 133, 209, 0.10);
+
+  --green: #2E9E5B;
+  --green-soft: rgba(46, 158, 91, 0.12);
+  --amber: #B5821C;
+  --amber-soft: rgba(181, 130, 28, 0.12);
+  --red: #CF463D;
+  --red-soft: rgba(207, 70, 61, 0.12);
+  --add: #2E9E5B;
+  --del: #CF463D;
+  --agent-codex: #10A37F;
+  --agent-claude: #D97757;
+  --agent-hermes: #7C5CFC;
+
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.10);
+  color-scheme: light;
+}
+
 :root {
-  /* Neutral command-center theme */
-  --theme-bg-primary: #FCFCFA;
-  --theme-bg-secondary: #F3F2EE;
-  --theme-workspace: #ECEBE4;
-  --theme-text-primary: #24211D;
-  --theme-text-secondary: #5D5851;
-  --theme-text-muted: #827B71;
-  --theme-accent: #2F6F73;
-  --theme-success: #3D7C45;
-  --theme-warning: #B47122;
-  --theme-border-subtle: #DFDCD2;
-  --theme-border-strong: #C5BFAF;
-  --theme-error: #B8443D;
+  --font: -apple-system, "SF Pro Text", "Segoe UI", Inter, system-ui, sans-serif;
+  --mono: "SF Mono", "JetBrains Mono", "Geist Mono", ui-monospace, Menlo, monospace;
+  --fs-title: 14px;
+  --fs-h: 16px;
+  --fs-body: 14px;
+  --fs-sm: 12.5px;
+  --fs-xs: 11.5px;
+  --fs-label: 11px;
+  --fs-mono: 13px;
+  --r-card: 10px;
+  --r-ctl: 8px;
+  --r-chip: 6px;
 
-  /* Font Families */
-  --font-headings: "Geist Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-data: "Geist Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-headings: var(--font);
+  --font-body: var(--font);
+  --font-data: var(--mono);
+
+  --theme-bg-primary: var(--bg);
+  --theme-bg-secondary: var(--bg-2);
+  --theme-workspace: var(--bg);
+  --theme-text-primary: var(--text);
+  --theme-text-secondary: var(--text-2);
+  --theme-text-muted: var(--text-3);
+  --theme-accent: var(--accent);
+  --theme-success: var(--green);
+  --theme-warning: var(--amber);
+  --theme-border-subtle: var(--border);
+  --theme-border-strong: var(--border-strong);
+  --theme-error: var(--red);
 }
 
-:root[data-theme="dark"] {
-  --theme-bg-primary: #151A17;
-  --theme-bg-secondary: #1B211E;
-  --theme-workspace: #0C100E;
-  --theme-text-primary: #E8ECE8;
-  --theme-text-secondary: #B9C2BC;
-  --theme-text-muted: #8E9A94;
-  --theme-accent: #35AEB4;
-  --theme-success: #66C483;
-  --theme-warning: #D6A14A;
-  --theme-border-subtle: #27302C;
-  --theme-border-strong: #3A4741;
-  --theme-error: #E47167;
-}
-
-html, body {
-  background-color: var(--theme-bg-primary);
-  color: var(--theme-text-primary);
-  font-family: var(--font-body);
+html,
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: var(--fs-body);
+  line-height: 1.55;
   margin: 0;
   padding: 0;
   height: 100%;
   width: 100%;
+  -webkit-font-smoothing: antialiased;
 }
 
 * {

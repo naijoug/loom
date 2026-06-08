@@ -130,6 +130,8 @@ export interface CreateTaskInput {
   projectPath: string;
   title: string;
   rawRequirement: string;
+  selectedPlanningAgentIds?: string[];
+  primaryAgentId?: string;
 }
 
 export interface PlanningDiscussionInput {

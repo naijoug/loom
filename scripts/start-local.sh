@@ -35,6 +35,22 @@ stop_pid() {
   kill -9 "${pid}" 2>/dev/null || true
 }
 
+process_cwd_in_root() {
+  local pid="$1"
+  local cwd
+
+  cwd="$(lsof -a -p "${pid}" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p' | head -n 1 || true)"
+  [[ "${cwd}" == "${ROOT_DIR}" || "${cwd}" == "${ROOT_DIR}/"* ]]
+}
+
+is_desktop_dev_command() {
+  local command="$1"
+
+  [[ "${command}" == *"tauri"* && "${command}" == *"dev"* ]] ||
+    [[ "${command}" == *"target/debug/loom"* ]] ||
+    [[ "${command}" == *"src-tauri/target/debug/bundle/macos/Loom.app/Contents/MacOS/loom"* ]]
+}
+
 stop_desktop_dev() {
   if [[ -f "${DESKTOP_PID_FILE}" ]]; then
     stop_pid "$(cat "${DESKTOP_PID_FILE}")"
@@ -50,9 +66,15 @@ stop_desktop_dev() {
       continue
     fi
 
-    if [[ "${command}" == *"${ROOT_DIR}"* && "${command}" == *"tauri"* && "${command}" == *"dev"* ]]; then
-      stop_pid "${pid}"
+    if ! is_desktop_dev_command "${command}"; then
+      continue
     fi
+
+    if [[ "${command}" != *"${ROOT_DIR}"* ]] && ! process_cwd_in_root "${pid}"; then
+      continue
+    fi
+
+    stop_pid "${pid}"
   done < <(ps -axo pid=,command= | sed 's/^ *//')
 }
 
@@ -71,7 +93,7 @@ start_desktop() {
   echo "$$" > "${DESKTOP_PID_FILE}"
 
   echo "Starting Loom desktop app..."
-  echo "Dev URL: http://localhost:1420"
+  echo "Dev URL: http://127.0.0.1:1420"
   echo "Stop: press Ctrl+C, or run scripts/start-local.sh stop from another terminal."
 
   cd "${ROOT_DIR}"

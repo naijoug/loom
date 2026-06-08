@@ -284,6 +284,10 @@ pub struct CreateTaskInput {
     pub project_path: String,
     pub title: String,
     pub raw_requirement: String,
+    #[serde(default)]
+    pub selected_planning_agent_ids: Vec<String>,
+    #[serde(default)]
+    pub primary_agent_id: Option<String>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]

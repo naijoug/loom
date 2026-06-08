@@ -7,7 +7,7 @@ use crate::{
     storage, tasks,
 };
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Runtime, State};
 use tokio::{
     fs::OpenOptions,
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
@@ -39,6 +39,21 @@ struct ManagedCommandRun {
     process_group_id: i32,
 }
 
+trait CommandEventEmitter: Clone + Send + Sync + 'static {
+    fn emit_log(&self, event: CommandLogEvent);
+    fn emit_finished(&self, event: CommandFinishedEvent);
+}
+
+impl<R: Runtime> CommandEventEmitter for AppHandle<R> {
+    fn emit_log(&self, event: CommandLogEvent) {
+        let _ = self.emit("loom://command-log", event);
+    }
+
+    fn emit_finished(&self, event: CommandFinishedEvent) {
+        let _ = self.emit("loom://command-finished", event);
+    }
+}
+
 #[tauri::command]
 pub fn command_runner_ready(_spec: Option<CommandSpec>) -> bool {
     true
@@ -49,6 +64,15 @@ pub async fn start_command_run(
     app: AppHandle,
     registry: State<'_, CommandRegistry>,
     ids: State<'_, IdGenerator>,
+    spec: CommandSpec,
+) -> Result<CommandRun, String> {
+    start_command_run_inner(app, registry.inner(), ids.inner(), spec).await
+}
+
+async fn start_command_run_inner<E: CommandEventEmitter>(
+    app: E,
+    registry: &CommandRegistry,
+    ids: &IdGenerator,
     spec: CommandSpec,
 ) -> Result<CommandRun, String> {
     if spec.program.trim().is_empty() {
@@ -164,6 +188,13 @@ pub async fn stop_command_run(
     registry: State<'_, CommandRegistry>,
     run_id: String,
 ) -> Result<CommandRunStopResult, String> {
+    stop_command_run_inner(registry.inner(), run_id).await
+}
+
+async fn stop_command_run_inner(
+    registry: &CommandRegistry,
+    run_id: String,
+) -> Result<CommandRunStopResult, String> {
     let Some(managed) = registry.runs.lock().await.remove(&run_id) else {
         return Ok(CommandRunStopResult {
             run_id,
@@ -213,16 +244,17 @@ pub struct CommandRunStopResult {
     exit_code: Option<i32>,
 }
 
-fn spawn_log_reader<R>(
-    app: AppHandle,
+fn spawn_log_reader<E, Reader>(
+    app: E,
     task_id: String,
     run_id: String,
     stream: &'static str,
-    reader: R,
+    reader: Reader,
     log_path: PathBuf,
     captured_lines: Option<Arc<Mutex<Vec<String>>>>,
 ) where
-    R: tokio::io::AsyncRead + Unpin + Send + 'static,
+    E: CommandEventEmitter,
+    Reader: tokio::io::AsyncRead + Unpin + Send + 'static,
 {
     tauri::async_runtime::spawn(async move {
         let mut lines = BufReader::new(reader).lines();
@@ -234,16 +266,13 @@ fn spawn_log_reader<R>(
         {
             Ok(file) => Some(file),
             Err(error) => {
-                let _ = app.emit(
-                    "loom://command-log",
-                    CommandLogEvent {
-                        task_id: Some(task_id.clone()),
-                        run_id: run_id.clone(),
-                        stream: "stderr".to_string(),
-                        line: format!("failed to open log file: {error}"),
-                        timestamp_ms: now_ms(),
-                    },
-                );
+                app.emit_log(CommandLogEvent {
+                    task_id: Some(task_id.clone()),
+                    run_id: run_id.clone(),
+                    stream: "stderr".to_string(),
+                    line: format!("failed to open log file: {error}"),
+                    timestamp_ms: now_ms(),
+                });
                 None
             }
         };
@@ -260,22 +289,19 @@ fn spawn_log_reader<R>(
                 captured.lock().await.push(redacted_line.clone());
             }
 
-            let _ = app.emit(
-                "loom://command-log",
-                CommandLogEvent {
-                    task_id: Some(task_id.clone()),
-                    run_id: run_id.clone(),
-                    stream: stream.to_string(),
-                    line: redacted_line,
-                    timestamp_ms: now_ms(),
-                },
-            );
+            app.emit_log(CommandLogEvent {
+                task_id: Some(task_id.clone()),
+                run_id: run_id.clone(),
+                stream: stream.to_string(),
+                line: redacted_line,
+                timestamp_ms: now_ms(),
+            });
         }
     });
 }
 
-fn spawn_command_monitor(
-    app: AppHandle,
+fn spawn_command_monitor<E: CommandEventEmitter>(
+    app: E,
     runs: Arc<Mutex<HashMap<String, ManagedCommandRun>>>,
     child: Arc<Mutex<Child>>,
     project_path: PathBuf,
@@ -318,17 +344,14 @@ fn spawn_command_monitor(
                     exit_code,
                     error_summary.clone(),
                 );
-                let _ = app.emit(
-                    "loom://command-finished",
-                    CommandFinishedEvent {
-                        task_id: task_id.clone(),
-                        run_id: run_id.clone(),
-                        status: command_status.to_string(),
-                        exit_code,
-                        error_summary,
-                        timestamp_ms: now_ms(),
-                    },
-                );
+                app.emit_finished(CommandFinishedEvent {
+                    task_id: task_id.clone(),
+                    run_id: run_id.clone(),
+                    status: command_status.to_string(),
+                    exit_code,
+                    error_summary,
+                    timestamp_ms: now_ms(),
+                });
                 break;
             }
 
@@ -396,6 +419,207 @@ fn is_error_line(line: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::{PlanTodoItem, Task};
+    use std::{fs, path::Path};
+
+    #[derive(Clone)]
+    struct NoopCommandEmitter;
+
+    impl CommandEventEmitter for NoopCommandEmitter {
+        fn emit_log(&self, _event: CommandLogEvent) {}
+
+        fn emit_finished(&self, _event: CommandFinishedEvent) {}
+    }
+
+    fn command_smoke_task(root: &Path) -> Task {
+        Task {
+            id: "task-command-smoke".to_string(),
+            project_path: root.display().to_string(),
+            title: "Verify command validation loop".to_string(),
+            raw_requirement: "Run failing commands, prepare repairs, rerun, then accept."
+                .to_string(),
+            status: "debugging".to_string(),
+            selected_planning_agent_ids: Vec::new(),
+            primary_agent_id: None,
+            review_agent_ids: Vec::new(),
+            final_plan: Some("# Plan\n- Validate command loop".to_string()),
+            final_plan_path: Some(
+                root.join("docs/plans/command-smoke.md")
+                    .display()
+                    .to_string(),
+            ),
+            discussion_summary: None,
+            planning_runs: Vec::new(),
+            agent_invocations: Vec::new(),
+            plan_reviews: Vec::new(),
+            planning_decisions: Vec::new(),
+            plan_todos: vec![PlanTodoItem {
+                id: "todo-command-smoke".to_string(),
+                task_id: "task-command-smoke".to_string(),
+                title: "Validate command loop".to_string(),
+                description: "Exercise failing and succeeding validation commands.".to_string(),
+                status: "done".to_string(),
+                order: 0,
+                plan_ref: Some("docs/plans/command-smoke.md".to_string()),
+            }],
+            events: Vec::new(),
+            command_runs: Vec::new(),
+            feedback: Vec::new(),
+            repair_context_preview: None,
+            created_at_ms: now_ms(),
+            updated_at_ms: now_ms(),
+        }
+    }
+
+    fn shell_spec(root: &Path, task_id: &str, script: &str) -> CommandSpec {
+        CommandSpec {
+            program: "/bin/sh".to_string(),
+            args: vec!["-c".to_string(), script.to_string()],
+            cwd: root.display().to_string(),
+            task_id: Some(task_id.to_string()),
+        }
+    }
+
+    async fn wait_for_run(root: &Path, task_id: &str, run_id: &str) -> Task {
+        for _ in 0..60 {
+            let task = tasks::load_task(root, task_id).expect("task should remain readable");
+            if task
+                .command_runs
+                .iter()
+                .any(|run| run.id == run_id && run.status != "running")
+            {
+                return task;
+            }
+            sleep(Duration::from_millis(100)).await;
+        }
+
+        panic!("timed out waiting for run {run_id}");
+    }
+
+    fn run_status<'a>(task: &'a Task, run_id: &str) -> &'a str {
+        task.command_runs
+            .iter()
+            .find(|run| run.id == run_id)
+            .map(|run| run.status.as_str())
+            .expect("run should be recorded")
+    }
+
+    #[tokio::test]
+    async fn command_runner_drives_two_repair_cycles_then_acceptance() {
+        let root = std::env::temp_dir().join(format!("loom-command-runner-smoke-{}", now_ms()));
+        fs::create_dir_all(&root).expect("test project should be created");
+
+        let app = NoopCommandEmitter;
+        let registry = CommandRegistry::default();
+        let ids = IdGenerator::default();
+        let task = command_smoke_task(&root);
+        tasks::save_task(&task).expect("task should be persisted");
+
+        let cancellable = start_command_run_inner(
+            app.clone(),
+            &registry,
+            &ids,
+            shell_spec(&root, &task.id, "sleep 20"),
+        )
+        .await
+        .expect("cancellable command should start");
+        sleep(Duration::from_millis(200)).await;
+        let stop_result = stop_command_run_inner(&registry, cancellable.id.clone())
+            .await
+            .expect("running command should stop");
+        assert!(stop_result.stopped);
+        let cancelled_task = tasks::load_task(&root, &task.id).expect("task should be readable");
+        assert_eq!(cancelled_task.status, "debugging");
+        assert_eq!(run_status(&cancelled_task, &cancellable.id), "cancelled");
+
+        let failed_one = start_command_run_inner(
+            app.clone(),
+            &registry,
+            &ids,
+            shell_spec(
+                &root,
+                &task.id,
+                "printf 'error: first smoke failure\\n' >&2; sleep 0.2; exit 7",
+            ),
+        )
+        .await
+        .expect("first command should start");
+        let failed_one_task = wait_for_run(&root, &task.id, &failed_one.id).await;
+        assert_eq!(failed_one_task.status, "debugging");
+        assert_eq!(run_status(&failed_one_task, &failed_one.id), "failed");
+        assert!(failed_one_task
+            .command_runs
+            .iter()
+            .find(|run| run.id == failed_one.id)
+            .and_then(|run| run.error_summary.as_ref())
+            .is_some_and(|summary| summary
+                .matched_lines
+                .iter()
+                .any(|line| line.contains("first smoke failure"))));
+
+        let repair_one =
+            tasks::generate_repair_context(root.display().to_string(), task.id.clone())
+                .expect("first repair context should be generated");
+        assert_eq!(repair_one.status, "fixing");
+        assert!(repair_one
+            .repair_context_preview
+            .as_deref()
+            .unwrap_or_default()
+            .contains(&failed_one.id));
+
+        let failed_two = start_command_run_inner(
+            app.clone(),
+            &registry,
+            &ids,
+            shell_spec(
+                &root,
+                &task.id,
+                "printf 'panic: second smoke failure\\n' >&2; sleep 0.2; exit 9",
+            ),
+        )
+        .await
+        .expect("second command should start");
+        let failed_two_task = wait_for_run(&root, &task.id, &failed_two.id).await;
+        assert_eq!(failed_two_task.status, "debugging");
+        assert_eq!(run_status(&failed_two_task, &failed_two.id), "failed");
+
+        let repair_two =
+            tasks::generate_repair_context(root.display().to_string(), task.id.clone())
+                .expect("second repair context should be generated");
+        assert_eq!(repair_two.status, "fixing");
+        assert!(repair_two
+            .repair_context_preview
+            .as_deref()
+            .unwrap_or_default()
+            .contains(&failed_two.id));
+
+        let succeeded = start_command_run_inner(
+            app.clone(),
+            &registry,
+            &ids,
+            shell_spec(&root, &task.id, "printf 'ok\\n'; sleep 0.1; exit 0"),
+        )
+        .await
+        .expect("successful command should start");
+        let verifying_task = wait_for_run(&root, &task.id, &succeeded.id).await;
+        assert_eq!(verifying_task.status, "verifying");
+        assert_eq!(run_status(&verifying_task, &succeeded.id), "succeeded");
+
+        let completed =
+            tasks::complete_task_inner(&ids, root.display().to_string(), task.id.clone())
+                .expect("verifying task should accept completion");
+        assert_eq!(completed.status, "completed");
+        assert_eq!(
+            completed
+                .events
+                .last()
+                .and_then(|event| event.evidence_ref.as_deref()),
+            Some(succeeded.id.as_str())
+        );
+        assert_eq!(completed.command_runs.len(), 4);
+
+        fs::remove_dir_all(root).expect("test project should be cleaned up");
+    }
 
     #[test]
     fn matches_error_summary_prefixes_case_insensitively() {

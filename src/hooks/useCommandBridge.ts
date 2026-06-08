@@ -33,7 +33,6 @@ export function useCommandBridge() {
 
   const startCommandRun = useCallback(
     async (spec: CommandSpec) => {
-      dispatch({ type: "commands/cleared" });
       try {
         const run = await invoke<CommandRun>("start_command_run", { spec });
         dispatch({ type: "commands/started", run });

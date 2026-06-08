@@ -1,0 +1,123 @@
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const { appReducer, initialAppState } = require("../../.tmp/test-build/src/state/reducer.js");
+
+function commandRun(id, taskId = "task-1") {
+  return {
+    id,
+    taskId,
+    command: id === "run-1" ? "pnpm dev" : "cargo tauri dev",
+    cwd: "/tmp/project",
+    startedAtMs: Date.now(),
+    status: "running",
+  };
+}
+
+function logEvent(runId, line, stream = "stdout") {
+  return {
+    runId,
+    taskId: "task-1",
+    stream,
+    line,
+    timestampMs: Date.now(),
+  };
+}
+
+function taskFixture(overrides = {}) {
+  return {
+    id: "task-1",
+    projectPath: "/tmp/project",
+    title: "Task",
+    rawRequirement: "Requirement",
+    status: "ready_to_implement",
+    selectedPlanningAgentIds: [],
+    reviewAgentIds: [],
+    planningRuns: [],
+    agentInvocations: [],
+    planReviews: [],
+    planningDecisions: [],
+    planTodos: [
+      {
+        id: "todo-1",
+        taskId: "task-1",
+        title: "Todo 1",
+        description: "First todo",
+        status: "pending",
+        order: 0,
+      },
+    ],
+    events: [],
+    commandRuns: [],
+    feedback: [],
+    createdAtMs: 1,
+    updatedAtMs: 1,
+    ...overrides,
+  };
+}
+
+test("command logs are bucketed by run id and starting another run does not clear existing logs", () => {
+  let state = appReducer(initialAppState, { type: "commands/started", run: commandRun("run-1") });
+  state = appReducer(state, { type: "commands/logReceived", event: logEvent("run-1", "vite ready") });
+  state = appReducer(state, { type: "commands/started", run: commandRun("run-2") });
+  state = appReducer(state, { type: "commands/logReceived", event: logEvent("run-2", "backend panic", "stderr") });
+
+  assert.deepEqual(
+    Object.keys(state.commandLogs).sort(),
+    ["run-1", "run-2"],
+  );
+  assert.equal(state.commandLogs["run-1"].length, 1);
+  assert.equal(state.commandLogs["run-1"][0].line, "vite ready");
+  assert.equal(state.commandLogs["run-2"].length, 1);
+  assert.equal(state.commandLogs["run-2"][0].stream, "stderr");
+});
+
+test("command log buckets are independently capped", () => {
+  let state = appReducer(initialAppState, { type: "commands/started", run: commandRun("run-1") });
+  state = appReducer(state, { type: "commands/started", run: commandRun("run-2") });
+
+  for (let index = 0; index < 305; index += 1) {
+    state = appReducer(state, {
+      type: "commands/logReceived",
+      event: logEvent("run-1", `line-${index}`),
+    });
+  }
+
+  state = appReducer(state, { type: "commands/logReceived", event: logEvent("run-2", "only-line") });
+
+  assert.equal(state.commandLogs["run-1"].length, 300);
+  assert.equal(state.commandLogs["run-1"][0].line, "line-5");
+  assert.equal(state.commandLogs["run-2"].length, 1);
+  assert.equal(state.commandLogs["run-2"][0].line, "only-line");
+});
+
+test("selecting a task routes to task-detail and preserves a valid selected todo", () => {
+  const task = taskFixture();
+  let state = appReducer(initialAppState, { type: "tasks/loaded", tasks: [task] });
+
+  state = appReducer(state, { type: "tasks/selected", taskId: task.id });
+
+  assert.equal(state.app.currentView, "task-detail");
+  assert.equal(state.app.selectedTaskId, task.id);
+  assert.equal(state.app.selectedTodoId, "todo-1");
+});
+
+test("completing all todos moves the optimistic task state to reviewing", () => {
+  const task = taskFixture({
+    planTodos: [
+      {
+        id: "todo-1",
+        taskId: "task-1",
+        title: "Todo 1",
+        description: "First todo",
+        status: "implementing",
+        order: 0,
+      },
+    ],
+  });
+  let state = appReducer(initialAppState, { type: "tasks/loaded", tasks: [task] });
+
+  state = appReducer(state, { type: "tasks/todoCompleted", taskId: task.id, todoId: "todo-1" });
+
+  assert.equal(state.tasks[0].status, "reviewing");
+  assert.equal(state.tasks[0].planTodos[0].status, "done");
+});

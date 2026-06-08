@@ -1,14 +1,25 @@
-import { Moon } from "lucide-react";
 import { ThemeProvider } from "../contexts/ThemeContext";
-import type { AppState } from "../state/reducer";
-import { AppStateProvider } from "../state/AppStateContext";
-import { PlanningWizard, type PlanningWizardStep } from "../components/Workspace/PlanningWizard";
-import type { AgentConfig, Task } from "../domain";
+import { AppLayout } from "../layouts/AppLayout";
+import { Board } from "../components/Board";
+import { NewTaskModal } from "../components/Board";
+import { Header } from "../components/Header";
+import { Sidebar } from "../components/Sidebar";
+import { AddProjectModal } from "../components/Sidebar/AddProjectModal";
+import { SettingsPage } from "../components/Settings";
+import { PlanningChat } from "../components/Planning";
+import { WorkspaceSplit } from "../components/Workspace";
+import type { AppState, AppView } from "../state/reducer";
+import { AppStateProvider, useAppState } from "../state/AppStateContext";
+import type { AgentConfig, ProjectSummary, Task } from "../domain";
 import "../styles/theme.css";
 import "../App.css";
 import "../layouts/AppLayout.css";
 import "../components/Sidebar/Sidebar.css";
 import "../components/Workspace/Workspace.css";
+import "../components/Board/Board.css";
+import "../components/Planning/Planning.css";
+import "../components/TaskDetail/TaskDetail.css";
+import "../components/Settings/SettingsPage.css";
 
 const now = Date.now();
 
@@ -19,7 +30,7 @@ const previewAgents: AgentConfig[] = [
     command: "codex",
     args: [],
     workingDirectoryPolicy: "project_root",
-    capabilities: ["planning", "review", "testing"],
+    capabilities: ["planning", "implementation", "review", "testing"],
     adapterType: "codex_cli",
     canWriteFiles: true,
     canRunCommands: true,
@@ -32,7 +43,7 @@ const previewAgents: AgentConfig[] = [
     command: "claude",
     args: [],
     workingDirectoryPolicy: "project_root",
-    capabilities: ["planning", "review", "testing"],
+    capabilities: ["planning", "implementation", "review", "debugging", "testing"],
     adapterType: "claude_code_cli",
     canWriteFiles: true,
     canRunCommands: true,
@@ -70,7 +81,7 @@ const previewAgents: AgentConfig[] = [
 const previewTask: Task = {
   id: "task-preview-planning",
   projectPath: "/Users/guojian/Workspace/naijoug/loom",
-  title: "多 Agent 共识计划 UI 重构",
+  title: "Add regex toggle to search bar",
   rawRequirement:
     "重构 Loom 的规划流程，让 Codex、Claude Code、Amp 先独立生成方案，再相互 Review，并允许人工介入形成最终共识计划。",
   status: "plan_review",
@@ -270,6 +281,288 @@ const previewTask: Task = {
   updatedAtMs: now - 50000,
 };
 
+const implementationTask: Task = {
+  ...previewTask,
+  id: "task-preview-implementing",
+  title: "Wire stream filter into reducer",
+  rawRequirement: "Connect the data stream to the filter reducer and keep large log filtering off the main thread.",
+  status: "implementing",
+  primaryAgentId: "agent-claude",
+  planTodos: [
+    {
+      id: "todo-read-filter",
+      taskId: "task-preview-implementing",
+      title: "Read current filter flow",
+      description: "Trace reducer, DebugPane, and command log state boundaries.",
+      status: "done",
+      order: 0,
+      planRef: "docs/plans/preview-final-plan.md#implementation",
+    },
+    {
+      id: "todo-worker-filter",
+      taskId: "task-preview-implementing",
+      title: "Move filter into worker",
+      description: "Move expensive regex filtering out of the render path.",
+      status: "implementing",
+      order: 1,
+      planRef: "docs/plans/preview-final-plan.md#implementation",
+    },
+    {
+      id: "todo-empty-state",
+      taskId: "task-preview-implementing",
+      title: "Fix empty-state guard",
+      description: "Keep stale alerts out of filtered empty states.",
+      status: "pending",
+      order: 2,
+      planRef: "docs/plans/preview-final-plan.md#implementation",
+    },
+  ],
+  commandRuns: [
+    {
+      id: "run-impl-preview",
+      taskId: "task-preview-implementing",
+      command: "claude -p \"Implement stream-side filtering\"",
+      cwd: "/Users/guojian/Workspace/naijoug/loom",
+      startedAtMs: now - 50000,
+      status: "running",
+    },
+  ],
+  events: [
+    {
+      id: "event-impl-start",
+      taskId: "task-preview-implementing",
+      timestampMs: now - 50000,
+      actor: "agent",
+      status: "implementing",
+      inputSummary: "Started Claude Code implementation loop",
+    },
+  ],
+};
+
+const testingTask: Task = {
+  ...implementationTask,
+  id: "task-preview-testing",
+  title: "Match highlighting in log view",
+  status: "debugging",
+  planTodos: implementationTask.planTodos.map((todo) => ({
+    ...todo,
+    taskId: "task-preview-testing",
+    status: "done",
+  })),
+  commandRuns: [
+    {
+      id: "run-frontend-preview",
+      taskId: "task-preview-testing",
+      command: "pnpm dev",
+      cwd: "/Users/guojian/Workspace/naijoug/loom",
+      startedAtMs: now - 45000,
+      status: "running",
+    },
+    {
+      id: "run-backend-preview",
+      taskId: "task-preview-testing",
+      command: "cargo tauri dev",
+      cwd: "/Users/guojian/Workspace/naijoug/loom",
+      startedAtMs: now - 42000,
+      endedAtMs: now - 32000,
+      status: "failed",
+      exitCode: 1,
+      errorSummary: {
+        exitCode: 1,
+        failed: true,
+        matchedLines: ["ERROR thread 'main' panicked at src/handlers/logs.rs:88:24"],
+        stderrTail: ["called `Result::unwrap()` on an `Err`: BufferOverflow { cap: 65536 }"],
+      },
+    },
+  ],
+  repairContextPreview:
+    "Detected backend panic in log handler.\n\nSuggested fix:\n- Replace fixed 64k buffer allocation.\n+ Grow buffer from stream size and return recoverable errors.",
+};
+
+const doneTask: Task = {
+  ...testingTask,
+  id: "task-preview-done",
+  title: "Scaffold search component",
+  status: "completed",
+  commandRuns: testingTask.commandRuns.map((run) => ({
+    ...run,
+    taskId: "task-preview-done",
+    status: "succeeded",
+    exitCode: 0,
+    errorSummary: undefined,
+    endedAtMs: run.endedAtMs ?? now - 12000,
+  })),
+  events: [
+    ...testingTask.events,
+    {
+      id: "event-done",
+      taskId: "task-preview-done",
+      timestampMs: now - 8000,
+      actor: "user",
+      status: "completed",
+      outputSummary: "Accepted after two repair cycles and passing checks.",
+    },
+  ],
+};
+
+const todoDebounceTask: Task = {
+  ...previewTask,
+  id: "loom-15",
+  title: "Debounce input (300ms)",
+  status: "ready_to_implement",
+  primaryAgentId: undefined,
+  planTodos: [
+    {
+      id: "loom-15-todo-1",
+      taskId: "loom-15",
+      title: "Add debounced search state",
+      description: "Delay expensive filter updates while the user types.",
+      status: "pending",
+      order: 0,
+    },
+  ],
+  commandRuns: [],
+  events: [],
+};
+
+const todoPersistTask: Task = {
+  ...previewTask,
+  id: "loom-16",
+  title: "Persist filter state across sessions",
+  status: "ready_to_implement",
+  primaryAgentId: undefined,
+  planTodos: [
+    {
+      id: "loom-16-todo-1",
+      taskId: "loom-16",
+      title: "Persist search filter state",
+      description: "Restore the last filter after reopening the project.",
+      status: "pending",
+      order: 0,
+    },
+  ],
+  commandRuns: [],
+  events: [],
+};
+
+const blockedTask: Task = {
+  ...previewTask,
+  id: "loom-19",
+  title: "Web-worker regex - API 504 on fixtures",
+  status: "blocked",
+  primaryAgentId: "agent-codex",
+  planTodos: [],
+  commandRuns: [],
+  events: [],
+};
+
+const doneStoreTask: Task = {
+  ...doneTask,
+  id: "loom-11",
+  title: "Add filter state to store",
+  primaryAgentId: "agent-codex",
+  planTodos: [],
+  commandRuns: [],
+  events: [],
+};
+
+const speakerTasks: Task[] = [
+  {
+    ...previewTask,
+    id: "spk-4",
+    projectPath: "/Users/guojian/Workspace/naijoug/speaker",
+    title: "TTS narration pipeline",
+    rawRequirement: "Build the narration pipeline for children story audio.",
+    status: "implementing",
+    primaryAgentId: "agent-claude",
+    planTodos: [],
+    commandRuns: [],
+    events: [],
+  },
+  {
+    ...previewTask,
+    id: "spk-5",
+    projectPath: "/Users/guojian/Workspace/naijoug/speaker",
+    title: "Chapter splitter from EPUB",
+    rawRequirement: "Split EPUB chapters into narration-ready scenes.",
+    status: "ready_to_implement",
+    primaryAgentId: undefined,
+    planTodos: [
+      {
+        id: "spk-5-todo-1",
+        taskId: "spk-5",
+        title: "Parse EPUB chapter markers",
+        description: "Extract headings and reading order.",
+        status: "pending",
+        order: 0,
+      },
+    ],
+    commandRuns: [],
+    events: [],
+  },
+  {
+    ...previewTask,
+    id: "spk-3",
+    projectPath: "/Users/guojian/Workspace/naijoug/speaker",
+    title: "Pinyin disambiguation",
+    rawRequirement: "Verify pinyin disambiguation before audio export.",
+    status: "debugging",
+    primaryAgentId: "agent-codex",
+    planTodos: [],
+    commandRuns: [],
+    events: [],
+  },
+  {
+    ...previewTask,
+    id: "spk-2",
+    projectPath: "/Users/guojian/Workspace/naijoug/speaker",
+    title: "Voice preset: storyteller",
+    rawRequirement: "Ship the storyteller voice preset.",
+    status: "completed",
+    primaryAgentId: "agent-codex",
+    planTodos: [],
+    commandRuns: [],
+    events: [],
+  },
+];
+
+const previewTasks = [
+  implementationTask,
+  previewTask,
+  todoDebounceTask,
+  todoPersistTask,
+  testingTask,
+  blockedTask,
+  doneTask,
+  doneStoreTask,
+];
+
+const loomProject: ProjectSummary = {
+  id: "project-loom",
+  path: "/Users/guojian/Workspace/naijoug/loom",
+  name: "loom",
+  detectedStacks: ["Tauri", "React", "Rust"],
+  suggestedCommands: ["pnpm dev", "pnpm build", "cargo test --manifest-path src-tauri/Cargo.toml"],
+  isGitRepository: true,
+  gitBranch: "codex/planning-ui",
+  hasUncommittedChanges: true,
+  loomDirReady: true,
+  schemaVersion: 1,
+};
+
+const speakerProject: ProjectSummary = {
+  id: "project-speaker",
+  path: "/Users/guojian/Workspace/naijoug/speaker",
+  name: "speaker",
+  detectedStacks: ["Node", "Audio", "TTS"],
+  suggestedCommands: ["pnpm dev", "pnpm test"],
+  isGitRepository: true,
+  gitBranch: "main",
+  hasUncommittedChanges: false,
+  loomDirReady: true,
+  schemaVersion: 1,
+};
+
 const previewState: AppState = {
   app: {
     currentView: "workspace",
@@ -286,89 +579,183 @@ const previewState: AppState = {
     commandError: null,
   },
   projects: {
-    current: {
-      id: "project-loom",
-      path: "/Users/guojian/Workspace/naijoug/loom",
-      name: "loom",
-      detectedStacks: ["Tauri", "React", "Rust"],
-      suggestedCommands: ["pnpm build", "cargo test"],
-      isGitRepository: true,
-      gitBranch: "codex/planning-ui",
-      hasUncommittedChanges: true,
-      loomDirReady: true,
-      schemaVersion: 1,
-    },
-    recent: [],
+    current: loomProject,
+    recent: [loomProject, speakerProject],
   },
   agents: previewAgents,
-  tasks: [previewTask],
-  commandRuns: [],
-  commandLogs: [],
+  tasks: previewTasks,
+  commandRuns: [
+    ...implementationTask.commandRuns,
+    ...testingTask.commandRuns,
+    ...doneTask.commandRuns,
+  ],
+  commandLogs: {
+    "run-impl-preview": [
+      {
+        runId: "run-impl-preview",
+        taskId: "task-preview-implementing",
+        stream: "stdout",
+        line: "Reading src/state/reducer.ts and DebugPane.tsx",
+        timestampMs: now - 42000,
+      },
+      {
+        runId: "run-impl-preview",
+        taskId: "task-preview-implementing",
+        stream: "stdout",
+        line: "Editing worker-backed stream filter",
+        timestampMs: now - 39000,
+      },
+    ],
+    "run-frontend-preview": [
+      {
+        runId: "run-frontend-preview",
+        taskId: "task-preview-testing",
+        stream: "stdout",
+        line: "VITE v7.3.3 ready in 92 ms",
+        timestampMs: now - 41000,
+      },
+      {
+        runId: "run-frontend-preview",
+        taskId: "task-preview-testing",
+        stream: "stdout",
+        line: "Local: http://127.0.0.1:1420/",
+        timestampMs: now - 40000,
+      },
+    ],
+    "run-backend-preview": [
+      {
+        runId: "run-backend-preview",
+        taskId: "task-preview-testing",
+        stream: "stdout",
+        line: "Running `target/debug/loom`",
+        timestampMs: now - 38000,
+      },
+      {
+        runId: "run-backend-preview",
+        taskId: "task-preview-testing",
+        stream: "stderr",
+        line: "ERROR thread 'main' panicked at src/handlers/logs.rs:88:24",
+        timestampMs: now - 36000,
+      },
+    ],
+  },
 };
 
-function PreviewSidebar() {
-  return (
-    <>
-      <div className="sidebar-brand">
-        <span className="brand-icon">L</span>
-        <span className="brand-title">LOOM</span>
-        <button type="button" className="settings-icon-button" title="Dark mode">
-          <Moon size={15} />
-        </button>
-      </div>
-      <div className="sidebar-nav-container">
-        <nav className="sidebar-nav-section">
-          <div className="nav-heading-row">
-            <h3 className="nav-heading">PROJECTS</h3>
-          </div>
-          <ul className="nav-list">
-            <li>
-              <a className="nav-item active" href="#loom">
-                <span>loom</span>
-              </a>
-            </li>
-          </ul>
-        </nav>
-        <nav className="sidebar-nav-section">
-          <div className="nav-heading-row">
-            <h3 className="nav-heading">PLANNING</h3>
-          </div>
-          <ul className="nav-list">
-            <li>
-              <a className="nav-item active" href="#task">
-                <span>多 Agent 共识计划 UI 重构</span>
-              </a>
-            </li>
-          </ul>
-        </nav>
-      </div>
-    </>
-  );
+type PreviewScreen = "planning" | "board" | "board-speaker" | "new-task" | "add-project" | "session" | "testing" | "done" | "settings";
+type PreviewSettingsTab = "general" | "appearance" | "agents" | "safety" | "notifications" | "about";
+type PreviewTheme = "dark" | "light";
+
+function previewScreen(value: string | null): PreviewScreen {
+  if (
+    value === "board" ||
+    value === "board-speaker" ||
+    value === "new-task" ||
+    value === "add-project" ||
+    value === "session" ||
+    value === "testing" ||
+    value === "done" ||
+    value === "settings"
+  ) {
+    return value;
+  }
+
+  return "planning";
 }
 
-function previewStep(value: string): PlanningWizardStep {
-  return ["setup", "generate", "review", "decision", "final"].includes(value)
-    ? (value as PlanningWizardStep)
-    : "review";
+function previewStateForScreen(screen: PreviewScreen): AppState {
+  const selectedTaskId = {
+    planning: previewTask.id,
+    board: previewTask.id,
+    "board-speaker": speakerTasks[0].id,
+    "new-task": previewTask.id,
+    "add-project": previewTask.id,
+    session: implementationTask.id,
+    testing: testingTask.id,
+    done: doneTask.id,
+    settings: previewTask.id,
+  }[screen];
+  const currentView: AppView =
+    screen === "board" || screen === "board-speaker" || screen === "new-task" || screen === "add-project"
+      ? "board"
+      : screen === "settings"
+        ? "settings"
+        : "task-detail";
+
+  return {
+    ...previewState,
+    app: {
+      ...previewState.app,
+      currentView,
+      activeProjectId: screen === "board-speaker" ? speakerProject.id : previewState.app.activeProjectId,
+      selectedTaskId,
+      selectedTodoId: screen === "session" ? "todo-worker-filter" : null,
+    },
+    projects: {
+      ...previewState.projects,
+      current: screen === "board-speaker" ? speakerProject : previewState.projects.current,
+    },
+    tasks: screen === "board-speaker" ? speakerTasks : previewState.tasks,
+  };
+}
+
+function previewSettingsTab(value: string | null): PreviewSettingsTab {
+  if (
+    value === "appearance" ||
+    value === "agents" ||
+    value === "safety" ||
+    value === "notifications" ||
+    value === "about"
+  ) {
+    return value;
+  }
+
+  return "general";
+}
+
+function previewTheme(value: string | null): PreviewTheme {
+  return value === "light" ? "light" : "dark";
+}
+
+function PreviewRoute({ screen, settingsTab }: { screen: PreviewScreen; settingsTab: PreviewSettingsTab }) {
+  const { state, dispatch } = useAppState();
+
+  if (state.app.currentView === "settings") {
+    return (
+      <SettingsPage
+        initialTab={settingsTab}
+        onBack={() => dispatch({ type: "app/viewSelected", view: "board" })}
+      />
+    );
+  }
+
+  const content =
+    screen === "board" || screen === "board-speaker" || screen === "new-task" || screen === "add-project"
+      ? <Board />
+      : screen === "planning"
+        ? <PlanningChat />
+        : <WorkspaceSplit />;
+
+  return (
+    <AppLayout sidebar={<Sidebar />} header={<Header />}>
+      {content}
+      {screen === "new-task" && previewState.projects.current && (
+        <NewTaskModal project={previewState.projects.current} onClose={() => undefined} />
+      )}
+      {screen === "add-project" && <AddProjectModal onClose={() => undefined} />}
+    </AppLayout>
+  );
 }
 
 export function PlanningPreviewApp() {
   const params = new URLSearchParams(window.location.search);
-  const step = previewStep(params.get("step") ?? "review");
+  const screen = previewScreen(params.get("screen"));
+  const settingsTab = previewSettingsTab(params.get("tab"));
+  const theme = previewTheme(params.get("theme"));
 
   return (
-    <ThemeProvider forcedTheme="dark">
-      <AppStateProvider initialStateOverride={previewState}>
-        <div className="app-layout">
-          <aside className="app-sidebar">
-            <PreviewSidebar />
-          </aside>
-          <main className="app-main">
-            <div className="app-content">
-              <PlanningWizard previewMode initialStep={step} />
-            </div>
-          </main>
-        </div>
+    <ThemeProvider forcedTheme={theme}>
+      <AppStateProvider initialStateOverride={previewStateForScreen(screen)}>
+        <PreviewRoute screen={screen} settingsTab={settingsTab} />
       </AppStateProvider>
     </ThemeProvider>
   );

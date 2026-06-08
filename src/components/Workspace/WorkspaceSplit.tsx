@@ -8,8 +8,9 @@ import {
 } from "lucide-react";
 import { ImplementationPane } from "./ImplementationPane";
 import { ImplementationOutputPane } from "./ImplementationOutputPane";
-import { PlanningWizard } from "./PlanningWizard";
 import { DebugPane } from "./DebugPane";
+import { PlanningChat } from "../Planning";
+import { DonePane, SessionPane, TestingPane } from "../TaskDetail";
 import type { Task, TaskStatus } from "../../domain";
 import { useAppState } from "../../state/AppStateContext";
 import "./Workspace.css";
@@ -163,8 +164,20 @@ export function WorkspaceSplit() {
     );
   }
 
+  if (task?.status === "completed") {
+    return <DonePane project={project} task={task} />;
+  }
+
+  if (task && ["debugging", "fixing", "verifying"].includes(task.status)) {
+    return <TestingPane project={project} task={task} />;
+  }
+
+  if (task && ["ready_to_implement", "implementing", "reviewing"].includes(task.status)) {
+    return <SessionPane project={project} task={task} />;
+  }
+
   if (!inExecution) {
-    return <PlanningWizard />;
+    return <PlanningChat />;
   }
 
   return (

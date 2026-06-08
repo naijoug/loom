@@ -46,8 +46,8 @@ pub fn create_task(ids: State<'_, IdGenerator>, input: CreateTaskInput) -> Resul
         title: input.title,
         raw_requirement: input.raw_requirement.clone(),
         status: "drafting_requirements".to_string(),
-        selected_planning_agent_ids: Vec::new(),
-        primary_agent_id: None,
+        selected_planning_agent_ids: input.selected_planning_agent_ids,
+        primary_agent_id: input.primary_agent_id,
         review_agent_ids: Vec::new(),
         final_plan: None,
         final_plan_path: None,
@@ -187,9 +187,10 @@ pub fn start_todo(
     project_path: String,
     task_id: String,
     todo_id: String,
+    primary_agent_id: Option<String>,
 ) -> Result<Task, String> {
     let mut task = load_task(Path::new(&project_path), &task_id)?;
-    apply_start_todo(&mut task, &todo_id, ids.next("event"))?;
+    apply_start_todo(&mut task, &todo_id, primary_agent_id, ids.next("event"))?;
     save_task(&task)?;
 
     Ok(task)
@@ -209,7 +210,46 @@ pub fn complete_todo(
     Ok(task)
 }
 
-fn apply_start_todo(task: &mut Task, todo_id: &str, event_id: String) -> Result<(), String> {
+#[tauri::command]
+pub fn mark_ready_for_testing(
+    ids: State<'_, IdGenerator>,
+    project_path: String,
+    task_id: String,
+) -> Result<Task, String> {
+    let mut task = load_task(Path::new(&project_path), &task_id)?;
+    apply_mark_ready_for_testing(&mut task, ids.next("event"))?;
+    save_task(&task)?;
+
+    Ok(task)
+}
+
+#[tauri::command]
+pub fn complete_task(
+    ids: State<'_, IdGenerator>,
+    project_path: String,
+    task_id: String,
+) -> Result<Task, String> {
+    complete_task_inner(ids.inner(), project_path, task_id)
+}
+
+pub(crate) fn complete_task_inner(
+    ids: &IdGenerator,
+    project_path: String,
+    task_id: String,
+) -> Result<Task, String> {
+    let mut task = load_task(Path::new(&project_path), &task_id)?;
+    apply_complete_task(&mut task, ids.next("event"))?;
+    save_task(&task)?;
+
+    Ok(task)
+}
+
+fn apply_start_todo(
+    task: &mut Task,
+    todo_id: &str,
+    primary_agent_id: Option<String>,
+    event_id: String,
+) -> Result<(), String> {
     let selected_title = task
         .plan_todos
         .iter()
@@ -218,6 +258,9 @@ fn apply_start_todo(task: &mut Task, todo_id: &str, event_id: String) -> Result<
         .ok_or_else(|| "cannot start todo because it does not exist".to_string())?;
 
     task.status = "implementing".to_string();
+    if primary_agent_id.is_some() {
+        task.primary_agent_id = primary_agent_id;
+    }
     task.plan_todos = task
         .plan_todos
         .drain(..)
@@ -297,6 +340,69 @@ fn apply_complete_todo(task: &mut Task, todo_id: &str, event_id: String) -> Resu
         input_summary: Some(format!("Completed implementation todo: {selected_title}")),
         output_summary: Some("Todo marked done and ready for review evidence handoff.".to_string()),
         evidence_ref: task.final_plan_path.clone(),
+    });
+
+    Ok(())
+}
+
+fn apply_mark_ready_for_testing(task: &mut Task, event_id: String) -> Result<(), String> {
+    if task.status != "reviewing" {
+        return Err(format!(
+            "cannot mark task ready for testing because it is {} instead of reviewing",
+            task.status
+        ));
+    }
+
+    if task.plan_todos.iter().any(|todo| todo.status != "done") {
+        return Err("cannot mark task ready for testing before all todos are done".to_string());
+    }
+
+    task.status = "debugging".to_string();
+    task.updated_at_ms = now_ms();
+    task.events.push(TaskEvent {
+        id: event_id,
+        task_id: task.id.clone(),
+        timestamp_ms: task.updated_at_ms,
+        actor: "user".to_string(),
+        status: task.status.clone(),
+        input_summary: Some("Marked task ready for testing".to_string()),
+        output_summary: Some(
+            "Implementation review completed; task is ready for debug validation.".to_string(),
+        ),
+        evidence_ref: task.final_plan_path.clone(),
+    });
+
+    Ok(())
+}
+
+fn apply_complete_task(task: &mut Task, event_id: String) -> Result<(), String> {
+    if task.status != "verifying" {
+        return Err(format!(
+            "cannot complete task because it is {} instead of verifying",
+            task.status
+        ));
+    }
+
+    let latest_successful_run_id = task
+        .command_runs
+        .iter()
+        .rev()
+        .find(|run| run.status == "succeeded")
+        .map(|run| run.id.clone());
+
+    task.status = "completed".to_string();
+    task.updated_at_ms = now_ms();
+    task.events.push(TaskEvent {
+        id: event_id,
+        task_id: task.id.clone(),
+        timestamp_ms: task.updated_at_ms,
+        actor: "user".to_string(),
+        status: task.status.clone(),
+        input_summary: Some("Accepted verification and completed task".to_string()),
+        output_summary: Some(
+            "Task completed after human acceptance of verification evidence.".to_string(),
+        ),
+        evidence_ref: latest_successful_run_id,
     });
 
     Ok(())
@@ -909,9 +1015,16 @@ mod tests {
             updated_at_ms: 1,
         };
 
-        apply_start_todo(&mut task, "todo-2", "event-1".to_string()).unwrap();
+        apply_start_todo(
+            &mut task,
+            "todo-2",
+            Some("agent-claude".to_string()),
+            "event-1".to_string(),
+        )
+        .unwrap();
 
         assert_eq!(task.status, "implementing");
+        assert_eq!(task.primary_agent_id.as_deref(), Some("agent-claude"));
         assert_eq!(task.plan_todos[0].status, "pending");
         assert_eq!(task.plan_todos[1].status, "implementing");
         assert_eq!(task.events.len(), 1);
@@ -1018,6 +1131,124 @@ mod tests {
         assert!(task.events.is_empty());
     }
 
+    fn transition_task_fixture(
+        status: &str,
+        todo_statuses: &[&str],
+        command_runs: Vec<CommandRun>,
+    ) -> Task {
+        Task {
+            id: "task-1".to_string(),
+            project_path: "/repo".to_string(),
+            title: "Ship validation loop".to_string(),
+            raw_requirement: "Complete implementation and validation".to_string(),
+            status: status.to_string(),
+            selected_planning_agent_ids: Vec::new(),
+            primary_agent_id: None,
+            review_agent_ids: Vec::new(),
+            final_plan: Some("# Plan".to_string()),
+            final_plan_path: Some("/repo/docs/plans/plan.md".to_string()),
+            discussion_summary: None,
+            planning_runs: Vec::new(),
+            agent_invocations: Vec::new(),
+            plan_reviews: Vec::new(),
+            planning_decisions: Vec::new(),
+            plan_todos: todo_statuses
+                .iter()
+                .enumerate()
+                .map(|(index, todo_status)| PlanTodoItem {
+                    id: format!("todo-{index}"),
+                    task_id: "task-1".to_string(),
+                    title: format!("Todo {index}"),
+                    description: format!("Todo {index}"),
+                    status: (*todo_status).to_string(),
+                    order: index as u32,
+                    plan_ref: None,
+                })
+                .collect(),
+            events: Vec::new(),
+            command_runs,
+            feedback: Vec::new(),
+            repair_context_preview: None,
+            created_at_ms: 1,
+            updated_at_ms: 1,
+        }
+    }
+
+    #[test]
+    fn mark_ready_for_testing_moves_reviewing_task_to_debugging() {
+        let mut task = transition_task_fixture("reviewing", &["done", "done"], Vec::new());
+
+        apply_mark_ready_for_testing(&mut task, "event-1".to_string()).unwrap();
+
+        assert_eq!(task.status, "debugging");
+        assert_eq!(task.events.len(), 1);
+        assert_eq!(task.events[0].actor, "user");
+        assert_eq!(task.events[0].status, "debugging");
+        assert_eq!(
+            task.events[0].evidence_ref.as_deref(),
+            Some("/repo/docs/plans/plan.md")
+        );
+    }
+
+    #[test]
+    fn mark_ready_for_testing_rejects_wrong_task_status() {
+        let mut task = transition_task_fixture("implementing", &["done"], Vec::new());
+
+        let error = apply_mark_ready_for_testing(&mut task, "event-1".to_string()).unwrap_err();
+
+        assert!(error.contains("instead of reviewing"));
+        assert_eq!(task.status, "implementing");
+        assert!(task.events.is_empty());
+    }
+
+    #[test]
+    fn mark_ready_for_testing_rejects_unfinished_todos() {
+        let mut task = transition_task_fixture("reviewing", &["done", "pending"], Vec::new());
+
+        let error = apply_mark_ready_for_testing(&mut task, "event-1".to_string()).unwrap_err();
+
+        assert!(error.contains("before all todos are done"));
+        assert_eq!(task.status, "reviewing");
+        assert!(task.events.is_empty());
+    }
+
+    #[test]
+    fn complete_task_moves_verifying_task_to_completed_with_evidence() {
+        let successful_run = CommandRun {
+            id: "run-1".to_string(),
+            task_id: "task-1".to_string(),
+            command: "pnpm build".to_string(),
+            cwd: "/repo".to_string(),
+            started_at_ms: 1,
+            ended_at_ms: Some(2),
+            status: "succeeded".to_string(),
+            exit_code: Some(0),
+            stdout_log_ref: None,
+            stderr_log_ref: None,
+            error_summary: None,
+        };
+        let mut task = transition_task_fixture("verifying", &["done"], vec![successful_run]);
+
+        apply_complete_task(&mut task, "event-1".to_string()).unwrap();
+
+        assert_eq!(task.status, "completed");
+        assert_eq!(task.events.len(), 1);
+        assert_eq!(task.events[0].actor, "user");
+        assert_eq!(task.events[0].status, "completed");
+        assert_eq!(task.events[0].evidence_ref.as_deref(), Some("run-1"));
+    }
+
+    #[test]
+    fn complete_task_rejects_non_verifying_task() {
+        let mut task = transition_task_fixture("debugging", &["done"], Vec::new());
+
+        let error = apply_complete_task(&mut task, "event-1".to_string()).unwrap_err();
+
+        assert!(error.contains("instead of verifying"));
+        assert_eq!(task.status, "debugging");
+        assert!(task.events.is_empty());
+    }
+
     #[test]
     fn start_todo_rejects_unknown_todo_without_mutating_task() {
         let mut task = Task {
@@ -1053,7 +1284,8 @@ mod tests {
             updated_at_ms: 1,
         };
 
-        let error = apply_start_todo(&mut task, "missing", "event-1".to_string()).unwrap_err();
+        let error =
+            apply_start_todo(&mut task, "missing", None, "event-1".to_string()).unwrap_err();
 
         assert!(error.contains("does not exist"));
         assert_eq!(task.status, "ready_to_implement");

@@ -5,6 +5,7 @@ import { useAgentBridge } from "../../hooks/useAgentBridge";
 import { useCommandBridge } from "../../hooks/useCommandBridge";
 import { useTaskBridge } from "../../hooks/useTaskBridge";
 import { useAppState } from "../../state/AppStateContext";
+import { Button } from "../common/Button";
 import "./Workspace.css";
 
 const TODO_STATUS_LABELS: Record<PlanTodoStatus, string> = {
@@ -87,7 +88,7 @@ function buildAgentCommandArgs(agent: AgentConfig, projectPath: string, prompt: 
 
 export function ImplementationPane() {
   const { state } = useAppState();
-  const { startTodo, completeTodo } = useTaskBridge();
+  const { startTodo, completeTodo, markReadyForTesting } = useTaskBridge();
   const { loadAgents } = useAgentBridge();
   const { startCommandRun } = useCommandBridge();
   const task = state.tasks.find((candidate) => candidate.id === state.app.selectedTaskId) ?? null;
@@ -102,6 +103,8 @@ export function ImplementationPane() {
   const selectedAgent =
     implementationAgents.find((agent) => agent.id === selectedAgentId) ?? implementationAgents[0] ?? null;
   const commandRunning = state.commandRuns.some((run) => run.status === "running");
+  const allTodosDone = todos.length > 0 && todos.every((todo) => todo.status === "done");
+  const canMarkReadyForTesting = task?.status === "reviewing" && allTodosDone;
 
   useEffect(() => {
     void loadAgents();
@@ -118,7 +121,7 @@ export function ImplementationPane() {
       return;
     }
 
-    const updatedTask = await startTodo(projectPath, taskId, todo.id);
+    const updatedTask = await startTodo(projectPath, taskId, todo.id, selectedAgent.id);
     const prompt = buildImplementationPrompt(updatedTask ?? task, todo, todoIndex);
     await startCommandRun({
       program: selectedAgent.command,
@@ -126,6 +129,14 @@ export function ImplementationPane() {
       cwd: projectPath,
       taskId,
     });
+  }
+
+  async function handleMarkReadyForTesting() {
+    if (!projectPath || !taskId) {
+      return;
+    }
+
+    await markReadyForTesting(projectPath, taskId);
   }
 
   return (
@@ -219,6 +230,23 @@ export function ImplementationPane() {
             </div>
           );
         })}
+      </div>
+
+      <div className="implementation-actions">
+        <div>
+          <div className="implementation-action-title">Testing handoff</div>
+          <div className="implementation-action-copy">
+            Complete every implementation todo before opening the debug validation stage.
+          </div>
+        </div>
+        <Button
+          type="button"
+          variant="primary"
+          disabled={!canMarkReadyForTesting}
+          onClick={handleMarkReadyForTesting}
+        >
+          Mark ready for testing
+        </Button>
       </div>
     </div>
   );

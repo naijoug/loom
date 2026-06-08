@@ -13,13 +13,12 @@ export function useTaskBridge() {
 
   const loadTasks = useCallback(
     async (projectPath: string) => {
+      if (!hasTauriRuntime()) {
+        return;
+      }
+
       dispatch({ type: "tasks/loadStarted" });
       try {
-        if (!hasTauriRuntime()) {
-          dispatch({ type: "tasks/loaded", tasks: [] });
-          return;
-        }
-
         const tasks = await invoke<Task[]>("list_tasks", { projectPath });
         dispatch({ type: "tasks/loaded", tasks });
       } catch (error) {
@@ -93,15 +92,24 @@ export function useTaskBridge() {
   );
 
   const startTodo = useCallback(
-    async (projectPath: string | null, taskId: string, todoId: string) => {
-      dispatch({ type: "tasks/todoSelected", taskId, todoId });
-
+    async (
+      projectPath: string | null,
+      taskId: string,
+      todoId: string,
+      primaryAgentId?: string,
+    ) => {
       if (!projectPath || !hasTauriRuntime()) {
+        dispatch({ type: "tasks/todoSelected", taskId, todoId });
         return null;
       }
 
       try {
-        const task = await invoke<Task>("start_todo", { projectPath, taskId, todoId });
+        const task = await invoke<Task>("start_todo", {
+          projectPath,
+          taskId,
+          todoId,
+          primaryAgentId,
+        });
         dispatch({ type: "tasks/upserted", task });
         return task;
       } catch (error) {
@@ -114,14 +122,49 @@ export function useTaskBridge() {
 
   const completeTodo = useCallback(
     async (projectPath: string | null, taskId: string, todoId: string) => {
-      dispatch({ type: "tasks/todoCompleted", taskId, todoId });
-
       if (!projectPath || !hasTauriRuntime()) {
+        dispatch({ type: "tasks/todoCompleted", taskId, todoId });
         return null;
       }
 
       try {
         const task = await invoke<Task>("complete_todo", { projectPath, taskId, todoId });
+        dispatch({ type: "tasks/upserted", task });
+        return task;
+      } catch (error) {
+        dispatch({ type: "tasks/loadFailed", error: toErrorMessage(error) });
+        return null;
+      }
+    },
+    [dispatch],
+  );
+
+  const markReadyForTesting = useCallback(
+    async (projectPath: string | null, taskId: string) => {
+      if (!projectPath || !hasTauriRuntime()) {
+        return null;
+      }
+
+      try {
+        const task = await invoke<Task>("mark_ready_for_testing", { projectPath, taskId });
+        dispatch({ type: "tasks/upserted", task });
+        return task;
+      } catch (error) {
+        dispatch({ type: "tasks/loadFailed", error: toErrorMessage(error) });
+        return null;
+      }
+    },
+    [dispatch],
+  );
+
+  const completeTask = useCallback(
+    async (projectPath: string | null, taskId: string) => {
+      if (!projectPath || !hasTauriRuntime()) {
+        return null;
+      }
+
+      try {
+        const task = await invoke<Task>("complete_task", { projectPath, taskId });
         dispatch({ type: "tasks/upserted", task });
         return task;
       } catch (error) {
@@ -152,6 +195,8 @@ export function useTaskBridge() {
     confirmPlan,
     startTodo,
     completeTodo,
+    markReadyForTesting,
+    completeTask,
     appendFeedback,
     recordPlanningDecision,
     generateRepairContext,

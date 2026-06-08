@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { Send, Square, Terminal, Wrench } from "lucide-react";
+import { CheckCircle2, Send, Square, Terminal, Wrench } from "lucide-react";
 import { useCommandBridge } from "../../hooks/useCommandBridge";
 import { useTaskBridge } from "../../hooks/useTaskBridge";
 import { useAppState } from "../../state/AppStateContext";
@@ -61,7 +61,7 @@ function countTextMatches(line: string, normalizedFilter: string): number {
 export function DebugPane() {
   const { state } = useAppState();
   const { startCommandRun, stopCommandRun } = useCommandBridge();
-  const { appendFeedback, generateRepairContext } = useTaskBridge();
+  const { appendFeedback, completeTask, generateRepairContext } = useTaskBridge();
   const project = state.projects.current;
   const task = state.tasks.find((candidate) => candidate.id === state.app.selectedTaskId) ?? null;
   const activeRun =
@@ -93,10 +93,10 @@ export function DebugPane() {
     : [];
   const scopedLogs = useMemo(() => {
     if (!activeRun) {
-      return state.commandLogs;
+      return Object.values(state.commandLogs).flat();
     }
 
-    return state.commandLogs.filter((entry) => entry.runId === activeRun.id);
+    return state.commandLogs[activeRun.id] ?? [];
   }, [activeRun, state.commandLogs]);
 
   const visibleLogs = useMemo(() => {
@@ -222,6 +222,14 @@ export function DebugPane() {
     await generateRepairContext(project.path, task.id);
   }
 
+  async function handleCompleteTask() {
+    if (!project || !task) {
+      return;
+    }
+
+    await completeTask(project.path, task.id);
+  }
+
   return (
     <div className="pane-container">
       <div className="pane-header">
@@ -320,6 +328,16 @@ export function DebugPane() {
           >
             Repair Handoff
           </Button>
+          {task?.status === "verifying" && (
+            <Button
+              type="button"
+              variant="primary"
+              iconLeft={<CheckCircle2 size={14} />}
+              onClick={handleCompleteTask}
+            >
+              Accept
+            </Button>
+          )}
         </div>
         <div className="feedback-input-wrapper">
           <input 

@@ -58,11 +58,13 @@ pub fn run() {
             projects::list_recent_projects,
             projects::register_project,
             tasks::append_feedback,
+            tasks::complete_task,
             tasks::complete_todo,
             tasks::confirm_plan,
             tasks::create_task,
             tasks::generate_repair_context,
             tasks::list_tasks,
+            tasks::mark_ready_for_testing,
             tasks::record_planning_decision,
             tasks::start_todo
         ])

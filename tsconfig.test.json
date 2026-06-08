@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "allowImportingTsExtensions": false,
+    "declaration": false,
+    "emitDeclarationOnly": false,
+    "isolatedModules": false,
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "noEmit": false,
+    "outDir": ".tmp/test-build",
+    "rootDir": "."
+  },
+  "include": [
+    "src/domain/**/*.ts",
+    "src/state/reducer.ts",
+    "src/state/selectors.ts",
+    "src/utils/commandLine.ts"
+  ],
+  "references": []
+}

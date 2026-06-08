@@ -2,7 +2,7 @@ import type { TaskStatus } from "../domain";
 import type { StepStatus } from "../components/Header/TaskFlowStep";
 import type { TaskStage } from "../components/Header/TaskFlow";
 
-const flowOrder = ["planning", "implementing", "debugging"] as const;
+const flowOrder = ["planning", "implementing", "debugging", "done"] as const;
 
 const statusToFlowStep: Record<TaskStatus, (typeof flowOrder)[number]> = {
   drafting_requirements: "planning",
@@ -14,7 +14,7 @@ const statusToFlowStep: Record<TaskStatus, (typeof flowOrder)[number]> = {
   debugging: "debugging",
   fixing: "debugging",
   verifying: "debugging",
-  completed: "debugging",
+  completed: "done",
   blocked: "debugging",
   cancelled: "debugging",
 };
@@ -44,7 +44,8 @@ export function deriveTaskStages(status: TaskStatus | null): TaskStage[] {
     return [
       { id: "planning", label: "Planning", status: "pending" },
       { id: "implementing", label: "Implementing", status: "pending" },
-      { id: "debugging", label: "Debugging", status: "pending" },
+      { id: "debugging", label: "Testing", status: "pending" },
+      { id: "done", label: "Done", status: "pending" },
     ];
   }
 
@@ -55,6 +56,7 @@ export function deriveTaskStages(status: TaskStatus | null): TaskStage[] {
   return [
     { id: "planning", label: "Planning", status: stepStatus(activeIndex, 0, running) },
     { id: "implementing", label: "Implementing", status: stepStatus(activeIndex, 1, running) },
-    { id: "debugging", label: "Debugging", status: stepStatus(activeIndex, 2, running) },
+    { id: "debugging", label: "Testing", status: stepStatus(activeIndex, 2, running) },
+    { id: "done", label: "Done", status: stepStatus(activeIndex, 3, running) },
   ];
 }

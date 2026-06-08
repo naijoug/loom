@@ -12,14 +12,13 @@ export function useProjectBridge() {
   const { dispatch } = useAppState();
 
   const loadRecentProjects = useCallback(async () => {
+    if (!hasTauriRuntime()) {
+      return;
+    }
+
     dispatch({ type: "projects/loadStarted" });
 
     try {
-      if (!hasTauriRuntime()) {
-        dispatch({ type: "projects/recentLoaded", projects: [] });
-        return;
-      }
-
       const projects = await invoke<ProjectSummary[]>("list_recent_projects");
       dispatch({ type: "projects/recentLoaded", projects });
     } catch (error) {

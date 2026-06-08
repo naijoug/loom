@@ -1687,6 +1687,30 @@
   padding: 16px;
 }
 
+.implementation-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-top: 1px solid var(--theme-border-subtle);
+  flex-shrink: 0;
+}
+
+.implementation-action-title {
+  color: var(--theme-text-primary);
+  font-family: var(--font-headings);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.implementation-action-copy {
+  margin-top: 3px;
+  color: var(--theme-text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .todo-agent-picker {
   display: inline-flex;
   align-items: center;

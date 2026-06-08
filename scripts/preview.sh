@@ -26,24 +26,34 @@ stop_pid() {
   kill -9 "${pid}" 2>/dev/null || true
 }
 
+preview_listener_pid() {
+  local port_pids
+  port_pids="$(lsof -tiTCP:"${PORT}" -sTCP:LISTEN 2>/dev/null || true)"
+
+  for pid in ${port_pids}; do
+    local command
+    command="$(ps -p "${pid}" -o command= 2>/dev/null || true)"
+    if [[ "${command}" == *"${ROOT_DIR}"*vite* ]]; then
+      echo "${pid}"
+      return 0
+    elif [[ -n "${command}" ]]; then
+      echo "Port ${PORT} is already used by a non-Loom process:" >&2
+      echo "  ${pid} ${command}" >&2
+      return 2
+    fi
+  done
+
+  return 1
+}
+
 stop_existing() {
   if [[ -f "${PID_FILE}" ]]; then
     stop_pid "$(cat "${PID_FILE}")"
     rm -f "${PID_FILE}"
   fi
 
-  local port_pids
-  port_pids="$(lsof -tiTCP:"${PORT}" -sTCP:LISTEN 2>/dev/null || true)"
-  for pid in ${port_pids}; do
-    local command
-    command="$(ps -p "${pid}" -o command= 2>/dev/null || true)"
-    if [[ "${command}" == *"${ROOT_DIR}"*vite* ]]; then
-      stop_pid "${pid}"
-    elif [[ -n "${command}" ]]; then
-      echo "Port ${PORT} is already used by a non-Loom process:" >&2
-      echo "  ${pid} ${command}" >&2
-      exit 1
-    fi
+  while pid="$(preview_listener_pid)"; do
+    stop_pid "${pid}"
   done
 }
 
@@ -58,6 +68,14 @@ start_preview() {
   )
 
   local pid
+  for _ in {1..80}; do
+    if pid="$(preview_listener_pid)"; then
+      echo "${pid}" > "${PID_FILE}"
+      break
+    fi
+    sleep 0.1
+  done
+
   pid="$(cat "${PID_FILE}")"
   echo "Loom preview started"
   echo "URL: http://${HOST}:${PORT}/preview/planning?step=review"
@@ -74,8 +92,9 @@ case "${1:-start}" in
     echo "Loom preview stopped"
     ;;
   status)
-    if [[ -f "${PID_FILE}" ]] && kill -0 "$(cat "${PID_FILE}")" 2>/dev/null; then
-      echo "Loom preview running: PID $(cat "${PID_FILE}")"
+    if pid="$(preview_listener_pid)"; then
+      echo "${pid}" > "${PID_FILE}"
+      echo "Loom preview running: PID ${pid}"
       echo "URL: http://${HOST}:${PORT}/preview/planning?step=review"
     else
       echo "Loom preview is not running"
