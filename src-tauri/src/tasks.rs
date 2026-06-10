@@ -244,6 +244,26 @@ pub(crate) fn complete_task_inner(
     Ok(task)
 }
 
+#[tauri::command]
+pub fn delete_task(project_path: String, task_id: String) -> Result<(), String> {
+    let project = Path::new(&project_path);
+    let path = task_path(project, &task_id);
+
+    if path.exists() {
+        std::fs::remove_file(&path).map_err(|error| format!("failed to delete task: {error}"))?;
+    }
+
+    // Best-effort cleanup of this task's planning evidence directory.
+    let evidence_dir = storage::project_loom_dir(project)
+        .join("planning")
+        .join(&task_id);
+    if evidence_dir.exists() {
+        let _ = std::fs::remove_dir_all(&evidence_dir);
+    }
+
+    Ok(())
+}
+
 fn apply_start_todo(
     task: &mut Task,
     todo_id: &str,
@@ -1236,6 +1256,26 @@ mod tests {
         assert_eq!(task.events[0].actor, "user");
         assert_eq!(task.events[0].status, "completed");
         assert_eq!(task.events[0].evidence_ref.as_deref(), Some("run-1"));
+    }
+
+    #[test]
+    fn delete_task_removes_file_and_is_idempotent() {
+        let root = std::env::temp_dir().join(format!("loom-delete-task-{}", now_ms()));
+        std::fs::create_dir_all(&root).unwrap();
+        let mut task = transition_task_fixture("reviewing", &["done"], Vec::new());
+        task.id = "task-del".to_string();
+        task.project_path = root.display().to_string();
+        save_task(&task).unwrap();
+        let path = task_path(&root, &task.id);
+        assert!(path.exists());
+
+        delete_task(root.display().to_string(), task.id.clone()).unwrap();
+        assert!(!path.exists());
+
+        // Deleting an already-removed task is a no-op success.
+        delete_task(root.display().to_string(), task.id.clone()).unwrap();
+
+        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]

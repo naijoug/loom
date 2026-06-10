@@ -6,6 +6,10 @@
   gap: 18px;
 }
 
+[data-tauri-drag-region] {
+  user-select: none;
+}
+
 .header-breadcrumb {
   min-width: 180px;
   max-width: 320px;

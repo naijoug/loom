@@ -175,6 +175,27 @@ export function useTaskBridge() {
     [dispatch],
   );
 
+  const deleteTask = useCallback(
+    async (projectPath: string | null, taskId: string) => {
+      // In the browser preview there is no backend file to remove; just drop it
+      // locally so the UI stays consistent.
+      if (!projectPath || !hasTauriRuntime()) {
+        dispatch({ type: "tasks/removed", taskId });
+        return true;
+      }
+
+      try {
+        await invoke("delete_task", { projectPath, taskId });
+        dispatch({ type: "tasks/removed", taskId });
+        return true;
+      } catch (error) {
+        dispatch({ type: "tasks/loadFailed", error: toErrorMessage(error) });
+        return false;
+      }
+    },
+    [dispatch],
+  );
+
   const generateRepairContext = useCallback(
     async (projectPath: string, taskId: string) => {
       try {
@@ -197,6 +218,7 @@ export function useTaskBridge() {
     completeTodo,
     markReadyForTesting,
     completeTask,
+    deleteTask,
     appendFeedback,
     recordPlanningDecision,
     generateRepairContext,

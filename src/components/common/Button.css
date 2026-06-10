@@ -30,12 +30,18 @@
 
 /* Primary Variant */
 .btn-primary {
-  background-color: var(--theme-accent);
+  background-color: var(--accent-fill);
   color: #FFFFFF;
 }
 
 .btn-primary:hover:not(:disabled) {
-  opacity: 0.9;
+  background-color: color-mix(in srgb, var(--accent-fill) 86%, #000);
+}
+
+.btn-primary:disabled {
+  background-color: color-mix(in srgb, var(--accent-fill) 38%, var(--surface));
+  color: var(--text-3);
+  opacity: 1;
 }
 
 /* Danger Variant */

@@ -289,6 +289,33 @@ scripts/start-local.sh stop     # 验收后清理，勿留后台预览
 - 约束记录：新增 `vitest` / Testing Library / `jsdom` 的 dev dependencies 曾因缺少显式批准被拒绝；当前先用 Node 内置 test runner 满足 `pnpm test` 门槛。若后续明确批准新增 dev dependencies，应升级到计划目标中的 Vitest + Testing Library 组件测试。
 - 外部依赖边界：Amp 当前账号缺少 execute-mode paid credits，因此无法证明 Amp 成功模型输出；已证明其失败会被适配器判定为 failed invocation。除该账号/计费前置外，当前自动化、Rust smoke、真实桌面验证、Codex CLI smoke 与 Claude Code CLI smoke 已覆盖 Web 预览关键路由、点击输入、视觉截图、Tauri 桌面原生目录选择、真实本地命令 run/stop/fix/accept、两轮 debug→repair→re-test、以及真实外部 Agent CLI 调用。
 
+### 10.1 真实计划闭环硬化（2026-06-08 补充）
+
+- **背景**：M3 计划聊天室前后端早已接真实 CLI（`run_planning_discussion` 直接 spawn 本地 `codex`/`claude`、写证据文件、落 `docs/plans/` 计划文档），并非 mock；"全是 mock" 的体验来自 `/preview/planning` 预览壳（`hasTauriRuntime()` 为 false 时 bridge 全部 no-op）。本轮把"真实可用"从"已接线"推进到"端到端实证 + 修复真实缺陷"。
+- **修复 1（Claude 计划输出被截断）**：`default_profile_args` 的 Claude 计划参数去掉 `--permission-mode plan`，改为 `-p --output-format text`。plan 模式下 Claude 把真实计划交给 ExitPlanMode 工具，`--output-format text` 只打印一句确认语，导致采集到的计划文档近乎为空。只读语义由 prompt 约束 + headless `-p`（拒绝写文件工具）兜底；Codex 仍由 `--sandbox read-only` 在 OS 层强制只读。
+- **修复 2（计划文档只有一行摘要）**：`render_final_plan` 新增 `## Agent Proposals` 段，内嵌每个成功 Agent 的**完整 `raw_output`**（失败 Agent 不贡献正文）。此前计划文档只放 `output_summary` 单行摘要，真实计划正文仅存于证据文件，导致交付物形同模板。
+- **超时放宽**：`PLANNING_TIMEOUT_MS` 120s → 240s/Agent（实测单个 Claude 计划约 72s；Agent 串行执行，总墙钟约为此值 × Agent 数）。
+- **前端反馈**：`PlanningChat` 在 `isLoadingTasks` 期间显示"Running planning discussion"虚线脉冲提示并列出参与 Agent、按钮变"Discussing…"，避免 1–4 分钟阻塞被误判为卡死。
+- **新增验证**：`agents::tests::claude_planning_profile_avoids_plan_permission_mode`、`final_plan_embeds_full_successful_agent_proposals`（常规 `cargo test`）；`real_claude_planning_agent_produces_usable_plan_document`（`#[ignore]`，需本地 `claude` 凭据，`--ignored` 显式跑通，实测 71.7s 返回 >200 字符真实计划且全文进入计划文档）。
+- **全绿复跑**：`cargo test`（62 passed / 1 ignored）、`pnpm exec tsc --noEmit`、`pnpm test`（12）、`pnpm build`。
+- **已知剩余项（非本轮）**：多 Agent 仍是**串行**（计划 §8 设想的"并行"未落地）；无逐 Agent 流式进度（只有整体 loading）；打包后的桌面 App 需保证 `claude`/`codex` 在 PATH（dev 从终端 `cargo tauri dev` 继承 PATH 没问题）。
+
+### 10.2 真机反馈修复（2026-06-08 桌面试用）
+
+- **计划输入框删除后被回填（bug）**：`PlanningChat` 原有 `useEffect([message, task.rawRequirement])` 在 `message` 变空时把任务需求写回，导致用户删字后被重新填充。改为仅在**所选任务变化**（keyed on `taskId`）时 seed，且仅当任务尚无 `discussionSummary` 时用需求预填；用户编辑（含清空）不再被覆盖。讨论成功后清空输入框（需求已在对话流里）。
+- **New task 不再强制填 title/description**：移除 Board "New task" 与侧栏项目 `+` 弹出的 `NewTaskModal`，改为新增 reducer action `tasks/new` → 直接进计划聊天室（`currentView=planning`、清空 `selectedTaskId`），空输入框等待用户描述需求。（`NewTaskModal` 仍保留给 Done 的 Start follow-up 与预览壳。）
+- **任务标题由首个计划会话自动生成**：后端 `run_planning_discussion` 在**首个 planning run 且有成功 Agent**时调用新增 `derive_plan_title`，从首个成功 Agent 计划输出里抽取 Goal（支持 `## Goal` 标题式与 `**Goal:** …` 行内式，去 Markdown 装饰并截断；无 Goal 则回退首个正文行）覆盖任务标题，前端创建时仅给临时标题占位。新增 4 个 `derive_plan_title` 单测。
+- **复跑全绿**：`cargo test`（66 passed / 1 ignored）、`pnpm exec tsc --noEmit`、`pnpm test`（12）、`pnpm build`。
+
+### 10.3 真机反馈修复（2026-06-08 第二轮）
+
+- **@mention 打错导致无法发送**：`PlanningChat` 的 `selectedAgents` 原来在有 `@mention` 但无匹配时返回空集合 → "No available planning Agent selected." 且 Send 禁用。改为**无匹配时回退到全部可用 planning Agent**，typo 不再阻塞发送。发送按钮文案 `Start discussion` → **`Send`**（运行中 `Sending…`）。
+- **移除右上角 Stop Task 按钮**：`Header` 删除 `Stop Task`（无真实停止语义，且 session 生命周期不该从这里控制），连带移除未用的 `canStopTask` 与 `Button` 引用。
+- **侧栏右键删除任务**：`Navigation` 任务项加 `onContextMenu` → 光标处弹出上下文菜单（"Delete task"）→ 确认弹窗（Cancel / Delete）→ `deleteTask`。新增后端 `delete_task(project_path, task_id)`（删除任务 json + 尽力清理该任务 `.loom/planning/<task_id>` 证据目录，缺失即 no-op 成功）并注册；前端 `useTaskBridge.deleteTask` + reducer `tasks/removed`（移除任务与其 commandRuns，若为当前选中则清空选择并回 Board）。上下文菜单与确认弹窗样式自带于 `Sidebar.css`（不依赖 Board.css）。
+- **澄清 Codex `--ask-for-approval` 报错**：当前代码与磁盘 `agents.json`（codex `args: []`）均无该参数，截图里的失败来自**旧构建留下的 run 证据**；重新构建运行后该路径已是 `codex exec --cd … --sandbox read-only -`。
+- **新增验证**：`delete_task_removes_file_and_is_idempotent`（cargo）；reducer 单测 `tasks/new`、`tasks/removed`（选中/未选中两种）。
+- **复跑全绿**：`cargo test`（67 passed / 1 ignored）、`pnpm exec tsc --noEmit`、`pnpm test`（15）、`pnpm build`。
+
 ## 11. 建议实施顺序
 
 `M0 → M0.5 → M1 → M2 → M3 → M4 → M5 → M6 → M7 → M8`。

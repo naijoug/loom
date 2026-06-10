@@ -62,6 +62,7 @@ pub fn run() {
             tasks::complete_todo,
             tasks::confirm_plan,
             tasks::create_task,
+            tasks::delete_task,
             tasks::generate_repair_context,
             tasks::list_tasks,
             tasks::mark_ready_for_testing,

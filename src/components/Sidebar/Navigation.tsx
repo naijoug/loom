@@ -1,11 +1,18 @@
-import { useEffect, useState } from "react";
-import { Circle, Folder, FolderPlus, Plus, Search, Settings } from "lucide-react";
-import type { ProjectSummary, TaskStatus } from "../../domain";
+import { type CSSProperties, useEffect, useState } from "react";
+import { ChevronRight, Circle, Folder, FolderPlus, Plus, Search, Settings, Trash2 } from "lucide-react";
+import type { TaskStatus } from "../../domain";
 import { useProjectBridge } from "../../hooks/useProjectBridge";
+import { useTaskBridge } from "../../hooks/useTaskBridge";
 import { useAppState } from "../../state/AppStateContext";
-import { NewTaskModal } from "../Board";
+import { Button } from "../common/Button";
 import { AddProjectModal } from "./AddProjectModal";
 import "./Sidebar.css";
+
+interface TaskMenuState {
+  taskId: string;
+  x: number;
+  y: number;
+}
 
 function statusClass(status: TaskStatus) {
   if (status === "completed") {
@@ -26,12 +33,66 @@ function statusClass(status: TaskStatus) {
 export function Navigation() {
   const { state, dispatch } = useAppState();
   const { loadRecentProjects } = useProjectBridge();
-  const [newTaskProject, setNewTaskProject] = useState<ProjectSummary | null>(null);
+  const { deleteTask } = useTaskBridge();
   const [addProjectOpen, setAddProjectOpen] = useState(false);
+  const [taskMenu, setTaskMenu] = useState<TaskMenuState | null>(null);
+  const [confirmTaskId, setConfirmTaskId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+
+  function toggleCollapsed(projectId: string) {
+    setCollapsedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(projectId)) {
+        next.delete(projectId);
+      } else {
+        next.add(projectId);
+      }
+      return next;
+    });
+  }
+
+  function expandProject(projectId: string) {
+    setCollapsedIds((prev) => {
+      if (!prev.has(projectId)) {
+        return prev;
+      }
+      const next = new Set(prev);
+      next.delete(projectId);
+      return next;
+    });
+  }
 
   useEffect(() => {
     void loadRecentProjects();
   }, [loadRecentProjects]);
+
+  useEffect(() => {
+    if (!taskMenu) {
+      return;
+    }
+
+    const close = () => setTaskMenu(null);
+    window.addEventListener("click", close);
+    window.addEventListener("resize", close);
+    return () => {
+      window.removeEventListener("click", close);
+      window.removeEventListener("resize", close);
+    };
+  }, [taskMenu]);
+
+  const confirmTask = state.tasks.find((task) => task.id === confirmTaskId) ?? null;
+
+  async function handleDeleteConfirmed() {
+    if (!confirmTaskId) {
+      return;
+    }
+
+    setDeleting(true);
+    await deleteTask(state.projects.current?.path ?? null, confirmTaskId);
+    setDeleting(false);
+    setConfirmTaskId(null);
+  }
 
   return (
     <div className="sidebar-nav-container">
@@ -55,6 +116,8 @@ export function Navigation() {
           {state.projects.recent.map((project) => {
             const active = project.id === state.app.activeProjectId;
             const projectTasks = active ? state.tasks : [];
+            const hasTasks = projectTasks.length > 0;
+            const expanded = active && hasTasks && !collapsedIds.has(project.id);
 
             return (
               <li className="project-nav-item" key={`${project.id}:${project.path}`}>
@@ -63,9 +126,22 @@ export function Navigation() {
                   className={`nav-item${active ? " active" : ""}`}
                   onClick={(event) => {
                     event.preventDefault();
-                    dispatch({ type: "projects/selected", projectId: project.id });
+                    if (active) {
+                      // Already selected: a second click toggles expand/collapse.
+                      toggleCollapsed(project.id);
+                    } else {
+                      // Selecting a project always opens it expanded.
+                      expandProject(project.id);
+                      dispatch({ type: "projects/selected", projectId: project.id });
+                    }
                   }}
                 >
+                  <ChevronRight
+                    size={14}
+                    className={`nav-disclosure${expanded ? " expanded" : ""}${
+                      active && !hasTasks ? " hidden" : ""
+                    }`}
+                  />
                   <Folder size={16} className={`nav-icon${active ? " active-icon" : ""}`} />
                   <span>{project.name}</span>
                   <span className="project-task-count">{active ? projectTasks.length : ""}</span>
@@ -77,32 +153,44 @@ export function Navigation() {
                     onClick={(event) => {
                       event.preventDefault();
                       event.stopPropagation();
-                      dispatch({ type: "projects/selected", projectId: project.id });
-                      setNewTaskProject(project);
+                      if (project.id !== state.app.activeProjectId) {
+                        dispatch({ type: "projects/selected", projectId: project.id });
+                      }
+                      dispatch({ type: "tasks/new" });
                     }}
                   >
                     <Plus size={13} />
                   </button>
                 </a>
-                {active && projectTasks.length > 0 && (
-                  <ul className="task-nav-list">
-                    {projectTasks.map((task) => {
-                      const selected = task.id === state.app.selectedTaskId;
+                {expanded && (
+                  <div className="task-nav-collapse">
+                    <ul className="task-nav-list">
+                      {projectTasks.map((task, index) => {
+                        const selected = task.id === state.app.selectedTaskId;
 
-                      return (
-                        <li key={task.id}>
-                          <button
-                            type="button"
-                            className={`task-nav-item${selected ? " selected" : ""}`}
-                            onClick={() => dispatch({ type: "tasks/selected", taskId: task.id })}
-                          >
-                            <Circle size={8} className={`task-dot task-${statusClass(task.status)}`} />
-                            <span>{task.title}</span>
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
+                        return (
+                          <li key={task.id} style={{ "--task-index": index } as CSSProperties}>
+                            <button
+                              type="button"
+                              className={`task-nav-item${selected ? " selected" : ""}`}
+                              onClick={() => dispatch({ type: "tasks/selected", taskId: task.id })}
+                              onContextMenu={(event) => {
+                                event.preventDefault();
+                                setTaskMenu({
+                                  taskId: task.id,
+                                  x: event.clientX,
+                                  y: event.clientY,
+                                });
+                              }}
+                            >
+                              <Circle size={8} className={`task-dot task-${statusClass(task.status)}`} />
+                              <span>{task.title}</span>
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
                 )}
               </li>
             );
@@ -124,11 +212,49 @@ export function Navigation() {
         </button>
       </div>
 
-      {newTaskProject && (
-        <NewTaskModal project={newTaskProject} onClose={() => setNewTaskProject(null)} />
+      {addProjectOpen && <AddProjectModal onClose={() => setAddProjectOpen(false)} />}
+
+      {taskMenu && (
+        <div
+          className="task-context-menu"
+          style={{ top: taskMenu.y, left: taskMenu.x }}
+          role="menu"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <button
+            type="button"
+            className="task-context-item danger"
+            role="menuitem"
+            onClick={() => {
+              setConfirmTaskId(taskMenu.taskId);
+              setTaskMenu(null);
+            }}
+          >
+            <Trash2 size={13} />
+            Delete task
+          </button>
+        </div>
       )}
 
-      {addProjectOpen && <AddProjectModal onClose={() => setAddProjectOpen(false)} />}
+      {confirmTask && (
+        <div className="confirm-backdrop" role="presentation">
+          <div className="confirm-modal" role="dialog" aria-modal="true">
+            <h2>Delete task?</h2>
+            <p>
+              “{confirmTask.title}” and its planning evidence will be permanently removed. This
+              cannot be undone.
+            </p>
+            <div className="confirm-modal-actions">
+              <Button variant="ghost" onClick={() => setConfirmTaskId(null)} disabled={deleting}>
+                Cancel
+              </Button>
+              <Button variant="danger" onClick={() => void handleDeleteConfirmed()} disabled={deleting}>
+                {deleting ? "Deleting…" : "Delete"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -24,7 +24,11 @@ const ADAPTER_CLAUDE_CODE: &str = "claude_code_cli";
 const ADAPTER_AMP: &str = "amp_cli";
 const ADAPTER_CLI: &str = "cli";
 const ADAPTER_DUMMY: &str = "dummy";
-const PLANNING_TIMEOUT_MS: u64 = 120_000;
+// Real planning agents (claude/codex) routinely take 1-2 minutes on a real
+// repository; a single observed run took ~72s. Keep a generous per-agent budget
+// so genuine work is not killed mid-plan. Agents run sequentially, so total wall
+// time is roughly this times the number of selected agents.
+const PLANNING_TIMEOUT_MS: u64 = 240_000;
 
 struct PlanningPrompt {
     content: String,
@@ -232,6 +236,15 @@ pub async fn run_planning_discussion(
         .iter()
         .filter(|invocation| invocation.status == "succeeded")
         .count();
+
+    // On the first planning session, name the task from the agents' plan output
+    // (the goal they extracted) so the user never has to title it up front.
+    if task.planning_runs.is_empty() && successful_invocations > 0 {
+        if let Some(title) = derive_plan_title(&invocations) {
+            task.title = title;
+        }
+    }
+
     let discussion_summary = summarize_discussion(&selected_agents, &requirement, &invocations);
     let final_plan =
         render_final_plan(&task.title, &requirement, &discussion_summary, &invocations);
@@ -777,10 +790,13 @@ fn default_profile_args(adapter_type: &str, project_path: &Path) -> Vec<String> 
             "read-only".to_string(),
             "-".to_string(),
         ],
+        // Planning is read-only by intent (enforced by the prompt + headless `-p`,
+        // which denies edit tools). We deliberately avoid `--permission-mode plan`:
+        // in plan mode Claude hands the real plan to its ExitPlanMode tool and
+        // `--output-format text` only prints a terse confirmation, so the captured
+        // stdout would be an almost-empty plan document.
         ADAPTER_CLAUDE_CODE => vec![
             "-p".to_string(),
-            "--permission-mode".to_string(),
-            "plan".to_string(),
             "--output-format".to_string(),
             "text".to_string(),
         ],
@@ -895,6 +911,79 @@ fn summarize_discussion(
     )
 }
 
+/// Derive a concise task title from the first successful agent's plan output,
+/// preferring the stated goal. Falls back to the first meaningful content line.
+fn derive_plan_title(invocations: &[AgentInvocation]) -> Option<String> {
+    let output = invocations
+        .iter()
+        .find(|invocation| {
+            invocation.status == "succeeded" && !invocation.raw_output.trim().is_empty()
+        })
+        .map(|invocation| invocation.raw_output.as_str())?;
+
+    let lines: Vec<&str> = output.lines().collect();
+
+    let is_content_line = |line: &str| {
+        let trimmed = line.trim();
+        !trimmed.is_empty() && !trimmed.starts_with('#') && !trimmed.starts_with("---")
+    };
+
+    let goal_text = lines.iter().enumerate().find_map(|(index, line)| {
+        let lower = line.to_lowercase();
+        if !(lower.contains("goal") || lower.contains("目标")) {
+            return None;
+        }
+
+        // Inline form: "**Goal:** Add X" / "Goal: Add X".
+        if let Some((_, after)) = line.split_once(':') {
+            let after = clean_title(after);
+            if !after.is_empty() {
+                return Some(after);
+            }
+        }
+
+        // Heading form: take the next content line.
+        lines[index + 1..]
+            .iter()
+            .find(|candidate| is_content_line(candidate))
+            .map(|candidate| candidate.trim().to_string())
+    });
+
+    let raw_title = goal_text.or_else(|| {
+        lines
+            .iter()
+            .find(|line| is_content_line(line))
+            .map(|line| line.trim().to_string())
+    })?;
+
+    let title = clean_title(&raw_title);
+    if title.is_empty() {
+        None
+    } else {
+        Some(title)
+    }
+}
+
+/// Strip Markdown decoration and leading list markers, then cap the length.
+fn clean_title(text: &str) -> String {
+    let stripped = text.replace("**", "").replace('`', "").replace('#', "");
+    let stripped = stripped.trim();
+    let stripped = stripped.trim_start_matches(|c: char| {
+        c.is_ascii_digit() || matches!(c, '.' | ')' | '-' | '*' | '、' | '：' | ':' | ' ')
+    });
+    let cleaned = stripped.trim();
+
+    if cleaned.chars().count() <= 64 {
+        return cleaned.to_string();
+    }
+
+    let truncated: String = cleaned.chars().take(64).collect();
+    match truncated.rsplit_once(' ') {
+        Some((head, _)) if head.chars().count() > 24 => format!("{head}…"),
+        _ => format!("{truncated}…"),
+    }
+}
+
 fn render_final_plan(
     task_title: &str,
     requirement: &str,
@@ -914,6 +1003,25 @@ fn render_final_plan(
         })
         .collect::<Vec<_>>()
         .join("\n");
+    let agent_proposals = invocations
+        .iter()
+        .filter(|invocation| {
+            invocation.status == "succeeded" && !invocation.raw_output.trim().is_empty()
+        })
+        .map(|invocation| {
+            format!(
+                "### {}\n\n{}",
+                invocation.agent_name,
+                invocation.raw_output.trim()
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n\n");
+    let agent_proposals = if agent_proposals.is_empty() {
+        "No successful agent produced a detailed proposal.".to_string()
+    } else {
+        agent_proposals
+    };
     let agent_todos = collect_implementation_todos_from_invocations(invocations);
     let implementation_todo = if !agent_todos.is_empty() {
         agent_todos
@@ -936,7 +1044,7 @@ fn render_final_plan(
     };
 
     format!(
-        "# {task_title} — Final Plan\n\n## Requirement\n\n{requirement}\n\n## Discussion Summary\n\n{discussion_summary}\n\n## Agent Notes\n\n{agent_notes}\n\n## Implementation Todo\n\n{implementation_todo}\n\n## Acceptance Criteria\n\n{acceptance_criteria}\n"
+        "# {task_title} — Final Plan\n\n## Requirement\n\n{requirement}\n\n## Discussion Summary\n\n{discussion_summary}\n\n## Agent Notes\n\n{agent_notes}\n\n## Agent Proposals\n\n{agent_proposals}\n\n## Implementation Todo\n\n{implementation_todo}\n\n## Acceptance Criteria\n\n{acceptance_criteria}\n"
     )
 }
 
@@ -1745,6 +1853,127 @@ mod tests {
         assert!(final_plan.contains("1. 抽取任务桥接边界"));
         assert!(final_plan.contains("2. 记录 Review 证据"));
         assert!(!final_plan.contains("Review successful Agent output"));
+    }
+
+    #[test]
+    fn final_plan_embeds_full_successful_agent_proposals() {
+        let invocations = vec![
+            test_invocation(
+                "claude",
+                "succeeded",
+                "## Goal\n\nFocus the planning composer on Cmd+K.\n\n## Verification plan\n\nManual focus check.",
+            ),
+            test_invocation("codex", "failed", "boom: codex could not run"),
+        ];
+
+        let final_plan = render_final_plan("Planning", "Add a shortcut", "summary", &invocations);
+
+        assert!(final_plan.contains("## Agent Proposals"));
+        assert!(final_plan.contains("### claude"));
+        assert!(final_plan.contains("Focus the planning composer on Cmd+K."));
+        assert!(final_plan.contains("Manual focus check."));
+        // Failed agents do not contribute proposal bodies.
+        assert!(!final_plan.contains("boom: codex could not run"));
+    }
+
+    #[tokio::test]
+    #[ignore = "requires a real local `claude` CLI with credentials; run explicitly"]
+    async fn real_claude_planning_agent_produces_usable_plan_document() {
+        let root = std::env::temp_dir().join(format!("loom-real-plan-{}", now_ms()));
+        fs::create_dir_all(&root).expect("create temp project");
+        let agent = test_agent("claude", ADAPTER_CLAUDE_CODE, Vec::new());
+        let prompt = render_planning_prompt(
+            "Add a Cmd+K shortcut to focus the planning composer",
+            &root.display().to_string(),
+            "When the user presses Cmd+K in the planning room, focus the message textarea. Planning only.",
+        );
+
+        let result = run_planning_agent(&agent, &root, "task-real", "planning-real", &prompt)
+            .await
+            .expect("planning agent should run");
+
+        assert_eq!(result.status, "succeeded", "stderr: {}", result.stderr);
+        assert!(
+            result.stdout.trim().len() > 200,
+            "expected a substantial plan, got: {}",
+            result.stdout
+        );
+
+        let invocation = test_invocation("claude", &result.status, &result.stdout);
+        let plan = render_final_plan(
+            "Add a Cmd+K shortcut to focus the planning composer",
+            "Focus the composer on Cmd+K",
+            "summary",
+            std::slice::from_ref(&invocation),
+        );
+        assert!(plan.contains("## Agent Proposals"));
+        assert!(plan.contains(result.stdout.trim()));
+
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn derive_plan_title_uses_goal_heading_from_first_successful_agent() {
+        let invocations = vec![
+            test_invocation("codex", "failed", "boom"),
+            test_invocation(
+                "claude",
+                "succeeded",
+                "## 1. Goal\n\nFocus the planning composer when the user presses Cmd+K.\n\n## 2. Approach\n\n- step",
+            ),
+        ];
+
+        let title = derive_plan_title(&invocations).expect("should derive a title");
+
+        assert_eq!(
+            title,
+            "Focus the planning composer when the user presses Cmd+K."
+        );
+    }
+
+    #[test]
+    fn derive_plan_title_handles_inline_goal_and_strips_markdown() {
+        let invocations = vec![test_invocation(
+            "codex",
+            "succeeded",
+            "1. **Goal:** Add a `Cmd+K` shortcut\n\n2. Approach",
+        )];
+
+        let title = derive_plan_title(&invocations).expect("should derive a title");
+
+        assert_eq!(title, "Add a Cmd+K shortcut");
+    }
+
+    #[test]
+    fn derive_plan_title_falls_back_to_first_content_line() {
+        let invocations = vec![test_invocation(
+            "claude",
+            "succeeded",
+            "# Plan\n\nRework the log search pipeline for streaming.\n",
+        )];
+
+        let title = derive_plan_title(&invocations).expect("should derive a title");
+
+        assert_eq!(title, "Rework the log search pipeline for streaming.");
+    }
+
+    #[test]
+    fn derive_plan_title_returns_none_without_successful_output() {
+        let invocations = vec![test_invocation("codex", "failed", "boom: could not run")];
+
+        assert!(derive_plan_title(&invocations).is_none());
+    }
+
+    #[test]
+    fn claude_planning_profile_avoids_plan_permission_mode() {
+        // Plan mode routes the real plan to ExitPlanMode and prints only a terse
+        // confirmation, so it must not be used for captured planning output.
+        let args = default_profile_args(ADAPTER_CLAUDE_CODE, Path::new("/tmp/project"));
+
+        assert!(args.contains(&"-p".to_string()));
+        assert!(args.contains(&"text".to_string()));
+        assert!(!args.iter().any(|arg| arg == "plan"));
+        assert!(!args.iter().any(|arg| arg == "--permission-mode"));
     }
 
     #[test]

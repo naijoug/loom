@@ -101,6 +101,44 @@ test("selecting a task routes to task-detail and preserves a valid selected todo
   assert.equal(state.app.selectedTodoId, "todo-1");
 });
 
+test("starting a new task opens the planning room with no task selected", () => {
+  const task = taskFixture();
+  let state = appReducer(initialAppState, { type: "tasks/loaded", tasks: [task] });
+  state = appReducer(state, { type: "tasks/selected", taskId: task.id });
+
+  state = appReducer(state, { type: "tasks/new" });
+
+  assert.equal(state.app.currentView, "planning");
+  assert.equal(state.app.selectedTaskId, null);
+  assert.equal(state.app.selectedTodoId, null);
+});
+
+test("removing the selected task drops it and returns to the board", () => {
+  const task = taskFixture();
+  let state = appReducer(initialAppState, { type: "tasks/loaded", tasks: [task] });
+  state = appReducer(state, { type: "tasks/selected", taskId: task.id });
+
+  state = appReducer(state, { type: "tasks/removed", taskId: task.id });
+
+  assert.equal(state.tasks.length, 0);
+  assert.equal(state.app.selectedTaskId, null);
+  assert.equal(state.app.currentView, "board");
+});
+
+test("removing an unselected task keeps the current selection and view", () => {
+  const selected = taskFixture({ id: "task-keep" });
+  const other = taskFixture({ id: "task-drop" });
+  let state = appReducer(initialAppState, { type: "tasks/loaded", tasks: [selected, other] });
+  state = appReducer(state, { type: "tasks/selected", taskId: "task-keep" });
+
+  state = appReducer(state, { type: "tasks/removed", taskId: "task-drop" });
+
+  assert.equal(state.tasks.length, 1);
+  assert.equal(state.tasks[0].id, "task-keep");
+  assert.equal(state.app.selectedTaskId, "task-keep");
+  assert.equal(state.app.currentView, "task-detail");
+});
+
 test("completing all todos moves the optimistic task state to reviewing", () => {
   const task = taskFixture({
     planTodos: [

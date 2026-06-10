@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { AppStateProvider } from "./state/AppStateContext";
 import { AppLayout } from "./layouts/AppLayout";
@@ -14,6 +14,7 @@ import "./App.css";
 function AppContent() {
   const { state, dispatch } = useAppState();
   const { loadTasks } = useTaskBridge();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     if (state.projects.current) {
@@ -35,6 +36,8 @@ function AppContent() {
     <AppLayout
       sidebar={<Sidebar />}
       header={<Header />}
+      sidebarCollapsed={sidebarCollapsed}
+      onToggleSidebar={() => setSidebarCollapsed((value) => !value)}
     >
       {content}
     </AppLayout>

@@ -1,20 +1,9 @@
 .sidebar-brand {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 18px 16px 10px;
+  /* Empty spacer that reserves the macOS traffic-light strip and matches the
+     main header height so the sidebar content lines up with it. */
+  flex-shrink: 0;
+  height: 68px;
   width: 100%;
-}
-
-.brand-icon {
-  color: var(--theme-text-primary);
-}
-
-.brand-title {
-  font-family: var(--font-headings);
-  font-weight: 700;
-  font-size: 17px;
-  color: var(--theme-text-primary);
 }
 
 .sidebar-nav-container {
@@ -104,7 +93,7 @@
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-height: 36px;
   padding: 0 8px;
   text-decoration: none;
@@ -114,6 +103,26 @@
   font-family: var(--font-body);
   font-size: 13px;
   transition: all 0.2s ease;
+}
+
+.nav-disclosure {
+  flex: 0 0 14px;
+  color: var(--theme-text-muted);
+  transform: rotate(0deg);
+  transition: transform 0.22s cubic-bezier(0.32, 0.72, 0, 1), color 0.2s ease;
+}
+
+.nav-disclosure.expanded {
+  transform: rotate(90deg);
+  color: var(--theme-text-secondary);
+}
+
+.nav-disclosure.hidden {
+  opacity: 0;
+}
+
+.nav-item:hover .nav-disclosure {
+  color: var(--theme-text-secondary);
 }
 
 .project-nav-item:hover .project-inline-add,
@@ -156,9 +165,10 @@
   color: var(--theme-text-muted);
 }
 
+/* Active project keeps only a text/icon emphasis — no persistent box.
+   The highlight box appears purely on hover (and the active row is still
+   identifiable by its expanded task list + rotated chevron). */
 .nav-item.active {
-  border-color: var(--theme-border-strong);
-  background-color: var(--theme-bg-primary);
   color: var(--theme-text-primary);
 }
 
@@ -166,7 +176,7 @@
   color: var(--theme-text-primary);
 }
 
-.nav-item:hover:not(.active) {
+.nav-item:hover {
   background-color: color-mix(in srgb, var(--theme-bg-primary) 64%, transparent);
 }
 
@@ -189,13 +199,67 @@
   background: var(--theme-border-subtle);
 }
 
+/* Animated disclosure: grid-template-rows 0fr→1fr lets us transition to an
+   intrinsic (auto) height. The inner <ul> needs overflow:hidden + min-height:0
+   so it can be clipped while the row track collapses. */
+.task-nav-collapse {
+  display: grid;
+  grid-template-rows: 1fr;
+  animation: task-collapse-expand 0.26s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes task-collapse-expand {
+  from {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+  to {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+}
+
 .task-nav-list {
   list-style: none;
+  /* margin-left aligns the guide line with the chevron's center:
+     nav-item padding-left (8px) + half the 14px chevron = 15px. */
   margin: 3px 0 8px 0;
-  padding: 0 0 0 22px;
+  margin-left: 15px;
+  padding: 0 0 0 6px;
+  border-left: 1px solid var(--theme-border-subtle);
+  min-height: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+.task-nav-list > li {
+  opacity: 0;
+  transform: translateY(-3px);
+  animation: task-item-in 0.24s ease forwards;
+  animation-delay: calc(var(--task-index, 0) * 0.035s + 0.04s);
+}
+
+@keyframes task-item-in {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-nav-collapse,
+  .task-nav-list > li,
+  .nav-disclosure {
+    animation: none;
+    transition: none;
+  }
+
+  .task-nav-list > li {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .task-nav-item {
@@ -208,9 +272,10 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 5px 8px;
+  padding: 5px 6px;
   text-align: left;
   font-size: 12px;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .task-nav-item:hover,
@@ -483,4 +548,75 @@
   justify-content: flex-end;
   gap: 9px;
   border-top: 1px solid var(--theme-border-subtle);
+}
+
+.task-context-menu {
+  position: fixed;
+  z-index: 1000;
+  min-width: 150px;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-ctl);
+  box-shadow: var(--shadow);
+}
+
+.task-context-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 9px;
+  border-radius: var(--r-chip);
+  background: transparent;
+  border: 0;
+  color: var(--text);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  text-align: left;
+}
+
+.task-context-item:hover {
+  background: var(--hover);
+}
+
+.task-context-item.danger {
+  color: var(--red);
+}
+
+.confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1001;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.confirm-modal {
+  width: min(380px, calc(100vw - 48px));
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow);
+}
+
+.confirm-modal h2 {
+  margin: 0 0 8px;
+  font-size: var(--fs-h);
+  color: var(--text);
+}
+
+.confirm-modal p {
+  margin: 0 0 18px;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
+.confirm-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
 }

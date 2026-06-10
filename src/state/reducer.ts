@@ -58,6 +58,8 @@ export type AppAction =
   | { type: "tasks/loaded"; tasks: Task[] }
   | { type: "tasks/upserted"; task: Task }
   | { type: "tasks/selected"; taskId: string }
+  | { type: "tasks/removed"; taskId: string }
+  | { type: "tasks/new" }
   | { type: "tasks/todoSelected"; taskId: string; todoId: string }
   | { type: "tasks/todoCompleted"; taskId: string; todoId: string }
   | { type: "commands/started"; run: CommandRun }
@@ -286,6 +288,34 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           selectedTaskId: action.taskId,
           selectedTodoId: selectedTodoIdForTask(task, state.app.selectedTodoId),
         },
+      };
+    }
+
+    case "tasks/new":
+      return {
+        ...state,
+        app: {
+          ...state.app,
+          currentView: "planning",
+          selectedTaskId: null,
+          selectedTodoId: null,
+        },
+      };
+
+    case "tasks/removed": {
+      const tasks = state.tasks.filter((task) => task.id !== action.taskId);
+      const wasSelected = state.app.selectedTaskId === action.taskId;
+
+      return {
+        ...state,
+        app: {
+          ...state.app,
+          selectedTaskId: wasSelected ? null : state.app.selectedTaskId,
+          selectedTodoId: wasSelected ? null : state.app.selectedTodoId,
+          currentView: wasSelected ? "board" : state.app.currentView,
+        },
+        tasks,
+        commandRuns: state.commandRuns.filter((run) => run.taskId !== action.taskId),
       };
     }
 

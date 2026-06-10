@@ -8,6 +8,15 @@
   color: var(--text);
 }
 
+.planning-chat.summary-collapsed {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.planning-chat.summary-collapsed .planning-summary {
+  display: none;
+}
+
+
 .planning-chat-main {
   display: flex;
   min-width: 0;
@@ -133,7 +142,13 @@
   background: var(--bg-2);
 }
 
+.planning-input-wrap {
+  position: relative;
+  display: flex;
+}
+
 .planning-composer-v2 textarea {
+  width: 100%;
   min-height: 96px;
   resize: vertical;
   border: 1px solid var(--border);
@@ -142,6 +157,54 @@
   color: var(--text);
   font: inherit;
   padding: 11px;
+}
+
+.mention-menu {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 6px);
+  z-index: 20;
+  min-width: 240px;
+  max-height: 240px;
+  overflow: auto;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-ctl);
+  box-shadow: var(--shadow);
+}
+
+.mention-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: var(--r-chip);
+  background: transparent;
+  color: var(--text);
+  font-size: var(--fs-sm);
+  text-align: left;
+}
+
+.mention-option:hover,
+.mention-option.active {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.mention-option-name {
+  font-weight: 500;
+}
+
+.mention-option-alias {
+  margin-left: auto;
+  color: var(--text-3);
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
 }
 
 .planning-composer-bar,
@@ -174,6 +237,19 @@
   border-radius: var(--r-chip);
   background: var(--surface);
   padding: 4px 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.planning-agent-chip:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.planning-agent-chip.active {
+  border-color: var(--accent-fill);
+  background: var(--accent-soft);
+  color: var(--text);
 }
 
 .planning-error {
@@ -275,12 +351,27 @@
   margin: 0;
 }
 
-@media (max-width: 980px) {
-  .planning-chat {
-    grid-template-columns: 1fr;
-  }
+.chat-message.planning-running {
+  border-style: dashed;
+  animation: planning-running-pulse 1.6s ease-in-out infinite;
+}
 
-  .planning-chat-main {
-    border-right: 0;
+@keyframes planning-running-pulse {
+  0%,
+  100% {
+    opacity: 0.65;
   }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-message.planning-running {
+    animation: none;
+  }
+}
+
+.planning-chat.summary-collapsed .planning-chat-main {
+  border-right: 0;
 }

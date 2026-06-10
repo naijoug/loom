@@ -14,6 +14,18 @@
   border-right: 1px solid var(--theme-border-subtle);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  transition: width 0.2s ease;
+}
+
+.app-layout.sidebar-collapsed .app-sidebar {
+  width: 0;
+  border-right: 0;
+}
+
+/* When collapsed, the main area starts at x=0; clear the macOS traffic lights. */
+.app-layout.sidebar-collapsed .app-header {
+  padding-left: 78px;
 }
 
 .app-main {
@@ -29,9 +41,45 @@
   flex-shrink: 0;
   display: flex;
   align-items: center;
+  gap: 12px;
   padding: 0 20px;
   background-color: var(--theme-bg-primary);
   border-bottom: 1px solid var(--theme-border-subtle);
+}
+
+.app-header-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.app-header-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Shared collapse/expand toggle, used by both the sidebar (left) and view
+   panels portalled into the header (right) so they share one baseline. */
+.panel-toggle-button {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--theme-text-muted);
+  transition: all 0.15s ease;
+}
+
+.panel-toggle-button:hover {
+  background: var(--hover);
+  color: var(--theme-text-primary);
 }
 
 .app-content {

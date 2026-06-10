@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
   AlertCircle,
   CheckCircle2,
@@ -14,7 +14,6 @@ import type { Task, TaskStatus } from "../../domain";
 import { useTaskBridge } from "../../hooks/useTaskBridge";
 import { useAppState } from "../../state/AppStateContext";
 import { Button } from "../common/Button";
-import { NewTaskModal } from "./NewTaskModal";
 import "./Board.css";
 
 interface BoardGroup {
@@ -135,7 +134,6 @@ export function Board() {
   const { state, dispatch } = useAppState();
   const { startTodo } = useTaskBridge();
   const project = state.projects.current;
-  const [newTaskOpen, setNewTaskOpen] = useState(false);
   const groupedTasks = useMemo(
     () =>
       BOARD_GROUPS.map((group) => ({
@@ -187,7 +185,11 @@ export function Board() {
               <SlidersHorizontal size={13} />
               Status
             </button>
-            <Button variant="ghost" iconLeft={<Plus size={14} />} onClick={() => setNewTaskOpen(true)}>
+            <Button
+              variant="ghost"
+              iconLeft={<Plus size={14} />}
+              onClick={() => dispatch({ type: "tasks/new" })}
+            >
               New task
             </Button>
           </div>
@@ -264,8 +266,6 @@ export function Board() {
           })}
         </div>
       </section>
-
-      {newTaskOpen && <NewTaskModal project={project} onClose={() => setNewTaskOpen(false)} />}
     </div>
   );
 }

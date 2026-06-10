@@ -1,5 +1,4 @@
 import { TaskFlow, type TaskStage } from "./TaskFlow";
-import { Button } from "../common/Button";
 import { useAppState } from "../../state/AppStateContext";
 import { deriveTaskStages } from "../../state/selectors";
 import "./Header.css";
@@ -15,11 +14,10 @@ export function Header() {
       ? `${currentProject.name} › Tasks`
       : `${currentProject.name} › ${currentTask?.title ?? "No active task"}`
     : "No project selected";
-  const canStopTask = currentTask && !["completed", "cancelled"].includes(currentTask.status);
 
   return (
-    <div className="main-header">
-      <div className="header-breadcrumb">
+    <div className="main-header" data-tauri-drag-region>
+      <div className="header-breadcrumb" data-tauri-drag-region>
         {breadcrumb}
       </div>
       
@@ -28,10 +26,6 @@ export function Header() {
           <TaskFlow stages={stages} />
         </div>
       )}
-
-      <div className="header-actions">
-        {canStopTask && !isBoard && <Button variant="danger">Stop Task</Button>}
-      </div>
     </div>
   );
 }
