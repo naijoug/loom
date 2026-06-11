@@ -14,6 +14,15 @@ export default defineConfig(async () => ({
   //
   // 1. prevent Vite from obscuring rust errors
   clearScreen: false,
+  build: {
+    rollupOptions: {
+      input: {
+        main: "index.html",
+        // Standalone window entry used by the `open_plan_viewer` command.
+        "plan-viewer": "plan-viewer.html",
+      },
+    },
+  },
   // 2. tauri expects a fixed port, fail if that port is not available
   server: {
     port,

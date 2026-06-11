@@ -6,23 +6,13 @@ import {
   type FormEvent,
   type KeyboardEvent,
 } from "react";
-import { createPortal } from "react-dom";
-import { HEADER_ACTIONS_SLOT_ID } from "../../layouts/AppLayout";
-import {
-  AlertTriangle,
-  AtSign,
-  Bot,
-  CheckCircle2,
-  FileText,
-  PanelRightClose,
-  PanelRightOpen,
-  Send,
-} from "lucide-react";
-import type { AgentConfig, PlanReview, Task } from "../../domain";
+import { AtSign, FileText, Send } from "lucide-react";
+import type { AgentConfig } from "../../domain";
 import { useAgentBridge } from "../../hooks/useAgentBridge";
 import { useTaskBridge } from "../../hooks/useTaskBridge";
 import { useAppState } from "../../state/AppStateContext";
 import { Button } from "../common/Button";
+import { PlanningTimeline } from "./PlanningTimeline";
 import "./Planning.css";
 
 function taskTitleFromRequirement(requirement: string) {
@@ -50,10 +40,6 @@ function mentionAliases(agent: AgentConfig) {
     aliases.add("claude");
     aliases.add("claude-code");
   }
-  if (agent.adapterType === "amp_cli") {
-    aliases.add("amp");
-  }
-
   return aliases;
 }
 
@@ -64,9 +50,6 @@ function canonicalMention(agent: AgentConfig) {
   if (agent.adapterType === "claude_code_cli") {
     return "claude";
   }
-  if (agent.adapterType === "amp_cli") {
-    return "amp";
-  }
   return agent.name.toLowerCase().replace(/\s+/g, "-");
 }
 
@@ -74,33 +57,10 @@ function planningCapable(agent: AgentConfig) {
   return agent.enabled && agent.available && agent.capabilities.includes("planning");
 }
 
-function latestPlanningReviews(task: Task | null) {
-  if (!task) {
-    return [];
-  }
-
-  const latestRun = task.planningRuns[task.planningRuns.length - 1];
-  if (!latestRun) {
-    return task.planReviews;
-  }
-
-  return task.planReviews.filter((review) => review.planningRunId === latestRun.id);
-}
-
-function severityLabel(review: PlanReview) {
-  if (review.severity === "blocker") {
-    return "Blocker";
-  }
-  if (review.severity === "risk") {
-    return "Risk";
-  }
-  return "Info";
-}
-
 export function PlanningChat() {
-  const { state, dispatch } = useAppState();
-  const { loadAgents, runPlanReviews, runPlanningDiscussion } = useAgentBridge();
-  const { confirmPlan, createTask, loadTasks, recordPlanningDecision } = useTaskBridge();
+  const { state } = useAppState();
+  const { loadAgents, runPlanningDiscussion } = useAgentBridge();
+  const { createTask, loadTasks } = useTaskBridge();
   const project = state.projects.current;
   const task = state.tasks.find((candidate) => candidate.id === state.app.selectedTaskId) ?? null;
   const taskId = task?.id ?? null;
@@ -111,15 +71,11 @@ export function PlanningChat() {
   const [message, setMessage] = useState(
     task && !task.discussionSummary ? task.rawRequirement ?? "" : "",
   );
-  const [decision, setDecision] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   // When non-null, the `@`-autocomplete menu is open and this holds the partial
   // query typed after the `@`. Empty string means `@` with nothing yet.
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionIndex, setMentionIndex] = useState(0);
-  const chatRef = useRef<HTMLDivElement>(null);
-  const [summaryCollapsed, setSummaryCollapsed] = useState(false);
-  const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);
   const [submitting, setSubmitting] = useState(false);
   // After a send, creating a task changes `taskId`, which would otherwise make
   // the reseed effect below refill the composer with the requirement we just
@@ -129,37 +85,6 @@ export function PlanningChat() {
   useEffect(() => {
     void loadAgents();
   }, [loadAgents]);
-
-  // Resolve the header slot once mounted so the panel toggle can be portalled
-  // onto the header line, aligned with the sidebar toggle.
-  useEffect(() => {
-    setHeaderSlot(document.getElementById(HEADER_ACTIONS_SLOT_ID));
-  }, []);
-
-  // Auto-collapse the summary panel when the planning area gets too narrow to
-  // hold both columns (e.g. the window shrinks, or the sidebar expands). We key
-  // off the container width — not the viewport — and only react on threshold
-  // crossings so manual toggles in the middle ground are preserved.
-  useEffect(() => {
-    const el = chatRef.current;
-    if (!el || typeof ResizeObserver === "undefined") {
-      return;
-    }
-
-    const NARROW = 900;
-    let wasNarrow = el.clientWidth < NARROW;
-    const observer = new ResizeObserver((entries) => {
-      const width = entries[0]?.contentRect.width ?? el.clientWidth;
-      const narrow = width < NARROW;
-      if (narrow !== wasNarrow) {
-        setSummaryCollapsed(narrow);
-        wasNarrow = narrow;
-      }
-    });
-
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
 
   useEffect(() => {
     if (project) {
@@ -282,16 +207,11 @@ export function PlanningChat() {
       setMentionQuery(null);
     }
   }
+
   // Drive the composer's running state from the in-flight send only — not the
   // shared `isLoadingTasks` flag, which also flips during unrelated task-list
   // loads and would otherwise disable Send for no reason.
   const discussionRunning = submitting;
-  const reviews = useMemo(() => latestPlanningReviews(task), [task]);
-  const riskReviews = reviews.filter((review) => review.severity !== "info");
-  const successfulInvocations =
-    task?.agentInvocations.filter((invocation) => invocation.status === "succeeded") ?? [];
-  const failedInvocations =
-    task?.agentInvocations.filter((invocation) => invocation.status === "failed") ?? [];
 
   async function handleDiscuss(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -341,44 +261,6 @@ export function PlanningChat() {
     }
   }
 
-  async function handleRunReviews() {
-    if (!project || !task) {
-      return;
-    }
-
-    await runPlanReviews(project.path, task.id);
-  }
-
-  async function handleRecordDecision(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!project || !task || !decision.trim()) {
-      return;
-    }
-
-    const updated = await recordPlanningDecision({
-      projectPath: project.path,
-      taskId: task.id,
-      title: "Planning decision",
-      content: decision.trim(),
-    });
-
-    if (updated) {
-      setDecision("");
-    }
-  }
-
-  async function handleCreateTasks() {
-    if (!project || !task?.finalPlan) {
-      return;
-    }
-
-    const updated = await confirmPlan(project.path, task.id);
-    if (updated) {
-      dispatch({ type: "app/viewSelected", view: "board" });
-    }
-  }
-
   if (!project) {
     return (
       <div className="planning-empty-route">
@@ -389,23 +271,7 @@ export function PlanningChat() {
   }
 
   return (
-    <div
-      className={`planning-chat${summaryCollapsed ? " summary-collapsed" : ""}`}
-      ref={chatRef}
-    >
-      {headerSlot &&
-        createPortal(
-          <button
-            type="button"
-            className="panel-toggle-button"
-            title={summaryCollapsed ? "Show planning panel" : "Hide planning panel"}
-            aria-label={summaryCollapsed ? "Show planning panel" : "Hide planning panel"}
-            onClick={() => setSummaryCollapsed((value) => !value)}
-          >
-            {summaryCollapsed ? <PanelRightOpen size={16} /> : <PanelRightClose size={16} />}
-          </button>,
-          headerSlot,
-        )}
+    <div className="planning-chat">
       <section className="planning-chat-main">
         <div className="planning-chat-header">
           <div>
@@ -413,59 +279,15 @@ export function PlanningChat() {
             <h1>{task?.title ?? "New planning discussion"}</h1>
           </div>
           {task?.finalPlanPath && (
-            <span className="planning-plan-ref">
+            <span className="planning-plan-ref" title={task.finalPlanPath}>
               <FileText size={14} />
-              <span>{task.finalPlanPath}</span>
+              <span>{task.finalPlanPath.split("/").slice(-2).join("/")}</span>
             </span>
           )}
         </div>
 
-        <div className="planning-thread">
-          {task?.rawRequirement && (
-            <article className="chat-message user-chat-message">
-              <div className="chat-author">You</div>
-              <p>{task.rawRequirement}</p>
-            </article>
-          )}
-
-          {task?.agentInvocations.map((invocation) => (
-            <article className="chat-message agent-chat-message" key={invocation.id}>
-              <div className="chat-author">
-                <Bot size={14} />
-                {invocation.agentName} · {invocation.status}
-              </div>
-              <p>{invocation.outputSummary}</p>
-              {invocation.evidenceRef && <span className="chat-evidence">{invocation.evidenceRef}</span>}
-              {invocation.status === "failed" && invocation.stderrTail.length > 0 && (
-                <pre>{invocation.stderrTail.join("\n")}</pre>
-              )}
-            </article>
-          ))}
-
-          {discussionRunning && (
-            <article className="chat-message agent-chat-message planning-running">
-              <div className="chat-author">
-                <Bot size={14} />
-                Running planning discussion
-              </div>
-              <p>
-                {selectedAgents.length > 0
-                  ? `${selectedAgents.map((agent) => agent.name).join(", ")} are drafting plans. Real agents run sequentially and can take a few minutes each.`
-                  : "Agents are working. This can take a few minutes."}
-              </p>
-            </article>
-          )}
-
-          {task?.discussionSummary && (
-            <article className="chat-message final-chat-message">
-              <div className="chat-author">
-                <CheckCircle2 size={14} />
-                Summary
-              </div>
-              <p>{task.discussionSummary}</p>
-              {task.finalPlan && <pre>{task.finalPlan}</pre>}
-            </article>
-          )}
+        <div className="planning-timeline-scroll">
+          <PlanningTimeline projectPath={project.path} task={task} />
         </div>
 
         <form className="planning-composer-v2" onSubmit={handleDiscuss}>
@@ -482,7 +304,7 @@ export function PlanningChat() {
                 syncMentionMenu(event.currentTarget.value, event.currentTarget.selectionStart)
               }
               onBlur={() => setMentionQuery(null)}
-              placeholder="Describe the task. Type @ to invoke a local agent (e.g. @codex, @claude, @amp)."
+              placeholder="Describe the task. Type @ to invoke a local agent (e.g. @codex, @claude)."
             />
             {mentionQuery !== null && mentionSuggestions.length > 0 && (
               <ul className="mention-menu" role="listbox">
@@ -543,84 +365,6 @@ export function PlanningChat() {
           {state.app.taskError && <div className="planning-error">{state.app.taskError}</div>}
         </form>
       </section>
-
-      <aside className="planning-summary">
-        <section className="summary-card">
-          <div className="summary-card-title">Consensus</div>
-          <p>{task?.discussionSummary ?? "Run a planning discussion to generate consensus."}</p>
-          <div className="summary-stats">
-            <span>{successfulInvocations.length} succeeded</span>
-            <span>{failedInvocations.length} failed</span>
-          </div>
-        </section>
-
-        <section className="summary-card">
-          <div className="summary-card-title">
-            <AlertTriangle size={15} />
-            Risks
-          </div>
-          {riskReviews.length > 0 ? (
-            <ul className="summary-list">
-              {riskReviews.map((review) => (
-                <li key={review.id}>
-                  <strong>{severityLabel(review)}</strong>
-                  <span>{review.finding}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p>No review risks recorded yet.</p>
-          )}
-          <Button
-            type="button"
-            variant="ghost"
-            disabled={!task || successfulInvocations.length < 1 || state.app.isLoadingTasks}
-            onClick={handleRunReviews}
-          >
-            Run reviews
-          </Button>
-        </section>
-
-        <section className="summary-card">
-          <div className="summary-card-title">Human decisions</div>
-          {task?.planningDecisions.length ? (
-            <ul className="summary-list">
-              {task.planningDecisions.map((item) => (
-                <li key={item.id}>
-                  <strong>{item.title}</strong>
-                  <span>{item.content}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p>No decisions recorded.</p>
-          )}
-          <form className="decision-form" onSubmit={handleRecordDecision}>
-            <textarea
-              value={decision}
-              onChange={(event) => setDecision(event.target.value)}
-              placeholder="Record a scope, tradeoff, or risk decision."
-              disabled={!task}
-            />
-            <Button type="submit" variant="ghost" disabled={!task || !decision.trim()}>
-              Record
-            </Button>
-          </form>
-        </section>
-
-        <section className="summary-card">
-          <div className="summary-card-title">Create tasks</div>
-          <p>Confirm the final plan to generate implementation todos and return to the board.</p>
-          <Button
-            type="button"
-            variant="primary"
-            disabled={!task?.finalPlan || state.app.isLoadingTasks}
-            onClick={handleCreateTasks}
-          >
-            Create tasks from plan
-          </Button>
-        </section>
-      </aside>
     </div>
   );
 }

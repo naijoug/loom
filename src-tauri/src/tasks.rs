@@ -3,6 +3,7 @@ use crate::{
         now_ms, CommandRun, CreateTaskInput, ErrorSummary, FeedbackInput, IdGenerator,
         PlanTodoItem, PlanningDecision, PlanningDecisionInput, Task, TaskEvent, UserFeedback,
     },
+    plan_html,
     storage,
 };
 use std::{
@@ -51,6 +52,7 @@ pub fn create_task(ids: State<'_, IdGenerator>, input: CreateTaskInput) -> Resul
         review_agent_ids: Vec::new(),
         final_plan: None,
         final_plan_path: None,
+        final_plan_html_path: None,
         discussion_summary: None,
         planning_runs: Vec::new(),
         agent_invocations: Vec::new(),
@@ -102,6 +104,7 @@ pub fn record_planning_decision(
     if let (Some(path), Some(plan)) = (&task.final_plan_path, &task.final_plan) {
         fs::write(path, plan)
             .map_err(|error| format!("failed to write decision to plan: {error}"))?;
+        task.final_plan_html_path = plan_html::write_task_plan_html(&task)?;
     }
     task.events.push(TaskEvent {
         id: ids.next("event"),
@@ -1002,6 +1005,7 @@ mod tests {
             review_agent_ids: Vec::new(),
             final_plan: Some("# Plan".to_string()),
             final_plan_path: Some("/repo/docs/plans/plan.md".to_string()),
+            final_plan_html_path: None,
             discussion_summary: None,
             planning_runs: Vec::new(),
             agent_invocations: Vec::new(),
@@ -1073,6 +1077,7 @@ mod tests {
             review_agent_ids: Vec::new(),
             final_plan: Some("# Plan".to_string()),
             final_plan_path: Some("/repo/docs/plans/plan.md".to_string()),
+            final_plan_html_path: None,
             discussion_summary: None,
             planning_runs: Vec::new(),
             agent_invocations: Vec::new(),
@@ -1121,6 +1126,7 @@ mod tests {
             review_agent_ids: Vec::new(),
             final_plan: Some("# Plan".to_string()),
             final_plan_path: Some("/repo/docs/plans/plan.md".to_string()),
+            final_plan_html_path: None,
             discussion_summary: None,
             planning_runs: Vec::new(),
             agent_invocations: Vec::new(),
@@ -1167,6 +1173,7 @@ mod tests {
             review_agent_ids: Vec::new(),
             final_plan: Some("# Plan".to_string()),
             final_plan_path: Some("/repo/docs/plans/plan.md".to_string()),
+            final_plan_html_path: None,
             discussion_summary: None,
             planning_runs: Vec::new(),
             agent_invocations: Vec::new(),
@@ -1302,6 +1309,7 @@ mod tests {
             review_agent_ids: Vec::new(),
             final_plan: None,
             final_plan_path: None,
+            final_plan_html_path: None,
             discussion_summary: None,
             planning_runs: Vec::new(),
             agent_invocations: Vec::new(),

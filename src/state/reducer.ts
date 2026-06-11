@@ -3,6 +3,7 @@ import type {
   CommandFinishedEvent,
   CommandLogEvent,
   CommandRun,
+  PlanningAgentStatusEvent,
   ProjectSummary,
   Task,
 } from "../domain";
@@ -36,6 +37,7 @@ export interface AppState {
   tasks: Task[];
   commandRuns: CommandRun[];
   commandLogs: Record<string, CommandLogEvent[]>;
+  planningProgress: Record<string, PlanningAgentStatusEvent>;
 }
 
 function normalizeAppView(view: AppView): AppView {
@@ -66,7 +68,14 @@ export type AppAction =
   | { type: "commands/logReceived"; event: CommandLogEvent }
   | { type: "commands/finished"; event: CommandFinishedEvent }
   | { type: "commands/failed"; error: string }
-  | { type: "commands/cleared" };
+  | { type: "commands/cleared" }
+  | {
+      type: "planning/progressQueued";
+      taskId: string;
+      agents: Array<{ id: string; name: string }>;
+    }
+  | { type: "planning/progressUpdated"; event: PlanningAgentStatusEvent }
+  | { type: "planning/progressCleared"; taskId: string };
 
 export const initialAppState: AppState = {
   app: {
@@ -91,7 +100,23 @@ export const initialAppState: AppState = {
   tasks: [],
   commandRuns: [],
   commandLogs: {},
+  planningProgress: {},
 };
+
+function planningProgressKey(event: PlanningAgentStatusEvent) {
+  return `${event.planningRunId}:${event.phase}:${event.agentId}`;
+}
+
+function removePendingPlanningProgress(
+  progress: Record<string, PlanningAgentStatusEvent>,
+  taskId: string,
+) {
+  return Object.fromEntries(
+    Object.entries(progress).filter(
+      ([, event]) => !(event.taskId === taskId && event.planningRunId === "pending"),
+    ),
+  );
+}
 
 function selectedTaskAfterLoad(tasks: Task[], currentTaskId: string | null) {
   return tasks.find((task) => task.id === currentTaskId) ?? tasks[tasks.length - 1] ?? null;
@@ -176,6 +201,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         tasks: [],
         commandRuns: [],
         commandLogs: {},
+        planningProgress: {},
       };
     }
 
@@ -199,6 +225,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         tasks: [],
         commandRuns: [],
         commandLogs: {},
+        planningProgress: {},
       };
     }
 
@@ -274,6 +301,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         },
         tasks,
         commandRuns: tasks.flatMap((task) => task.commandRuns),
+        planningProgress: removePendingPlanningProgress(state.planningProgress, action.task.id),
       };
     }
 
@@ -426,6 +454,62 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         commandLogs: {},
+      };
+
+    case "planning/progressQueued": {
+      const existing = Object.fromEntries(
+        Object.entries(state.planningProgress).filter(
+          ([, event]) => event.taskId !== action.taskId,
+        ),
+      );
+      const queued = Object.fromEntries(
+        action.agents.map((agent) => [
+          `pending:planning:${agent.id}`,
+          {
+            taskId: action.taskId,
+            planningRunId: "pending",
+            agentId: agent.id,
+            agentName: agent.name,
+            phase: "planning" as const,
+            status: "pending" as const,
+            attempt: 1,
+            startedAtMs: Date.now(),
+          },
+        ]),
+      );
+
+      return {
+        ...state,
+        planningProgress: {
+          ...existing,
+          ...queued,
+        },
+      };
+    }
+
+    case "planning/progressUpdated": {
+      const progress =
+        action.event.status === "running"
+          ? removePendingPlanningProgress(state.planningProgress, action.event.taskId)
+          : state.planningProgress;
+
+      return {
+        ...state,
+        planningProgress: {
+          ...progress,
+          [planningProgressKey(action.event)]: action.event,
+        },
+      };
+    }
+
+    case "planning/progressCleared":
+      return {
+        ...state,
+        planningProgress: Object.fromEntries(
+          Object.entries(state.planningProgress).filter(
+            ([, event]) => event.taskId !== action.taskId,
+          ),
+        ),
       };
 
     default:

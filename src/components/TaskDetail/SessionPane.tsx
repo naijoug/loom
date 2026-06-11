@@ -92,8 +92,6 @@ function buildAgentCommandArgs(agent: AgentConfig, projectPath: string, prompt: 
         "--output-format",
         "text",
       ];
-    case "amp_cli":
-      return ["-x", prompt];
     default:
       return [prompt];
   }

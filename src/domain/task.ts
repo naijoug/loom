@@ -33,6 +33,12 @@ export interface UserFeedback {
 
 export type AgentInvocationStatus = "pending" | "running" | "succeeded" | "failed";
 
+export type PlanningFailureKind =
+  | "timeout"
+  | "empty_output"
+  | "nonzero_exit"
+  | "not_retryable";
+
 export interface AgentInvocation {
   id: string;
   planningRunId: string;
@@ -44,11 +50,31 @@ export interface AgentInvocation {
   rawOutput: string;
   outputSummary: string;
   evidenceRef?: string;
+  planPath?: string;
   stderrTail: string[];
   exitCode?: number;
   timedOut: boolean;
+  attempt: number;
+  failureKind?: PlanningFailureKind;
   startedAtMs: number;
   endedAtMs?: number;
+}
+
+export type PlanningAgentPhase = "planning" | "review" | "synthesis";
+
+export type PlanningAgentRuntimeStatus = AgentInvocationStatus | "retrying";
+
+export interface PlanningAgentStatusEvent {
+  taskId: string;
+  planningRunId: string;
+  agentId: string;
+  agentName: string;
+  phase: PlanningAgentPhase;
+  status: PlanningAgentRuntimeStatus;
+  attempt: number;
+  startedAtMs: number;
+  endedAtMs?: number;
+  elapsedMs?: number;
 }
 
 export interface PlanReview {
@@ -112,6 +138,7 @@ export interface Task {
   reviewAgentIds: string[];
   finalPlan?: string;
   finalPlanPath?: string;
+  finalPlanHtmlPath?: string;
   discussionSummary?: string;
   planningRuns: PlanningRun[];
   agentInvocations: AgentInvocation[];

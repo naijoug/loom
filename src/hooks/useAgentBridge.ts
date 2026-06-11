@@ -1,6 +1,13 @@
 import { invoke } from "@tauri-apps/api/core";
-import { useCallback } from "react";
-import type { AgentConfig, AgentConfigInput, PlanningDiscussionInput, Task } from "../domain";
+import { listen } from "@tauri-apps/api/event";
+import { useCallback, useEffect } from "react";
+import type {
+  AgentConfig,
+  AgentConfigInput,
+  PlanningAgentStatusEvent,
+  PlanningDiscussionInput,
+  Task,
+} from "../domain";
 import { useAppState } from "../state/AppStateContext";
 import { hasTauriRuntime } from "./runtime";
 
@@ -15,7 +22,30 @@ function assertTauriRuntime(action: string) {
 }
 
 export function useAgentBridge() {
-  const { dispatch } = useAppState();
+  const { state, dispatch } = useAppState();
+
+  useEffect(() => {
+    if (!hasTauriRuntime()) {
+      return;
+    }
+
+    let unlisten: (() => void) | null = null;
+    let cancelled = false;
+    void listen<PlanningAgentStatusEvent>("loom://planning-agent-status", (event) => {
+      dispatch({ type: "planning/progressUpdated", event: event.payload });
+    }).then((cleanup) => {
+      if (cancelled) {
+        cleanup();
+      } else {
+        unlisten = cleanup;
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      unlisten?.();
+    };
+  }, [dispatch]);
 
   const loadAgents = useCallback(async () => {
     if (!hasTauriRuntime()) {
@@ -104,6 +134,11 @@ export function useAgentBridge() {
       try {
         assertTauriRuntime("Planning discussion");
 
+        const agents = state.agents
+          .filter((agent) => input.agentIds.includes(agent.id))
+          .map((agent) => ({ id: agent.id, name: agent.name }));
+        dispatch({ type: "planning/progressQueued", taskId: input.taskId, agents });
+
         const task = await invoke<Task>("run_planning_discussion", { input });
         dispatch({ type: "tasks/upserted", task });
         return task;
@@ -112,7 +147,7 @@ export function useAgentBridge() {
         return null;
       }
     },
-    [dispatch],
+    [dispatch, state.agents],
   );
 
   const runPlanReviews = useCallback(
@@ -132,6 +167,27 @@ export function useAgentBridge() {
     [dispatch],
   );
 
+  const retryPlanningAgent = useCallback(
+    async (projectPath: string, taskId: string, agentId: string) => {
+      dispatch({ type: "tasks/loadStarted" });
+      try {
+        assertTauriRuntime("Planning retry");
+
+        const task = await invoke<Task>("retry_planning_agent", {
+          projectPath,
+          taskId,
+          agentId,
+        });
+        dispatch({ type: "tasks/upserted", task });
+        return task;
+      } catch (error) {
+        dispatch({ type: "tasks/loadFailed", error: toErrorMessage(error) });
+        return null;
+      }
+    },
+    [dispatch],
+  );
+
   return {
     loadAgents,
     createAgent,
@@ -140,5 +196,6 @@ export function useAgentBridge() {
     deleteAgent,
     runPlanningDiscussion,
     runPlanReviews,
+    retryPlanningAgent,
   };
 }

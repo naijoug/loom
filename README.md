@@ -59,7 +59,7 @@ Loom 是一个面向软件开发任务的桌面端编程助手工作台。它用
 
 ## 当前状态
 
-当前仓库已经进入功能内核阶段，包含 Tauri 前端与 Rust 后端应用代码。已具备本地项目登记、项目分析、Agent 配置、Codex CLI / Claude Code CLI / Amp CLI planning adapter、任务记录、命令执行、实时日志、失败摘要、人工反馈和修复上下文预览的最小闭环。dummy Agent 仅保留为测试 fixture 和显式开发自测能力，不作为真实任务处理 Agent 展示。
+当前仓库已经进入功能内核阶段，包含 Tauri 前端与 Rust 后端应用代码。已具备本地项目登记、项目分析、Agent 配置、Codex CLI / Claude Code CLI planning adapter、任务记录、命令执行、实时日志、失败摘要、人工反馈和修复上下文预览的最小闭环。dummy Agent 仅保留为测试 fixture 和显式开发自测能力，不作为真实任务处理 Agent 展示。（Amp CLI adapter 已于 2026-06-11 移除：非交互模式需要付费 credits，本地不可用；历史配置会在加载时自动清理。）
 
 下一步建议：
 

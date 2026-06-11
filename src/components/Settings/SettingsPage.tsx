@@ -27,7 +27,7 @@ interface SettingsPageProps {
 
 type SettingsTab = "general" | "appearance" | "agents" | "safety" | "notifications" | "about";
 
-const cliAdapterTypes = new Set(["codex_cli", "claude_code_cli", "amp_cli", "dummy", "cli"]);
+const cliAdapterTypes = new Set(["codex_cli", "claude_code_cli", "dummy", "cli"]);
 const capabilityOptions: AgentCapability[] = [
   "planning",
   "implementation",
@@ -39,7 +39,6 @@ const capabilityOptions: AgentCapability[] = [
 const adapterOptions: Array<{ value: AgentAdapterType; label: string; command: string; name: string }> = [
   { value: "codex_cli", label: "Codex CLI", command: "codex", name: "Codex" },
   { value: "claude_code_cli", label: "Claude Code", command: "claude", name: "Claude Code" },
-  { value: "amp_cli", label: "Amp CLI", command: "amp", name: "Amp" },
   { value: "cli", label: "Custom CLI", command: "", name: "Custom Agent" },
   { value: "dummy", label: "Dummy/Test", command: "dummy", name: "Dummy Agent" },
 ];
@@ -81,7 +80,7 @@ function draftFromAgent(agent: AgentConfig): AgentConfigInput {
 }
 
 function isBuiltInAgent(agent: AgentConfig) {
-  return ["agent-codex", "agent-claude", "agent-amp", "agent-dummy"].includes(agent.id);
+  return ["agent-codex", "agent-claude", "agent-dummy"].includes(agent.id);
 }
 
 function profileSummary(agent: AgentConfig) {
@@ -89,9 +88,7 @@ function profileSummary(agent: AgentConfig) {
     case "codex_cli":
       return "codex exec --cd {projectPath} --sandbox read-only -";
     case "claude_code_cli":
-      return "claude -p --permission-mode plan --output-format text";
-    case "amp_cli":
-      return "amp -x";
+      return "claude -p --output-format text";
     case "dummy":
       return "test fixture only";
     default:

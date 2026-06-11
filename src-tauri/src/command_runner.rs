@@ -448,6 +448,7 @@ mod tests {
                     .display()
                     .to_string(),
             ),
+            final_plan_html_path: None,
             discussion_summary: None,
             planning_runs: Vec::new(),
             agent_invocations: Vec::new(),

@@ -210,6 +210,47 @@ export function useTaskBridge() {
     [dispatch],
   );
 
+  const readPlanHtml = useCallback(async (projectPath: string, mdPath: string) => {
+    if (!hasTauriRuntime()) {
+      return null;
+    }
+
+    try {
+      return await invoke<string>("read_plan_html", { projectPath, mdPath });
+    } catch (error) {
+      dispatch({ type: "tasks/loadFailed", error: toErrorMessage(error) });
+      return null;
+    }
+  }, [dispatch]);
+
+  const openPlanHtml = useCallback(async (projectPath: string, htmlPath: string) => {
+    if (!hasTauriRuntime()) {
+      return false;
+    }
+
+    try {
+      await invoke("open_plan_html", { projectPath, htmlPath });
+      return true;
+    } catch (error) {
+      dispatch({ type: "tasks/loadFailed", error: toErrorMessage(error) });
+      return false;
+    }
+  }, [dispatch]);
+
+  const openPlanViewer = useCallback(async (projectPath: string, mdPath: string) => {
+    if (!hasTauriRuntime()) {
+      return false;
+    }
+
+    try {
+      await invoke("open_plan_viewer", { projectPath, mdPath });
+      return true;
+    } catch (error) {
+      dispatch({ type: "tasks/loadFailed", error: toErrorMessage(error) });
+      return false;
+    }
+  }, [dispatch]);
+
   return {
     loadTasks,
     createTask,
@@ -222,5 +263,8 @@ export function useTaskBridge() {
     appendFeedback,
     recordPlanningDecision,
     generateRepairContext,
+    readPlanHtml,
+    openPlanHtml,
+    openPlanViewer,
   };
 }

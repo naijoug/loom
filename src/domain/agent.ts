@@ -11,7 +11,6 @@ export type AgentAdapterType =
   | "cli"
   | "codex_cli"
   | "claude_code_cli"
-  | "amp_cli"
   | "mcp"
   | "http";
 

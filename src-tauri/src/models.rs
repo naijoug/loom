@@ -157,6 +157,8 @@ pub struct Task {
     #[serde(default)]
     pub final_plan_path: Option<String>,
     #[serde(default)]
+    pub final_plan_html_path: Option<String>,
+    #[serde(default)]
     pub discussion_summary: Option<String>,
     #[serde(default)]
     pub planning_runs: Vec<PlanningRun>,
@@ -220,6 +222,10 @@ pub struct PlanningRun {
     pub ended_at_ms: Option<u128>,
 }
 
+fn default_attempt() -> u32 {
+    1
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AgentInvocation {
@@ -234,13 +240,35 @@ pub struct AgentInvocation {
     pub output_summary: String,
     pub evidence_ref: Option<String>,
     #[serde(default)]
+    pub plan_path: Option<String>,
+    #[serde(default)]
     pub stderr_tail: Vec<String>,
     #[serde(default)]
     pub exit_code: Option<i32>,
     #[serde(default)]
     pub timed_out: bool,
+    #[serde(default = "default_attempt")]
+    pub attempt: u32,
+    #[serde(default)]
+    pub failure_kind: Option<String>,
     pub started_at_ms: u128,
     pub ended_at_ms: Option<u128>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlanningAgentStatusEvent {
+    pub task_id: String,
+    pub planning_run_id: String,
+    pub agent_id: String,
+    pub agent_name: String,
+    pub phase: String,
+    pub status: String,
+    #[serde(default = "default_attempt")]
+    pub attempt: u32,
+    pub started_at_ms: u128,
+    pub ended_at_ms: Option<u128>,
+    pub elapsed_ms: Option<u128>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]

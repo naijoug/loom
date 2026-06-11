@@ -458,7 +458,6 @@
   background: var(--agent-claude);
 }
 
-.task-agent-avatar.agent-amp_cli,
 .task-agent-avatar.agent-cli {
   background: var(--agent-hermes);
 }

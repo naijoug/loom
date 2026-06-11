@@ -1,6 +1,7 @@
 mod agents;
 mod command_runner;
 mod models;
+mod plan_html;
 mod projects;
 mod storage;
 mod tasks;
@@ -48,6 +49,7 @@ pub fn run() {
             agents::create_agent,
             agents::delete_agent,
             agents::list_agents,
+            agents::retry_planning_agent,
             agents::run_planning_discussion,
             agents::run_plan_reviews,
             agents::set_agent_enabled,
@@ -55,6 +57,9 @@ pub fn run() {
             command_runner::command_runner_ready,
             command_runner::start_command_run,
             command_runner::stop_command_run,
+            plan_html::open_plan_html,
+            plan_html::open_plan_viewer,
+            plan_html::read_plan_html,
             projects::list_recent_projects,
             projects::register_project,
             tasks::append_feedback,

@@ -1,9 +1,10 @@
 use crate::{
     models::{
         now_ms, AgentConfig, AgentConfigInput, AgentInvocation, IdGenerator, PlanReview,
-        PlanningDecision, PlanningDiscussionInput, PlanningRun, TaskEvent,
+        PlanningAgentStatusEvent, PlanningDecision, PlanningDiscussionInput, PlanningRun,
+        TaskEvent,
     },
-    storage, tasks,
+    plan_html, storage, tasks,
 };
 use std::{
     fs,
@@ -11,7 +12,7 @@ use std::{
     process::Command,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Emitter, Runtime, State};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     process::Command as TokioCommand,
@@ -21,15 +22,44 @@ use tokio::{
 const AGENTS_FILE: &str = "agents.json";
 const ADAPTER_CODEX: &str = "codex_cli";
 const ADAPTER_CLAUDE_CODE: &str = "claude_code_cli";
-const ADAPTER_AMP: &str = "amp_cli";
 const ADAPTER_CLI: &str = "cli";
+// Adapter types that used to ship as built-ins but are retired now (Amp needs
+// paid credits for non-interactive use). Stored configs are dropped on load.
+const RETIRED_ADAPTER_AMP: &str = "amp_cli";
+const RETIRED_AGENT_AMP_ID: &str = "agent-amp";
 const ADAPTER_DUMMY: &str = "dummy";
 // Real planning agents (claude/codex) routinely take 1-2 minutes on a real
 // repository; a single observed run took ~72s. Keep a generous per-agent budget
 // so genuine work is not killed mid-plan. Agents run sequentially, so total wall
 // time is roughly this times the number of selected agents.
 const PLANNING_TIMEOUT_MS: u64 = 240_000;
+const SYNTHESIS_PROMPT_SUMMARY: &str = "Synthesize final plan";
+// One automatic retry per agent phase keeps transient failures (timeouts,
+// flaky exits) from sinking a whole planning round without letting a broken
+// setup burn time in a loop.
+const MAX_PLANNING_ATTEMPTS: u32 = 2;
 
+const FAILURE_TIMEOUT: &str = "timeout";
+const FAILURE_EMPTY_OUTPUT: &str = "empty_output";
+const FAILURE_NONZERO_EXIT: &str = "nonzero_exit";
+const FAILURE_NOT_RETRYABLE: &str = "not_retryable";
+
+// Configuration-level errors that retrying cannot fix: the user has to change
+// credentials, install the CLI, or pay for credits first.
+const NOT_RETRYABLE_PATTERNS: &[&str] = &[
+    "paid credits",
+    "command not found",
+    "no such file or directory",
+    "not logged in",
+    "login required",
+    "please run /login",
+    "authentication",
+    "unauthorized",
+    "invalid api key",
+    "permission denied",
+];
+
+#[derive(Clone)]
 struct PlanningPrompt {
     content: String,
 }
@@ -46,8 +76,11 @@ struct PlanningInvocationResult {
     stderr: String,
     output_summary: String,
     evidence_ref: Option<String>,
+    plan_path: Option<String>,
     exit_code: Option<i32>,
     timed_out: bool,
+    attempt: u32,
+    failure_kind: Option<String>,
     started_at_ms: u128,
     ended_at_ms: u128,
 }
@@ -60,6 +93,16 @@ struct PlanReviewInvocationResult {
     evidence_ref: Option<String>,
     started_at_ms: u128,
     ended_at_ms: u128,
+}
+
+trait PlanningEventEmitter: Clone + Send + Sync + 'static {
+    fn emit_planning_agent_status(&self, event: PlanningAgentStatusEvent);
+}
+
+impl<R: Runtime> PlanningEventEmitter for AppHandle<R> {
+    fn emit_planning_agent_status(&self, event: PlanningAgentStatusEvent) {
+        let _ = self.emit("loom://planning-agent-status", event);
+    }
 }
 
 #[tauri::command]
@@ -202,53 +245,97 @@ pub async fn run_planning_discussion(
     let prompt_summary = format!("Planning discussion for task '{}'", task.title);
     let prompt = render_planning_prompt(&task.title, &input.project_path, &requirement);
 
-    let mut invocations = Vec::new();
-    for agent in &selected_agents {
-        let result = run_planning_agent(
-            agent,
-            Path::new(&input.project_path),
-            &task.id,
-            &planning_run_id,
-            &prompt,
-        )
-        .await?;
-
-        invocations.push(AgentInvocation {
-            id: ids.next("invoke"),
-            planning_run_id: planning_run_id.clone(),
-            task_id: task.id.clone(),
-            agent_id: agent.id.clone(),
-            agent_name: agent.name.clone(),
-            status: result.status,
-            prompt_summary: prompt_summary.clone(),
-            raw_output: result.stdout,
-            output_summary: result.output_summary,
-            evidence_ref: result.evidence_ref,
-            stderr_tail: stderr_tail(&result.stderr),
-            exit_code: result.exit_code,
-            timed_out: result.timed_out,
-            started_at_ms: result.started_at_ms,
-            ended_at_ms: Some(result.ended_at_ms),
+    let project_path = PathBuf::from(&input.project_path);
+    let mut planning_handles = Vec::new();
+    for agent in selected_agents.iter().cloned() {
+        let app = app.clone();
+        let project_path = project_path.clone();
+        let task_id = task.id.clone();
+        let planning_run_id = planning_run_id.clone();
+        let prompt = prompt.clone();
+        let spawned_agent = agent.clone();
+        let handle = tauri::async_runtime::spawn(async move {
+            run_planning_agent_with_status(
+                app,
+                spawned_agent,
+                project_path,
+                task_id,
+                planning_run_id,
+                prompt,
+                "planning",
+                1,
+                true,
+            )
+            .await
         });
+        planning_handles.push((agent, handle));
     }
 
-    let successful_invocations = invocations
+    let mut invocations = Vec::new();
+    for (agent, handle) in planning_handles {
+        let result = handle.await.unwrap_or_else(|error| {
+            failed_planning_result(
+                &agent,
+                format!("planning worker failed to join: {error}"),
+                None,
+            )
+        });
+        invocations.push(agent_invocation_from_result(
+            ids.inner(),
+            &task.id,
+            &planning_run_id,
+            &agent,
+            prompt_summary.clone(),
+            result,
+        ));
+    }
+
+    let planning_successful_invocations = invocations
         .iter()
         .filter(|invocation| invocation.status == "succeeded")
         .count();
 
-    // On the first planning session, name the task from the agents' plan output
-    // (the goal they extracted) so the user never has to title it up front.
-    if task.planning_runs.is_empty() && successful_invocations > 0 {
-        if let Some(title) = derive_plan_title(&invocations) {
+    let mut discussion_summary = summarize_discussion(&selected_agents, &requirement, &invocations);
+    let outcome = review_and_synthesize(
+        app.clone(),
+        ids.inner(),
+        &project_path,
+        &task.title,
+        &task.id,
+        &planning_run_id,
+        &requirement,
+        &selected_agents,
+        &invocations,
+        &discussion_summary,
+    )
+    .await?;
+    discussion_summary.push_str(&outcome.source_note);
+    let run_reviews = outcome.reviews;
+    if let Some(synthesis_invocation) = outcome.synthesis_invocation {
+        invocations.push(synthesis_invocation);
+    }
+    // Keep the review records and human decisions visible in the written plan
+    // document, matching what a later "re-run reviews" would produce.
+    let final_plan = if run_reviews.is_empty() && task.planning_decisions.is_empty() {
+        outcome.final_plan
+    } else {
+        render_reviewed_final_plan(&outcome.final_plan, &run_reviews, &task.planning_decisions)
+    };
+
+    // On the first planning session, name the task from the final plan output
+    // so the user never has to title it up front.
+    if task.planning_runs.is_empty() && planning_successful_invocations > 0 {
+        if let Some(title) = derive_plan_title_from_markdown(&final_plan) {
             task.title = title;
         }
     }
 
-    let discussion_summary = summarize_discussion(&selected_agents, &requirement, &invocations);
-    let final_plan =
-        render_final_plan(&task.title, &requirement, &discussion_summary, &invocations);
-    let plan_path = next_project_plan_path(Path::new(&input.project_path), &task.title)?;
+    // Later rounds of the same task overwrite the first round's plan file so
+    // docs/plans/ holds one document per task instead of one per round.
+    let plan_path = match task.final_plan_path.as_deref() {
+        Some(existing) => PathBuf::from(existing),
+        None => next_project_plan_path(Path::new(&input.project_path), &task.title)?,
+    };
     fs::create_dir_all(
         plan_path
             .parent()
@@ -278,7 +365,7 @@ pub async fn run_planning_discussion(
         task_id: task.id.clone(),
         requirement,
         selected_agent_ids: task.selected_planning_agent_ids.clone(),
-        status: if successful_invocations > 0 {
+        status: if planning_successful_invocations > 0 {
             "succeeded".to_string()
         } else {
             "failed".to_string()
@@ -288,13 +375,12 @@ pub async fn run_planning_discussion(
         ended_at_ms: Some(finished_at_ms),
     });
     task.agent_invocations.extend(invocations);
-    task.plan_reviews = task
-        .plan_reviews
-        .into_iter()
-        .filter(|review| review.planning_run_id != planning_run_id)
-        .collect();
+    task.plan_reviews
+        .retain(|review| review.planning_run_id != planning_run_id);
+    task.plan_reviews.extend(run_reviews);
     task.plan_todos = Vec::new();
     task.updated_at_ms = finished_at_ms;
+    task.final_plan_html_path = plan_html::write_task_plan_html(&task)?;
     task.events.push(TaskEvent {
         id: ids.next("event"),
         task_id: task.id.clone(),
@@ -302,7 +388,7 @@ pub async fn run_planning_discussion(
         actor: "agent".to_string(),
         status: task.status.clone(),
         input_summary: Some(prompt_summary),
-        output_summary: Some(if successful_invocations > 0 {
+        output_summary: Some(if planning_successful_invocations > 0 {
             "Planning discussion generated a final plan for review.".to_string()
         } else {
             "Planning discussion failed for all selected real agents.".to_string()
@@ -329,69 +415,35 @@ pub async fn run_plan_reviews(
         .cloned()
         .ok_or_else(|| "cannot run plan reviews before a planning run exists".to_string())?;
     let selected_agents = resolve_planning_agents(&agents, &planning_run.selected_agent_ids);
-    let successful_invocations = task
-        .agent_invocations
-        .iter()
-        .filter(|invocation| {
-            invocation.planning_run_id == planning_run.id && invocation.status == "succeeded"
-        })
-        .cloned()
-        .collect::<Vec<_>>();
+    let candidates = successful_plan_invocations(&latest_drafting_invocations(
+        &task.agent_invocations,
+        &planning_run.id,
+    ));
 
-    if successful_invocations.len() < 2 {
+    if candidates.len() < 2 {
         return Err("plan review requires at least two successful agent proposals".to_string());
     }
 
-    let mut reviews = Vec::new();
-    for reviewer in selected_agents.iter().filter(|agent| {
-        successful_invocations
-            .iter()
-            .any(|invocation| invocation.agent_id == agent.id)
-    }) {
-        for target in successful_invocations
-            .iter()
-            .filter(|invocation| invocation.agent_id != reviewer.id)
-        {
-            let result = run_plan_review_agent(
-                reviewer,
-                Path::new(&project_path),
-                &task.id,
-                &planning_run.id,
-                target,
-            )
-            .await?;
+    let reviews = run_cross_reviews(
+        app.clone(),
+        ids.inner(),
+        Path::new(&project_path),
+        &task.id,
+        &planning_run.id,
+        &selected_agents,
+        &candidates,
+    )
+    .await;
 
-            reviews.push(PlanReview {
-                id: ids.next("review"),
-                planning_run_id: planning_run.id.clone(),
-                task_id: task.id.clone(),
-                reviewer_agent_id: reviewer.id.clone(),
-                reviewer_agent_name: reviewer.name.clone(),
-                target_agent_id: target.agent_id.clone(),
-                target_agent_name: target.agent_name.clone(),
-                status: result.status,
-                finding: result.finding,
-                severity: result.severity,
-                accepted: false,
-                raw_output: result.raw_output,
-                evidence_ref: result.evidence_ref,
-                started_at_ms: result.started_at_ms,
-                ended_at_ms: Some(result.ended_at_ms),
-            });
-        }
-    }
-
-    task.plan_reviews = task
-        .plan_reviews
-        .into_iter()
-        .filter(|review| review.planning_run_id != planning_run.id)
-        .collect();
+    task.plan_reviews
+        .retain(|review| review.planning_run_id != planning_run.id);
     task.plan_reviews.extend(reviews);
     task.final_plan = task.final_plan.clone().map(|plan| {
         render_reviewed_final_plan(&plan, &task.plan_reviews, &task.planning_decisions)
     });
     if let (Some(path), Some(plan)) = (&task.final_plan_path, &task.final_plan) {
         fs::write(path, plan).map_err(|error| format!("failed to write reviewed plan: {error}"))?;
+        task.final_plan_html_path = plan_html::write_task_plan_html(&task)?;
     }
     task.status = "plan_review".to_string();
     task.updated_at_ms = now_ms();
@@ -414,6 +466,656 @@ pub async fn run_plan_reviews(
     tasks::save_task(&task)?;
 
     Ok(task)
+}
+
+/// Re-run a single failed drafting agent inside the latest planning run, then
+/// replay cross-review and synthesis on the updated candidate set.
+#[tauri::command]
+pub async fn retry_planning_agent(
+    app: AppHandle,
+    ids: State<'_, IdGenerator>,
+    project_path: String,
+    task_id: String,
+    agent_id: String,
+) -> Result<crate::models::Task, String> {
+    let agents = load_agents(&app)?;
+    let mut task = tasks::load_task(Path::new(&project_path), &task_id)?;
+    let planning_run = task
+        .planning_runs
+        .last()
+        .cloned()
+        .ok_or_else(|| "cannot retry before a planning run exists".to_string())?;
+    if planning_run.ended_at_ms.is_none() {
+        return Err("the latest planning run is still in progress".to_string());
+    }
+
+    let agent = resolve_planning_agents(&agents, std::slice::from_ref(&agent_id))
+        .into_iter()
+        .next()
+        .ok_or_else(|| "agent is not available for planning".to_string())?;
+    let previous = latest_drafting_invocations(&task.agent_invocations, &planning_run.id)
+        .into_iter()
+        .find(|invocation| invocation.agent_id == agent.id)
+        .ok_or_else(|| "agent was not part of the latest planning run".to_string())?;
+    if previous.status == "succeeded" {
+        return Err("only failed agents can be retried".to_string());
+    }
+
+    let prompt = render_planning_prompt(&task.title, &project_path, &planning_run.requirement);
+    let prompt_summary = format!("Planning discussion for task '{}'", task.title);
+    let result = run_planning_agent_with_status(
+        app.clone(),
+        agent.clone(),
+        PathBuf::from(&project_path),
+        task.id.clone(),
+        planning_run.id.clone(),
+        prompt,
+        "planning",
+        previous.attempt + 1,
+        false,
+    )
+    .await;
+    task.agent_invocations.push(agent_invocation_from_result(
+        ids.inner(),
+        &task.id,
+        &planning_run.id,
+        &agent,
+        prompt_summary.clone(),
+        result,
+    ));
+
+    let selected_agents = resolve_planning_agents(&agents, &planning_run.selected_agent_ids);
+    let drafting = latest_drafting_invocations(&task.agent_invocations, &planning_run.id);
+    let mut discussion_summary =
+        summarize_discussion(&selected_agents, &planning_run.requirement, &drafting);
+    let outcome = review_and_synthesize(
+        app.clone(),
+        ids.inner(),
+        Path::new(&project_path),
+        &task.title,
+        &task.id,
+        &planning_run.id,
+        &planning_run.requirement,
+        &selected_agents,
+        &drafting,
+        &discussion_summary,
+    )
+    .await?;
+    discussion_summary.push_str(&outcome.source_note);
+    let run_reviews = outcome.reviews;
+    if let Some(synthesis_invocation) = outcome.synthesis_invocation {
+        task.agent_invocations.push(synthesis_invocation);
+    }
+    let final_plan = if run_reviews.is_empty() && task.planning_decisions.is_empty() {
+        outcome.final_plan
+    } else {
+        render_reviewed_final_plan(&outcome.final_plan, &run_reviews, &task.planning_decisions)
+    };
+
+    let plan_path = match task.final_plan_path.as_deref() {
+        Some(existing) => PathBuf::from(existing),
+        None => next_project_plan_path(Path::new(&project_path), &task.title)?,
+    };
+    fs::create_dir_all(
+        plan_path
+            .parent()
+            .ok_or_else(|| "invalid plan path".to_string())?,
+    )
+    .map_err(|error| format!("failed to create plans directory: {error}"))?;
+    fs::write(&plan_path, &final_plan)
+        .map_err(|error| format!("failed to write final plan: {error}"))?;
+    update_project_plans_index(
+        Path::new(&project_path),
+        &plan_path,
+        "通过多 Agent 讨论生成最终实施计划，等待人工确认后进入实施。",
+    )?;
+
+    let finished_at_ms = now_ms();
+    let drafting_succeeded = drafting
+        .iter()
+        .any(|invocation| invocation.status == "succeeded");
+    task.status = "plan_review".to_string();
+    task.final_plan = Some(final_plan);
+    task.final_plan_path = Some(plan_path.display().to_string());
+    task.discussion_summary = Some(discussion_summary.clone());
+    if let Some(run) = task.planning_runs.last_mut() {
+        run.status = if drafting_succeeded {
+            "succeeded".to_string()
+        } else {
+            "failed".to_string()
+        };
+        run.summary = discussion_summary;
+        run.ended_at_ms = Some(finished_at_ms);
+    }
+    task.plan_reviews
+        .retain(|review| review.planning_run_id != planning_run.id);
+    task.plan_reviews.extend(run_reviews);
+    task.plan_todos = Vec::new();
+    task.updated_at_ms = finished_at_ms;
+    task.final_plan_html_path = plan_html::write_task_plan_html(&task)?;
+    task.events.push(TaskEvent {
+        id: ids.next("event"),
+        task_id: task.id.clone(),
+        timestamp_ms: finished_at_ms,
+        actor: "agent".to_string(),
+        status: task.status.clone(),
+        input_summary: Some(format!("Retried planning agent {}", agent.name)),
+        output_summary: Some(format!(
+            "Retry {} the planning round for {}.",
+            if drafting_succeeded {
+                "recovered"
+            } else {
+                "did not recover"
+            },
+            agent.name
+        )),
+        evidence_ref: task.final_plan_path.clone(),
+    });
+    tasks::save_task(&task)?;
+
+    Ok(task)
+}
+
+/// Classify why an invocation result is unusable. Returns `None` for a usable
+/// success. An exit-0 run with empty stdout is unusable for planning, so it is
+/// classified (and later downgraded to failed) rather than silently accepted.
+fn classify_failure(result: &PlanningInvocationResult) -> Option<String> {
+    if result.status == "succeeded" && !result.stdout.trim().is_empty() {
+        return None;
+    }
+
+    let haystack = format!("{}\n{}", result.stderr, result.output_summary).to_lowercase();
+    if NOT_RETRYABLE_PATTERNS
+        .iter()
+        .any(|pattern| haystack.contains(pattern))
+    {
+        return Some(FAILURE_NOT_RETRYABLE.to_string());
+    }
+    if result.timed_out {
+        return Some(FAILURE_TIMEOUT.to_string());
+    }
+    if result.stdout.trim().is_empty() && result.status == "succeeded" {
+        return Some(FAILURE_EMPTY_OUTPUT.to_string());
+    }
+    Some(FAILURE_NONZERO_EXIT.to_string())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn planning_status_event(
+    agent: &AgentConfig,
+    task_id: &str,
+    planning_run_id: &str,
+    phase: &str,
+    status: &str,
+    attempt: u32,
+    started_at_ms: u128,
+    ended_at_ms: Option<u128>,
+) -> PlanningAgentStatusEvent {
+    PlanningAgentStatusEvent {
+        task_id: task_id.to_string(),
+        planning_run_id: planning_run_id.to_string(),
+        agent_id: agent.id.clone(),
+        agent_name: agent.name.clone(),
+        phase: phase.to_string(),
+        status: status.to_string(),
+        attempt,
+        started_at_ms,
+        ended_at_ms,
+        elapsed_ms: ended_at_ms.map(|ended| ended.saturating_sub(started_at_ms)),
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn run_planning_agent_with_status<E: PlanningEventEmitter>(
+    emitter: E,
+    agent: AgentConfig,
+    project_path: PathBuf,
+    task_id: String,
+    planning_run_id: String,
+    prompt: PlanningPrompt,
+    phase: &'static str,
+    start_attempt: u32,
+    auto_retry: bool,
+) -> PlanningInvocationResult {
+    let max_attempt = if auto_retry {
+        start_attempt + MAX_PLANNING_ATTEMPTS - 1
+    } else {
+        start_attempt
+    };
+    let mut attempt = start_attempt;
+
+    loop {
+        let started_at_ms = now_ms();
+        emitter.emit_planning_agent_status(planning_status_event(
+            &agent,
+            &task_id,
+            &planning_run_id,
+            phase,
+            "running",
+            attempt,
+            started_at_ms,
+            None,
+        ));
+
+        let mut result = if phase == "synthesis" {
+            run_synthesis_agent(
+                &agent,
+                &project_path,
+                &task_id,
+                &planning_run_id,
+                &prompt,
+                attempt,
+            )
+            .await
+        } else {
+            run_planning_agent(
+                &agent,
+                &project_path,
+                &task_id,
+                &planning_run_id,
+                &prompt,
+                attempt,
+            )
+            .await
+        }
+        .unwrap_or_else(|error| failed_planning_result(&agent, error, Some(started_at_ms)));
+        result.attempt = attempt;
+
+        let Some(kind) = classify_failure(&result) else {
+            emitter.emit_planning_agent_status(planning_status_event(
+                &agent,
+                &task_id,
+                &planning_run_id,
+                phase,
+                &result.status,
+                attempt,
+                result.started_at_ms,
+                Some(result.ended_at_ms),
+            ));
+            return result;
+        };
+
+        if result.status == "succeeded" {
+            // Exit 0 with no stdout is not a usable plan; surface it as a failure.
+            result.status = "failed".to_string();
+            result.output_summary = format!("{} produced no output.", agent.name);
+        }
+        result.failure_kind = Some(kind.clone());
+
+        if kind != FAILURE_NOT_RETRYABLE && attempt < max_attempt {
+            emitter.emit_planning_agent_status(planning_status_event(
+                &agent,
+                &task_id,
+                &planning_run_id,
+                phase,
+                "retrying",
+                attempt,
+                result.started_at_ms,
+                Some(result.ended_at_ms),
+            ));
+            attempt += 1;
+            continue;
+        }
+
+        emitter.emit_planning_agent_status(planning_status_event(
+            &agent,
+            &task_id,
+            &planning_run_id,
+            phase,
+            &result.status,
+            attempt,
+            result.started_at_ms,
+            Some(result.ended_at_ms),
+        ));
+        return result;
+    }
+}
+
+fn agent_invocation_from_result(
+    ids: &IdGenerator,
+    task_id: &str,
+    planning_run_id: &str,
+    agent: &AgentConfig,
+    prompt_summary: String,
+    result: PlanningInvocationResult,
+) -> AgentInvocation {
+    AgentInvocation {
+        id: ids.next("invoke"),
+        planning_run_id: planning_run_id.to_string(),
+        task_id: task_id.to_string(),
+        agent_id: agent.id.clone(),
+        agent_name: agent.name.clone(),
+        status: result.status,
+        prompt_summary,
+        raw_output: result.stdout,
+        output_summary: result.output_summary,
+        evidence_ref: result.evidence_ref,
+        plan_path: result.plan_path,
+        stderr_tail: stderr_tail(&result.stderr),
+        exit_code: result.exit_code,
+        timed_out: result.timed_out,
+        attempt: result.attempt,
+        failure_kind: result.failure_kind,
+        started_at_ms: result.started_at_ms,
+        ended_at_ms: Some(result.ended_at_ms),
+    }
+}
+
+fn failed_planning_result(
+    agent: &AgentConfig,
+    error: String,
+    started_at_ms: Option<u128>,
+) -> PlanningInvocationResult {
+    let started_at_ms = started_at_ms.unwrap_or_else(now_ms);
+    PlanningInvocationResult {
+        status: "failed".to_string(),
+        stdout: String::new(),
+        stderr: redact_sensitive_text(&error),
+        output_summary: format!("{} failed before producing output.", agent.name),
+        evidence_ref: None,
+        plan_path: None,
+        exit_code: None,
+        timed_out: false,
+        attempt: 1,
+        failure_kind: None,
+        started_at_ms,
+        ended_at_ms: now_ms(),
+    }
+}
+
+fn successful_plan_invocations(invocations: &[AgentInvocation]) -> Vec<AgentInvocation> {
+    invocations
+        .iter()
+        .filter(|invocation| {
+            invocation.status == "succeeded" && !invocation.raw_output.trim().is_empty()
+        })
+        .cloned()
+        .collect()
+}
+
+/// The effective drafting set for a planning run: the latest invocation per
+/// agent (retries supersede earlier attempts), excluding synthesis records.
+fn latest_drafting_invocations(
+    invocations: &[AgentInvocation],
+    planning_run_id: &str,
+) -> Vec<AgentInvocation> {
+    let mut by_agent: Vec<AgentInvocation> = Vec::new();
+    for invocation in invocations.iter().filter(|invocation| {
+        invocation.planning_run_id == planning_run_id
+            && invocation.prompt_summary != SYNTHESIS_PROMPT_SUMMARY
+    }) {
+        if let Some(existing) = by_agent
+            .iter_mut()
+            .find(|existing| existing.agent_id == invocation.agent_id)
+        {
+            *existing = invocation.clone();
+        } else {
+            by_agent.push(invocation.clone());
+        }
+    }
+    by_agent
+}
+
+/// Run every reviewer-vs-target pair in parallel. A failed review becomes a
+/// failed `PlanReview` record instead of aborting the round.
+async fn run_cross_reviews<E: PlanningEventEmitter>(
+    emitter: E,
+    ids: &IdGenerator,
+    project_path: &Path,
+    task_id: &str,
+    planning_run_id: &str,
+    agents: &[AgentConfig],
+    candidates: &[AgentInvocation],
+) -> Vec<PlanReview> {
+    let mut handles = Vec::new();
+    for reviewer in agents.iter().filter(|agent| {
+        candidates
+            .iter()
+            .any(|candidate| candidate.agent_id == agent.id)
+    }) {
+        for target in candidates
+            .iter()
+            .filter(|candidate| candidate.agent_id != reviewer.id)
+        {
+            let emitter = emitter.clone();
+            let reviewer = reviewer.clone();
+            let target = target.clone();
+            let project_path = project_path.to_path_buf();
+            let task_id = task_id.to_string();
+            let planning_run_id = planning_run_id.to_string();
+            handles.push(tauri::async_runtime::spawn(async move {
+                // Progress events identify the pair, not just the reviewer, so
+                // one reviewer covering several targets stays distinguishable.
+                let pair = AgentConfig {
+                    id: format!("{}->{}", reviewer.id, target.agent_id),
+                    name: format!("{} → {}", reviewer.name, target.agent_name),
+                    ..reviewer.clone()
+                };
+                let started_at_ms = now_ms();
+                emitter.emit_planning_agent_status(planning_status_event(
+                    &pair,
+                    &task_id,
+                    &planning_run_id,
+                    "review",
+                    "running",
+                    1,
+                    started_at_ms,
+                    None,
+                ));
+                let result = run_plan_review_agent(
+                    &reviewer,
+                    &project_path,
+                    &task_id,
+                    &planning_run_id,
+                    &target,
+                )
+                .await
+                .unwrap_or_else(|error| PlanReviewInvocationResult {
+                    status: "failed".to_string(),
+                    finding: format!(
+                        "{} failed to review {}: {error}",
+                        reviewer.name, target.agent_name
+                    ),
+                    severity: "blocker".to_string(),
+                    raw_output: redact_sensitive_text(&error),
+                    evidence_ref: None,
+                    started_at_ms,
+                    ended_at_ms: now_ms(),
+                });
+                emitter.emit_planning_agent_status(planning_status_event(
+                    &pair,
+                    &task_id,
+                    &planning_run_id,
+                    "review",
+                    &result.status,
+                    1,
+                    result.started_at_ms,
+                    Some(result.ended_at_ms),
+                ));
+                (reviewer, target, result)
+            }));
+        }
+    }
+
+    let mut reviews = Vec::new();
+    for handle in handles {
+        let Ok((reviewer, target, result)) = handle.await else {
+            continue;
+        };
+        reviews.push(PlanReview {
+            id: ids.next("review"),
+            planning_run_id: planning_run_id.to_string(),
+            task_id: task_id.to_string(),
+            reviewer_agent_id: reviewer.id,
+            reviewer_agent_name: reviewer.name,
+            target_agent_id: target.agent_id,
+            target_agent_name: target.agent_name,
+            status: result.status,
+            finding: result.finding,
+            severity: result.severity,
+            accepted: false,
+            raw_output: result.raw_output,
+            evidence_ref: result.evidence_ref,
+            started_at_ms: result.started_at_ms,
+            ended_at_ms: Some(result.ended_at_ms),
+        });
+    }
+    reviews
+}
+
+struct PlanningSynthesisOutcome {
+    final_plan: String,
+    reviews: Vec<PlanReview>,
+    synthesis_invocation: Option<AgentInvocation>,
+    /// Sentence appended to the discussion summary describing where the final
+    /// plan came from (synthesis / direct adoption / fallback).
+    source_note: String,
+}
+
+/// Shared tail of the planning pipeline: cross-review the candidates, then
+/// synthesize (or adopt / fall back to) the final plan. Used by the initial
+/// discussion and by per-agent retries.
+#[allow(clippy::too_many_arguments)]
+async fn review_and_synthesize<E: PlanningEventEmitter>(
+    emitter: E,
+    ids: &IdGenerator,
+    project_path: &Path,
+    task_title: &str,
+    task_id: &str,
+    planning_run_id: &str,
+    requirement: &str,
+    selected_agents: &[AgentConfig],
+    drafting_invocations: &[AgentInvocation],
+    discussion_summary: &str,
+) -> Result<PlanningSynthesisOutcome, String> {
+    let candidates = successful_plan_invocations(drafting_invocations);
+
+    if candidates.len() >= 2 {
+        let reviews = run_cross_reviews(
+            emitter.clone(),
+            ids,
+            project_path,
+            task_id,
+            planning_run_id,
+            selected_agents,
+            &candidates,
+        )
+        .await;
+        let synthesis_agent = choose_synthesis_agent(selected_agents, &candidates)
+            .ok_or_else(|| "failed to select a synthesis agent".to_string())?;
+        let synthesis_prompt = render_synthesis_prompt(
+            task_title,
+            &project_path.display().to_string(),
+            requirement,
+            &candidates,
+            &reviews,
+        );
+        let synthesis_result = run_planning_agent_with_status(
+            emitter,
+            synthesis_agent.clone(),
+            project_path.to_path_buf(),
+            task_id.to_string(),
+            planning_run_id.to_string(),
+            synthesis_prompt,
+            "synthesis",
+            1,
+            true,
+        )
+        .await;
+        let synthesis_succeeded = synthesis_result.status == "succeeded";
+        let synthesis_invocation = agent_invocation_from_result(
+            ids,
+            task_id,
+            planning_run_id,
+            &synthesis_agent,
+            SYNTHESIS_PROMPT_SUMMARY.to_string(),
+            synthesis_result,
+        );
+
+        if synthesis_succeeded {
+            let successful_reviews = reviews
+                .iter()
+                .filter(|review| review.status == "succeeded")
+                .count();
+            Ok(PlanningSynthesisOutcome {
+                final_plan: synthesis_invocation.raw_output.clone(),
+                source_note: format!(
+                    ". Final plan source: synthesized by {} from {} candidate plans and {} cross-review findings.",
+                    synthesis_agent.name,
+                    candidates.len(),
+                    successful_reviews
+                ),
+                reviews,
+                synthesis_invocation: Some(synthesis_invocation),
+            })
+        } else {
+            let source_note =
+                ". Final plan source: synthesis failed; used deterministic fallback from candidate plans."
+                    .to_string();
+            let mut all_invocations = drafting_invocations.to_vec();
+            all_invocations.push(synthesis_invocation.clone());
+            Ok(PlanningSynthesisOutcome {
+                final_plan: render_final_plan(
+                    task_title,
+                    requirement,
+                    &format!("{discussion_summary}{source_note}"),
+                    &all_invocations,
+                ),
+                source_note,
+                reviews,
+                synthesis_invocation: Some(synthesis_invocation),
+            })
+        }
+    } else if candidates.len() == 1 {
+        let candidate = &candidates[0];
+        Ok(PlanningSynthesisOutcome {
+            final_plan: candidate.raw_output.clone(),
+            source_note: format!(
+                ". Final plan source: directly adopted {} candidate plan.",
+                candidate.agent_name
+            ),
+            reviews: Vec::new(),
+            synthesis_invocation: None,
+        })
+    } else {
+        let source_note =
+            ". Final plan source: deterministic fallback because all selected agents failed."
+                .to_string();
+        Ok(PlanningSynthesisOutcome {
+            final_plan: render_final_plan(
+                task_title,
+                requirement,
+                &format!("{discussion_summary}{source_note}"),
+                drafting_invocations,
+            ),
+            source_note,
+            reviews: Vec::new(),
+            synthesis_invocation: None,
+        })
+    }
+}
+
+fn choose_synthesis_agent(
+    agents: &[AgentConfig],
+    candidates: &[AgentInvocation],
+) -> Option<AgentConfig> {
+    let successful_agent_ids = candidates
+        .iter()
+        .map(|candidate| candidate.agent_id.as_str())
+        .collect::<Vec<_>>();
+
+    agents
+        .iter()
+        .find(|agent| {
+            successful_agent_ids.contains(&agent.id.as_str())
+                && effective_adapter_type(agent) == ADAPTER_CLAUDE_CODE
+        })
+        .or_else(|| {
+            agents
+                .iter()
+                .find(|agent| successful_agent_ids.contains(&agent.id.as_str()))
+        })
+        .cloned()
 }
 
 async fn run_plan_review_agent(
@@ -493,20 +1195,33 @@ async fn run_plan_review_agent(
     }
 }
 
+/// Evidence file suffix that keeps every attempt's artifacts on disk: the
+/// first attempt keeps the historical names, retries get `.attempt-N`.
+fn attempt_suffix(attempt: u32) -> String {
+    if attempt > 1 {
+        format!(".attempt-{attempt}")
+    } else {
+        String::new()
+    }
+}
+
 async fn run_planning_agent(
     agent: &AgentConfig,
     project_path: &Path,
     task_id: &str,
     planning_run_id: &str,
     prompt: &PlanningPrompt,
+    attempt: u32,
 ) -> Result<PlanningInvocationResult, String> {
     let evidence_dir = planning_evidence_dir(project_path, task_id, planning_run_id);
     fs::create_dir_all(&evidence_dir)
         .map_err(|error| format!("failed to create planning evidence directory: {error}"))?;
 
-    let prompt_path = evidence_dir.join(format!("{}.prompt.md", agent.id));
-    let stdout_path = evidence_dir.join(format!("{}.stdout.md", agent.id));
-    let stderr_path = evidence_dir.join(format!("{}.stderr.log", agent.id));
+    let suffix = attempt_suffix(attempt);
+    let prompt_path = evidence_dir.join(format!("{}{suffix}.prompt.md", agent.id));
+    let stdout_path = evidence_dir.join(format!("{}{suffix}.stdout.md", agent.id));
+    let plan_path = evidence_dir.join(format!("{}{suffix}.plan.md", agent.id));
+    let stderr_path = evidence_dir.join(format!("{}{suffix}.stderr.log", agent.id));
     let redacted_prompt = redact_sensitive_text(&prompt.content);
     fs::write(&prompt_path, &redacted_prompt)
         .map_err(|error| format!("failed to write planning prompt: {error}"))?;
@@ -516,6 +1231,11 @@ async fn run_planning_agent(
         let output = deterministic_planning_output(agent, prompt);
         fs::write(&stdout_path, &output)
             .map_err(|error| format!("failed to write dummy planning output: {error}"))?;
+        fs::write(
+            &plan_path,
+            render_candidate_plan_document(agent, prompt, &output, started_at_ms),
+        )
+        .map_err(|error| format!("failed to write dummy candidate plan: {error}"))?;
         fs::write(&stderr_path, "")
             .map_err(|error| format!("failed to write dummy planning stderr: {error}"))?;
 
@@ -525,8 +1245,11 @@ async fn run_planning_agent(
             stderr: String::new(),
             output_summary: summarize_agent_output(agent, &output),
             evidence_ref: Some(stdout_path.display().to_string()),
+            plan_path: Some(plan_path.display().to_string()),
             exit_code: Some(0),
             timed_out: false,
+            attempt: 1,
+            failure_kind: None,
             started_at_ms,
             ended_at_ms: now_ms(),
         });
@@ -539,9 +1262,15 @@ async fn run_planning_agent(
         Ok(mut result) => {
             fs::write(&stdout_path, &result.stdout)
                 .map_err(|error| format!("failed to write planning stdout: {error}"))?;
+            fs::write(
+                &plan_path,
+                render_candidate_plan_document(agent, prompt, &result.stdout, result.started_at_ms),
+            )
+            .map_err(|error| format!("failed to write candidate plan: {error}"))?;
             fs::write(&stderr_path, &result.stderr)
                 .map_err(|error| format!("failed to write planning stderr: {error}"))?;
             result.evidence_ref = Some(stdout_path.display().to_string());
+            result.plan_path = Some(plan_path.display().to_string());
             Ok(result)
         }
         Err(error) => {
@@ -557,8 +1286,93 @@ async fn run_planning_agent(
                 stderr: stderr.clone(),
                 output_summary: format!("{} failed before producing output.", agent.name),
                 evidence_ref: Some(stderr_path.display().to_string()),
+                plan_path: None,
                 exit_code: None,
                 timed_out: false,
+                attempt: 1,
+                failure_kind: None,
+                started_at_ms,
+                ended_at_ms: now_ms(),
+            })
+        }
+    }
+}
+
+async fn run_synthesis_agent(
+    agent: &AgentConfig,
+    project_path: &Path,
+    task_id: &str,
+    planning_run_id: &str,
+    prompt: &PlanningPrompt,
+    attempt: u32,
+) -> Result<PlanningInvocationResult, String> {
+    let evidence_dir = planning_evidence_dir(project_path, task_id, planning_run_id);
+    fs::create_dir_all(&evidence_dir)
+        .map_err(|error| format!("failed to create synthesis evidence directory: {error}"))?;
+
+    let suffix = attempt_suffix(attempt);
+    let prompt_path = evidence_dir.join(format!("synthesis{suffix}.prompt.md"));
+    let stdout_path = evidence_dir.join(format!("synthesis{suffix}.stdout.md"));
+    let stderr_path = evidence_dir.join(format!("synthesis{suffix}.stderr.log"));
+    let redacted_prompt = redact_sensitive_text(&prompt.content);
+    fs::write(&prompt_path, &redacted_prompt)
+        .map_err(|error| format!("failed to write synthesis prompt: {error}"))?;
+
+    if effective_adapter_type(agent) == ADAPTER_DUMMY {
+        let started_at_ms = now_ms();
+        let output = deterministic_synthesis_output(prompt);
+        fs::write(&stdout_path, &output)
+            .map_err(|error| format!("failed to write dummy synthesis output: {error}"))?;
+        fs::write(&stderr_path, "")
+            .map_err(|error| format!("failed to write dummy synthesis stderr: {error}"))?;
+
+        return Ok(PlanningInvocationResult {
+            status: "succeeded".to_string(),
+            stdout: output.clone(),
+            stderr: String::new(),
+            output_summary: "Synthesized final plan from candidate plans.".to_string(),
+            evidence_ref: Some(stdout_path.display().to_string()),
+            plan_path: None,
+            exit_code: Some(0),
+            timed_out: false,
+            attempt: 1,
+            failure_kind: None,
+            started_at_ms,
+            ended_at_ms: now_ms(),
+        });
+    }
+
+    let profile = build_cli_profile(agent, project_path, &prompt_path)?;
+    let result = run_cli_profile(&profile, project_path, &redacted_prompt).await;
+
+    match result {
+        Ok(mut result) => {
+            fs::write(&stdout_path, &result.stdout)
+                .map_err(|error| format!("failed to write synthesis stdout: {error}"))?;
+            fs::write(&stderr_path, &result.stderr)
+                .map_err(|error| format!("failed to write synthesis stderr: {error}"))?;
+            result.evidence_ref = Some(stdout_path.display().to_string());
+            result.plan_path = None;
+            Ok(result)
+        }
+        Err(error) => {
+            let started_at_ms = now_ms();
+            let stderr = redact_sensitive_text(&error);
+            fs::write(&stdout_path, "")
+                .map_err(|error| format!("failed to write empty synthesis stdout: {error}"))?;
+            fs::write(&stderr_path, &stderr)
+                .map_err(|error| format!("failed to write synthesis stderr: {error}"))?;
+            Ok(PlanningInvocationResult {
+                status: "failed".to_string(),
+                stdout: String::new(),
+                stderr: stderr.clone(),
+                output_summary: format!("{} failed to synthesize the final plan.", agent.name),
+                evidence_ref: Some(stderr_path.display().to_string()),
+                plan_path: None,
+                exit_code: None,
+                timed_out: false,
+                attempt: 1,
+                failure_kind: None,
                 started_at_ms,
                 ended_at_ms: now_ms(),
             })
@@ -682,8 +1496,11 @@ async fn run_cli_profile(
         stderr,
         output_summary,
         evidence_ref: None,
+        plan_path: None,
         exit_code,
         timed_out,
+        attempt: 1,
+        failure_kind: None,
         started_at_ms,
         ended_at_ms: now_ms(),
     })
@@ -720,7 +1537,64 @@ fn render_planning_prompt(
 ) -> PlanningPrompt {
     PlanningPrompt {
         content: format!(
-            "# Loom Planning Request\n\n## Task\n\n{task_title}\n\n## Project\n\n{project_path}\n\n## Requirement\n\n{requirement}\n\n## Constraints\n\n- Planning stage only: do not modify files.\n- Return a practical implementation plan with risks and verification steps.\n- Call out assumptions and blockers explicitly.\n\n## Expected Output\n\nUse these sections:\n\n1. Goal\n2. Proposed approach\n3. Files or modules likely affected\n4. Risks\n5. Verification plan\n"
+            "# Loom Planning Request\n\n## Task\n\n{task_title}\n\n## Project\n\n{project_path}\n\n## Requirement\n\n{requirement}\n\n## Operating Constraints\n\n- Planning stage only: do not modify files.\n- First inspect the existing project code and tests before proposing work.\n- Cite concrete repository file paths and symbols when describing current state or file impact.\n- Do not give generic advice. Produce a plan that another engineer can execute independently.\n- Call out assumptions and blockers explicitly.\n\n## Required Output Template\n\nReturn Markdown with these exact top-level sections:\n\n# <concise plan title>\n\n## Goal\n\nState the intended outcome in one or two paragraphs.\n\n## Non-goals\n\nList work that is intentionally excluded.\n\n## Current State\n\nSummarize the relevant existing code, including concrete file paths and important symbols.\n\n## Technical Approach\n\nDescribe the implementation strategy and important tradeoffs.\n\n## File Impact\n\nUse a table with columns: File / Symbol, Change, Reason.\n\n## Milestones\n\nUse a table with columns: Step, Task, Files / Symbols, Dependencies, Verification.\n\n## Risks\n\nUse bullets or a table. Mark severe items with `blocker` or `risk` text.\n\n## Verification Strategy\n\nList the exact checks, tests, builds, and manual validation that should prove the plan.\n\n## Implementation Todo\n\nProvide numbered implementation tasks. Each item must be specific and actionable.\n"
+        ),
+    }
+}
+
+fn render_cross_review_findings(reviews: &[PlanReview]) -> String {
+    reviews
+        .iter()
+        .filter(|review| review.status == "succeeded")
+        .map(|review| {
+            format!(
+                "- **{} → {}** [{}]: {}",
+                review.reviewer_agent_name,
+                review.target_agent_name,
+                review.severity,
+                review.finding
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn render_synthesis_prompt(
+    task_title: &str,
+    project_path: &str,
+    requirement: &str,
+    candidates: &[AgentInvocation],
+    reviews: &[PlanReview],
+) -> PlanningPrompt {
+    let candidate_text = candidates
+        .iter()
+        .enumerate()
+        .map(|(index, candidate)| {
+            format!(
+                "## Candidate {} — {}\n\nEvidence: {}\nCandidate plan path: {}\n\n{}",
+                index + 1,
+                candidate.agent_name,
+                candidate
+                    .evidence_ref
+                    .as_deref()
+                    .unwrap_or("(no stdout evidence)"),
+                candidate.plan_path.as_deref().unwrap_or("(no candidate plan file)"),
+                candidate.raw_output.trim()
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n\n---\n\n");
+
+    let findings = render_cross_review_findings(reviews);
+    let review_section = if findings.is_empty() {
+        String::new()
+    } else {
+        format!("\n\n## Cross-Review Findings\n\n{findings}")
+    };
+
+    PlanningPrompt {
+        content: format!(
+            "# Loom Final Plan Synthesis Request\n\n## Task\n\n{task_title}\n\n## Project\n\n{project_path}\n\n## Requirement\n\n{requirement}\n\n## Candidate Plans\n\n{candidate_text}{review_section}\n\n## Instructions\n\n- Synthesize the candidate plans into one final implementation plan.\n- If cross-review findings are listed above, resolve every blocker and risk item explicitly in the final plan.\n- Resolve contradictions by choosing the approach best supported by concrete repository evidence.\n- Preserve concrete file paths, symbols, risks, and verification steps.\n- If a candidate is generic, discard the generic parts instead of copying them.\n- Return only the final Markdown plan.\n\n## Required Output Template\n\nUse these exact top-level sections:\n\n# <concise final plan title>\n\n## Goal\n\n## Non-goals\n\n## Current State\n\n## Technical Approach\n\n## File Impact\n\n## Milestones\n\n## Risks\n\n## Verification Strategy\n\n## Implementation Todo\n"
         ),
     }
 }
@@ -740,10 +1614,56 @@ fn render_plan_review_prompt(reviewer: &AgentConfig, target: &AgentInvocation) -
 
 fn deterministic_planning_output(agent: &AgentConfig, prompt: &PlanningPrompt) -> String {
     format!(
-        "Agent: {}\nAdapter: dummy\n\nPlan:\n- Capture the raw requirement and selected planning agents.\n- Persist each agent discussion output with an evidence reference.\n- Generate a final Markdown plan and derive implementation todo items.\n\nRisk:\n- Keep dummy output clearly marked as test-only.\n- Do not treat this output as real Agent reasoning.\n\nPrompt excerpt:\n{}",
+        "# Dummy Planning Candidate\n\n## Goal\n\nCapture planning evidence for {}.\n\n## Non-goals\n\n- Do not treat dummy output as real Agent reasoning.\n\n## Current State\n\n- `src-tauri/src/agents.rs` runs planning agents and persists evidence.\n- `src-tauri/src/tasks.rs` derives todos from the final plan.\n\n## Technical Approach\n\n- Capture the raw requirement and selected planning agents.\n- Persist each agent discussion output with an evidence reference.\n- Generate a final Markdown plan and derive implementation todo items.\n\n## File Impact\n\n| File / Symbol | Change | Reason |\n|---|---|---|\n| `src-tauri/src/agents.rs` | Persist planning evidence | Keep planning auditable |\n\n## Milestones\n\n| Step | Task | Files / Symbols | Dependencies | Verification |\n|---|---|---|---|---|\n| 1 | Persist Agent output | `run_planning_agent` | None | Unit test evidence path |\n\n## Risks\n\n- risk: Keep dummy output clearly marked as test-only.\n\n## Verification Strategy\n\n- Run Rust unit tests for planning helpers.\n\n## Implementation Todo\n\n1. Capture the raw requirement and selected planning agents.\n2. Persist each agent discussion output with an evidence reference.\n3. Generate a final Markdown plan and derive implementation todo items.\n\nPrompt excerpt:\n{}",
         agent.name,
         prompt.content.lines().take(12).collect::<Vec<_>>().join("\n")
     )
+}
+
+fn deterministic_synthesis_output(prompt: &PlanningPrompt) -> String {
+    format!(
+        "# Synthesized Dummy Final Plan\n\n## Goal\n\nProduce a deterministic final plan from dummy candidate plans.\n\n## Non-goals\n\n- Do not execute implementation work during planning.\n\n## Current State\n\n- `src-tauri/src/agents.rs` owns planning orchestration.\n- `.loom/planning/` stores prompt and stdout evidence.\n\n## Technical Approach\n\n- Combine successful candidate plans into a single final Markdown document.\n- Preserve concrete file paths and verification steps from candidates.\n\n## File Impact\n\n| File / Symbol | Change | Reason |\n|---|---|---|\n| `src-tauri/src/agents.rs` | Select or synthesize final plan | Avoid generic concatenated output |\n\n## Milestones\n\n| Step | Task | Files / Symbols | Dependencies | Verification |\n|---|---|---|---|---|\n| 1 | Synthesize candidates | `render_synthesis_prompt` | Candidate plans | Unit test synthesis prompt |\n\n## Risks\n\n- risk: Dummy synthesis is only for test coverage.\n\n## Verification Strategy\n\n- Run `cargo test` for planning helpers.\n\n## Implementation Todo\n\n1. Select successful candidate plans.\n2. Synthesize one final Markdown plan.\n3. Persist the final plan and planning evidence.\n\nPrompt excerpt:\n{}",
+        prompt.content.lines().take(16).collect::<Vec<_>>().join("\n")
+    )
+}
+
+fn render_candidate_plan_document(
+    agent: &AgentConfig,
+    prompt: &PlanningPrompt,
+    output: &str,
+    generated_at_ms: u128,
+) -> String {
+    format!(
+        "---\nagent: \"{}\"\nagentId: \"{}\"\ngeneratedAtMs: {}\nrequirementSummary: \"{}\"\n---\n\n{}{}\n",
+        yaml_escape(&agent.name),
+        yaml_escape(&agent.id),
+        generated_at_ms,
+        yaml_escape(&extract_requirement_summary(&prompt.content)),
+        output.trim(),
+        if output.trim().is_empty() { "" } else { "\n" }
+    )
+}
+
+fn extract_requirement_summary(prompt: &str) -> String {
+    let Some((_, after_heading)) = prompt.split_once("\n## Requirement\n\n") else {
+        return "(unknown)".to_string();
+    };
+    let requirement = after_heading
+        .split("\n## ")
+        .next()
+        .unwrap_or(after_heading)
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+    if requirement.chars().count() <= 160 {
+        requirement
+    } else {
+        format!("{}…", requirement.chars().take(160).collect::<String>())
+    }
+}
+
+fn yaml_escape(value: &str) -> String {
+    value.replace('\\', "\\\\").replace('"', "\\\"")
 }
 
 fn deterministic_plan_review_output(reviewer: &AgentConfig, target: &AgentInvocation) -> String {
@@ -800,7 +1720,6 @@ fn default_profile_args(adapter_type: &str, project_path: &Path) -> Vec<String> 
             "--output-format".to_string(),
             "text".to_string(),
         ],
-        ADAPTER_AMP => vec!["-x".to_string()],
         _ => Vec::new(),
     }
 }
@@ -825,7 +1744,6 @@ fn effective_adapter_type(agent: &AgentConfig) -> String {
         ADAPTER_CLI => match agent.command.as_str() {
             "codex" => ADAPTER_CODEX.to_string(),
             "claude" => ADAPTER_CLAUDE_CODE.to_string(),
-            "amp" => ADAPTER_AMP.to_string(),
             _ => ADAPTER_CLI.to_string(),
         },
         value => value.to_string(),
@@ -913,6 +1831,7 @@ fn summarize_discussion(
 
 /// Derive a concise task title from the first successful agent's plan output,
 /// preferring the stated goal. Falls back to the first meaningful content line.
+#[cfg(test)]
 fn derive_plan_title(invocations: &[AgentInvocation]) -> Option<String> {
     let output = invocations
         .iter()
@@ -921,7 +1840,11 @@ fn derive_plan_title(invocations: &[AgentInvocation]) -> Option<String> {
         })
         .map(|invocation| invocation.raw_output.as_str())?;
 
-    let lines: Vec<&str> = output.lines().collect();
+    derive_plan_title_from_markdown(output)
+}
+
+fn derive_plan_title_from_markdown(markdown: &str) -> Option<String> {
+    let lines: Vec<&str> = markdown.lines().collect();
 
     let is_content_line = |line: &str| {
         let trimmed = line.trim();
@@ -966,7 +1889,7 @@ fn derive_plan_title(invocations: &[AgentInvocation]) -> Option<String> {
 
 /// Strip Markdown decoration and leading list markers, then cap the length.
 fn clean_title(text: &str) -> String {
-    let stripped = text.replace("**", "").replace('`', "").replace('#', "");
+    let stripped = text.replace("**", "").replace(['`', '#'], "");
     let stripped = stripped.trim();
     let stripped = stripped.trim_start_matches(|c: char| {
         c.is_ascii_digit() || matches!(c, '.' | ')' | '-' | '*' | '、' | '：' | ':' | ' ')
@@ -1289,7 +2212,7 @@ fn update_date_section_plan_summary(
         .enumerate()
         .skip(heading_index + 1)
         .find_map(|(index, line)| line.trim_start().starts_with("## ").then_some(index))
-        .unwrap_or_else(|| lines.len());
+        .unwrap_or(lines.len());
 
     if let Some(entry_index) = lines
         .iter()
@@ -1326,7 +2249,7 @@ fn date_section_plan_insert_index(
         .enumerate()
         .skip(heading_index + 1)
         .find_map(|(index, line)| line.trim_start().starts_with("## ").then_some(index))
-        .unwrap_or_else(|| lines.len());
+        .unwrap_or(lines.len());
 
     for (index, line) in lines
         .iter()
@@ -1362,7 +2285,7 @@ fn plan_date_insert_index(lines: &[String], date: &str) -> usize {
                 .filter(|heading_date| date > *heading_date)
                 .map(|_| index)
         })
-        .unwrap_or_else(|| lines.len())
+        .unwrap_or(lines.len())
 }
 
 fn plan_heading_date(line: &str) -> Option<&str> {
@@ -1558,7 +2481,6 @@ fn discover_default_agents() -> Vec<AgentConfig> {
             true,
             true,
         ),
-        ("agent-amp", "Amp", "amp", ADAPTER_AMP, false, false),
     ]
     .into_iter()
     .map(
@@ -1604,6 +2526,12 @@ fn discover_default_agents() -> Vec<AgentConfig> {
 }
 
 fn merge_missing_default_agents(agents: &mut Vec<AgentConfig>) {
+    // Drop retired built-ins (and any custom config on the same adapter) from
+    // previously saved files so they stop showing up in the UI.
+    agents.retain(|agent| {
+        agent.id != RETIRED_AGENT_AMP_ID && agent.adapter_type != RETIRED_ADAPTER_AMP
+    });
+
     for default_agent in discover_default_agents() {
         if let Some(existing) = agents.iter_mut().find(|agent| agent.id == default_agent.id) {
             let preserve_enabled = existing.adapter_type != ADAPTER_DUMMY;
@@ -1634,10 +2562,7 @@ fn merge_missing_default_agents(agents: &mut Vec<AgentConfig>) {
 }
 
 fn is_default_agent_id(agent_id: &str) -> bool {
-    matches!(
-        agent_id,
-        "agent-codex" | "agent-claude" | "agent-amp" | "agent-dummy"
-    )
+    matches!(agent_id, "agent-codex" | "agent-claude" | "agent-dummy")
 }
 
 fn command_available(agent: &AgentConfig) -> bool {
@@ -1774,11 +2699,69 @@ mod tests {
             raw_output: raw_output.to_string(),
             output_summary: "test summary".to_string(),
             evidence_ref: None,
+            plan_path: None,
             stderr_tail: Vec::new(),
             exit_code: Some(0),
             timed_out: false,
+            attempt: 1,
+            failure_kind: None,
             started_at_ms: 1,
             ended_at_ms: Some(2),
+        }
+    }
+
+    fn test_review(reviewer: &str, target: &str, severity: &str, finding: &str) -> PlanReview {
+        PlanReview {
+            id: format!("review-{reviewer}-{target}"),
+            planning_run_id: "planning-run-test".to_string(),
+            task_id: "task-test".to_string(),
+            reviewer_agent_id: format!("agent-{reviewer}"),
+            reviewer_agent_name: reviewer.to_string(),
+            target_agent_id: format!("agent-{target}"),
+            target_agent_name: target.to_string(),
+            status: "succeeded".to_string(),
+            finding: finding.to_string(),
+            severity: severity.to_string(),
+            accepted: false,
+            raw_output: finding.to_string(),
+            evidence_ref: None,
+            started_at_ms: 1,
+            ended_at_ms: Some(2),
+        }
+    }
+
+    fn test_result(status: &str, stdout: &str, stderr: &str) -> PlanningInvocationResult {
+        PlanningInvocationResult {
+            status: status.to_string(),
+            stdout: stdout.to_string(),
+            stderr: stderr.to_string(),
+            output_summary: String::new(),
+            evidence_ref: None,
+            plan_path: None,
+            exit_code: Some(if status == "succeeded" { 0 } else { 1 }),
+            timed_out: false,
+            attempt: 1,
+            failure_kind: None,
+            started_at_ms: 1,
+            ended_at_ms: 2,
+        }
+    }
+
+    #[derive(Clone)]
+    struct NoopEmitter;
+
+    impl PlanningEventEmitter for NoopEmitter {
+        fn emit_planning_agent_status(&self, _event: PlanningAgentStatusEvent) {}
+    }
+
+    #[derive(Clone, Default)]
+    struct RecordingEmitter {
+        events: std::sync::Arc<std::sync::Mutex<Vec<PlanningAgentStatusEvent>>>,
+    }
+
+    impl PlanningEventEmitter for RecordingEmitter {
+        fn emit_planning_agent_status(&self, event: PlanningAgentStatusEvent) {
+            self.events.lock().expect("event lock").push(event);
         }
     }
 
@@ -1790,6 +2773,66 @@ mod tests {
         assert!(prompt.content.contains("/tmp/project"));
         assert!(prompt.content.contains("Use real CLIs"));
         assert!(prompt.content.contains("do not modify files"));
+        assert!(prompt.content.contains("## Current State"));
+        assert!(prompt.content.contains("## File Impact"));
+        assert!(prompt.content.contains("## Implementation Todo"));
+        assert!(prompt.content.contains("Cite concrete repository file paths"));
+    }
+
+    #[test]
+    fn synthesis_prompt_includes_cross_review_findings() {
+        let candidates = vec![test_invocation(
+            "claude",
+            "succeeded",
+            "## Goal\n\nShip candidate\n\n## Implementation Todo\n\n1. Wire synthesis",
+        )];
+        let reviews = vec![test_review(
+            "codex",
+            "claude",
+            "risk",
+            "Migration order has a hidden dependency",
+        )];
+
+        let prompt =
+            render_synthesis_prompt("Plan", "/repo", "Need final plan", &candidates, &reviews);
+
+        assert!(prompt.content.contains("Candidate 1 — claude"));
+        assert!(prompt.content.contains("Wire synthesis"));
+        assert!(prompt.content.contains("## Cross-Review Findings"));
+        assert!(prompt.content.contains("codex → claude"));
+        assert!(prompt.content.contains("Migration order has a hidden dependency"));
+        assert!(prompt.content.contains("Return only the final Markdown plan"));
+    }
+
+    #[test]
+    fn synthesis_prompt_omits_review_section_without_findings() {
+        let candidates = vec![test_invocation("claude", "succeeded", "## Goal\n\nShip")];
+        let mut failed_review = test_review("codex", "claude", "blocker", "review crashed");
+        failed_review.status = "failed".to_string();
+
+        let prompt = render_synthesis_prompt(
+            "Plan",
+            "/repo",
+            "Need final plan",
+            &candidates,
+            &[failed_review],
+        );
+
+        assert!(!prompt.content.contains("## Cross-Review Findings"));
+        assert!(!prompt.content.contains("review crashed"));
+    }
+
+    #[test]
+    fn candidate_plan_document_includes_frontmatter() {
+        let agent = test_agent("codex", ADAPTER_CODEX, Vec::new());
+        let prompt = render_planning_prompt("Plan", "/repo", "Implement candidate plan output");
+        let document = render_candidate_plan_document(&agent, &prompt, "# Candidate", 42);
+
+        assert!(document.starts_with("---\nagent: \"codex\""));
+        assert!(document.contains("agentId: \"agent-codex\""));
+        assert!(document.contains("generatedAtMs: 42"));
+        assert!(document.contains("requirementSummary: \"Implement candidate plan output\""));
+        assert!(document.contains("# Candidate"));
     }
 
     #[test]
@@ -1888,7 +2931,7 @@ mod tests {
             "When the user presses Cmd+K in the planning room, focus the message textarea. Planning only.",
         );
 
-        let result = run_planning_agent(&agent, &root, "task-real", "planning-real", &prompt)
+        let result = run_planning_agent(&agent, &root, "task-real", "planning-real", &prompt, 1)
             .await
             .expect("planning agent should run");
 
@@ -1977,7 +3020,7 @@ mod tests {
     }
 
     #[test]
-    fn builds_codex_claude_and_amp_profiles() {
+    fn builds_codex_and_claude_profiles() {
         let project_path = Path::new("/tmp/project");
         let prompt_path = Path::new("/tmp/project/.loom/planning/prompt.md");
 
@@ -2005,16 +3048,48 @@ mod tests {
         assert_eq!(claude.command, "claude");
         assert!(claude.args.contains(&"-p".to_string()));
         assert!(!claude.args.iter().any(|arg| arg.contains("claude-code")));
+    }
 
-        let amp = build_cli_profile(
-            &test_agent("amp", ADAPTER_AMP, Vec::new()),
-            project_path,
-            prompt_path,
-        )
-        .expect("amp profile should build");
-        assert_eq!(amp.command, "amp");
-        assert!(amp.args.contains(&"-x".to_string()));
-        assert!(amp.stdin_prompt);
+    #[test]
+    fn load_drops_retired_amp_agents() {
+        let mut agents = vec![
+            test_agent("codex", ADAPTER_CODEX, Vec::new()),
+            AgentConfig {
+                id: RETIRED_AGENT_AMP_ID.to_string(),
+                name: "Amp".to_string(),
+                command: "amp".to_string(),
+                args: Vec::new(),
+                working_directory_policy: "project_root".to_string(),
+                capabilities: vec!["planning".to_string()],
+                adapter_type: RETIRED_ADAPTER_AMP.to_string(),
+                can_write_files: false,
+                can_run_commands: false,
+                enabled: true,
+                available: false,
+            },
+            AgentConfig {
+                id: "agent-custom-amp".to_string(),
+                name: "My Amp".to_string(),
+                command: "amp".to_string(),
+                args: vec!["-x".to_string()],
+                working_directory_policy: "project_root".to_string(),
+                capabilities: vec!["planning".to_string()],
+                adapter_type: RETIRED_ADAPTER_AMP.to_string(),
+                can_write_files: false,
+                can_run_commands: false,
+                enabled: true,
+                available: false,
+            },
+        ];
+
+        merge_missing_default_agents(&mut agents);
+
+        assert!(agents
+            .iter()
+            .all(|agent| agent.adapter_type != RETIRED_ADAPTER_AMP));
+        assert!(agents.iter().all(|agent| agent.id != RETIRED_AGENT_AMP_ID));
+        // The remaining defaults are still synced in.
+        assert!(agents.iter().any(|agent| agent.id == "agent-claude"));
     }
 
     #[test]
@@ -2449,5 +3524,324 @@ mod tests {
         assert_eq!(result.status, "failed");
         assert_eq!(result.exit_code, Some(0));
         assert!(result.output_summary.contains("reported an error"));
+    }
+
+    #[test]
+    fn classify_failure_returns_none_for_usable_success() {
+        let result = test_result("succeeded", "# Plan body", "");
+
+        assert_eq!(classify_failure(&result), None);
+    }
+
+    #[test]
+    fn classify_failure_detects_not_retryable_config_errors() {
+        let credits = test_result(
+            "failed",
+            "",
+            "Error: Execute mode requires paid credits and cannot run in non-interactive contexts.",
+        );
+        let missing_cli = test_result("failed", "", "failed to start codex: No such file or directory (os error 2)");
+
+        assert_eq!(
+            classify_failure(&credits),
+            Some(FAILURE_NOT_RETRYABLE.to_string())
+        );
+        assert_eq!(
+            classify_failure(&missing_cli),
+            Some(FAILURE_NOT_RETRYABLE.to_string())
+        );
+    }
+
+    #[test]
+    fn classify_failure_detects_timeout_and_empty_output() {
+        let mut timed_out = test_result("failed", "", "");
+        timed_out.timed_out = true;
+        let empty = test_result("succeeded", "   ", "");
+        let crashed = test_result("failed", "", "fatal: nope");
+
+        assert_eq!(
+            classify_failure(&timed_out),
+            Some(FAILURE_TIMEOUT.to_string())
+        );
+        assert_eq!(
+            classify_failure(&empty),
+            Some(FAILURE_EMPTY_OUTPUT.to_string())
+        );
+        assert_eq!(
+            classify_failure(&crashed),
+            Some(FAILURE_NONZERO_EXIT.to_string())
+        );
+    }
+
+    #[test]
+    fn attempt_suffix_only_marks_retries() {
+        assert_eq!(attempt_suffix(1), "");
+        assert_eq!(attempt_suffix(2), ".attempt-2");
+    }
+
+    #[test]
+    fn latest_drafting_invocations_keeps_last_attempt_per_agent() {
+        let mut first = test_invocation("codex", "failed", "");
+        first.attempt = 1;
+        let mut retried = test_invocation("codex", "succeeded", "# Plan");
+        retried.attempt = 2;
+        let claude = test_invocation("claude", "succeeded", "# Other plan");
+        let mut synthesis = test_invocation("claude", "succeeded", "# Final");
+        synthesis.prompt_summary = SYNTHESIS_PROMPT_SUMMARY.to_string();
+        let invocations = vec![first, claude.clone(), retried.clone(), synthesis];
+
+        let drafting = latest_drafting_invocations(&invocations, "planning-run-test");
+
+        assert_eq!(drafting.len(), 2);
+        let codex = drafting
+            .iter()
+            .find(|invocation| invocation.agent_name == "codex")
+            .expect("codex entry");
+        assert_eq!(codex.attempt, 2);
+        assert_eq!(codex.status, "succeeded");
+        assert!(drafting
+            .iter()
+            .all(|invocation| invocation.prompt_summary != SYNTHESIS_PROMPT_SUMMARY));
+    }
+
+    fn temp_project(label: &str) -> PathBuf {
+        let root = std::env::temp_dir().join(format!("loom-{label}-{}", now_ms()));
+        fs::create_dir_all(&root).expect("create temp project");
+        root
+    }
+
+    #[tokio::test]
+    async fn cross_reviews_cover_every_pair_and_run_in_parallel_workers() {
+        let root = temp_project("cross-reviews");
+        let agents = vec![
+            test_agent("alpha", ADAPTER_DUMMY, Vec::new()),
+            test_agent("beta", ADAPTER_DUMMY, Vec::new()),
+        ];
+        let candidates = vec![
+            test_invocation("alpha", "succeeded", "# Plan A"),
+            test_invocation("beta", "succeeded", "# Plan B"),
+        ];
+        let ids = IdGenerator::default();
+        let emitter = RecordingEmitter::default();
+
+        let reviews = run_cross_reviews(
+            emitter.clone(),
+            &ids,
+            &root,
+            "task-test",
+            "planning-run-test",
+            &agents,
+            &candidates,
+        )
+        .await;
+
+        assert_eq!(reviews.len(), 2);
+        assert!(reviews.iter().all(|review| review.status == "succeeded"));
+        assert!(reviews
+            .iter()
+            .any(|review| review.reviewer_agent_name == "alpha"
+                && review.target_agent_name == "beta"));
+        assert!(reviews
+            .iter()
+            .any(|review| review.reviewer_agent_name == "beta"
+                && review.target_agent_name == "alpha"));
+        let events = emitter.events.lock().expect("events");
+        assert!(events
+            .iter()
+            .all(|event| event.phase == "review"));
+        assert_eq!(
+            events
+                .iter()
+                .filter(|event| event.status == "succeeded")
+                .count(),
+            2
+        );
+
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[tokio::test]
+    async fn review_and_synthesize_runs_reviews_before_synthesis() {
+        let root = temp_project("synthesize");
+        let agents = vec![
+            test_agent("alpha", ADAPTER_DUMMY, Vec::new()),
+            test_agent("beta", ADAPTER_DUMMY, Vec::new()),
+        ];
+        let drafting = vec![
+            test_invocation("alpha", "succeeded", "# Plan A"),
+            test_invocation("beta", "succeeded", "# Plan B"),
+        ];
+        let ids = IdGenerator::default();
+
+        let outcome = review_and_synthesize(
+            NoopEmitter,
+            &ids,
+            &root,
+            "Task",
+            "task-test",
+            "planning-run-test",
+            "Requirement",
+            &agents,
+            &drafting,
+            "summary",
+        )
+        .await
+        .expect("pipeline should complete");
+
+        assert_eq!(outcome.reviews.len(), 2);
+        assert!(outcome.synthesis_invocation.is_some());
+        assert!(outcome.source_note.contains("synthesized by alpha"));
+        assert!(outcome.source_note.contains("2 cross-review findings"));
+        assert!(!outcome.final_plan.trim().is_empty());
+
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[tokio::test]
+    async fn review_and_synthesize_adopts_single_candidate_without_reviews() {
+        let root = temp_project("adopt");
+        let agents = vec![
+            test_agent("alpha", ADAPTER_DUMMY, Vec::new()),
+            test_agent("beta", ADAPTER_DUMMY, Vec::new()),
+        ];
+        let drafting = vec![
+            test_invocation("alpha", "succeeded", "# Only plan"),
+            test_invocation("beta", "failed", ""),
+        ];
+        let ids = IdGenerator::default();
+
+        let outcome = review_and_synthesize(
+            NoopEmitter,
+            &ids,
+            &root,
+            "Task",
+            "task-test",
+            "planning-run-test",
+            "Requirement",
+            &agents,
+            &drafting,
+            "summary",
+        )
+        .await
+        .expect("pipeline should complete");
+
+        assert!(outcome.reviews.is_empty());
+        assert!(outcome.synthesis_invocation.is_none());
+        assert_eq!(outcome.final_plan, "# Only plan");
+        assert!(outcome.source_note.contains("directly adopted alpha"));
+
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[tokio::test]
+    async fn review_and_synthesize_falls_back_when_all_agents_failed() {
+        let root = temp_project("fallback");
+        let agents = vec![test_agent("alpha", ADAPTER_DUMMY, Vec::new())];
+        let drafting = vec![test_invocation("alpha", "failed", "")];
+        let ids = IdGenerator::default();
+
+        let outcome = review_and_synthesize(
+            NoopEmitter,
+            &ids,
+            &root,
+            "Task",
+            "task-test",
+            "planning-run-test",
+            "Requirement",
+            &agents,
+            &drafting,
+            "summary",
+        )
+        .await
+        .expect("pipeline should complete");
+
+        assert!(outcome.reviews.is_empty());
+        assert!(outcome.synthesis_invocation.is_none());
+        assert!(outcome.source_note.contains("deterministic fallback"));
+        assert!(outcome.final_plan.contains("Final Plan"));
+
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[tokio::test]
+    async fn planning_wrapper_retries_retryable_failures_once() {
+        let root = temp_project("retry");
+        // A cli agent whose command always exits non-zero: retryable failure.
+        let agent = test_agent(
+            "sh",
+            ADAPTER_CLI,
+            vec!["-c".to_string(), "exit 9".to_string()],
+        );
+        let emitter = RecordingEmitter::default();
+        let prompt = render_planning_prompt("Task", &root.display().to_string(), "Requirement");
+
+        let result = run_planning_agent_with_status(
+            emitter.clone(),
+            agent,
+            root.clone(),
+            "task-test".to_string(),
+            "planning-run-test".to_string(),
+            prompt,
+            "planning",
+            1,
+            true,
+        )
+        .await;
+
+        assert_eq!(result.status, "failed");
+        assert_eq!(result.attempt, 2);
+        assert_eq!(result.failure_kind, Some(FAILURE_NONZERO_EXIT.to_string()));
+        let events = emitter.events.lock().expect("events");
+        assert_eq!(
+            events
+                .iter()
+                .filter(|event| event.status == "retrying")
+                .count(),
+            1
+        );
+        assert!(events
+            .iter()
+            .any(|event| event.status == "failed" && event.attempt == 2));
+
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[tokio::test]
+    async fn planning_wrapper_does_not_retry_config_errors() {
+        let root = temp_project("no-retry");
+        let agent = test_agent(
+            "sh",
+            ADAPTER_CLI,
+            vec![
+                "-c".to_string(),
+                "printf 'Error: requires paid credits\\n' >&2; exit 1".to_string(),
+            ],
+        );
+        let emitter = RecordingEmitter::default();
+        let prompt = render_planning_prompt("Task", &root.display().to_string(), "Requirement");
+
+        let result = run_planning_agent_with_status(
+            emitter.clone(),
+            agent,
+            root.clone(),
+            "task-test".to_string(),
+            "planning-run-test".to_string(),
+            prompt,
+            "planning",
+            1,
+            true,
+        )
+        .await;
+
+        assert_eq!(result.status, "failed");
+        assert_eq!(result.attempt, 1);
+        assert_eq!(
+            result.failure_kind,
+            Some(FAILURE_NOT_RETRYABLE.to_string())
+        );
+        let events = emitter.events.lock().expect("events");
+        assert!(events.iter().all(|event| event.status != "retrying"));
+
+        let _ = fs::remove_dir_all(&root);
     }
 }
