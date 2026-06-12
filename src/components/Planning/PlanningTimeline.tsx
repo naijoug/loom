@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   ChevronRight,
   Circle,
+  Copy,
   ExternalLink,
   FileText,
   GitMerge,
@@ -17,6 +18,7 @@ import {
 import type {
   AgentInvocation,
   PlanReview,
+  PlanningAgentLogEvent,
   PlanningAgentStatusEvent,
   PlanningRun,
   Task,
@@ -24,6 +26,7 @@ import type {
 import { useAgentBridge } from "../../hooks/useAgentBridge";
 import { useTaskBridge } from "../../hooks/useTaskBridge";
 import { useAppState } from "../../state/AppStateContext";
+import { PLAN_PREVIEW_SANDBOX, wireIframeHashNavigation } from "../../utils/iframeNavigation";
 import { Button } from "../common/Button";
 
 const SYNTHESIS_PROMPT_SUMMARY = "Synthesize final plan";
@@ -105,6 +108,24 @@ function failureLabel(kind?: string) {
 function planSource(summary: string) {
   const match = summary.match(/Final plan source: (.+?)\.?$/);
   return match ? match[1] : null;
+}
+
+function planningLogKey(runId: string, phase: string, agentId: string) {
+  return `${runId}:${phase}:${agentId}`;
+}
+
+function flattenLogLines(events: PlanningAgentLogEvent[] | undefined) {
+  return (events ?? []).flatMap((event) =>
+    event.lines.map((line) => ({
+      stream: event.stream,
+      line,
+      timestampMs: event.timestampMs,
+    })),
+  );
+}
+
+async function copyToClipboard(value: string) {
+  await navigator.clipboard.writeText(value);
 }
 
 /** Latest drafting invocation per agent for one run (retries supersede). */
@@ -205,16 +226,69 @@ function StageMarker({ icon, label }: { icon: React.ReactNode; label: string }) 
   );
 }
 
+function AgentLogPanel({
+  events,
+  live,
+}: {
+  events: PlanningAgentLogEvent[] | undefined;
+  live: boolean;
+}) {
+  const lines = flattenLogLines(events);
+  if (lines.length === 0) {
+    return null;
+  }
+  const tail = lines.slice(-8);
+
+  return (
+    <div className="timeline-agent-log">
+      {live && (
+        <pre className="timeline-live-tail">
+          {tail.map((line) => `[${line.stream}] ${line.line}`).join("\n")}
+        </pre>
+      )}
+      <details className="timeline-execution-log">
+        <summary>Execution log</summary>
+        <pre>{lines.map((line) => `[${line.stream}] ${line.line}`).join("\n")}</pre>
+      </details>
+    </div>
+  );
+}
+
+function ResumeCommand({ command }: { command?: string }) {
+  if (!command) {
+    return null;
+  }
+
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      iconLeft={<Copy size={13} />}
+      onClick={() => void copyToClipboard(command)}
+    >
+      Copy resume
+    </Button>
+  );
+}
+
 function DraftStage({
   rows,
+  runId,
+  logsByKey,
   busy,
   onRetry,
   onOpenCandidate,
+  onOpenEvidence,
+  onOpenPartial,
 }: {
   rows: DraftRow[];
+  runId: string;
+  logsByKey: Record<string, PlanningAgentLogEvent[]>;
   busy: boolean;
   onRetry: (agentId: string) => void;
   onOpenCandidate: (mdPath: string) => void;
+  onOpenEvidence: (path: string) => void;
+  onOpenPartial: (mdPath: string) => void;
 }) {
   if (rows.length === 0) {
     return null;
@@ -224,54 +298,93 @@ function DraftStage({
     <div className="timeline-stage">
       <StageMarker icon={<Bot size={13} />} label="Drafting" />
       <div className="timeline-stage-body">
-        {rows.map((row) => (
-          <div className={`timeline-agent-row status-${row.status}`} key={row.agentId}>
-            <div className="timeline-agent-head">
-              {statusIcon(row.status)}
-              <span className="timeline-agent-name">{row.agentName}</span>
-              {row.attempt > 1 && (
-                <span className="timeline-attempt-badge">attempt {row.attempt}</span>
-              )}
-              <span className="timeline-agent-meta">
-                {row.status === "retrying" ? "retrying…" : row.status}
-                {elapsedLabel(row.elapsedMs) ? ` · ${elapsedLabel(row.elapsedMs)}` : ""}
-              </span>
-              <span className="timeline-agent-actions">
-                {row.status === "succeeded" && row.invocation?.planPath && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => onOpenCandidate(row.invocation!.planPath!)}
-                  >
-                    View plan
-                  </Button>
+        {rows.map((row) => {
+          const logs = logsByKey[planningLogKey(runId, "planning", row.agentId)];
+          const isLive = row.status === "running" || row.status === "retrying";
+          const errorLines = row.invocation?.errorLines ?? [];
+          const partialPath =
+            row.status === "failed" && row.invocation?.rawOutput.trim()
+              ? row.invocation.evidenceRef
+              : undefined;
+
+          return (
+            <div className={`timeline-agent-row status-${row.status}`} key={row.agentId}>
+              <div className="timeline-agent-head">
+                {statusIcon(row.status)}
+                <span className="timeline-agent-name">{row.agentName}</span>
+                {row.attempt > 1 && (
+                  <span className="timeline-attempt-badge">attempt {row.attempt}</span>
                 )}
-                {row.status === "failed" && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    iconLeft={<RefreshCw size={13} />}
-                    disabled={busy}
-                    onClick={() => onRetry(row.agentId)}
-                  >
-                    Retry
-                  </Button>
-                )}
-              </span>
-            </div>
-            {row.status === "failed" && row.invocation && (
-              <div className="timeline-agent-failure">
-                <span className="timeline-failure-kind">{failureLabel(row.failureKind)}</span>
-                {row.invocation.stderrTail.length > 0 && (
-                  <details>
-                    <summary>Error details</summary>
-                    <pre>{row.invocation.stderrTail.join("\n")}</pre>
-                  </details>
-                )}
+                <span className="timeline-agent-meta">
+                  {row.status === "retrying" ? "retrying…" : row.status}
+                  {elapsedLabel(row.elapsedMs) ? ` · ${elapsedLabel(row.elapsedMs)}` : ""}
+                  {row.invocation?.sessionId ? ` · ${row.invocation.sessionId.slice(0, 8)}` : ""}
+                </span>
+                <span className="timeline-agent-actions">
+                  <ResumeCommand command={row.invocation?.resumeCommand} />
+                  {row.status === "succeeded" && row.invocation?.planPath && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => onOpenCandidate(row.invocation!.planPath!)}
+                    >
+                      View plan
+                    </Button>
+                  )}
+                  {row.status === "failed" && row.invocation?.stderrRef && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => onOpenEvidence(row.invocation!.stderrRef!)}
+                    >
+                      Open log file
+                    </Button>
+                  )}
+                  {partialPath && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => onOpenPartial(partialPath)}
+                    >
+                      View partial output
+                    </Button>
+                  )}
+                  {row.status === "failed" && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      iconLeft={<RefreshCw size={13} />}
+                      disabled={busy}
+                      onClick={() => onRetry(row.agentId)}
+                    >
+                      Retry
+                    </Button>
+                  )}
+                </span>
               </div>
-            )}
-          </div>
-        ))}
+              {row.status === "succeeded" && row.invocation?.outputSummary && (
+                <p className="timeline-agent-summary">{row.invocation.outputSummary}</p>
+              )}
+              {row.status === "failed" && row.invocation && (
+                <div className="timeline-agent-failure">
+                  <span className="timeline-failure-kind">
+                    {row.invocation.failureDetail ?? failureLabel(row.failureKind)}
+                  </span>
+                  {errorLines.length > 0 && (
+                    <pre className="timeline-error-lines">{errorLines.join("\n")}</pre>
+                  )}
+                  {row.invocation.stderrTail.length > 0 && (
+                    <details>
+                      <summary>Error details</summary>
+                      <pre>{row.invocation.stderrTail.join("\n")}</pre>
+                    </details>
+                  )}
+                </div>
+              )}
+              <AgentLogPanel events={logs} live={isLive} />
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -290,9 +403,11 @@ function severityClass(severity: string) {
 function ReviewStage({
   reviews,
   liveReviews,
+  logsByKey,
 }: {
   reviews: PlanReview[];
   liveReviews: PlanningAgentStatusEvent[];
+  logsByKey: Record<string, PlanningAgentLogEvent[]>;
 }) {
   if (reviews.length === 0 && liveReviews.length === 0) {
     return null;
@@ -303,22 +418,43 @@ function ReviewStage({
       <StageMarker icon={<Scale size={13} />} label="Cross-review" />
       <div className="timeline-stage-body">
         {liveReviews.map((event) => (
-          <div className="timeline-review-row" key={`live-${event.agentId}`}>
-            {statusIcon(event.status)}
-            <span className="timeline-review-pair">{event.agentName}</span>
-            <span className="timeline-agent-meta">reviewing…</span>
+          <div className="timeline-review-block" key={`live-${event.agentId}`}>
+            <div className="timeline-review-row">
+              {statusIcon(event.status)}
+              <span className="timeline-review-pair">{event.agentName}</span>
+              <span className="timeline-agent-meta">reviewing…</span>
+            </div>
+            <AgentLogPanel
+              events={logsByKey[planningLogKey(event.planningRunId, "review", event.agentId)]}
+              live
+            />
           </div>
         ))}
         {reviews.map((review) => (
-          <div className="timeline-review-row" key={review.id}>
-            {statusIcon(review.status)}
-            <span className="timeline-review-pair">
-              {review.reviewerAgentName} → {review.targetAgentName}
-            </span>
-            <span className={`timeline-severity ${severityClass(review.severity)}`}>
-              {review.severity}
-            </span>
-            <span className="timeline-review-finding">{review.finding}</span>
+          <div className="timeline-review-block" key={review.id}>
+            <div className="timeline-review-row">
+              {statusIcon(review.status)}
+              <span className="timeline-review-pair">
+                {review.reviewerAgentName} → {review.targetAgentName}
+              </span>
+              <span className={`timeline-severity ${severityClass(review.severity)}`}>
+                {review.severity}
+              </span>
+              <span className="timeline-review-finding">{review.finding}</span>
+              <ResumeCommand command={review.resumeCommand} />
+            </div>
+            <AgentLogPanel
+              events={
+                logsByKey[
+                  planningLogKey(
+                    review.planningRunId,
+                    "review",
+                    `${review.reviewerAgentId}->${review.targetAgentId}`,
+                  )
+                ]
+              }
+              live={false}
+            />
           </div>
         ))}
       </div>
@@ -330,16 +466,22 @@ function SynthesisStage({
   synthesis,
   liveSynthesis,
   source,
+  logsByKey,
 }: {
   synthesis?: AgentInvocation;
   liveSynthesis?: PlanningAgentStatusEvent;
   source: string | null;
+  logsByKey: Record<string, PlanningAgentLogEvent[]>;
 }) {
   if (!synthesis && !liveSynthesis && !source) {
     return null;
   }
 
   const status = liveSynthesis?.status ?? synthesis?.status ?? "succeeded";
+  const logRunId = liveSynthesis?.planningRunId ?? synthesis?.planningRunId;
+  const logAgentId = liveSynthesis?.agentId ?? synthesis?.agentId;
+  const logs =
+    logRunId && logAgentId ? logsByKey[planningLogKey(logRunId, "synthesis", logAgentId)] : undefined;
 
   return (
     <div className="timeline-stage">
@@ -352,7 +494,12 @@ function SynthesisStage({
               ? `${liveSynthesis.agentName} is synthesizing the final plan…`
               : source ?? synthesis?.outputSummary ?? ""}
           </span>
+          <ResumeCommand command={synthesis?.resumeCommand} />
         </div>
+        <AgentLogPanel
+          events={logs}
+          live={status === "running" || status === "retrying"}
+        />
       </div>
     </div>
   );
@@ -481,7 +628,12 @@ function FinalPlanStage({
           </div>
           <details className="timeline-final-preview" open>
             <summary>Preview</summary>
-            <iframe title="Final plan preview" sandbox="" srcDoc={html ?? fallback} />
+            <iframe
+              title="Final plan preview"
+              sandbox={PLAN_PREVIEW_SANDBOX}
+              srcDoc={html ?? fallback}
+              onLoad={(event) => wireIframeHashNavigation(event.currentTarget)}
+            />
           </details>
 
           {task.planningDecisions.length > 0 && (
@@ -531,17 +683,23 @@ function RoundSection({
   task,
   round,
   isLatest,
+  logsByKey,
   busy,
   onRetry,
   onOpenCandidate,
+  onOpenEvidence,
+  onOpenPartial,
 }: {
   projectPath: string;
   task: Task;
   round: RoundData;
   isLatest: boolean;
+  logsByKey: Record<string, PlanningAgentLogEvent[]>;
   busy: boolean;
   onRetry: (agentId: string) => void;
   onOpenCandidate: (mdPath: string) => void;
+  onOpenEvidence: (path: string) => void;
+  onOpenPartial: (mdPath: string) => void;
 }) {
   const [expanded, setExpanded] = useState(isLatest);
 
@@ -583,15 +741,24 @@ function RoundSection({
 
           <DraftStage
             rows={round.drafts}
+            runId={round.run.id}
+            logsByKey={logsByKey}
             busy={busy}
             onRetry={onRetry}
             onOpenCandidate={onOpenCandidate}
+            onOpenEvidence={onOpenEvidence}
+            onOpenPartial={onOpenPartial}
           />
-          <ReviewStage reviews={round.reviews} liveReviews={round.liveReviews} />
+          <ReviewStage
+            reviews={round.reviews}
+            liveReviews={round.liveReviews}
+            logsByKey={logsByKey}
+          />
           <SynthesisStage
             synthesis={round.synthesis}
             liveSynthesis={round.liveSynthesis}
             source={source}
+            logsByKey={logsByKey}
           />
           {isLatest && (
             <FinalPlanStage
@@ -610,7 +777,7 @@ function RoundSection({
 export function PlanningTimeline({ projectPath, task }: PlanningTimelineProps) {
   const { state } = useAppState();
   const { retryPlanningAgent } = useAgentBridge();
-  const { openPlanViewer } = useTaskBridge();
+  const { openPlanViewer, openPlanningEvidence } = useTaskBridge();
 
   const progress = useMemo(
     () =>
@@ -618,6 +785,15 @@ export function PlanningTimeline({ projectPath, task }: PlanningTimelineProps) {
         (event) => task && event.taskId === task.id,
       ),
     [state.planningProgress, task],
+  );
+  const logsByKey = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(state.planningLogs).filter(
+          ([, events]) => events[0] && task && events[0].taskId === task.id,
+        ),
+      ),
+    [state.planningLogs, task],
   );
   const rounds = useMemo(() => (task ? buildRounds(task, progress) : []), [task, progress]);
   const liveEvents = useMemo(() => liveRoundEvents(task, progress), [task, progress]);
@@ -665,29 +841,39 @@ export function PlanningTimeline({ projectPath, task }: PlanningTimelineProps) {
                             attempt {event.attempt}
                           </span>
                         )}
-                        <span className="timeline-agent-meta">
-                          {event.status === "retrying" ? "retrying…" : event.status}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+	                        <span className="timeline-agent-meta">
+	                          {event.status === "retrying" ? "retrying…" : event.status}
+	                        </span>
+	                      </div>
+	                      <AgentLogPanel
+	                        events={
+	                          logsByKey[
+	                            planningLogKey(event.planningRunId, "planning", event.agentId)
+	                          ]
+	                        }
+	                        live
+	                      />
+	                    </div>
+	                  ))}
               </div>
             </div>
             {liveEvents.some((event) => event.phase === "review") && (
               <ReviewStage
                 reviews={[]}
-                liveReviews={liveEvents.filter(
-                  (event) => event.phase === "review" && event.status === "running",
-                )}
-              />
+	                liveReviews={liveEvents.filter(
+	                  (event) => event.phase === "review" && event.status === "running",
+	                )}
+	                logsByKey={logsByKey}
+	              />
             )}
             {liveEvents.some((event) => event.phase === "synthesis") && (
               <SynthesisStage
                 liveSynthesis={liveEvents.find(
                   (event) => event.phase === "synthesis" && event.status === "running",
-                )}
-                source={null}
-              />
+	                )}
+	                source={null}
+	                logsByKey={logsByKey}
+	              />
             )}
           </div>
         </section>
@@ -698,13 +884,16 @@ export function PlanningTimeline({ projectPath, task }: PlanningTimelineProps) {
           <RoundSection
             key={round.run.id}
             projectPath={projectPath}
-            task={task}
-            round={round}
-            isLatest={round.index === rounds.length - 1 && !hasLiveRound}
-            busy={busy}
-            onRetry={(agentId) => void retryPlanningAgent(projectPath, task.id, agentId)}
-            onOpenCandidate={(mdPath) => void openPlanViewer(projectPath, mdPath)}
-          />
+	            task={task}
+	            round={round}
+	            isLatest={round.index === rounds.length - 1 && !hasLiveRound}
+	            logsByKey={logsByKey}
+	            busy={busy}
+	            onRetry={(agentId) => void retryPlanningAgent(projectPath, task.id, agentId)}
+	            onOpenCandidate={(mdPath) => void openPlanViewer(projectPath, mdPath)}
+	            onOpenEvidence={(path) => void openPlanningEvidence(projectPath, path)}
+	            onOpenPartial={(mdPath) => void openPlanViewer(projectPath, mdPath)}
+	          />
         ))}
 
       {task && rounds.length === 0 && !hasLiveRound && (

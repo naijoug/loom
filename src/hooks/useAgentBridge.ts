@@ -4,6 +4,7 @@ import { useCallback, useEffect } from "react";
 import type {
   AgentConfig,
   AgentConfigInput,
+  PlanningAgentLogEvent,
   PlanningAgentStatusEvent,
   PlanningDiscussionInput,
   Task,
@@ -29,7 +30,8 @@ export function useAgentBridge() {
       return;
     }
 
-    let unlisten: (() => void) | null = null;
+    let unlistenStatus: (() => void) | null = null;
+    let unlistenLog: (() => void) | null = null;
     let cancelled = false;
     void listen<PlanningAgentStatusEvent>("loom://planning-agent-status", (event) => {
       dispatch({ type: "planning/progressUpdated", event: event.payload });
@@ -37,13 +39,23 @@ export function useAgentBridge() {
       if (cancelled) {
         cleanup();
       } else {
-        unlisten = cleanup;
+        unlistenStatus = cleanup;
+      }
+    });
+    void listen<PlanningAgentLogEvent>("loom://planning-agent-log", (event) => {
+      dispatch({ type: "planning/logReceived", event: event.payload });
+    }).then((cleanup) => {
+      if (cancelled) {
+        cleanup();
+      } else {
+        unlistenLog = cleanup;
       }
     });
 
     return () => {
       cancelled = true;
-      unlisten?.();
+      unlistenStatus?.();
+      unlistenLog?.();
     };
   }, [dispatch]);
 

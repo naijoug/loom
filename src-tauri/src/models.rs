@@ -124,6 +124,21 @@ pub struct CommandLogEvent {
 
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct PlanningAgentLogEvent {
+    pub task_id: String,
+    pub planning_run_id: String,
+    pub agent_id: String,
+    pub agent_name: String,
+    pub phase: String,
+    #[serde(default = "default_attempt")]
+    pub attempt: u32,
+    pub stream: String,
+    pub lines: Vec<String>,
+    pub timestamp_ms: u128,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CommandFinishedEvent {
     pub task_id: String,
     pub run_id: String,
@@ -194,6 +209,12 @@ pub struct PlanReview {
     pub accepted: bool,
     pub raw_output: String,
     pub evidence_ref: Option<String>,
+    #[serde(default)]
+    pub stderr_ref: Option<String>,
+    #[serde(default)]
+    pub session_id: Option<String>,
+    #[serde(default)]
+    pub resume_command: Option<String>,
     pub started_at_ms: u128,
     pub ended_at_ms: Option<u128>,
 }
@@ -251,6 +272,16 @@ pub struct AgentInvocation {
     pub attempt: u32,
     #[serde(default)]
     pub failure_kind: Option<String>,
+    #[serde(default)]
+    pub failure_detail: Option<String>,
+    #[serde(default)]
+    pub error_lines: Vec<String>,
+    #[serde(default)]
+    pub stderr_ref: Option<String>,
+    #[serde(default)]
+    pub session_id: Option<String>,
+    #[serde(default)]
+    pub resume_command: Option<String>,
     pub started_at_ms: u128,
     pub ended_at_ms: Option<u128>,
 }

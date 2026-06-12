@@ -9,6 +9,7 @@ use std::{
 use tauri::{AppHandle, Manager};
 
 const RECENT_PROJECTS_FILE: &str = "recent-projects.json";
+const LOOM_GITIGNORE_PATTERN: &str = "/.loom/";
 static TEMP_FILE_SEQUENCE: AtomicU64 = AtomicU64::new(1);
 
 pub struct ProjectStoreStatus {
@@ -24,6 +25,7 @@ pub fn ensure_project_store(
     let loom_dir = project_path.join(".loom");
     fs::create_dir_all(&loom_dir)
         .map_err(|error| format!("failed to create .loom directory: {error}"))?;
+    ensure_loom_dir_ignored(project_path)?;
 
     let metadata_path = loom_dir.join("loom.json");
     let metadata = ProjectMetadata {
@@ -54,6 +56,50 @@ pub fn ensure_project_store(
     Ok(ProjectStoreStatus {
         loom_dir_ready: true,
         schema_version: CURRENT_SCHEMA_VERSION,
+    })
+}
+
+fn ensure_loom_dir_ignored(project_path: &Path) -> Result<(), String> {
+    let gitignore_path = project_path.join(".gitignore");
+    let content = match fs::read_to_string(&gitignore_path) {
+        Ok(content) => content,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => String::new(),
+        Err(error) => return Err(format!("failed to read .gitignore: {error}")),
+    };
+
+    if gitignore_covers_loom_dir(&content) {
+        return Ok(());
+    }
+
+    let mut updated = content;
+    if !updated.is_empty() && !updated.ends_with('\n') {
+        updated.push('\n');
+    }
+    updated.push_str(LOOM_GITIGNORE_PATTERN);
+    updated.push('\n');
+
+    fs::write(&gitignore_path, updated)
+        .map_err(|error| format!("failed to update .gitignore: {error}"))
+}
+
+fn gitignore_covers_loom_dir(content: &str) -> bool {
+    content.lines().any(|line| {
+        let pattern = line.trim();
+        if pattern.is_empty() || pattern.starts_with('#') || pattern.starts_with('!') {
+            return false;
+        }
+
+        matches!(
+            pattern,
+            ".loom"
+                | ".loom/"
+                | ".loom/*"
+                | ".loom/**"
+                | "/.loom"
+                | "/.loom/"
+                | "/.loom/*"
+                | "/.loom/**"
+        )
     })
 }
 
@@ -187,6 +233,58 @@ mod tests {
                 .file_name()
                 .to_string_lossy()
                 .starts_with("loom.json.bak-")));
+
+        fs::remove_dir_all(root).expect("test dir should be removed");
+    }
+
+    #[test]
+    fn ensure_project_store_adds_loom_to_gitignore() {
+        let root = std::env::temp_dir().join(format!("loom-gitignore-test-{}", now_ms()));
+        fs::create_dir_all(&root).expect("test dir should be created");
+
+        ensure_project_store(&root, "project-test", "Test Project")
+            .expect("project store should be created");
+
+        let gitignore =
+            fs::read_to_string(root.join(".gitignore")).expect("gitignore should be created");
+        assert_eq!(gitignore, "/.loom/\n");
+        assert!(root.join(".loom").join("loom.json").exists());
+
+        fs::remove_dir_all(root).expect("test dir should be removed");
+    }
+
+    #[test]
+    fn ensure_project_store_appends_loom_to_existing_gitignore_once() {
+        let root = std::env::temp_dir().join(format!("loom-gitignore-existing-test-{}", now_ms()));
+        fs::create_dir_all(&root).expect("test dir should be created");
+        fs::write(root.join(".gitignore"), "node_modules\n.env")
+            .expect("gitignore should be seeded");
+
+        ensure_project_store(&root, "project-test", "Test Project")
+            .expect("project store should be created");
+        ensure_project_store(&root, "project-test", "Test Project")
+            .expect("project store should remain idempotent");
+
+        let gitignore =
+            fs::read_to_string(root.join(".gitignore")).expect("gitignore should be readable");
+        assert_eq!(gitignore, "node_modules\n.env\n/.loom/\n");
+
+        fs::remove_dir_all(root).expect("test dir should be removed");
+    }
+
+    #[test]
+    fn ensure_project_store_reuses_existing_loom_gitignore_pattern() {
+        let root = std::env::temp_dir().join(format!("loom-gitignore-covered-test-{}", now_ms()));
+        fs::create_dir_all(&root).expect("test dir should be created");
+        fs::write(root.join(".gitignore"), "target/\n.loom/\n")
+            .expect("gitignore should be seeded");
+
+        ensure_project_store(&root, "project-test", "Test Project")
+            .expect("project store should be created");
+
+        let gitignore =
+            fs::read_to_string(root.join(".gitignore")).expect("gitignore should be readable");
+        assert_eq!(gitignore, "target/\n.loom/\n");
 
         fs::remove_dir_all(root).expect("test dir should be removed");
     }

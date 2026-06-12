@@ -1,8 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
+import { PLAN_PREVIEW_SANDBOX, wireIframeHashNavigation } from "../utils/iframeNavigation";
 
 // Standalone entry for the plan viewer window opened by `open_plan_viewer`.
 // It renders the safe HTML produced by `read_plan_html` inside a sandboxed
-// iframe, mirroring the in-app preview's trust boundary.
+// iframe, mirroring the in-app preview's trust boundary. Scripts remain
+// disabled; same-origin access lets the host handle in-document hash links.
 
 const root = document.getElementById("plan-viewer-root");
 
@@ -32,7 +34,8 @@ async function main() {
     document.title = `Loom Plan — ${fileName.replace(/\.md$/, "")}`;
 
     const iframe = document.createElement("iframe");
-    iframe.setAttribute("sandbox", "");
+    iframe.setAttribute("sandbox", PLAN_PREVIEW_SANDBOX);
+    iframe.addEventListener("load", () => wireIframeHashNavigation(iframe));
     iframe.title = document.title;
     iframe.srcdoc = html;
     root.innerHTML = "";

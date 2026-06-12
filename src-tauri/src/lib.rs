@@ -58,6 +58,7 @@ pub fn run() {
             command_runner::start_command_run,
             command_runner::stop_command_run,
             plan_html::open_plan_html,
+            plan_html::open_planning_evidence,
             plan_html::open_plan_viewer,
             plan_html::read_plan_html,
             projects::list_recent_projects,

@@ -56,6 +56,11 @@ export interface AgentInvocation {
   timedOut: boolean;
   attempt: number;
   failureKind?: PlanningFailureKind;
+  failureDetail?: string;
+  errorLines?: string[];
+  stderrRef?: string;
+  sessionId?: string;
+  resumeCommand?: string;
   startedAtMs: number;
   endedAtMs?: number;
 }
@@ -77,6 +82,18 @@ export interface PlanningAgentStatusEvent {
   elapsedMs?: number;
 }
 
+export interface PlanningAgentLogEvent {
+  taskId: string;
+  planningRunId: string;
+  agentId: string;
+  agentName: string;
+  phase: PlanningAgentPhase;
+  attempt: number;
+  stream: "stdout" | "stderr";
+  lines: string[];
+  timestampMs: number;
+}
+
 export interface PlanReview {
   id: string;
   planningRunId: string;
@@ -91,6 +108,9 @@ export interface PlanReview {
   accepted: boolean;
   rawOutput: string;
   evidenceRef?: string;
+  stderrRef?: string;
+  sessionId?: string;
+  resumeCommand?: string;
   startedAtMs: number;
   endedAtMs?: number;
 }

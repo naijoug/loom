@@ -2,6 +2,9 @@
 
 ## 2026-06-11
 
+- 16:05-planning-live-output.md
+  > （已实施，v3）针对时间线实测反馈：进度改走双 CLI 官方结构化事件流（claude stream-json + codex exec --json，hook 方案评估后排除），agent 行内嵌实时 tail 与执行日志；每次调用绑定原生 session（记录 session id 并提供可复制的 resume 命令，在 codex/claude 原生工具中可恢复同一会话）；失败行前置具体原因并支持打开完整日志与超时 partial 输出；超时预算 240s 提至 480s。
+
 - 11:15-planning-v2-timeline.md
   > （已实施）基于实测反馈二次重构计划功能：计划页改为按轮次分组的单列时间线工作台并移除右侧摘要面板，互评自动纳入"起草→互评→合成"流水线且结论参与合成，Agent 失败分类后自动重试一次并支持单 Agent 手动重跑，计划 HTML 新增应用内 WebviewWindow 查看器与外部浏览器双入口。
 

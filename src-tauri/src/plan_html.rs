@@ -39,8 +39,8 @@ impl PlanHtmlMeta {
 #[tauri::command]
 pub fn read_plan_html(project_path: String, md_path: String) -> Result<String, String> {
     let path = validate_plan_markdown_path(Path::new(&project_path), Path::new(&md_path))?;
-    let markdown =
-        fs::read_to_string(&path).map_err(|error| format!("failed to read plan markdown: {error}"))?;
+    let markdown = fs::read_to_string(&path)
+        .map_err(|error| format!("failed to read plan markdown: {error}"))?;
     let title = path
         .file_stem()
         .and_then(|value| value.to_str())
@@ -65,6 +65,14 @@ pub fn open_plan_html(project_path: String, html_path: String) -> Result<(), Str
         .map_err(|error| format!("failed to open plan HTML: {error}"))
 }
 
+#[tauri::command]
+pub fn open_planning_evidence(project_path: String, evidence_path: String) -> Result<(), String> {
+    let path =
+        validate_planning_evidence_path(Path::new(&project_path), Path::new(&evidence_path))?;
+    tauri_plugin_opener::open_path(path, None::<&str>)
+        .map_err(|error| format!("failed to open planning evidence: {error}"))
+}
+
 /// Open a plan Markdown document in a dedicated in-app viewer window. The
 /// window loads the `plan-viewer.html` entry, which renders the document via
 /// `read_plan_html` (same whitelist and escaping as the inline preview).
@@ -77,7 +85,10 @@ pub fn open_plan_viewer(
     use tauri::Manager;
 
     let path = validate_plan_markdown_path(Path::new(&project_path), Path::new(&md_path))?;
-    let label = format!("plan-viewer-{:016x}", stable_hash(&path.display().to_string()));
+    let label = format!(
+        "plan-viewer-{:016x}",
+        stable_hash(&path.display().to_string())
+    );
 
     if let Some(window) = app.get_webview_window(&label) {
         return window
@@ -396,7 +407,9 @@ fn render_markdown_body(markdown: &str, headings: &[Heading]) -> String {
             classes,
             attrs,
         }) => {
-            let id = headings.get(heading_index).map(|heading| heading.id.clone());
+            let id = headings
+                .get(heading_index)
+                .map(|heading| heading.id.clone());
             heading_index += 1;
             Event::Start(Tag::Heading {
                 level,
@@ -629,8 +642,8 @@ fn validate_plan_markdown_path(project_path: &Path, md_path: &Path) -> Result<Pa
 
     let project = fs::canonicalize(project_path)
         .map_err(|error| format!("failed to resolve project path: {error}"))?;
-    let target =
-        fs::canonicalize(md_path).map_err(|error| format!("failed to resolve plan path: {error}"))?;
+    let target = fs::canonicalize(md_path)
+        .map_err(|error| format!("failed to resolve plan path: {error}"))?;
     let docs_plans = canonicalize_allowed_dir(&storage::project_plans_dir(&project))?;
     let loom_planning =
         canonicalize_allowed_dir(&storage::project_loom_dir(&project).join("planning"))?;
@@ -639,6 +652,24 @@ fn validate_plan_markdown_path(project_path: &Path, md_path: &Path) -> Result<Pa
         Ok(target)
     } else {
         Err("plan preview path must be under docs/plans or .loom/planning".to_string())
+    }
+}
+
+fn validate_planning_evidence_path(
+    project_path: &Path,
+    evidence_path: &Path,
+) -> Result<PathBuf, String> {
+    let project = fs::canonicalize(project_path)
+        .map_err(|error| format!("failed to resolve project path: {error}"))?;
+    let target = fs::canonicalize(evidence_path)
+        .map_err(|error| format!("failed to resolve planning evidence path: {error}"))?;
+    let loom_planning =
+        canonicalize_allowed_dir(&storage::project_loom_dir(&project).join("planning"))?;
+
+    if target.starts_with(&loom_planning) {
+        Ok(target)
+    } else {
+        Err("planning evidence path must be under .loom/planning".to_string())
     }
 }
 
@@ -701,7 +732,10 @@ mod tests {
 
     #[test]
     fn render_plan_html_builds_toc_and_collapsible_sections() {
-        let html = render_plan_html("# Plan\n\n## Goal\n\nShip it.\n\n## Risks\n\n- Low", &meta());
+        let html = render_plan_html(
+            "# Plan\n\n## Goal\n\nShip it.\n\n## Risks\n\n- Low",
+            &meta(),
+        );
 
         assert!(html.contains("href=\"#goal\""));
         assert!(html.contains("<details class=\"plan-section\" open>"));
@@ -710,7 +744,10 @@ mod tests {
 
     #[test]
     fn render_plan_html_escapes_raw_html() {
-        let html = render_plan_html("## Risk\n\n<script>alert(1)</script>\n\n<img src=x onerror=alert(1)>", &meta());
+        let html = render_plan_html(
+            "## Risk\n\n<script>alert(1)</script>\n\n<img src=x onerror=alert(1)>",
+            &meta(),
+        );
 
         assert!(!html.contains("<script>alert(1)</script>"));
         assert!(!html.contains("<img src=x onerror=alert(1)>"));
@@ -720,7 +757,10 @@ mod tests {
 
     #[test]
     fn render_plan_html_blocks_dangerous_links() {
-        let html = render_plan_html("[bad](javascript:alert(1))\n\n![bad](data:text/html,boom)", &meta());
+        let html = render_plan_html(
+            "[bad](javascript:alert(1))\n\n![bad](data:text/html,boom)",
+            &meta(),
+        );
 
         assert!(!html.contains("javascript:alert"));
         assert!(!html.contains("data:text/html"));
@@ -742,6 +782,24 @@ mod tests {
         assert!(validate_plan_markdown_path(&root, &allowed).is_ok());
         assert!(validate_plan_markdown_path(&root, &outside).is_err());
         assert!(validate_plan_markdown_path(&root, &allowed.with_extension("txt")).is_err());
+
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn validate_planning_evidence_accepts_only_loom_planning_paths() {
+        let root = std::env::temp_dir().join(format!("loom-planning-evidence-{}", now_ms()));
+        let allowed_dir = root.join(".loom").join("planning").join("task-1");
+        let outside_dir = root.join("outside");
+        fs::create_dir_all(&allowed_dir).unwrap();
+        fs::create_dir_all(&outside_dir).unwrap();
+        let allowed = allowed_dir.join("agent.stderr.log");
+        let outside = outside_dir.join("agent.stderr.log");
+        fs::write(&allowed, "fatal: nope").unwrap();
+        fs::write(&outside, "fatal: outside").unwrap();
+
+        assert!(validate_planning_evidence_path(&root, &allowed).is_ok());
+        assert!(validate_planning_evidence_path(&root, &outside).is_err());
 
         let _ = fs::remove_dir_all(&root);
     }

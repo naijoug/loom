@@ -1,8 +1,8 @@
 use crate::{
     models::{
         now_ms, AgentConfig, AgentConfigInput, AgentInvocation, IdGenerator, PlanReview,
-        PlanningAgentStatusEvent, PlanningDecision, PlanningDiscussionInput, PlanningRun,
-        TaskEvent,
+        PlanningAgentLogEvent, PlanningAgentStatusEvent, PlanningDecision, PlanningDiscussionInput,
+        PlanningRun, TaskEvent,
     },
     plan_html, storage, tasks,
 };
@@ -14,9 +14,9 @@ use std::{
 };
 use tauri::{AppHandle, Emitter, Runtime, State};
 use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
+    io::{AsyncBufReadExt, AsyncRead, AsyncWriteExt, BufReader},
     process::Command as TokioCommand,
-    time::sleep,
+    time::{interval, sleep},
 };
 
 const AGENTS_FILE: &str = "agents.json";
@@ -64,10 +64,19 @@ struct PlanningPrompt {
     content: String,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum CliOutputMode {
+    Plain,
+    ClaudeStreamJson,
+    CodexJson,
+}
+
 struct CliProfile {
+    adapter_type: String,
     command: String,
     args: Vec<String>,
     stdin_prompt: bool,
+    output_mode: CliOutputMode,
 }
 
 struct PlanningInvocationResult {
@@ -81,6 +90,11 @@ struct PlanningInvocationResult {
     timed_out: bool,
     attempt: u32,
     failure_kind: Option<String>,
+    failure_detail: Option<String>,
+    error_lines: Vec<String>,
+    stderr_ref: Option<String>,
+    session_id: Option<String>,
+    resume_command: Option<String>,
     started_at_ms: u128,
     ended_at_ms: u128,
 }
@@ -91,17 +105,35 @@ struct PlanReviewInvocationResult {
     finding: String,
     severity: String,
     evidence_ref: Option<String>,
+    stderr_ref: Option<String>,
+    session_id: Option<String>,
+    resume_command: Option<String>,
     started_at_ms: u128,
     ended_at_ms: u128,
 }
 
+#[derive(Clone)]
+struct PlanningLogContext {
+    task_id: String,
+    planning_run_id: String,
+    agent_id: String,
+    agent_name: String,
+    phase: String,
+    attempt: u32,
+}
+
 trait PlanningEventEmitter: Clone + Send + Sync + 'static {
     fn emit_planning_agent_status(&self, event: PlanningAgentStatusEvent);
+    fn emit_planning_agent_log(&self, event: PlanningAgentLogEvent);
 }
 
 impl<R: Runtime> PlanningEventEmitter for AppHandle<R> {
     fn emit_planning_agent_status(&self, event: PlanningAgentStatusEvent) {
         let _ = self.emit("loom://planning-agent-status", event);
+    }
+
+    fn emit_planning_agent_log(&self, event: PlanningAgentLogEvent) {
+        let _ = self.emit("loom://planning-agent-log", event);
     }
 }
 
@@ -252,6 +284,7 @@ pub async fn run_planning_discussion(
         let project_path = project_path.clone();
         let task_id = task.id.clone();
         let planning_run_id = planning_run_id.clone();
+        let task_title = task.title.clone();
         let prompt = prompt.clone();
         let spawned_agent = agent.clone();
         let handle = tauri::async_runtime::spawn(async move {
@@ -261,6 +294,7 @@ pub async fn run_planning_discussion(
                 project_path,
                 task_id,
                 planning_run_id,
+                task_title,
                 prompt,
                 "planning",
                 1,
@@ -428,6 +462,7 @@ pub async fn run_plan_reviews(
         app.clone(),
         ids.inner(),
         Path::new(&project_path),
+        &task.title,
         &task.id,
         &planning_run.id,
         &selected_agents,
@@ -509,6 +544,7 @@ pub async fn retry_planning_agent(
         PathBuf::from(&project_path),
         task.id.clone(),
         planning_run.id.clone(),
+        task.title.clone(),
         prompt,
         "planning",
         previous.attempt + 1,
@@ -640,6 +676,47 @@ fn classify_failure(result: &PlanningInvocationResult) -> Option<String> {
     Some(FAILURE_NONZERO_EXIT.to_string())
 }
 
+fn failure_detail_for_result(kind: &str, result: &PlanningInvocationResult) -> String {
+    match kind {
+        FAILURE_TIMEOUT => format!("Timed out after {}s", PLANNING_TIMEOUT_MS / 1000),
+        FAILURE_EMPTY_OUTPUT => "Agent completed but produced no output".to_string(),
+        FAILURE_NOT_RETRYABLE => extract_error_lines(&result.stderr)
+            .into_iter()
+            .next()
+            .unwrap_or_else(|| "Configuration error; fix the agent setup, then retry".to_string()),
+        _ => match result.exit_code {
+            Some(code) => format!("Exited with code {code}"),
+            None => "Agent process failed before an exit code was available".to_string(),
+        },
+    }
+}
+
+fn extract_error_lines(stderr: &str) -> Vec<String> {
+    stderr
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .filter(|line| {
+            let lower = line.to_ascii_lowercase();
+            !lower.starts_with("hook:")
+                && (lower.starts_with("error:")
+                    || lower.starts_with("fatal:")
+                    || lower.starts_with("panic")
+                    || lower.contains("panic"))
+        })
+        .take(5)
+        .map(str::to_string)
+        .collect()
+}
+
+fn resume_command_for_profile(profile: &CliProfile, session_id: &str) -> Option<String> {
+    match profile.adapter_type.as_str() {
+        ADAPTER_CLAUDE_CODE => Some(format!("{} --resume {}", profile.command, session_id)),
+        ADAPTER_CODEX => Some(format!("{} resume {}", profile.command, session_id)),
+        _ => None,
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 fn planning_status_event(
     agent: &AgentConfig,
@@ -672,6 +749,7 @@ async fn run_planning_agent_with_status<E: PlanningEventEmitter>(
     project_path: PathBuf,
     task_id: String,
     planning_run_id: String,
+    task_title: String,
     prompt: PlanningPrompt,
     phase: &'static str,
     start_attempt: u32,
@@ -701,20 +779,24 @@ async fn run_planning_agent_with_status<E: PlanningEventEmitter>(
             run_synthesis_agent(
                 &agent,
                 &project_path,
+                &task_title,
                 &task_id,
                 &planning_run_id,
                 &prompt,
                 attempt,
+                emitter.clone(),
             )
             .await
         } else {
             run_planning_agent(
                 &agent,
                 &project_path,
+                &task_title,
                 &task_id,
                 &planning_run_id,
                 &prompt,
                 attempt,
+                emitter.clone(),
             )
             .await
         }
@@ -741,6 +823,8 @@ async fn run_planning_agent_with_status<E: PlanningEventEmitter>(
             result.output_summary = format!("{} produced no output.", agent.name);
         }
         result.failure_kind = Some(kind.clone());
+        result.error_lines = extract_error_lines(&result.stderr);
+        result.failure_detail = Some(failure_detail_for_result(&kind, &result));
 
         if kind != FAILURE_NOT_RETRYABLE && attempt < max_attempt {
             emitter.emit_planning_agent_status(planning_status_event(
@@ -796,6 +880,11 @@ fn agent_invocation_from_result(
         timed_out: result.timed_out,
         attempt: result.attempt,
         failure_kind: result.failure_kind,
+        failure_detail: result.failure_detail,
+        error_lines: result.error_lines,
+        stderr_ref: result.stderr_ref,
+        session_id: result.session_id,
+        resume_command: result.resume_command,
         started_at_ms: result.started_at_ms,
         ended_at_ms: Some(result.ended_at_ms),
     }
@@ -818,6 +907,11 @@ fn failed_planning_result(
         timed_out: false,
         attempt: 1,
         failure_kind: None,
+        failure_detail: None,
+        error_lines: extract_error_lines(&error),
+        stderr_ref: None,
+        session_id: None,
+        resume_command: None,
         started_at_ms,
         ended_at_ms: now_ms(),
     }
@@ -858,10 +952,12 @@ fn latest_drafting_invocations(
 
 /// Run every reviewer-vs-target pair in parallel. A failed review becomes a
 /// failed `PlanReview` record instead of aborting the round.
+#[allow(clippy::too_many_arguments)]
 async fn run_cross_reviews<E: PlanningEventEmitter>(
     emitter: E,
     ids: &IdGenerator,
     project_path: &Path,
+    task_title: &str,
     task_id: &str,
     planning_run_id: &str,
     agents: &[AgentConfig],
@@ -881,6 +977,7 @@ async fn run_cross_reviews<E: PlanningEventEmitter>(
             let reviewer = reviewer.clone();
             let target = target.clone();
             let project_path = project_path.to_path_buf();
+            let task_title = task_title.to_string();
             let task_id = task_id.to_string();
             let planning_run_id = planning_run_id.to_string();
             handles.push(tauri::async_runtime::spawn(async move {
@@ -905,9 +1002,12 @@ async fn run_cross_reviews<E: PlanningEventEmitter>(
                 let result = run_plan_review_agent(
                     &reviewer,
                     &project_path,
+                    &task_title,
                     &task_id,
                     &planning_run_id,
                     &target,
+                    &pair,
+                    emitter.clone(),
                 )
                 .await
                 .unwrap_or_else(|error| PlanReviewInvocationResult {
@@ -919,6 +1019,9 @@ async fn run_cross_reviews<E: PlanningEventEmitter>(
                     severity: "blocker".to_string(),
                     raw_output: redact_sensitive_text(&error),
                     evidence_ref: None,
+                    stderr_ref: None,
+                    session_id: None,
+                    resume_command: None,
                     started_at_ms,
                     ended_at_ms: now_ms(),
                 });
@@ -956,6 +1059,9 @@ async fn run_cross_reviews<E: PlanningEventEmitter>(
             accepted: false,
             raw_output: result.raw_output,
             evidence_ref: result.evidence_ref,
+            stderr_ref: result.stderr_ref,
+            session_id: result.session_id,
+            resume_command: result.resume_command,
             started_at_ms: result.started_at_ms,
             ended_at_ms: Some(result.ended_at_ms),
         });
@@ -995,6 +1101,7 @@ async fn review_and_synthesize<E: PlanningEventEmitter>(
             emitter.clone(),
             ids,
             project_path,
+            task_title,
             task_id,
             planning_run_id,
             selected_agents,
@@ -1016,6 +1123,7 @@ async fn review_and_synthesize<E: PlanningEventEmitter>(
             project_path.to_path_buf(),
             task_id.to_string(),
             planning_run_id.to_string(),
+            task_title.to_string(),
             synthesis_prompt,
             "synthesis",
             1,
@@ -1118,12 +1226,16 @@ fn choose_synthesis_agent(
         .cloned()
 }
 
-async fn run_plan_review_agent(
+#[allow(clippy::too_many_arguments)]
+async fn run_plan_review_agent<E: PlanningEventEmitter>(
     reviewer: &AgentConfig,
     project_path: &Path,
+    task_title: &str,
     task_id: &str,
     planning_run_id: &str,
     target: &AgentInvocation,
+    log_agent: &AgentConfig,
+    emitter: E,
 ) -> Result<PlanReviewInvocationResult, String> {
     let evidence_dir =
         planning_evidence_dir(project_path, task_id, planning_run_id).join("reviews");
@@ -1153,13 +1265,32 @@ async fn run_plan_review_agent(
             severity: infer_review_severity(&output),
             raw_output: output,
             evidence_ref: Some(stdout_path.display().to_string()),
+            stderr_ref: Some(stderr_path.display().to_string()),
+            session_id: None,
+            resume_command: None,
             started_at_ms,
             ended_at_ms: now_ms(),
         });
     }
 
-    let profile = build_cli_profile(reviewer, project_path, &prompt_path)?;
-    match run_cli_profile(&profile, project_path, &redacted_prompt).await {
+    let profile = build_cli_profile(reviewer, project_path, &prompt_path, Some(task_title))?;
+    let log_context = PlanningLogContext {
+        task_id: task_id.to_string(),
+        planning_run_id: planning_run_id.to_string(),
+        agent_id: log_agent.id.clone(),
+        agent_name: log_agent.name.clone(),
+        phase: "review".to_string(),
+        attempt: 1,
+    };
+    match run_cli_profile(
+        &profile,
+        project_path,
+        &redacted_prompt,
+        emitter,
+        Some(log_context),
+    )
+    .await
+    {
         Ok(result) => {
             fs::write(&stdout_path, &result.stdout)
                 .map_err(|error| format!("failed to write review stdout: {error}"))?;
@@ -1171,6 +1302,9 @@ async fn run_plan_review_agent(
                 severity: infer_review_severity(&result.stdout),
                 raw_output: result.stdout,
                 evidence_ref: Some(stdout_path.display().to_string()),
+                stderr_ref: Some(stderr_path.display().to_string()),
+                session_id: result.session_id,
+                resume_command: result.resume_command,
                 started_at_ms: result.started_at_ms,
                 ended_at_ms: result.ended_at_ms,
             })
@@ -1187,7 +1321,10 @@ async fn run_plan_review_agent(
                 finding: format!("{} failed to review {}.", reviewer.name, target.agent_name),
                 severity: "blocker".to_string(),
                 raw_output: stderr,
-                evidence_ref: Some(stderr_path.display().to_string()),
+                evidence_ref: Some(stdout_path.display().to_string()),
+                stderr_ref: Some(stderr_path.display().to_string()),
+                session_id: None,
+                resume_command: None,
                 started_at_ms,
                 ended_at_ms: now_ms(),
             })
@@ -1205,13 +1342,16 @@ fn attempt_suffix(attempt: u32) -> String {
     }
 }
 
-async fn run_planning_agent(
+#[allow(clippy::too_many_arguments)]
+async fn run_planning_agent<E: PlanningEventEmitter>(
     agent: &AgentConfig,
     project_path: &Path,
+    task_title: &str,
     task_id: &str,
     planning_run_id: &str,
     prompt: &PlanningPrompt,
     attempt: u32,
+    emitter: E,
 ) -> Result<PlanningInvocationResult, String> {
     let evidence_dir = planning_evidence_dir(project_path, task_id, planning_run_id);
     fs::create_dir_all(&evidence_dir)
@@ -1250,13 +1390,33 @@ async fn run_planning_agent(
             timed_out: false,
             attempt: 1,
             failure_kind: None,
+            failure_detail: None,
+            error_lines: Vec::new(),
+            stderr_ref: Some(stderr_path.display().to_string()),
+            session_id: None,
+            resume_command: None,
             started_at_ms,
             ended_at_ms: now_ms(),
         });
     }
 
-    let profile = build_cli_profile(agent, project_path, &prompt_path)?;
-    let result = run_cli_profile(&profile, project_path, &redacted_prompt).await;
+    let profile = build_cli_profile(agent, project_path, &prompt_path, Some(task_title))?;
+    let log_context = PlanningLogContext {
+        task_id: task_id.to_string(),
+        planning_run_id: planning_run_id.to_string(),
+        agent_id: agent.id.clone(),
+        agent_name: agent.name.clone(),
+        phase: "planning".to_string(),
+        attempt,
+    };
+    let result = run_cli_profile(
+        &profile,
+        project_path,
+        &redacted_prompt,
+        emitter,
+        Some(log_context),
+    )
+    .await;
 
     match result {
         Ok(mut result) => {
@@ -1271,6 +1431,7 @@ async fn run_planning_agent(
                 .map_err(|error| format!("failed to write planning stderr: {error}"))?;
             result.evidence_ref = Some(stdout_path.display().to_string());
             result.plan_path = Some(plan_path.display().to_string());
+            result.stderr_ref = Some(stderr_path.display().to_string());
             Ok(result)
         }
         Err(error) => {
@@ -1285,12 +1446,17 @@ async fn run_planning_agent(
                 stdout: String::new(),
                 stderr: stderr.clone(),
                 output_summary: format!("{} failed before producing output.", agent.name),
-                evidence_ref: Some(stderr_path.display().to_string()),
+                evidence_ref: Some(stdout_path.display().to_string()),
                 plan_path: None,
                 exit_code: None,
                 timed_out: false,
                 attempt: 1,
                 failure_kind: None,
+                failure_detail: None,
+                error_lines: Vec::new(),
+                stderr_ref: Some(stderr_path.display().to_string()),
+                session_id: None,
+                resume_command: None,
                 started_at_ms,
                 ended_at_ms: now_ms(),
             })
@@ -1298,13 +1464,16 @@ async fn run_planning_agent(
     }
 }
 
-async fn run_synthesis_agent(
+#[allow(clippy::too_many_arguments)]
+async fn run_synthesis_agent<E: PlanningEventEmitter>(
     agent: &AgentConfig,
     project_path: &Path,
+    task_title: &str,
     task_id: &str,
     planning_run_id: &str,
     prompt: &PlanningPrompt,
     attempt: u32,
+    emitter: E,
 ) -> Result<PlanningInvocationResult, String> {
     let evidence_dir = planning_evidence_dir(project_path, task_id, planning_run_id);
     fs::create_dir_all(&evidence_dir)
@@ -1337,13 +1506,33 @@ async fn run_synthesis_agent(
             timed_out: false,
             attempt: 1,
             failure_kind: None,
+            failure_detail: None,
+            error_lines: Vec::new(),
+            stderr_ref: Some(stderr_path.display().to_string()),
+            session_id: None,
+            resume_command: None,
             started_at_ms,
             ended_at_ms: now_ms(),
         });
     }
 
-    let profile = build_cli_profile(agent, project_path, &prompt_path)?;
-    let result = run_cli_profile(&profile, project_path, &redacted_prompt).await;
+    let profile = build_cli_profile(agent, project_path, &prompt_path, Some(task_title))?;
+    let log_context = PlanningLogContext {
+        task_id: task_id.to_string(),
+        planning_run_id: planning_run_id.to_string(),
+        agent_id: agent.id.clone(),
+        agent_name: agent.name.clone(),
+        phase: "synthesis".to_string(),
+        attempt,
+    };
+    let result = run_cli_profile(
+        &profile,
+        project_path,
+        &redacted_prompt,
+        emitter,
+        Some(log_context),
+    )
+    .await;
 
     match result {
         Ok(mut result) => {
@@ -1353,6 +1542,7 @@ async fn run_synthesis_agent(
                 .map_err(|error| format!("failed to write synthesis stderr: {error}"))?;
             result.evidence_ref = Some(stdout_path.display().to_string());
             result.plan_path = None;
+            result.stderr_ref = Some(stderr_path.display().to_string());
             Ok(result)
         }
         Err(error) => {
@@ -1367,12 +1557,17 @@ async fn run_synthesis_agent(
                 stdout: String::new(),
                 stderr: stderr.clone(),
                 output_summary: format!("{} failed to synthesize the final plan.", agent.name),
-                evidence_ref: Some(stderr_path.display().to_string()),
+                evidence_ref: Some(stdout_path.display().to_string()),
                 plan_path: None,
                 exit_code: None,
                 timed_out: false,
                 attempt: 1,
                 failure_kind: None,
+                failure_detail: None,
+                error_lines: Vec::new(),
+                stderr_ref: Some(stderr_path.display().to_string()),
+                session_id: None,
+                resume_command: None,
                 started_at_ms,
                 ended_at_ms: now_ms(),
             })
@@ -1380,10 +1575,393 @@ async fn run_synthesis_agent(
     }
 }
 
-async fn run_cli_profile(
+struct ParsedCliStdout {
+    stdout: Option<String>,
+    session_id: Option<String>,
+}
+
+async fn read_planning_stream<E, Reader>(
+    emitter: E,
+    context: Option<PlanningLogContext>,
+    output_mode: CliOutputMode,
+    stream: &'static str,
+    reader: Reader,
+) -> String
+where
+    E: PlanningEventEmitter,
+    Reader: AsyncRead + Unpin + Send + 'static,
+{
+    let mut lines = BufReader::new(reader).lines();
+    let mut raw_lines = Vec::new();
+    let mut pending_log_lines = Vec::new();
+    let mut ticker = interval(Duration::from_millis(100));
+
+    loop {
+        tokio::select! {
+            line = lines.next_line() => {
+                match line {
+                    Ok(Some(line)) => {
+                        raw_lines.push(line.clone());
+                        if context.is_some() {
+                            pending_log_lines.extend(log_lines_for_stream(output_mode, stream, &line));
+                            if pending_log_lines.len() >= 32 {
+                                flush_planning_log(&emitter, context.as_ref(), stream, &mut pending_log_lines);
+                            }
+                        }
+                    }
+                    Ok(None) => break,
+                    Err(error) => {
+                        if context.is_some() {
+                            pending_log_lines.push(format!("failed to read {stream}: {error}"));
+                        }
+                        break;
+                    }
+                }
+            }
+            _ = ticker.tick() => {
+                flush_planning_log(&emitter, context.as_ref(), stream, &mut pending_log_lines);
+            }
+        }
+    }
+
+    flush_planning_log(&emitter, context.as_ref(), stream, &mut pending_log_lines);
+    raw_lines.join("\n")
+}
+
+fn flush_planning_log<E: PlanningEventEmitter>(
+    emitter: &E,
+    context: Option<&PlanningLogContext>,
+    stream: &str,
+    pending_log_lines: &mut Vec<String>,
+) {
+    if pending_log_lines.is_empty() {
+        return;
+    }
+    let Some(context) = context else {
+        pending_log_lines.clear();
+        return;
+    };
+    let lines = std::mem::take(pending_log_lines)
+        .into_iter()
+        .flat_map(|line| {
+            redact_sensitive_text(&line)
+                .lines()
+                .map(str::to_string)
+                .collect::<Vec<_>>()
+        })
+        .filter(|line| !line.trim().is_empty())
+        .collect::<Vec<_>>();
+    if lines.is_empty() {
+        return;
+    }
+
+    emitter.emit_planning_agent_log(PlanningAgentLogEvent {
+        task_id: context.task_id.clone(),
+        planning_run_id: context.planning_run_id.clone(),
+        agent_id: context.agent_id.clone(),
+        agent_name: context.agent_name.clone(),
+        phase: context.phase.clone(),
+        attempt: context.attempt,
+        stream: stream.to_string(),
+        lines,
+        timestamp_ms: now_ms(),
+    });
+}
+
+fn log_lines_for_stream(output_mode: CliOutputMode, stream: &str, line: &str) -> Vec<String> {
+    if stream != "stdout" {
+        return vec![line.to_string()];
+    }
+
+    match output_mode {
+        CliOutputMode::Plain => vec![line.to_string()],
+        CliOutputMode::ClaudeStreamJson => serde_json::from_str::<serde_json::Value>(line)
+            .map(|value| claude_log_lines(&value))
+            .unwrap_or_else(|_| vec![line.to_string()]),
+        CliOutputMode::CodexJson => serde_json::from_str::<serde_json::Value>(line)
+            .map(|value| codex_log_lines(&value))
+            .unwrap_or_else(|_| vec![line.to_string()]),
+    }
+}
+
+fn parse_cli_stdout(output_mode: CliOutputMode, stdout: &str) -> ParsedCliStdout {
+    match output_mode {
+        CliOutputMode::Plain => ParsedCliStdout {
+            stdout: None,
+            session_id: None,
+        },
+        CliOutputMode::ClaudeStreamJson => parse_claude_stream(stdout),
+        CliOutputMode::CodexJson => parse_codex_stream(stdout),
+    }
+}
+
+fn parse_claude_stream(stdout: &str) -> ParsedCliStdout {
+    let mut session_id = None;
+    let mut result_stdout = None;
+    let mut assistant_chunks = Vec::new();
+
+    for line in stdout.lines() {
+        let Ok(value) = serde_json::from_str::<serde_json::Value>(line) else {
+            assistant_chunks.push(line.to_string());
+            continue;
+        };
+        if session_id.is_none() {
+            session_id = find_session_id(&value);
+        }
+
+        match event_type(&value).as_deref() {
+            Some("result") => {
+                if let Some(text) = string_field(&value, "result") {
+                    if !text.trim().is_empty() {
+                        result_stdout = Some(text.to_string());
+                    }
+                }
+            }
+            Some("assistant") => {
+                assistant_chunks.extend(assistant_text_chunks(&value));
+            }
+            _ => {}
+        }
+    }
+
+    ParsedCliStdout {
+        stdout: result_stdout.or_else(|| join_chunks(assistant_chunks)),
+        session_id,
+    }
+}
+
+fn parse_codex_stream(stdout: &str) -> ParsedCliStdout {
+    let mut session_id = None;
+    let mut last_agent_message = None;
+    let mut fallback_chunks = Vec::new();
+
+    for line in stdout.lines() {
+        let Ok(value) = serde_json::from_str::<serde_json::Value>(line) else {
+            fallback_chunks.push(line.to_string());
+            continue;
+        };
+        if session_id.is_none() {
+            session_id = find_session_id(&value);
+        }
+
+        let event = event_type(&value).unwrap_or_default();
+        if is_agent_message_event(&event, &value) {
+            let text = assistant_text_chunks(&value).join("\n");
+            if !text.trim().is_empty() {
+                last_agent_message = Some(text);
+            }
+        } else {
+            fallback_chunks.extend(codex_log_lines(&value));
+        }
+    }
+
+    ParsedCliStdout {
+        stdout: last_agent_message.or_else(|| join_chunks(fallback_chunks)),
+        session_id,
+    }
+}
+
+fn claude_log_lines(value: &serde_json::Value) -> Vec<String> {
+    match event_type(value).as_deref() {
+        Some("system") => find_session_id(value)
+            .map(|id| vec![format!("Session started: {id}")])
+            .unwrap_or_default(),
+        Some("assistant") => assistant_text_lines(value),
+        Some("stream_event") => string_field_deep(value, &["text"])
+            .map(split_log_text)
+            .unwrap_or_default(),
+        Some("result") => {
+            if bool_field(value, "is_error") == Some(true) {
+                string_field(value, "result")
+                    .map(split_log_text)
+                    .unwrap_or_default()
+            } else {
+                Vec::new()
+            }
+        }
+        Some(kind) => vec![format!("[{kind}]")],
+        None => Vec::new(),
+    }
+}
+
+fn codex_log_lines(value: &serde_json::Value) -> Vec<String> {
+    let event = event_type(value).unwrap_or_default();
+    if event == "thread.started" {
+        return find_session_id(value)
+            .map(|id| vec![format!("Session started: {id}")])
+            .unwrap_or_default();
+    }
+    if is_agent_message_event(&event, value) {
+        return assistant_text_lines(value);
+    }
+    if event.contains("exec_command") || event.contains("command") {
+        if let Some(command) = string_field_deep(value, &["command", "cmd"]) {
+            return vec![format!("$ {command}")];
+        }
+        if let Some(output) = string_field_deep(value, &["output", "text", "delta"]) {
+            return split_log_text(output);
+        }
+    }
+    if event.is_empty() {
+        Vec::new()
+    } else {
+        vec![format!("[{event}]")]
+    }
+}
+
+fn event_type(value: &serde_json::Value) -> Option<String> {
+    string_field(value, "type")
+        .or_else(|| value.get("msg").and_then(|msg| string_field(msg, "type")))
+        .or_else(|| {
+            value
+                .get("event")
+                .and_then(|event| string_field(event, "type"))
+        })
+        .or_else(|| string_field(value, "event"))
+        .map(str::to_string)
+}
+
+fn find_session_id(value: &serde_json::Value) -> Option<String> {
+    string_field_deep(
+        value,
+        &[
+            "session_id",
+            "sessionId",
+            "thread_id",
+            "threadId",
+            "conversation_id",
+        ],
+    )
+    .map(str::to_string)
+    .or_else(|| {
+        let event = event_type(value)?;
+        if event == "thread.started" {
+            string_field_deep(value, &["id"]).map(str::to_string)
+        } else {
+            None
+        }
+    })
+}
+
+fn is_agent_message_event(event: &str, value: &serde_json::Value) -> bool {
+    event.contains("agent_message")
+        || event.contains("assistant")
+        || contains_type_value(value, &["agent_message", "assistant"])
+        || string_field_deep(value, &["role"]) == Some("assistant")
+}
+
+fn contains_type_value(value: &serde_json::Value, expected: &[&str]) -> bool {
+    match value {
+        serde_json::Value::Object(map) => {
+            map.get("type")
+                .and_then(serde_json::Value::as_str)
+                .is_some_and(|value| expected.contains(&value))
+                || map
+                    .values()
+                    .any(|child| contains_type_value(child, expected))
+        }
+        serde_json::Value::Array(items) => items
+            .iter()
+            .any(|child| contains_type_value(child, expected)),
+        _ => false,
+    }
+}
+
+fn assistant_text_lines(value: &serde_json::Value) -> Vec<String> {
+    assistant_text_chunks(value)
+        .into_iter()
+        .flat_map(|text| split_log_text(&text))
+        .collect()
+}
+
+fn assistant_text_chunks(value: &serde_json::Value) -> Vec<String> {
+    let mut output = Vec::new();
+    collect_text_values(value, &mut output);
+    output
+        .into_iter()
+        .filter(|text| !text.trim().is_empty())
+        .collect()
+}
+
+fn collect_text_values(value: &serde_json::Value, output: &mut Vec<String>) {
+    match value {
+        serde_json::Value::Object(map) => {
+            for (key, child) in map {
+                if matches!(
+                    key.as_str(),
+                    "text" | "message" | "content" | "delta" | "result"
+                ) {
+                    if let Some(text) = child.as_str() {
+                        if !text.trim().is_empty() {
+                            output.push(text.to_string());
+                        }
+                    }
+                }
+                collect_text_values(child, output);
+            }
+        }
+        serde_json::Value::Array(items) => {
+            for item in items {
+                collect_text_values(item, output);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn string_field<'a>(value: &'a serde_json::Value, key: &str) -> Option<&'a str> {
+    value.get(key).and_then(serde_json::Value::as_str)
+}
+
+fn bool_field(value: &serde_json::Value, key: &str) -> Option<bool> {
+    value.get(key).and_then(serde_json::Value::as_bool)
+}
+
+fn string_field_deep<'a>(value: &'a serde_json::Value, keys: &[&str]) -> Option<&'a str> {
+    match value {
+        serde_json::Value::Object(map) => {
+            for key in keys {
+                if let Some(text) = map.get(*key).and_then(serde_json::Value::as_str) {
+                    return Some(text);
+                }
+            }
+            map.values()
+                .find_map(|child| string_field_deep(child, keys))
+        }
+        serde_json::Value::Array(items) => items
+            .iter()
+            .find_map(|child| string_field_deep(child, keys)),
+        _ => None,
+    }
+}
+
+fn split_log_text(text: &str) -> Vec<String> {
+    text.lines()
+        .map(str::trim_end)
+        .filter(|line| !line.trim().is_empty())
+        .map(str::to_string)
+        .collect()
+}
+
+fn join_chunks(chunks: Vec<String>) -> Option<String> {
+    let text = chunks
+        .into_iter()
+        .filter(|chunk| !chunk.trim().is_empty())
+        .collect::<Vec<_>>()
+        .join("\n");
+    if text.trim().is_empty() {
+        None
+    } else {
+        Some(text)
+    }
+}
+
+async fn run_cli_profile<E: PlanningEventEmitter>(
     profile: &CliProfile,
     project_path: &Path,
     prompt: &str,
+    emitter: E,
+    log_context: Option<PlanningLogContext>,
 ) -> Result<PlanningInvocationResult, String> {
     let started_at_ms = now_ms();
     let mut command = TokioCommand::new(&profile.command);
@@ -1412,24 +1990,28 @@ async fn run_cli_profile(
         }
     }
 
-    let mut stdout = child
+    let stdout = child
         .stdout
         .take()
         .ok_or_else(|| "failed to capture agent stdout".to_string())?;
-    let mut stderr = child
+    let stderr = child
         .stderr
         .take()
         .ok_or_else(|| "failed to capture agent stderr".to_string())?;
-    let stdout_task = tauri::async_runtime::spawn(async move {
-        let mut buffer = Vec::new();
-        let _ = stdout.read_to_end(&mut buffer).await;
-        String::from_utf8_lossy(&buffer).to_string()
-    });
-    let stderr_task = tauri::async_runtime::spawn(async move {
-        let mut buffer = Vec::new();
-        let _ = stderr.read_to_end(&mut buffer).await;
-        String::from_utf8_lossy(&buffer).to_string()
-    });
+    let stdout_task = tauri::async_runtime::spawn(read_planning_stream(
+        emitter.clone(),
+        log_context.clone(),
+        profile.output_mode,
+        "stdout",
+        stdout,
+    ));
+    let stderr_task = tauri::async_runtime::spawn(read_planning_stream(
+        emitter,
+        log_context,
+        profile.output_mode,
+        "stderr",
+        stderr,
+    ));
 
     let timeout = sleep(Duration::from_millis(PLANNING_TIMEOUT_MS));
     tokio::pin!(timeout);
@@ -1447,14 +2029,20 @@ async fn run_cli_profile(
         }
     };
 
-    let stdout = stdout_task
+    let raw_stdout = stdout_task
         .await
         .map_err(|error| format!("failed to join stdout reader: {error}"))?;
-    let stderr = stderr_task
+    let raw_stderr = stderr_task
         .await
         .map_err(|error| format!("failed to join stderr reader: {error}"))?;
-    let stdout = redact_sensitive_text(&stdout);
-    let stderr = redact_sensitive_text(&stderr);
+    let parsed = parse_cli_stdout(profile.output_mode, &raw_stdout);
+    let stdout = redact_sensitive_text(&parsed.stdout.unwrap_or(raw_stdout));
+    let stderr = redact_sensitive_text(&raw_stderr);
+    let session_id = parsed.session_id;
+    let resume_command = session_id
+        .as_deref()
+        .and_then(|session_id| resume_command_for_profile(profile, session_id));
+    let error_lines = extract_error_lines(&stderr);
     let exit_code = status.code();
     let stderr_only_error = status.success()
         && stdout.trim().is_empty()
@@ -1501,6 +2089,11 @@ async fn run_cli_profile(
         timed_out,
         attempt: 1,
         failure_kind: None,
+        failure_detail: None,
+        error_lines,
+        stderr_ref: None,
+        session_id,
+        resume_command,
         started_at_ms,
         ended_at_ms: now_ms(),
     })
@@ -1578,7 +2171,10 @@ fn render_synthesis_prompt(
                     .evidence_ref
                     .as_deref()
                     .unwrap_or("(no stdout evidence)"),
-                candidate.plan_path.as_deref().unwrap_or("(no candidate plan file)"),
+                candidate
+                    .plan_path
+                    .as_deref()
+                    .unwrap_or("(no candidate plan file)"),
                 candidate.raw_output.trim()
             )
         })
@@ -1677,6 +2273,7 @@ fn build_cli_profile(
     agent: &AgentConfig,
     project_path: &Path,
     prompt_path: &Path,
+    session_title: Option<&str>,
 ) -> Result<CliProfile, String> {
     let adapter_type = effective_adapter_type(agent);
     let command = agent.command.trim().to_string();
@@ -1689,14 +2286,24 @@ fn build_cli_profile(
     } else {
         agent.args.clone()
     };
+    if adapter_type == ADAPTER_CLAUDE_CODE && !args.iter().any(|arg| arg == "--name" || arg == "-n")
+    {
+        if let Some(title) = session_title {
+            args.push("--name".to_string());
+            args.push(loom_session_name(title));
+        }
+    }
     let had_prompt_file = args.iter().any(|arg| arg.contains("{promptFile}"));
     args = replace_arg_placeholders(args, project_path, prompt_path);
     let stdin_prompt = !had_prompt_file;
+    let output_mode = cli_output_mode(&adapter_type, &args);
 
     Ok(CliProfile {
+        adapter_type,
         command,
         args,
         stdin_prompt,
+        output_mode,
     })
 }
 
@@ -1704,6 +2311,7 @@ fn default_profile_args(adapter_type: &str, project_path: &Path) -> Vec<String> 
     match adapter_type {
         ADAPTER_CODEX => vec![
             "exec".to_string(),
+            "--json".to_string(),
             "--cd".to_string(),
             project_path.display().to_string(),
             "--sandbox".to_string(),
@@ -1717,11 +2325,36 @@ fn default_profile_args(adapter_type: &str, project_path: &Path) -> Vec<String> 
         // stdout would be an almost-empty plan document.
         ADAPTER_CLAUDE_CODE => vec![
             "-p".to_string(),
+            "--verbose".to_string(),
             "--output-format".to_string(),
-            "text".to_string(),
+            "stream-json".to_string(),
+            "--include-partial-messages".to_string(),
         ],
         _ => Vec::new(),
     }
+}
+
+fn cli_output_mode(adapter_type: &str, args: &[String]) -> CliOutputMode {
+    match adapter_type {
+        ADAPTER_CLAUDE_CODE
+            if args
+                .windows(2)
+                .any(|pair| pair[0] == "--output-format" && pair[1] == "stream-json") =>
+        {
+            CliOutputMode::ClaudeStreamJson
+        }
+        ADAPTER_CODEX if args.iter().any(|arg| arg == "--json") => CliOutputMode::CodexJson,
+        _ => CliOutputMode::Plain,
+    }
+}
+
+fn loom_session_name(title: &str) -> String {
+    let mut name = format!("Loom · {}", title.trim());
+    if name.chars().count() > 40 {
+        name = name.chars().take(39).collect::<String>();
+        name.push('…');
+    }
+    name
 }
 
 fn replace_arg_placeholders(
@@ -2705,6 +3338,11 @@ mod tests {
             timed_out: false,
             attempt: 1,
             failure_kind: None,
+            failure_detail: None,
+            error_lines: Vec::new(),
+            stderr_ref: None,
+            session_id: None,
+            resume_command: None,
             started_at_ms: 1,
             ended_at_ms: Some(2),
         }
@@ -2725,6 +3363,9 @@ mod tests {
             accepted: false,
             raw_output: finding.to_string(),
             evidence_ref: None,
+            stderr_ref: None,
+            session_id: None,
+            resume_command: None,
             started_at_ms: 1,
             ended_at_ms: Some(2),
         }
@@ -2742,6 +3383,11 @@ mod tests {
             timed_out: false,
             attempt: 1,
             failure_kind: None,
+            failure_detail: None,
+            error_lines: extract_error_lines(stderr),
+            stderr_ref: None,
+            session_id: None,
+            resume_command: None,
             started_at_ms: 1,
             ended_at_ms: 2,
         }
@@ -2752,16 +3398,22 @@ mod tests {
 
     impl PlanningEventEmitter for NoopEmitter {
         fn emit_planning_agent_status(&self, _event: PlanningAgentStatusEvent) {}
+        fn emit_planning_agent_log(&self, _event: PlanningAgentLogEvent) {}
     }
 
     #[derive(Clone, Default)]
     struct RecordingEmitter {
         events: std::sync::Arc<std::sync::Mutex<Vec<PlanningAgentStatusEvent>>>,
+        logs: std::sync::Arc<std::sync::Mutex<Vec<PlanningAgentLogEvent>>>,
     }
 
     impl PlanningEventEmitter for RecordingEmitter {
         fn emit_planning_agent_status(&self, event: PlanningAgentStatusEvent) {
             self.events.lock().expect("event lock").push(event);
+        }
+
+        fn emit_planning_agent_log(&self, event: PlanningAgentLogEvent) {
+            self.logs.lock().expect("log lock").push(event);
         }
     }
 
@@ -2776,7 +3428,9 @@ mod tests {
         assert!(prompt.content.contains("## Current State"));
         assert!(prompt.content.contains("## File Impact"));
         assert!(prompt.content.contains("## Implementation Todo"));
-        assert!(prompt.content.contains("Cite concrete repository file paths"));
+        assert!(prompt
+            .content
+            .contains("Cite concrete repository file paths"));
     }
 
     #[test]
@@ -2800,8 +3454,12 @@ mod tests {
         assert!(prompt.content.contains("Wire synthesis"));
         assert!(prompt.content.contains("## Cross-Review Findings"));
         assert!(prompt.content.contains("codex → claude"));
-        assert!(prompt.content.contains("Migration order has a hidden dependency"));
-        assert!(prompt.content.contains("Return only the final Markdown plan"));
+        assert!(prompt
+            .content
+            .contains("Migration order has a hidden dependency"));
+        assert!(prompt
+            .content
+            .contains("Return only the final Markdown plan"));
     }
 
     #[test]
@@ -2931,9 +3589,18 @@ mod tests {
             "When the user presses Cmd+K in the planning room, focus the message textarea. Planning only.",
         );
 
-        let result = run_planning_agent(&agent, &root, "task-real", "planning-real", &prompt, 1)
-            .await
-            .expect("planning agent should run");
+        let result = run_planning_agent(
+            &agent,
+            &root,
+            "Add a Cmd+K shortcut to focus the planning composer",
+            "task-real",
+            "planning-real",
+            &prompt,
+            1,
+            NoopEmitter,
+        )
+        .await
+        .expect("planning agent should run");
 
         assert_eq!(result.status, "succeeded", "stderr: {}", result.stderr);
         assert!(
@@ -3014,7 +3681,8 @@ mod tests {
         let args = default_profile_args(ADAPTER_CLAUDE_CODE, Path::new("/tmp/project"));
 
         assert!(args.contains(&"-p".to_string()));
-        assert!(args.contains(&"text".to_string()));
+        assert!(args.contains(&"stream-json".to_string()));
+        assert!(args.contains(&"--include-partial-messages".to_string()));
         assert!(!args.iter().any(|arg| arg == "plan"));
         assert!(!args.iter().any(|arg| arg == "--permission-mode"));
     }
@@ -3028,11 +3696,14 @@ mod tests {
             &test_agent("codex", ADAPTER_CODEX, Vec::new()),
             project_path,
             prompt_path,
+            Some("Implement live planning output"),
         )
         .expect("codex profile should build");
         assert_eq!(codex.command, "codex");
         assert!(codex.args.contains(&"exec".to_string()));
+        assert!(codex.args.contains(&"--json".to_string()));
         assert!(codex.args.contains(&"read-only".to_string()));
+        assert_eq!(codex.output_mode, CliOutputMode::CodexJson);
         assert!(!codex
             .args
             .iter()
@@ -3043,10 +3714,16 @@ mod tests {
             &test_agent("claude", ADAPTER_CLAUDE_CODE, Vec::new()),
             project_path,
             prompt_path,
+            Some("Implement live planning output"),
         )
         .expect("claude profile should build");
         assert_eq!(claude.command, "claude");
         assert!(claude.args.contains(&"-p".to_string()));
+        assert!(claude.args.contains(&"--verbose".to_string()));
+        assert!(claude.args.contains(&"stream-json".to_string()));
+        assert!(claude.args.contains(&"--name".to_string()));
+        assert!(claude.args.iter().any(|arg| arg.starts_with("Loom · ")));
+        assert_eq!(claude.output_mode, CliOutputMode::ClaudeStreamJson);
         assert!(!claude.args.iter().any(|arg| arg.contains("claude-code")));
     }
 
@@ -3425,7 +4102,7 @@ mod tests {
             ],
         );
 
-        let profile = build_cli_profile(&agent, project_path, prompt_path)
+        let profile = build_cli_profile(&agent, project_path, prompt_path, None)
             .expect("custom cli profile should build");
 
         assert!(profile.args.contains(&"/tmp/project".to_string()));
@@ -3438,18 +4115,106 @@ mod tests {
     #[tokio::test]
     async fn runs_cli_profile_with_stdin_and_captures_stdout() {
         let profile = CliProfile {
+            adapter_type: ADAPTER_CLI.to_string(),
             command: "sh".to_string(),
             args: vec!["-c".to_string(), "cat".to_string()],
             stdin_prompt: true,
+            output_mode: CliOutputMode::Plain,
         };
 
-        let result = run_cli_profile(&profile, Path::new("."), "hello from prompt")
-            .await
-            .expect("shell profile should run");
+        let result = run_cli_profile(
+            &profile,
+            Path::new("."),
+            "hello from prompt",
+            NoopEmitter,
+            None,
+        )
+        .await
+        .expect("shell profile should run");
 
         assert_eq!(result.status, "succeeded");
         assert_eq!(result.exit_code, Some(0));
         assert!(result.stdout.contains("hello from prompt"));
+    }
+
+    #[test]
+    fn parses_claude_stream_json_result_and_session() {
+        let stream = r##"{"type":"system","subtype":"init","session_id":"claude-session-1"}"##
+            .to_string()
+            + "\n"
+            + r##"{"type":"assistant","message":{"content":[{"type":"text","text":"Drafting..."}]}}"##
+            + "\n"
+            + r##"{"type":"result","subtype":"success","result":"# Final Plan\n\nShip live output.","session_id":"claude-session-1"}"##;
+
+        let parsed = parse_claude_stream(&stream);
+
+        assert_eq!(parsed.session_id.as_deref(), Some("claude-session-1"));
+        assert_eq!(
+            parsed.stdout.as_deref(),
+            Some("# Final Plan\n\nShip live output.")
+        );
+    }
+
+    #[test]
+    fn parses_codex_json_result_and_session() {
+        let stream = r##"{"type":"thread.started","thread_id":"codex-thread-1"}"##.to_string()
+            + "\n"
+            + r##"{"type":"agent_message","message":"# Codex Plan\n\nUse JSONL."}"##;
+
+        let parsed = parse_codex_stream(&stream);
+
+        assert_eq!(parsed.session_id.as_deref(), Some("codex-thread-1"));
+        assert_eq!(parsed.stdout.as_deref(), Some("# Codex Plan\n\nUse JSONL."));
+    }
+
+    #[test]
+    fn parses_codex_item_completed_agent_message() {
+        let stream = r##"{"type":"thread.started","thread_id":"019eb60b-a94f"}"##.to_string()
+            + "\n"
+            + r##"{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"LOOM_SMOKE_OK"}}"##;
+
+        let parsed = parse_codex_stream(&stream);
+
+        assert_eq!(parsed.session_id.as_deref(), Some("019eb60b-a94f"));
+        assert_eq!(parsed.stdout.as_deref(), Some("LOOM_SMOKE_OK"));
+    }
+
+    #[tokio::test]
+    async fn cli_profile_emits_batched_planning_logs() {
+        let profile = CliProfile {
+            adapter_type: ADAPTER_CLI.to_string(),
+            command: "sh".to_string(),
+            args: vec![
+                "-c".to_string(),
+                "printf 'line one\\nline two\\n'; printf 'fatal: nope\\n' >&2".to_string(),
+            ],
+            stdin_prompt: false,
+            output_mode: CliOutputMode::Plain,
+        };
+        let emitter = RecordingEmitter::default();
+        let context = PlanningLogContext {
+            task_id: "task-1".to_string(),
+            planning_run_id: "planning-1".to_string(),
+            agent_id: "agent-codex".to_string(),
+            agent_name: "Codex".to_string(),
+            phase: "planning".to_string(),
+            attempt: 2,
+        };
+
+        let result = run_cli_profile(&profile, Path::new("."), "", emitter.clone(), Some(context))
+            .await
+            .expect("shell profile should run");
+
+        assert_eq!(result.status, "succeeded");
+        let logs = emitter.logs.lock().expect("log lock");
+        let lines = logs
+            .iter()
+            .flat_map(|event| event.lines.iter().map(String::as_str))
+            .collect::<Vec<_>>();
+        assert!(lines.contains(&"line one"));
+        assert!(lines.contains(&"line two"));
+        assert!(lines.contains(&"fatal: nope"));
+        assert!(logs.iter().any(|event| event.attempt == 2));
     }
 
     #[test]
@@ -3468,15 +4233,17 @@ mod tests {
     #[tokio::test]
     async fn cli_profile_redacts_stdout_and_stderr_before_storage() {
         let profile = CliProfile {
+            adapter_type: ADAPTER_CLI.to_string(),
             command: "sh".to_string(),
             args: vec![
                 "-c".to_string(),
                 "printf 'token=secret-stdout\\n'; printf 'password=hunter2\\n' >&2".to_string(),
             ],
             stdin_prompt: false,
+            output_mode: CliOutputMode::Plain,
         };
 
-        let result = run_cli_profile(&profile, Path::new("."), "")
+        let result = run_cli_profile(&profile, Path::new("."), "", NoopEmitter, None)
             .await
             .expect("shell profile should run");
 
@@ -3489,15 +4256,17 @@ mod tests {
     #[tokio::test]
     async fn failed_cli_profile_preserves_stderr_tail() {
         let profile = CliProfile {
+            adapter_type: ADAPTER_CLI.to_string(),
             command: "sh".to_string(),
             args: vec![
                 "-c".to_string(),
                 "printf 'fatal: nope\\n' >&2; exit 7".to_string(),
             ],
             stdin_prompt: false,
+            output_mode: CliOutputMode::Plain,
         };
 
-        let result = run_cli_profile(&profile, Path::new("."), "")
+        let result = run_cli_profile(&profile, Path::new("."), "", NoopEmitter, None)
             .await
             .expect("failing shell profile should still return result");
 
@@ -3509,15 +4278,17 @@ mod tests {
     #[tokio::test]
     async fn stderr_only_error_is_failed_even_with_zero_exit() {
         let profile = CliProfile {
+            adapter_type: ADAPTER_CLI.to_string(),
             command: "sh".to_string(),
             args: vec![
                 "-c".to_string(),
                 "printf 'Error: paid credits required\\n' >&2".to_string(),
             ],
             stdin_prompt: false,
+            output_mode: CliOutputMode::Plain,
         };
 
-        let result = run_cli_profile(&profile, Path::new("."), "")
+        let result = run_cli_profile(&profile, Path::new("."), "", NoopEmitter, None)
             .await
             .expect("stderr-only error profile should return result");
 
@@ -3540,7 +4311,11 @@ mod tests {
             "",
             "Error: Execute mode requires paid credits and cannot run in non-interactive contexts.",
         );
-        let missing_cli = test_result("failed", "", "failed to start codex: No such file or directory (os error 2)");
+        let missing_cli = test_result(
+            "failed",
+            "",
+            "failed to start codex: No such file or directory (os error 2)",
+        );
 
         assert_eq!(
             classify_failure(&credits),
@@ -3570,6 +4345,21 @@ mod tests {
         assert_eq!(
             classify_failure(&crashed),
             Some(FAILURE_NONZERO_EXIT.to_string())
+        );
+    }
+
+    #[test]
+    fn error_lines_ignore_hook_noise_and_keep_key_failures() {
+        let stderr =
+            "hook: Stop\nsome progress\nError: paid credits required\nfatal: nope\npanic in worker";
+
+        assert_eq!(
+            extract_error_lines(stderr),
+            vec![
+                "Error: paid credits required".to_string(),
+                "fatal: nope".to_string(),
+                "panic in worker".to_string(),
+            ]
         );
     }
 
@@ -3628,6 +4418,7 @@ mod tests {
             emitter.clone(),
             &ids,
             &root,
+            "Task",
             "task-test",
             "planning-run-test",
             &agents,
@@ -3646,9 +4437,7 @@ mod tests {
             .any(|review| review.reviewer_agent_name == "beta"
                 && review.target_agent_name == "alpha"));
         let events = emitter.events.lock().expect("events");
-        assert!(events
-            .iter()
-            .all(|event| event.phase == "review"));
+        assert!(events.iter().all(|event| event.phase == "review"));
         assert_eq!(
             events
                 .iter()
@@ -3781,6 +4570,7 @@ mod tests {
             root.clone(),
             "task-test".to_string(),
             "planning-run-test".to_string(),
+            "Task".to_string(),
             prompt,
             "planning",
             1,
@@ -3826,6 +4616,7 @@ mod tests {
             root.clone(),
             "task-test".to_string(),
             "planning-run-test".to_string(),
+            "Task".to_string(),
             prompt,
             "planning",
             1,
@@ -3835,10 +4626,7 @@ mod tests {
 
         assert_eq!(result.status, "failed");
         assert_eq!(result.attempt, 1);
-        assert_eq!(
-            result.failure_kind,
-            Some(FAILURE_NOT_RETRYABLE.to_string())
-        );
+        assert_eq!(result.failure_kind, Some(FAILURE_NOT_RETRYABLE.to_string()));
         let events = emitter.events.lock().expect("events");
         assert!(events.iter().all(|event| event.status != "retrying"));
 

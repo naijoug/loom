@@ -23,6 +23,21 @@ function logEvent(runId, line, stream = "stdout") {
   };
 }
 
+function planningLogEvent(line, overrides = {}) {
+  return {
+    taskId: "task-1",
+    planningRunId: "planning-1",
+    agentId: "agent-codex",
+    agentName: "Codex",
+    phase: "planning",
+    attempt: 1,
+    stream: "stdout",
+    lines: [line],
+    timestampMs: Date.now(),
+    ...overrides,
+  };
+}
+
 function taskFixture(overrides = {}) {
   return {
     id: "task-1",
@@ -267,4 +282,50 @@ test("planning progress tracks retry attempts and review pairs separately", () =
     state.planningProgress["planning-1:review:agent-codex->agent-claude"].phase,
     "review",
   );
+});
+
+test("planning logs are bucketed by run phase agent and capped", () => {
+  let state = initialAppState;
+
+  for (let index = 0; index < 305; index += 1) {
+    state = appReducer(state, {
+      type: "planning/logReceived",
+      event: planningLogEvent(`line-${index}`),
+    });
+  }
+  state = appReducer(state, {
+    type: "planning/logReceived",
+    event: planningLogEvent("review-line", {
+      phase: "review",
+      agentId: "agent-codex->agent-claude",
+      agentName: "Codex → Claude",
+    }),
+  });
+
+  assert.equal(state.planningLogs["planning-1:planning:agent-codex"].length, 300);
+  assert.equal(state.planningLogs["planning-1:planning:agent-codex"][0].lines[0], "line-5");
+  assert.equal(
+    state.planningLogs["planning-1:review:agent-codex->agent-claude"][0].lines[0],
+    "review-line",
+  );
+});
+
+test("planning progress queue clears prior planning logs for the same task", () => {
+  let state = appReducer(initialAppState, {
+    type: "planning/logReceived",
+    event: planningLogEvent("old-line"),
+  });
+  state = appReducer(state, {
+    type: "planning/logReceived",
+    event: planningLogEvent("other-task-line", { taskId: "task-2", planningRunId: "planning-2" }),
+  });
+
+  state = appReducer(state, {
+    type: "planning/progressQueued",
+    taskId: "task-1",
+    agents: [{ id: "agent-codex", name: "Codex" }],
+  });
+
+  assert.equal(state.planningLogs["planning-1:planning:agent-codex"], undefined);
+  assert.equal(Object.values(state.planningLogs).flat()[0].taskId, "task-2");
 });

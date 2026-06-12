@@ -251,6 +251,20 @@ export function useTaskBridge() {
     }
   }, [dispatch]);
 
+  const openPlanningEvidence = useCallback(async (projectPath: string, evidencePath: string) => {
+    if (!hasTauriRuntime()) {
+      return false;
+    }
+
+    try {
+      await invoke("open_planning_evidence", { projectPath, evidencePath });
+      return true;
+    } catch (error) {
+      dispatch({ type: "tasks/loadFailed", error: toErrorMessage(error) });
+      return false;
+    }
+  }, [dispatch]);
+
   return {
     loadTasks,
     createTask,
@@ -266,5 +280,6 @@ export function useTaskBridge() {
     readPlanHtml,
     openPlanHtml,
     openPlanViewer,
+    openPlanningEvidence,
   };
 }

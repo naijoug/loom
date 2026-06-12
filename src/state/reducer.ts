@@ -3,6 +3,7 @@ import type {
   CommandFinishedEvent,
   CommandLogEvent,
   CommandRun,
+  PlanningAgentLogEvent,
   PlanningAgentStatusEvent,
   ProjectSummary,
   Task,
@@ -37,6 +38,7 @@ export interface AppState {
   tasks: Task[];
   commandRuns: CommandRun[];
   commandLogs: Record<string, CommandLogEvent[]>;
+  planningLogs: Record<string, PlanningAgentLogEvent[]>;
   planningProgress: Record<string, PlanningAgentStatusEvent>;
 }
 
@@ -75,6 +77,7 @@ export type AppAction =
       agents: Array<{ id: string; name: string }>;
     }
   | { type: "planning/progressUpdated"; event: PlanningAgentStatusEvent }
+  | { type: "planning/logReceived"; event: PlanningAgentLogEvent }
   | { type: "planning/progressCleared"; taskId: string };
 
 export const initialAppState: AppState = {
@@ -100,10 +103,15 @@ export const initialAppState: AppState = {
   tasks: [],
   commandRuns: [],
   commandLogs: {},
+  planningLogs: {},
   planningProgress: {},
 };
 
 function planningProgressKey(event: PlanningAgentStatusEvent) {
+  return `${event.planningRunId}:${event.phase}:${event.agentId}`;
+}
+
+export function planningLogKey(event: Pick<PlanningAgentLogEvent, "planningRunId" | "phase" | "agentId">) {
   return `${event.planningRunId}:${event.phase}:${event.agentId}`;
 }
 
@@ -201,6 +209,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         tasks: [],
         commandRuns: [],
         commandLogs: {},
+        planningLogs: {},
         planningProgress: {},
       };
     }
@@ -225,6 +234,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         tasks: [],
         commandRuns: [],
         commandLogs: {},
+        planningLogs: {},
         planningProgress: {},
       };
     }
@@ -462,6 +472,11 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           ([, event]) => event.taskId !== action.taskId,
         ),
       );
+      const existingLogs = Object.fromEntries(
+        Object.entries(state.planningLogs).filter(
+          ([, logs]) => logs[0]?.taskId !== action.taskId,
+        ),
+      );
       const queued = Object.fromEntries(
         action.agents.map((agent) => [
           `pending:planning:${agent.id}`,
@@ -480,6 +495,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
       return {
         ...state,
+        planningLogs: existingLogs,
         planningProgress: {
           ...existing,
           ...queued,
@@ -502,9 +518,27 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       };
     }
 
+    case "planning/logReceived": {
+      const key = planningLogKey(action.event);
+      const runLogs = state.planningLogs[key] ?? [];
+
+      return {
+        ...state,
+        planningLogs: {
+          ...state.planningLogs,
+          [key]: [...runLogs, action.event].slice(-300),
+        },
+      };
+    }
+
     case "planning/progressCleared":
       return {
         ...state,
+        planningLogs: Object.fromEntries(
+          Object.entries(state.planningLogs).filter(
+            ([, logs]) => logs[0]?.taskId !== action.taskId,
+          ),
+        ),
         planningProgress: Object.fromEntries(
           Object.entries(state.planningProgress).filter(
             ([, event]) => event.taskId !== action.taskId,
