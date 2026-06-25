@@ -8,6 +8,7 @@ import type {
   ProjectSummary,
   Task,
 } from "../domain";
+import type { WorkflowStageId } from "./selectors";
 
 export type AppView = "workspace" | "board" | "planning" | "task-detail" | "settings";
 
@@ -16,6 +17,10 @@ export interface AppSlice {
   activeProjectId: string | null;
   selectedTaskId: string | null;
   selectedTodoId: string | null;
+  // Which workflow stage the user is reviewing. null = follow the task's real
+  // stage (default). Purely a UI/view concern — never persisted, never changes
+  // task.status. See selectors.WorkflowStageId.
+  viewedStage: WorkflowStageId | null;
   activeCommandRunId: string | null;
   isLoadingProjects: boolean;
   isLoadingAgents: boolean;
@@ -36,6 +41,7 @@ export interface AppState {
   projects: ProjectsSlice;
   agents: AgentConfig[];
   tasks: Task[];
+  taskCache: Record<string, Task[]>;
   commandRuns: CommandRun[];
   commandLogs: Record<string, CommandLogEvent[]>;
   planningLogs: Record<string, PlanningAgentLogEvent[]>;
@@ -48,6 +54,7 @@ function normalizeAppView(view: AppView): AppView {
 
 export type AppAction =
   | { type: "app/viewSelected"; view: AppSlice["currentView"] }
+  | { type: "app/stageViewed"; stage: WorkflowStageId | null }
   | { type: "projects/loadStarted" }
   | { type: "projects/loadFailed"; error: string }
   | { type: "projects/recentLoaded"; projects: ProjectSummary[] }
@@ -59,10 +66,10 @@ export type AppAction =
   | { type: "agents/created"; agent: AgentConfig }
   | { type: "tasks/loadStarted" }
   | { type: "tasks/loadFailed"; error: string }
-  | { type: "tasks/loaded"; tasks: Task[] }
+  | { type: "tasks/loaded"; projectPath: string; tasks: Task[] }
   | { type: "tasks/upserted"; task: Task }
   | { type: "tasks/selected"; taskId: string }
-  | { type: "tasks/removed"; taskId: string }
+  | { type: "tasks/removed"; taskId: string; projectPath?: string }
   | { type: "tasks/new" }
   | { type: "tasks/todoSelected"; taskId: string; todoId: string }
   | { type: "tasks/todoCompleted"; taskId: string; todoId: string }
@@ -86,6 +93,7 @@ export const initialAppState: AppState = {
     activeProjectId: null,
     selectedTaskId: null,
     selectedTodoId: null,
+    viewedStage: null,
     activeCommandRunId: null,
     isLoadingProjects: false,
     isLoadingAgents: false,
@@ -101,6 +109,7 @@ export const initialAppState: AppState = {
   },
   agents: [],
   tasks: [],
+  taskCache: {},
   commandRuns: [],
   commandLogs: {},
   planningLogs: {},
@@ -140,6 +149,47 @@ function selectedTodoIdForTask(task: Task | null, currentTodoId: string | null) 
     : task.planTodos[0]?.id ?? null;
 }
 
+function taskProjectPath(state: AppState, taskId: string) {
+  const currentTask = state.tasks.find((task) => task.id === taskId);
+  if (currentTask) {
+    return currentTask.projectPath;
+  }
+
+  for (const tasks of Object.values(state.taskCache)) {
+    const cachedTask = tasks.find((task) => task.id === taskId);
+    if (cachedTask) {
+      return cachedTask.projectPath;
+    }
+  }
+
+  return null;
+}
+
+function upsertTask(tasks: Task[], task: Task) {
+  return [...tasks.filter((candidate) => candidate.id !== task.id), task].sort(
+    (left, right) => left.createdAtMs - right.createdAtMs,
+  );
+}
+
+function replaceTask(tasks: Task[], taskId: string, update: (task: Task) => Task) {
+  return tasks.map((task) => (task.id === taskId ? update(task) : task));
+}
+
+function removeTask(tasks: Task[], taskId: string) {
+  return tasks.filter((task) => task.id !== taskId);
+}
+
+function cacheProjectTasks(
+  cache: Record<string, Task[]>,
+  projectPath: string,
+  tasks: Task[],
+) {
+  return {
+    ...cache,
+    [projectPath]: tasks,
+  };
+}
+
 export function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
     case "app/viewSelected":
@@ -148,6 +198,15 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         app: {
           ...state.app,
           currentView: normalizeAppView(action.view),
+        },
+      };
+
+    case "app/stageViewed":
+      return {
+        ...state,
+        app: {
+          ...state.app,
+          viewedStage: action.stage,
         },
       };
 
@@ -199,6 +258,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           currentView: "board",
           selectedTaskId: null,
           selectedTodoId: null,
+          viewedStage: null,
           isLoadingProjects: false,
           projectError: null,
         },
@@ -207,6 +267,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           recent,
         },
         tasks: [],
+        taskCache: cacheProjectTasks(state.taskCache, action.project.path, []),
         commandRuns: [],
         commandLogs: {},
         planningLogs: {},
@@ -216,6 +277,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case "projects/selected": {
       const project = state.projects.recent.find((candidate) => candidate.id === action.projectId);
+      const tasks = project ? state.taskCache[project.path] ?? [] : [];
 
       return {
         ...state,
@@ -225,14 +287,15 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           currentView: "board",
           selectedTaskId: null,
           selectedTodoId: null,
+          viewedStage: null,
           projectError: null,
         },
         projects: {
           ...state.projects,
           current: project ?? state.projects.current,
         },
-        tasks: [],
-        commandRuns: [],
+        tasks,
+        commandRuns: tasks.flatMap((task) => task.commandRuns),
         commandLogs: {},
         planningLogs: {},
         planningProgress: {},
@@ -278,6 +341,22 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       };
 
     case "tasks/loaded": {
+      const taskCache = cacheProjectTasks(state.taskCache, action.projectPath, action.tasks);
+      const loadingCurrentProject =
+        !state.projects.current || state.projects.current.path === action.projectPath;
+
+      if (!loadingCurrentProject) {
+        return {
+          ...state,
+          app: {
+            ...state.app,
+            isLoadingTasks: false,
+            taskError: null,
+          },
+          taskCache,
+        };
+      }
+
       const selectedTask = selectedTaskAfterLoad(action.tasks, state.app.selectedTaskId);
 
       return {
@@ -288,17 +367,39 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           taskError: null,
           selectedTaskId: selectedTask?.id ?? null,
           selectedTodoId: selectedTodoIdForTask(selectedTask, state.app.selectedTodoId),
+          // Keep the review state only while the selected task is unchanged; a
+          // reload that lands on a different task drops any stale review.
+          viewedStage:
+            selectedTask?.id === state.app.selectedTaskId ? state.app.viewedStage : null,
         },
         tasks: action.tasks,
+        taskCache,
         commandRuns: action.tasks.flatMap((task) => task.commandRuns),
       };
     }
 
     case "tasks/upserted": {
-      const tasks = [
-        ...state.tasks.filter((task) => task.id !== action.task.id),
-        action.task,
-      ].sort((left, right) => left.createdAtMs - right.createdAtMs);
+      const isCurrentProject = state.projects.current?.path === action.task.projectPath;
+      const sourceTasks = isCurrentProject
+        ? state.tasks
+        : state.taskCache[action.task.projectPath] ?? [];
+      const projectTasks = upsertTask(sourceTasks, action.task);
+      // A live update to the task already under review must not interrupt the
+      // review; only an upsert that switches the selected task resets it.
+      const sameSelectedTask = state.app.selectedTaskId === action.task.id;
+
+      if (!isCurrentProject && state.projects.current) {
+        return {
+          ...state,
+          app: {
+            ...state.app,
+            isLoadingTasks: false,
+            taskError: null,
+          },
+          taskCache: cacheProjectTasks(state.taskCache, action.task.projectPath, projectTasks),
+          planningProgress: removePendingPlanningProgress(state.planningProgress, action.task.id),
+        };
+      }
 
       return {
         ...state,
@@ -308,9 +409,11 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           taskError: null,
           selectedTaskId: action.task.id,
           selectedTodoId: selectedTodoIdForTask(action.task, state.app.selectedTodoId),
+          viewedStage: sameSelectedTask ? state.app.viewedStage : null,
         },
-        tasks,
-        commandRuns: tasks.flatMap((task) => task.commandRuns),
+        tasks: projectTasks,
+        taskCache: cacheProjectTasks(state.taskCache, action.task.projectPath, projectTasks),
+        commandRuns: projectTasks.flatMap((task) => task.commandRuns),
         planningProgress: removePendingPlanningProgress(state.planningProgress, action.task.id),
       };
     }
@@ -325,6 +428,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           currentView: "task-detail",
           selectedTaskId: action.taskId,
           selectedTodoId: selectedTodoIdForTask(task, state.app.selectedTodoId),
+          viewedStage: null,
         },
       };
     }
@@ -337,11 +441,18 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           currentView: "planning",
           selectedTaskId: null,
           selectedTodoId: null,
+          viewedStage: null,
         },
       };
 
     case "tasks/removed": {
-      const tasks = state.tasks.filter((task) => task.id !== action.taskId);
+      const projectPath = action.projectPath ?? taskProjectPath(state, action.taskId);
+      const currentProjectPath = state.projects.current?.path ?? null;
+      const removesCurrentProject = !currentProjectPath || projectPath === currentProjectPath;
+      const sourceTasks =
+        projectPath && !removesCurrentProject ? state.taskCache[projectPath] ?? [] : state.tasks;
+      const projectTasks = removeTask(sourceTasks, action.taskId);
+      const tasks = removesCurrentProject ? projectTasks : state.tasks;
       const wasSelected = state.app.selectedTaskId === action.taskId;
 
       return {
@@ -350,61 +461,65 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           ...state.app,
           selectedTaskId: wasSelected ? null : state.app.selectedTaskId,
           selectedTodoId: wasSelected ? null : state.app.selectedTodoId,
+          viewedStage: wasSelected ? null : state.app.viewedStage,
           currentView: wasSelected ? "board" : state.app.currentView,
         },
         tasks,
+        taskCache: projectPath
+          ? cacheProjectTasks(state.taskCache, projectPath, projectTasks)
+          : state.taskCache,
         commandRuns: state.commandRuns.filter((run) => run.taskId !== action.taskId),
       };
     }
 
-    case "tasks/todoSelected":
+    case "tasks/todoSelected": {
+      const tasks = replaceTask(state.tasks, action.taskId, (task) => ({
+        ...task,
+        planTodos: task.planTodos.map((todo) =>
+          todo.id === action.todoId
+            ? { ...todo, status: "implementing" }
+            : todo.status === "implementing"
+              ? { ...todo, status: "pending" }
+              : todo,
+        ),
+      }));
+      const projectPath = state.projects.current?.path;
+
       return {
         ...state,
         app: {
           ...state.app,
           selectedTodoId: action.todoId,
         },
-        tasks: state.tasks.map((task) => {
-          if (task.id !== action.taskId) {
-            return task;
-          }
-
-          return {
-            ...task,
-            planTodos: task.planTodos.map((todo) =>
-              todo.id === action.todoId
-                ? { ...todo, status: "implementing" }
-                : todo.status === "implementing"
-                  ? { ...todo, status: "pending" }
-                  : todo,
-            ),
-          };
-        }),
+        tasks,
+        taskCache: projectPath ? cacheProjectTasks(state.taskCache, projectPath, tasks) : state.taskCache,
       };
+    }
 
-    case "tasks/todoCompleted":
+    case "tasks/todoCompleted": {
+      const tasks = replaceTask(state.tasks, action.taskId, (task) => {
+        const planTodos = task.planTodos.map((todo) =>
+          todo.id === action.todoId ? { ...todo, status: "done" as const } : todo,
+        );
+
+        return {
+          ...task,
+          status: planTodos.every((todo) => todo.status === "done") ? "reviewing" : task.status,
+          planTodos,
+        };
+      });
+      const projectPath = state.projects.current?.path;
+
       return {
         ...state,
         app: {
           ...state.app,
           selectedTodoId: action.todoId,
         },
-        tasks: state.tasks.map((task) => {
-          if (task.id !== action.taskId) {
-            return task;
-          }
-
-          const planTodos = task.planTodos.map((todo) =>
-            todo.id === action.todoId ? { ...todo, status: "done" as const } : todo,
-          );
-
-          return {
-            ...task,
-            status: planTodos.every((todo) => todo.status === "done") ? "reviewing" : task.status,
-            planTodos,
-          };
-        }),
+        tasks,
+        taskCache: projectPath ? cacheProjectTasks(state.taskCache, projectPath, tasks) : state.taskCache,
       };
+    }
 
     case "commands/started":
       return {

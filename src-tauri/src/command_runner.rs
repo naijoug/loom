@@ -239,9 +239,9 @@ async fn stop_command_run_inner(
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CommandRunStopResult {
-    run_id: String,
-    stopped: bool,
-    exit_code: Option<i32>,
+    pub run_id: String,
+    pub stopped: bool,
+    pub exit_code: Option<i32>,
 }
 
 fn spawn_log_reader<E, Reader>(

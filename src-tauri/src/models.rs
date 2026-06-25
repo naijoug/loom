@@ -96,6 +96,22 @@ pub struct CommandSpec {
     pub task_id: Option<String>,
 }
 
+/// A persisted terminal slot for the Testing cockpit. `kind` is "preview"
+/// (long-running dev server → PTY) or "validation" (one-shot check → piped,
+/// feeds the acceptance gate).
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TerminalSlot {
+    pub id: String,
+    pub name: String,
+    pub command: String,
+    pub kind: String,
+    /// Working directory relative to the project root (for monorepo subdir apps).
+    /// `None`/absent runs at the project root.
+    #[serde(default)]
+    pub cwd: Option<String>,
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CommandRun {

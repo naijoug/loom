@@ -13,8 +13,10 @@
   },
   "include": [
     "src/domain/**/*.ts",
+    "src/components/Planning/roundSummary.ts",
     "src/state/reducer.ts",
     "src/state/selectors.ts",
+    "src/utils/agentRun.ts",
     "src/utils/commandLine.ts"
   ],
   "references": []

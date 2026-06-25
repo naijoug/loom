@@ -11,12 +11,44 @@
 }
 
 .header-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   min-width: 180px;
-  max-width: 320px;
+  max-width: 360px;
   font-family: var(--font-headings);
   font-weight: 600;
   font-size: 16px;
   color: var(--theme-text-primary);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.breadcrumb-project {
+  flex: none;
+  border: none;
+  background: none;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  border-radius: 6px;
+  font: inherit;
+  color: var(--theme-text-secondary);
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+
+.breadcrumb-project:hover {
+  color: var(--theme-text-primary);
+  background: var(--theme-bg-secondary);
+}
+
+.breadcrumb-sep {
+  flex: none;
+  color: var(--theme-text-muted);
+}
+
+.breadcrumb-current {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -57,6 +89,24 @@
   border-radius: 999px;
   background: var(--theme-bg-secondary);
   padding: 5px 9px;
+  font: inherit;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.task-flow-step:not(:disabled):hover {
+  border-color: var(--theme-border-strong);
+}
+
+.task-flow-step:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.task-flow-step.viewing {
+  border-color: var(--theme-accent);
+  background: var(--accent-soft);
 }
 
 .step-separator {

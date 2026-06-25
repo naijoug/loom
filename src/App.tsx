@@ -22,6 +22,22 @@ function AppContent() {
     }
   }, [loadTasks, state.projects.current]);
 
+  // Esc returns from a task's detail view back to the project board.
+  useEffect(() => {
+    if (state.app.currentView !== "task-detail") {
+      return;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        dispatch({ type: "app/viewSelected", view: "board" });
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [state.app.currentView, dispatch]);
+
   if (state.app.currentView === "settings") {
     return (
       <SettingsPage

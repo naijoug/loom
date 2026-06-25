@@ -1,156 +1,21 @@
-import {
-  Activity,
-  ClipboardCheck,
-  MessagesSquare,
-  Radar,
-  ShieldCheck,
-  TerminalSquare,
-} from "lucide-react";
-import { ImplementationPane } from "./ImplementationPane";
-import { ImplementationOutputPane } from "./ImplementationOutputPane";
-import { DebugPane } from "./DebugPane";
+import { History, Radar } from "lucide-react";
 import { PlanningChat } from "../Planning";
 import { DonePane, SessionPane, TestingPane } from "../TaskDetail";
-import type { Task, TaskStatus } from "../../domain";
 import { useAppState } from "../../state/AppStateContext";
+import { stageOf, type WorkflowStageId } from "../../state/selectors";
 import "./Workspace.css";
 
-const STAGE_GROUPS: Array<{
-  id: string;
-  title: string;
-  statuses: TaskStatus[];
-  icon: typeof MessagesSquare;
-}> = [
-  {
-    id: "plan",
-    title: "Discuss + plan",
-    statuses: ["drafting_requirements", "planning", "plan_review"],
-    icon: MessagesSquare,
-  },
-  {
-    id: "build",
-    title: "Implement + review",
-    statuses: ["ready_to_implement", "implementing", "reviewing"],
-    icon: ClipboardCheck,
-  },
-  {
-    id: "debug",
-    title: "Debug + repair",
-    statuses: ["debugging", "fixing"],
-    icon: TerminalSquare,
-  },
-  {
-    id: "verify",
-    title: "Verify + summarize",
-    statuses: ["verifying", "completed", "blocked", "cancelled"],
-    icon: ShieldCheck,
-  },
-];
-
-function formatStatus(status: TaskStatus | null) {
-  if (!status) {
-    return "no task";
-  }
-
-  return status.split("_").join(" ");
-}
-
-function stageState(taskStatus: TaskStatus | null, statuses: TaskStatus[]) {
-  if (!taskStatus) {
-    return "pending";
-  }
-
-  if (statuses.includes(taskStatus)) {
-    return ["blocked", "cancelled"].includes(taskStatus) ? "blocked" : "active";
-  }
-
-  const activeIndex = STAGE_GROUPS.findIndex((group) => group.statuses.includes(taskStatus));
-  const groupIndex = STAGE_GROUPS.findIndex((group) => group.statuses === statuses);
-
-  return groupIndex < activeIndex ? "done" : "pending";
-}
-
-function latestRunSummary(task: Task | null) {
-  const latestRun = task?.commandRuns
-    .slice()
-    .sort((left, right) => right.startedAtMs - left.startedAtMs)[0];
-
-  if (!latestRun) {
-    return "No verification run yet";
-  }
-
-  const exit = typeof latestRun.exitCode === "number" ? ` · exit ${latestRun.exitCode}` : "";
-  return `${latestRun.status}${exit}`;
-}
-
-function CommandOverview({ task }: { task: Task | null }) {
-  const completedTodos = task?.planTodos.filter((todo) => todo.status === "done").length ?? 0;
-  const totalTodos = task?.planTodos.length ?? 0;
-  const failedInvocations =
-    task?.agentInvocations.filter((invocation) => invocation.status === "failed").length ?? 0;
-  const successfulInvocations =
-    task?.agentInvocations.filter((invocation) => invocation.status === "succeeded").length ?? 0;
-
-  return (
-    <div className="command-overview">
-      <div className="command-overview-header">
-        <div>
-          <div className="command-eyebrow">Current operating state</div>
-          <h2>{task?.title ?? "Create a development task"}</h2>
-        </div>
-        <span className={`status-pill status-${task?.status ?? "none"}`}>
-          <Activity size={14} />
-          {formatStatus(task?.status ?? null)}
-        </span>
-      </div>
-
-      <div className="stage-grid">
-        {STAGE_GROUPS.map((group) => {
-          const Icon = group.icon;
-          const state = stageState(task?.status ?? null, group.statuses);
-
-          return (
-            <div className={`stage-card stage-${state}`} key={group.id}>
-              <Icon size={16} />
-              <span>{group.title}</span>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="telemetry-grid">
-        <div>
-          <span>Agent calls</span>
-          <strong>{successfulInvocations}/{task?.agentInvocations.length ?? 0}</strong>
-        </div>
-        <div>
-          <span>Implementation</span>
-          <strong>{completedTodos}/{totalTodos}</strong>
-        </div>
-        <div>
-          <span>Review risk</span>
-          <strong>{failedInvocations > 0 ? `${failedInvocations} failed` : "clear"}</strong>
-        </div>
-        <div>
-          <span>Latest run</span>
-          <strong>{latestRunSummary(task)}</strong>
-        </div>
-      </div>
-    </div>
-  );
-}
+const STAGE_LABELS: Record<WorkflowStageId, string> = {
+  planning: "Planning",
+  implementing: "Implementing",
+  testing: "Testing",
+  done: "Done",
+};
 
 export function WorkspaceSplit() {
-  const { state } = useAppState();
+  const { state, dispatch } = useAppState();
   const task = state.tasks.find((candidate) => candidate.id === state.app.selectedTaskId) ?? null;
   const project = state.projects.current;
-  const inExecution =
-    task?.status === "ready_to_implement" ||
-    task?.status === "implementing" ||
-    task?.status === "reviewing" ||
-    task?.status === "debugging" ||
-    task?.status === "fixing" ||
-    task?.status === "verifying";
 
   if (!project) {
     return (
@@ -164,38 +29,49 @@ export function WorkspaceSplit() {
     );
   }
 
-  if (task?.status === "completed") {
-    return <DonePane project={project} task={task} />;
+  const currentStage = stageOf(task?.status ?? null);
+  const effectiveStage: WorkflowStageId = state.app.viewedStage ?? currentStage;
+  // Read-only review means the user is looking at a stage other than the one
+  // the task is actually in. All side-effecting controls are disabled.
+  const readOnly = task !== null && state.app.viewedStage !== null && effectiveStage !== currentStage;
+
+  let pane: JSX.Element;
+  switch (effectiveStage) {
+    case "done":
+      pane = task ? <DonePane project={project} task={task} readOnly={readOnly} /> : <PlanningChat />;
+      break;
+    case "testing":
+      pane = task ? <TestingPane project={project} task={task} readOnly={readOnly} /> : <PlanningChat />;
+      break;
+    case "implementing":
+      pane = task ? <SessionPane project={project} task={task} readOnly={readOnly} /> : <PlanningChat />;
+      break;
+    case "planning":
+    default:
+      pane = <PlanningChat readOnly={readOnly} />;
+      break;
   }
 
-  if (task && ["debugging", "fixing", "verifying"].includes(task.status)) {
-    return <TestingPane project={project} task={task} />;
-  }
-
-  if (task && ["ready_to_implement", "implementing", "reviewing"].includes(task.status)) {
-    return <SessionPane project={project} task={task} />;
-  }
-
-  if (!inExecution) {
-    return <PlanningChat />;
+  if (!readOnly) {
+    return pane;
   }
 
   return (
-    <div className="command-center">
-      <section className="command-column mission-column">
-        <div className="column-label">Mission setup</div>
-        <ImplementationPane />
-      </section>
-
-      <section className="command-column command-column-main">
-        <CommandOverview task={task} />
-        <ImplementationOutputPane />
-      </section>
-
-      <section className="command-column evidence-column">
-        <div className="column-label">Evidence + repair</div>
-        <DebugPane />
-      </section>
+    <div className="stage-review-wrap">
+      <div className="stage-review-banner">
+        <History size={14} />
+        <span>
+          正在回看 <b>{STAGE_LABELS[effectiveStage]}</b> 阶段（任务当前在 {STAGE_LABELS[currentStage]}）
+        </span>
+        <button
+          type="button"
+          className="stage-review-return"
+          onClick={() => dispatch({ type: "app/stageViewed", stage: null })}
+        >
+          回到当前阶段
+        </button>
+      </div>
+      <div className="stage-review-content">{pane}</div>
     </div>
   );
 }

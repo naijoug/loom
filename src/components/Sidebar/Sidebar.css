@@ -94,15 +94,33 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  width: 100%;
   min-height: 36px;
   padding: 0 8px;
   text-decoration: none;
   border: 1px solid transparent;
   border-radius: 7px;
+  background: transparent;
   color: var(--theme-text-secondary);
   font-family: var(--font-body);
   font-size: 13px;
   transition: all 0.2s ease;
+}
+
+.project-select-area {
+  min-width: 0;
+  flex: 1 1 auto;
+  align-self: stretch;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
 .nav-disclosure {
@@ -550,7 +568,7 @@
   border-top: 1px solid var(--theme-border-subtle);
 }
 
-.task-context-menu {
+.context-menu {
   position: fixed;
   z-index: 1000;
   min-width: 150px;
@@ -561,7 +579,11 @@
   box-shadow: var(--shadow);
 }
 
-.task-context-item {
+.project-context-menu {
+  min-width: 214px;
+}
+
+.context-menu-item {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -576,12 +598,18 @@
   text-align: left;
 }
 
-.task-context-item:hover {
+.context-menu-item:hover {
   background: var(--hover);
 }
 
-.task-context-item.danger {
+.context-menu-item.danger {
   color: var(--red);
+}
+
+.context-menu-divider {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--border);
 }
 
 .confirm-backdrop {
@@ -619,4 +647,13 @@
   display: flex;
   justify-content: flex-end;
   gap: 9px;
+}
+
+.task-nav-item.all-tasks {
+  color: var(--theme-text-muted);
+  font-weight: 500;
+}
+
+.task-nav-item.all-tasks .task-allboard-icon {
+  flex: 0 0 auto;
 }

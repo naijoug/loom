@@ -1,7 +1,25 @@
-import { type CSSProperties, useEffect, useState } from "react";
-import { ChevronRight, Circle, Folder, FolderPlus, Plus, Search, Settings, Trash2 } from "lucide-react";
-import type { TaskStatus } from "../../domain";
+import { revealItemInDir } from "@tauri-apps/plugin-opener";
+import { type CSSProperties, type MouseEvent, useEffect, useState } from "react";
+import {
+  Archive,
+  ChevronRight,
+  Circle,
+  Folder,
+  FolderOpen,
+  FolderPlus,
+  GitBranchPlus,
+  LayoutGrid,
+  Pencil,
+  PinOff,
+  Plus,
+  Search,
+  Settings,
+  Trash2,
+  X,
+} from "lucide-react";
+import type { ProjectSummary, TaskStatus } from "../../domain";
 import { useProjectBridge } from "../../hooks/useProjectBridge";
+import { hasTauriRuntime } from "../../hooks/runtime";
 import { useTaskBridge } from "../../hooks/useTaskBridge";
 import { useAppState } from "../../state/AppStateContext";
 import { Button } from "../common/Button";
@@ -10,9 +28,18 @@ import "./Sidebar.css";
 
 interface TaskMenuState {
   taskId: string;
+  projectPath: string;
   x: number;
   y: number;
 }
+
+interface ProjectMenuState {
+  projectId: string;
+  x: number;
+  y: number;
+}
+
+type ProjectMenuAction = "unpin" | "reveal" | "worktree" | "rename" | "archive" | "remove";
 
 function statusClass(status: TaskStatus) {
   if (status === "completed") {
@@ -30,12 +57,24 @@ function statusClass(status: TaskStatus) {
   return "todo";
 }
 
+function toErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function contextMenuPosition(event: MouseEvent) {
+  return {
+    x: Math.max(8, Math.min(event.clientX, window.innerWidth - 236)),
+    y: Math.max(8, Math.min(event.clientY, window.innerHeight - 228)),
+  };
+}
+
 export function Navigation() {
   const { state, dispatch } = useAppState();
   const { loadRecentProjects } = useProjectBridge();
   const { deleteTask } = useTaskBridge();
   const [addProjectOpen, setAddProjectOpen] = useState(false);
   const [taskMenu, setTaskMenu] = useState<TaskMenuState | null>(null);
+  const [projectMenu, setProjectMenu] = useState<ProjectMenuState | null>(null);
   const [confirmTaskId, setConfirmTaskId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
@@ -68,20 +107,40 @@ export function Navigation() {
   }, [loadRecentProjects]);
 
   useEffect(() => {
-    if (!taskMenu) {
+    if (!taskMenu && !projectMenu) {
       return;
     }
 
-    const close = () => setTaskMenu(null);
+    const close = () => {
+      setTaskMenu(null);
+      setProjectMenu(null);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        close();
+      }
+    };
+
     window.addEventListener("click", close);
+    window.addEventListener("keydown", closeOnEscape);
     window.addEventListener("resize", close);
+    window.addEventListener("scroll", close, true);
     return () => {
       window.removeEventListener("click", close);
+      window.removeEventListener("keydown", closeOnEscape);
       window.removeEventListener("resize", close);
+      window.removeEventListener("scroll", close, true);
     };
-  }, [taskMenu]);
+  }, [projectMenu, taskMenu]);
 
-  const confirmTask = state.tasks.find((task) => task.id === confirmTaskId) ?? null;
+  const confirmTask =
+    state.tasks.find((task) => task.id === confirmTaskId) ??
+    Object.values(state.taskCache)
+      .flat()
+      .find((task) => task.id === confirmTaskId) ??
+    null;
+  const menuProject =
+    state.projects.recent.find((project) => project.id === projectMenu?.projectId) ?? null;
 
   async function handleDeleteConfirmed() {
     if (!confirmTaskId) {
@@ -89,9 +148,27 @@ export function Navigation() {
     }
 
     setDeleting(true);
-    await deleteTask(state.projects.current?.path ?? null, confirmTaskId);
+    await deleteTask(confirmTask?.projectPath ?? state.projects.current?.path ?? null, confirmTaskId);
     setDeleting(false);
     setConfirmTaskId(null);
+  }
+
+  async function handleProjectMenuAction(action: ProjectMenuAction, project: ProjectSummary) {
+    setProjectMenu(null);
+
+    if (action !== "reveal") {
+      return;
+    }
+
+    if (!hasTauriRuntime()) {
+      return;
+    }
+
+    try {
+      await revealItemInDir(project.path);
+    } catch (error) {
+      dispatch({ type: "projects/loadFailed", error: toErrorMessage(error) });
+    }
   }
 
   return (
@@ -115,36 +192,50 @@ export function Navigation() {
         <ul className="nav-list">
           {state.projects.recent.map((project) => {
             const active = project.id === state.app.activeProjectId;
-            const projectTasks = active ? state.tasks : [];
+            const cachedProjectTasks = state.taskCache[project.path];
+            const projectTasks = cachedProjectTasks ?? (active ? state.tasks : []);
             const hasTasks = projectTasks.length > 0;
-            const expanded = active && hasTasks && !collapsedIds.has(project.id);
+            const hasLoadedTasks = cachedProjectTasks !== undefined || active;
+            const expanded = hasTasks && !collapsedIds.has(project.id);
 
             return (
               <li className="project-nav-item" key={`${project.id}:${project.path}`}>
-                <a
-                  href={`#${project.id}`}
+                <div
                   className={`nav-item${active ? " active" : ""}`}
-                  onClick={(event) => {
+                  onContextMenu={(event) => {
                     event.preventDefault();
-                    if (active) {
-                      // Already selected: a second click toggles expand/collapse.
-                      toggleCollapsed(project.id);
-                    } else {
-                      // Selecting a project always opens it expanded.
-                      expandProject(project.id);
-                      dispatch({ type: "projects/selected", projectId: project.id });
-                    }
+                    setTaskMenu(null);
+                    setProjectMenu({
+                      projectId: project.id,
+                      ...contextMenuPosition(event),
+                    });
                   }}
                 >
-                  <ChevronRight
-                    size={14}
-                    className={`nav-disclosure${expanded ? " expanded" : ""}${
-                      active && !hasTasks ? " hidden" : ""
-                    }`}
-                  />
-                  <Folder size={16} className={`nav-icon${active ? " active-icon" : ""}`} />
-                  <span>{project.name}</span>
-                  <span className="project-task-count">{active ? projectTasks.length : ""}</span>
+                  <button
+                    type="button"
+                    className="project-select-area"
+                    aria-expanded={expanded}
+                    onClick={() => {
+                      if (active) {
+                        // Already selected: a second click toggles expand/collapse.
+                        toggleCollapsed(project.id);
+                      } else {
+                        // Selecting a project always opens it expanded.
+                        expandProject(project.id);
+                        dispatch({ type: "projects/selected", projectId: project.id });
+                      }
+                    }}
+                  >
+                    <ChevronRight
+                      size={14}
+                      className={`nav-disclosure${expanded ? " expanded" : ""}${
+                        active && !hasTasks ? " hidden" : ""
+                      }`}
+                    />
+                    <Folder size={16} className={`nav-icon${active ? " active-icon" : ""}`} />
+                    <span>{project.name}</span>
+                    <span className="project-task-count">{hasLoadedTasks ? projectTasks.length : ""}</span>
+                  </button>
                   <button
                     type="button"
                     className="project-inline-add"
@@ -161,10 +252,27 @@ export function Navigation() {
                   >
                     <Plus size={13} />
                   </button>
-                </a>
+                </div>
                 {expanded && (
                   <div className="task-nav-collapse">
                     <ul className="task-nav-list">
+                      <li>
+                        <button
+                          type="button"
+                          className={`task-nav-item all-tasks${
+                            active && state.app.currentView === "board" ? " selected" : ""
+                          }`}
+                          onClick={() => {
+                            if (!active) {
+                              dispatch({ type: "projects/selected", projectId: project.id });
+                            }
+                            dispatch({ type: "app/viewSelected", view: "board" });
+                          }}
+                        >
+                          <LayoutGrid size={12} className="task-allboard-icon" />
+                          <span>All tasks</span>
+                        </button>
+                      </li>
                       {projectTasks.map((task, index) => {
                         const selected = task.id === state.app.selectedTaskId;
 
@@ -173,13 +281,19 @@ export function Navigation() {
                             <button
                               type="button"
                               className={`task-nav-item${selected ? " selected" : ""}`}
-                              onClick={() => dispatch({ type: "tasks/selected", taskId: task.id })}
+                              onClick={() => {
+                                if (!active) {
+                                  dispatch({ type: "projects/selected", projectId: project.id });
+                                }
+                                dispatch({ type: "tasks/selected", taskId: task.id });
+                              }}
                               onContextMenu={(event) => {
                                 event.preventDefault();
+                                setProjectMenu(null);
                                 setTaskMenu({
                                   taskId: task.id,
-                                  x: event.clientX,
-                                  y: event.clientY,
+                                  projectPath: task.projectPath,
+                                  ...contextMenuPosition(event),
                                 });
                               }}
                             >
@@ -214,16 +328,84 @@ export function Navigation() {
 
       {addProjectOpen && <AddProjectModal onClose={() => setAddProjectOpen(false)} />}
 
-      {taskMenu && (
+      {menuProject && projectMenu && (
         <div
-          className="task-context-menu"
-          style={{ top: taskMenu.y, left: taskMenu.x }}
+          className="context-menu project-context-menu"
+          style={{ top: projectMenu.y, left: projectMenu.x }}
           role="menu"
+          aria-label={`${menuProject.name} project actions`}
           onClick={(event) => event.stopPropagation()}
+          onContextMenu={(event) => event.preventDefault()}
         >
           <button
             type="button"
-            className="task-context-item danger"
+            className="context-menu-item"
+            role="menuitem"
+            onClick={() => void handleProjectMenuAction("unpin", menuProject)}
+          >
+            <PinOff size={13} />
+            Unpin project
+          </button>
+          <button
+            type="button"
+            className="context-menu-item"
+            role="menuitem"
+            onClick={() => void handleProjectMenuAction("reveal", menuProject)}
+          >
+            <FolderOpen size={13} />
+            Reveal in Finder
+          </button>
+          <button
+            type="button"
+            className="context-menu-item"
+            role="menuitem"
+            onClick={() => void handleProjectMenuAction("worktree", menuProject)}
+          >
+            <GitBranchPlus size={13} />
+            Create permanent worktree
+          </button>
+          <button
+            type="button"
+            className="context-menu-item"
+            role="menuitem"
+            onClick={() => void handleProjectMenuAction("rename", menuProject)}
+          >
+            <Pencil size={13} />
+            Rename project
+          </button>
+          <div className="context-menu-divider" role="separator" />
+          <button
+            type="button"
+            className="context-menu-item"
+            role="menuitem"
+            onClick={() => void handleProjectMenuAction("archive", menuProject)}
+          >
+            <Archive size={13} />
+            Archive chats
+          </button>
+          <button
+            type="button"
+            className="context-menu-item danger"
+            role="menuitem"
+            onClick={() => void handleProjectMenuAction("remove", menuProject)}
+          >
+            <X size={13} />
+            Remove
+          </button>
+        </div>
+      )}
+
+      {taskMenu && (
+        <div
+          className="context-menu task-context-menu"
+          style={{ top: taskMenu.y, left: taskMenu.x }}
+          role="menu"
+          onClick={(event) => event.stopPropagation()}
+          onContextMenu={(event) => event.preventDefault()}
+        >
+          <button
+            type="button"
+            className="context-menu-item danger"
             role="menuitem"
             onClick={() => {
               setConfirmTaskId(taskMenu.taskId);

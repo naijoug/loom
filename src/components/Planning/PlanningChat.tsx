@@ -57,7 +57,11 @@ function planningCapable(agent: AgentConfig) {
   return agent.enabled && agent.available && agent.capabilities.includes("planning");
 }
 
-export function PlanningChat() {
+interface PlanningChatProps {
+  readOnly?: boolean;
+}
+
+export function PlanningChat({ readOnly = false }: PlanningChatProps) {
   const { state } = useAppState();
   const { loadAgents, runPlanningDiscussion } = useAgentBridge();
   const { createTask, loadTasks } = useTaskBridge();
@@ -287,9 +291,10 @@ export function PlanningChat() {
         </div>
 
         <div className="planning-timeline-scroll">
-          <PlanningTimeline projectPath={project.path} task={task} />
+          <PlanningTimeline projectPath={project.path} task={task} readOnly={readOnly} />
         </div>
 
+        {!readOnly && (
         <form className="planning-composer-v2" onSubmit={handleDiscuss}>
           <div className="planning-input-wrap">
             <textarea
@@ -364,6 +369,7 @@ export function PlanningChat() {
           </div>
           {state.app.taskError && <div className="planning-error">{state.app.taskError}</div>}
         </form>
+        )}
       </section>
     </div>
   );

@@ -3,8 +3,10 @@ mod command_runner;
 mod models;
 mod plan_html;
 mod projects;
+mod pty;
 mod storage;
 mod tasks;
+mod terminals;
 
 use serde::Serialize;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -43,6 +45,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(command_runner::CommandRegistry::default())
+        .manage(pty::PtyRegistry::default())
         .manage(models::IdGenerator::default())
         .invoke_handler(tauri::generate_handler![
             health_check,
@@ -57,6 +60,13 @@ pub fn run() {
             command_runner::command_runner_ready,
             command_runner::start_command_run,
             command_runner::stop_command_run,
+            pty::start_pty_run,
+            pty::stop_pty_run,
+            pty::write_pty,
+            pty::resize_pty,
+            terminals::list_terminal_slots,
+            terminals::save_terminal_slots,
+            terminals::suggest_terminal_slots,
             plan_html::open_plan_html,
             plan_html::open_planning_evidence,
             plan_html::open_plan_viewer,

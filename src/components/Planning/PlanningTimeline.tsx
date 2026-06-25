@@ -28,12 +28,16 @@ import { useTaskBridge } from "../../hooks/useTaskBridge";
 import { useAppState } from "../../state/AppStateContext";
 import { PLAN_PREVIEW_SANDBOX, wireIframeHashNavigation } from "../../utils/iframeNavigation";
 import { Button } from "../common/Button";
+import { describeRoundDraftStatus } from "./roundSummary";
 
 const SYNTHESIS_PROMPT_SUMMARY = "Synthesize final plan";
 
 interface PlanningTimelineProps {
   projectPath: string;
   task: Task | null;
+  // Read-only review of a past stage: keep view/copy/open actions, hide every
+  // control that re-runs agents or mutates task state.
+  readOnly?: boolean;
 }
 
 interface DraftRow {
@@ -276,6 +280,7 @@ function DraftStage({
   runId,
   logsByKey,
   busy,
+  readOnly,
   onRetry,
   onOpenCandidate,
   onOpenEvidence,
@@ -285,6 +290,7 @@ function DraftStage({
   runId: string;
   logsByKey: Record<string, PlanningAgentLogEvent[]>;
   busy: boolean;
+  readOnly: boolean;
   onRetry: (agentId: string) => void;
   onOpenCandidate: (mdPath: string) => void;
   onOpenEvidence: (path: string) => void;
@@ -349,7 +355,7 @@ function DraftStage({
                       View partial output
                     </Button>
                   )}
-                  {row.status === "failed" && (
+                  {row.status === "failed" && !readOnly && (
                     <Button
                       type="button"
                       variant="ghost"
@@ -510,11 +516,13 @@ function FinalPlanStage({
   task,
   busy,
   canRerunReviews,
+  readOnly,
 }: {
   projectPath: string;
   task: Task;
   busy: boolean;
   canRerunReviews: boolean;
+  readOnly: boolean;
 }) {
   const { dispatch } = useAppState();
   const { runPlanReviews } = useAgentBridge();
@@ -614,7 +622,7 @@ function FinalPlanStage({
               >
                 Open in browser
               </Button>
-              {canRerunReviews && (
+              {canRerunReviews && !readOnly && (
                 <Button
                   type="button"
                   variant="ghost"
@@ -647,31 +655,35 @@ function FinalPlanStage({
             </ul>
           )}
 
-          <details className="timeline-decision-form">
-            <summary>Record a decision</summary>
-            <form onSubmit={handleRecordDecision}>
-              <textarea
-                value={decision}
-                onChange={(event) => setDecision(event.target.value)}
-                placeholder="Record a scope, tradeoff, or risk decision."
-              />
-              <Button type="submit" variant="ghost" disabled={!decision.trim()}>
-                Record
-              </Button>
-            </form>
-          </details>
+          {!readOnly && (
+            <details className="timeline-decision-form">
+              <summary>Record a decision</summary>
+              <form onSubmit={handleRecordDecision}>
+                <textarea
+                  value={decision}
+                  onChange={(event) => setDecision(event.target.value)}
+                  placeholder="Record a scope, tradeoff, or risk decision."
+                />
+                <Button type="submit" variant="ghost" disabled={!decision.trim()}>
+                  Record
+                </Button>
+              </form>
+            </details>
+          )}
 
-          <div className="timeline-final-cta">
-            <span>Confirm the final plan to generate implementation todos.</span>
-            <Button
-              type="button"
-              variant="primary"
-              disabled={busy}
-              onClick={() => void handleCreateTasks()}
-            >
-              Create tasks from plan
-            </Button>
-          </div>
+          {!readOnly && (
+            <div className="timeline-final-cta">
+              <span>Confirm the final plan to generate implementation todos.</span>
+              <Button
+                type="button"
+                variant="primary"
+                disabled={busy}
+                onClick={() => void handleCreateTasks()}
+              >
+                Create tasks from plan
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -685,6 +697,7 @@ function RoundSection({
   isLatest,
   logsByKey,
   busy,
+  readOnly,
   onRetry,
   onOpenCandidate,
   onOpenEvidence,
@@ -696,6 +709,7 @@ function RoundSection({
   isLatest: boolean;
   logsByKey: Record<string, PlanningAgentLogEvent[]>;
   busy: boolean;
+  readOnly: boolean;
   onRetry: (agentId: string) => void;
   onOpenCandidate: (mdPath: string) => void;
   onOpenEvidence: (path: string) => void;
@@ -707,11 +721,11 @@ function RoundSection({
     setExpanded(isLatest);
   }, [isLatest]);
 
-  const succeeded = round.drafts.filter((row) => row.status === "succeeded").length;
   const source = planSource(round.run.summary);
   const successfulCandidates = round.drafts.filter(
     (row) => row.status === "succeeded",
   ).length;
+  const draftSummary = describeRoundDraftStatus(round.drafts);
 
   return (
     <section className={`timeline-round${expanded ? " expanded" : ""}`}>
@@ -724,8 +738,7 @@ function RoundSection({
         <ChevronRight size={14} className="timeline-round-chevron" />
         <span className="timeline-round-title">Round {round.index + 1}</span>
         <span className="timeline-round-meta">
-          {timeLabel(round.run.startedAtMs)} · {round.drafts.length} agent
-          {round.drafts.length === 1 ? "" : "s"} · {succeeded} succeeded
+          {timeLabel(round.run.startedAtMs)} · {draftSummary}
           {!expanded && source ? ` · ${source}` : ""}
         </span>
       </button>
@@ -744,6 +757,7 @@ function RoundSection({
             runId={round.run.id}
             logsByKey={logsByKey}
             busy={busy}
+            readOnly={readOnly}
             onRetry={onRetry}
             onOpenCandidate={onOpenCandidate}
             onOpenEvidence={onOpenEvidence}
@@ -766,6 +780,7 @@ function RoundSection({
               task={task}
               busy={busy}
               canRerunReviews={successfulCandidates >= 2}
+              readOnly={readOnly}
             />
           )}
         </div>
@@ -774,7 +789,7 @@ function RoundSection({
   );
 }
 
-export function PlanningTimeline({ projectPath, task }: PlanningTimelineProps) {
+export function PlanningTimeline({ projectPath, task, readOnly = false }: PlanningTimelineProps) {
   const { state } = useAppState();
   const { retryPlanningAgent } = useAgentBridge();
   const { openPlanViewer, openPlanningEvidence } = useTaskBridge();
@@ -889,6 +904,7 @@ export function PlanningTimeline({ projectPath, task }: PlanningTimelineProps) {
 	            isLatest={round.index === rounds.length - 1 && !hasLiveRound}
 	            logsByKey={logsByKey}
 	            busy={busy}
+	            readOnly={readOnly}
 	            onRetry={(agentId) => void retryPlanningAgent(projectPath, task.id, agentId)}
 	            onOpenCandidate={(mdPath) => void openPlanViewer(projectPath, mdPath)}
 	            onOpenEvidence={(path) => void openPlanningEvidence(projectPath, path)}

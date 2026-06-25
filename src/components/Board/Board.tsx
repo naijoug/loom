@@ -3,12 +3,10 @@ import {
   AlertCircle,
   CheckCircle2,
   Circle,
-  Filter,
   ListTodo,
   Play,
   Plus,
   Radio,
-  SlidersHorizontal,
 } from "lucide-react";
 import type { Task, TaskStatus } from "../../domain";
 import { useTaskBridge } from "../../hooks/useTaskBridge";
@@ -57,6 +55,8 @@ const BOARD_GROUPS: BoardGroup[] = [
 ];
 
 function taskShortId(task: Task) {
+  // Fixed short ids for the standalone planning preview fixtures only; real
+  // tasks fall through to the id-derived path below.
   const previewIds: Record<string, string> = {
     "task-preview-implementing": "LOOM-12",
     "task-preview-planning": "LOOM-13",
@@ -76,24 +76,6 @@ function taskShortId(task: Task) {
   }
 
   return task.id.toUpperCase();
-}
-
-function taskTag(task: Task) {
-  if (task.primaryAgentId?.includes("claude")) {
-    return "backend";
-  }
-  if (task.primaryAgentId?.includes("codex")) {
-    return "ui";
-  }
-  if (task.status === "blocked") {
-    return "perf";
-  }
-  if (task.status === "completed") {
-    return "state";
-  }
-  return task.status === "debugging" || task.status === "verifying" || task.status === "fixing"
-    ? "test"
-    : "ui";
 }
 
 function agentInitial(task: Task) {
@@ -169,22 +151,10 @@ export function Board() {
       <section className="board-panel">
         <div className="board-toolbar">
           <div className="board-title-row">
-            <h1>{project.name === "speaker" ? "Children Three Kingdoms · audio" : "Add log search & filter"}</h1>
+            <h1>{project.name}</h1>
             <span className="board-chip">{taskCount} tasks</span>
           </div>
           <div className="board-toolbar-actions">
-            <span className="board-view-toggle">
-              <b>List</b>
-              <span>Board</span>
-            </span>
-            <button type="button" className="board-chip board-toolbar-button">
-              <Filter size={13} />
-              Filter
-            </button>
-            <button type="button" className="board-chip board-toolbar-button">
-              <SlidersHorizontal size={13} />
-              Status
-            </button>
             <Button
               variant="ghost"
               iconLeft={<Plus size={14} />}
@@ -223,15 +193,9 @@ export function Board() {
                       >
                         <span className={`board-status-dot status-${task.status}`} />
                         <span className="board-task-id">{taskShortId(task)}</span>
-                        <span className="board-priority" aria-hidden="true">
-                          <i />
-                          <i />
-                          <i />
-                        </span>
                         <span className="board-task-title">{task.title}</span>
                         <span className="board-task-spacer" />
                         <span className="board-task-meta">
-                          <span className="board-tag">{taskTag(task)}</span>
                           {canRun && (
                             <span
                               className="board-run-button"

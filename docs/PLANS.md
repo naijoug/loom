@@ -1,5 +1,15 @@
 # 计划文档索引
 
+## 2026-06-24
+
+- 17:56-testing-cockpit-redesign.md
+  > （已实施 M0–M4）把 Testing 阶段改造为人机协同调试驾驶舱：dev-server 终端改用 PTY（portable-pty）+ xterm.js（真彩色/选区/复制），终端槽位每项目可配置 N 个并持久化（取代硬编码 frontend/backend）；选中终端文本一键投喂 agent；Debug agent 改为可在阶段内真正调起修复 run 的对话（复用 startCommandRun + append_feedback）；落地 Auto/Manual 与布局重排。已评估并排除 tmux。
+
+## 2026-06-12
+
+- 10:46-workflow-stage-navigation.md
+  > （已实施）解耦"任务所处阶段"与"用户查看阶段"：新增前端 viewedStage 与统一 WorkflowStageId，让 header 步骤条可点击回看历史阶段；只读边界覆盖 PlanningTimeline / SessionPane / TestingPane 的所有状态变更入口，同时补看板 breadcrumb/sidebar 双入口并清理 Board 假数据。
+
 ## 2026-06-11
 
 - 16:05-planning-live-output.md

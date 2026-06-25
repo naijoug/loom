@@ -520,6 +520,7 @@ const previewState: AppState = {
     activeProjectId: "project-loom",
     selectedTaskId: previewTask.id,
     selectedTodoId: null,
+    viewedStage: null,
     activeCommandRunId: null,
     isLoadingProjects: false,
     isLoadingAgents: false,
@@ -535,6 +536,10 @@ const previewState: AppState = {
   },
   agents: previewAgents,
   tasks: previewTasks,
+  taskCache: {
+    [loomProject.path]: previewTasks,
+    [speakerProject.path]: speakerTasks,
+  },
   commandRuns: [
     ...implementationTask.commandRuns,
     ...testingTask.commandRuns,

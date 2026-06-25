@@ -12,15 +12,17 @@ export function useTaskBridge() {
   const { dispatch } = useAppState();
 
   const loadTasks = useCallback(
-    async (projectPath: string) => {
+    async (projectPath: string, options: { silent?: boolean } = {}) => {
       if (!hasTauriRuntime()) {
         return;
       }
 
-      dispatch({ type: "tasks/loadStarted" });
+      if (!options.silent) {
+        dispatch({ type: "tasks/loadStarted" });
+      }
       try {
         const tasks = await invoke<Task[]>("list_tasks", { projectPath });
-        dispatch({ type: "tasks/loaded", tasks });
+        dispatch({ type: "tasks/loaded", projectPath, tasks });
       } catch (error) {
         dispatch({ type: "tasks/loadFailed", error: toErrorMessage(error) });
       }
@@ -180,13 +182,13 @@ export function useTaskBridge() {
       // In the browser preview there is no backend file to remove; just drop it
       // locally so the UI stays consistent.
       if (!projectPath || !hasTauriRuntime()) {
-        dispatch({ type: "tasks/removed", taskId });
+        dispatch({ type: "tasks/removed", taskId, projectPath: projectPath ?? undefined });
         return true;
       }
 
       try {
         await invoke("delete_task", { projectPath, taskId });
-        dispatch({ type: "tasks/removed", taskId });
+        dispatch({ type: "tasks/removed", taskId, projectPath });
         return true;
       } catch (error) {
         dispatch({ type: "tasks/loadFailed", error: toErrorMessage(error) });

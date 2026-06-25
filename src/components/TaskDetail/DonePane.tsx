@@ -8,6 +8,7 @@ import "./TaskDetail.css";
 interface DonePaneProps {
   project: ProjectSummary;
   task: Task;
+  readOnly?: boolean;
 }
 
 function latestValidation(task: Task) {
@@ -16,7 +17,7 @@ function latestValidation(task: Task) {
     .sort((left, right) => right.startedAtMs - left.startedAtMs)[0] ?? null;
 }
 
-export function DonePane({ project, task }: DonePaneProps) {
+export function DonePane({ project, task, readOnly = false }: DonePaneProps) {
   const [followUpOpen, setFollowUpOpen] = useState(false);
   const validation = useMemo(() => latestValidation(task), [task]);
   const completedTodos = task.planTodos.filter((todo) => todo.status === "done");
@@ -30,9 +31,11 @@ export function DonePane({ project, task }: DonePaneProps) {
           <h1>{task.title}</h1>
           <p>{project.name}</p>
         </div>
-        <Button variant="primary" iconLeft={<Plus size={14} />} onClick={() => setFollowUpOpen(true)}>
-          Start follow-up
-        </Button>
+        {!readOnly && (
+          <Button variant="primary" iconLeft={<Plus size={14} />} onClick={() => setFollowUpOpen(true)}>
+            Start follow-up
+          </Button>
+        )}
       </div>
 
       <div className="done-grid">

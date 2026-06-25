@@ -19,6 +19,7 @@ import "./TaskDetail.css";
 interface SessionPaneProps {
   project: ProjectSummary;
   task: Task;
+  readOnly?: boolean;
 }
 
 const TODO_STATUS_LABELS: Record<PlanTodoStatus, string> = {
@@ -113,7 +114,7 @@ function summarizeCommand(command: string) {
   return command.length > 140 ? `${command.slice(0, 140)}...` : command;
 }
 
-export function SessionPane({ project, task }: SessionPaneProps) {
+export function SessionPane({ project, task, readOnly = false }: SessionPaneProps) {
   const { state } = useAppState();
   const { loadAgents } = useAgentBridge();
   const { startCommandRun } = useCommandBridge();
@@ -142,7 +143,7 @@ export function SessionPane({ project, task }: SessionPaneProps) {
   const latestRunLogs = latestRun ? state.commandLogs[latestRun.id] ?? [] : [];
   const allTodosDone =
     task.planTodos.length > 0 && task.planTodos.every((todo) => todo.status === "done");
-  const canMarkReadyForTesting = task.status === "reviewing" && allTodosDone;
+  const canMarkReadyForTesting = !readOnly && task.status === "reviewing" && allTodosDone;
 
   useEffect(() => {
     void loadAgents();
@@ -193,12 +194,6 @@ export function SessionPane({ project, task }: SessionPaneProps) {
   return (
     <div className="session-pane">
       <div className="session-header">
-        <div className="testing-stepper">
-          <span className="testing-step step-done">Plan</span>
-          <span className="testing-step step-active">Implement</span>
-          <span className="testing-step">Test</span>
-          <span className="testing-step">Done</span>
-        </div>
         <span className="testing-status-pill testing-status-ok">
           <span />
           {selectedAgent?.name ?? "No implementation Agent"}
@@ -268,9 +263,14 @@ export function SessionPane({ project, task }: SessionPaneProps) {
               value={guidance}
               onChange={(event) => setGuidance(event.target.value)}
               placeholder={`Steer ${selectedAgent?.name ?? "the Agent"} - add a constraint, answer, or approve next step...`}
-              disabled={!selectedAgent}
+              disabled={!selectedAgent || readOnly}
             />
-            <Button type="submit" variant="primary" iconRight={<Send size={14} />} disabled={!guidance.trim()}>
+            <Button
+              type="submit"
+              variant="primary"
+              iconRight={<Send size={14} />}
+              disabled={!guidance.trim() || readOnly}
+            >
               Send
             </Button>
           </form>
@@ -291,7 +291,7 @@ export function SessionPane({ project, task }: SessionPaneProps) {
                 <div className="session-avatar agent">{agentInitials(selectedAgent)}</div>
                 <select
                   value={selectedAgent?.id ?? ""}
-                  disabled={implementationAgents.length === 0 || commandRunning}
+                  disabled={implementationAgents.length === 0 || commandRunning || readOnly}
                   onChange={(event) => setSelectedAgentId(event.target.value)}
                 >
                   {implementationAgents.map((agent) => (
@@ -316,7 +316,7 @@ export function SessionPane({ project, task }: SessionPaneProps) {
                       <button
                         type="button"
                         className="session-subtask-main"
-                        disabled={done || !selectedAgent || commandRunning}
+                        disabled={done || !selectedAgent || commandRunning || readOnly}
                         onClick={() => void handleStartTodo(todo, todoIndex)}
                       >
                         {todo.status === "implementing" ? <PlayCircle size={15} /> : <Play size={15} />}
@@ -326,7 +326,7 @@ export function SessionPane({ project, task }: SessionPaneProps) {
                       <button
                         type="button"
                         className="session-subtask-check"
-                        disabled={done}
+                        disabled={done || readOnly}
                         onClick={() => void handleCompleteTodo(todo)}
                       >
                         {done ? <CheckCircle2 size={14} /> : <Circle size={10} />}

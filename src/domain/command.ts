@@ -28,6 +28,33 @@ export interface CommandSpec {
   taskId?: string;
 }
 
+export interface PtySpec {
+  program: string;
+  args: string[];
+  cwd: string;
+  taskId?: string;
+  rows: number;
+  cols: number;
+}
+
+export interface PtyOutputEvent {
+  runId: string;
+  taskId: string;
+  bytes: number[];
+  timestampMs: number;
+}
+
+export type TerminalSlotKind = "preview" | "validation";
+
+export interface TerminalSlot {
+  id: string;
+  name: string;
+  command: string;
+  kind: TerminalSlotKind;
+  /** Working directory relative to the project root (monorepo subdir apps). */
+  cwd?: string;
+}
+
 export interface CommandRunStopResult {
   runId: string;
   stopped: boolean;

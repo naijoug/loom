@@ -70,6 +70,25 @@ function taskFixture(overrides = {}) {
   };
 }
 
+function projectFixture(overrides = {}) {
+  return {
+    id: "project-1",
+    path: "/tmp/project",
+    name: "Project",
+    detectedStacks: [],
+    suggestedCommands: [],
+    isGitRepository: true,
+    hasUncommittedChanges: false,
+    loomDirReady: true,
+    schemaVersion: 1,
+    ...overrides,
+  };
+}
+
+function tasksLoaded(tasks, projectPath = "/tmp/project") {
+  return { type: "tasks/loaded", projectPath, tasks };
+}
+
 test("command logs are bucketed by run id and starting another run does not clear existing logs", () => {
   let state = appReducer(initialAppState, { type: "commands/started", run: commandRun("run-1") });
   state = appReducer(state, { type: "commands/logReceived", event: logEvent("run-1", "vite ready") });
@@ -107,7 +126,7 @@ test("command log buckets are independently capped", () => {
 
 test("selecting a task routes to task-detail and preserves a valid selected todo", () => {
   const task = taskFixture();
-  let state = appReducer(initialAppState, { type: "tasks/loaded", tasks: [task] });
+  let state = appReducer(initialAppState, tasksLoaded([task]));
 
   state = appReducer(state, { type: "tasks/selected", taskId: task.id });
 
@@ -116,21 +135,114 @@ test("selecting a task routes to task-detail and preserves a valid selected todo
   assert.equal(state.app.selectedTodoId, "todo-1");
 });
 
+test("app/stageViewed sets and clears the viewed stage", () => {
+  let state = appReducer(initialAppState, { type: "app/stageViewed", stage: "planning" });
+  assert.equal(state.app.viewedStage, "planning");
+
+  state = appReducer(state, { type: "app/stageViewed", stage: null });
+  assert.equal(state.app.viewedStage, null);
+});
+
+test("selecting a task resets any stage being reviewed", () => {
+  const task = taskFixture();
+  let state = appReducer(initialAppState, tasksLoaded([task]));
+  state = appReducer(state, { type: "app/stageViewed", stage: "planning" });
+
+  state = appReducer(state, { type: "tasks/selected", taskId: task.id });
+
+  assert.equal(state.app.viewedStage, null);
+});
+
+test("selecting another project resets the viewed stage", () => {
+  let state = appReducer(initialAppState, { type: "app/stageViewed", stage: "testing" });
+
+  state = appReducer(state, { type: "projects/selected", projectId: "project-2" });
+
+  assert.equal(state.app.viewedStage, null);
+});
+
+test("loading tasks for another project caches them without replacing the current board", () => {
+  const currentProject = projectFixture();
+  const otherProject = projectFixture({ id: "project-2", path: "/tmp/other", name: "Other" });
+  const currentTask = taskFixture({ id: "task-current", projectPath: currentProject.path });
+  const otherTask = taskFixture({ id: "task-other", projectPath: otherProject.path });
+  let state = {
+    ...initialAppState,
+    app: { ...initialAppState.app, activeProjectId: currentProject.id },
+    projects: { current: currentProject, recent: [currentProject, otherProject] },
+  };
+
+  state = appReducer(state, tasksLoaded([currentTask], currentProject.path));
+  state = appReducer(state, tasksLoaded([otherTask], otherProject.path));
+
+  assert.deepEqual(state.tasks.map((task) => task.id), ["task-current"]);
+  assert.deepEqual(
+    state.taskCache[otherProject.path].map((task) => task.id),
+    ["task-other"],
+  );
+});
+
+test("selecting a project restores its cached tasks", () => {
+  const firstProject = projectFixture();
+  const secondProject = projectFixture({ id: "project-2", path: "/tmp/other", name: "Other" });
+  const firstTask = taskFixture({ id: "task-first", projectPath: firstProject.path });
+  const secondTask = taskFixture({ id: "task-second", projectPath: secondProject.path });
+  let state = {
+    ...initialAppState,
+    app: { ...initialAppState.app, activeProjectId: firstProject.id },
+    projects: { current: firstProject, recent: [firstProject, secondProject] },
+  };
+
+  state = appReducer(state, tasksLoaded([firstTask], firstProject.path));
+  state = appReducer(state, tasksLoaded([secondTask], secondProject.path));
+  state = appReducer(state, { type: "projects/selected", projectId: secondProject.id });
+
+  assert.equal(state.projects.current.id, secondProject.id);
+  assert.deepEqual(state.tasks.map((task) => task.id), ["task-second"]);
+  assert.deepEqual(state.commandRuns, []);
+});
+
+test("upserting the selected task preserves the viewed stage", () => {
+  const task = taskFixture();
+  let state = appReducer(initialAppState, tasksLoaded([task]));
+  state = appReducer(state, { type: "tasks/selected", taskId: task.id });
+  state = appReducer(state, { type: "app/stageViewed", stage: "planning" });
+
+  state = appReducer(state, { type: "tasks/upserted", task: { ...task, status: "verifying" } });
+
+  assert.equal(state.app.selectedTaskId, task.id);
+  assert.equal(state.app.viewedStage, "planning");
+});
+
+test("upserting a different task resets the viewed stage", () => {
+  const task = taskFixture();
+  let state = appReducer(initialAppState, tasksLoaded([task]));
+  state = appReducer(state, { type: "tasks/selected", taskId: task.id });
+  state = appReducer(state, { type: "app/stageViewed", stage: "planning" });
+
+  state = appReducer(state, { type: "tasks/upserted", task: taskFixture({ id: "task-2" }) });
+
+  assert.equal(state.app.selectedTaskId, "task-2");
+  assert.equal(state.app.viewedStage, null);
+});
+
 test("starting a new task opens the planning room with no task selected", () => {
   const task = taskFixture();
-  let state = appReducer(initialAppState, { type: "tasks/loaded", tasks: [task] });
+  let state = appReducer(initialAppState, tasksLoaded([task]));
   state = appReducer(state, { type: "tasks/selected", taskId: task.id });
+  state = appReducer(state, { type: "app/stageViewed", stage: "implementing" });
 
   state = appReducer(state, { type: "tasks/new" });
 
   assert.equal(state.app.currentView, "planning");
   assert.equal(state.app.selectedTaskId, null);
   assert.equal(state.app.selectedTodoId, null);
+  assert.equal(state.app.viewedStage, null);
 });
 
 test("removing the selected task drops it and returns to the board", () => {
   const task = taskFixture();
-  let state = appReducer(initialAppState, { type: "tasks/loaded", tasks: [task] });
+  let state = appReducer(initialAppState, tasksLoaded([task]));
   state = appReducer(state, { type: "tasks/selected", taskId: task.id });
 
   state = appReducer(state, { type: "tasks/removed", taskId: task.id });
@@ -143,7 +255,7 @@ test("removing the selected task drops it and returns to the board", () => {
 test("removing an unselected task keeps the current selection and view", () => {
   const selected = taskFixture({ id: "task-keep" });
   const other = taskFixture({ id: "task-drop" });
-  let state = appReducer(initialAppState, { type: "tasks/loaded", tasks: [selected, other] });
+  let state = appReducer(initialAppState, tasksLoaded([selected, other]));
   state = appReducer(state, { type: "tasks/selected", taskId: "task-keep" });
 
   state = appReducer(state, { type: "tasks/removed", taskId: "task-drop" });
@@ -167,7 +279,7 @@ test("completing all todos moves the optimistic task state to reviewing", () => 
       },
     ],
   });
-  let state = appReducer(initialAppState, { type: "tasks/loaded", tasks: [task] });
+  let state = appReducer(initialAppState, tasksLoaded([task]));
 
   state = appReducer(state, { type: "tasks/todoCompleted", taskId: task.id, todoId: "todo-1" });
 
