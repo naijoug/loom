@@ -1,0 +1,1378 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loom · 规划讨论室</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style id="theme-vars">
+/* Loom — Dark Technical Workbench
+   设计令牌：深色优先，Linear/Claude 桌面端风格
+   等宽字体强调日志/代码，Agent 各自配色编码 */
+
+:root {
+  /* 品牌主色 — 冷调天蓝，用于链接/active/主操作 */
+  --loom-accent: #97C9F8;
+  --loom-accent-ink: #0B1F33;
+  --loom-accent-fill: #2F6FB0;
+  --loom-accent-soft: rgba(151, 201, 248, 0.14);
+
+  /* 背景层级 */
+  --loom-bg: #181818;
+  --loom-bg-2: #1F1F1F;
+  --loom-sidebar: #272727;
+  --loom-surface: #222222;
+  --loom-surface-2: #2D2D2D;
+  --loom-inset: #303030;
+  --loom-selected: #3B3D41;
+  --loom-hover: #2E2E2E;
+  --loom-border: #2F2F2F;
+  --loom-border-strong: #3A3A3C;
+
+  /* 文字层级 */
+  --loom-text: #ECECEC;
+  --loom-text-2: #A3A4A5;
+  --loom-text-3: #6E6F70;
+
+  /* 语义状态色 */
+  --loom-green: #4FB477;
+  --loom-green-soft: rgba(79, 180, 119, 0.16);
+  --loom-amber: #D6A23C;
+  --loom-amber-soft: rgba(214, 162, 60, 0.16);
+  --loom-red: #E2645C;
+  --loom-red-soft: rgba(226, 100, 92, 0.16);
+
+  /* Agent 配色编码 */
+  --loom-agent-codex: #10A37F;
+  --loom-agent-claude: #D97757;
+  --loom-agent-hermes: #7C5CFC;
+
+  /* 圆角 */
+  --loom-r-card: 10px;
+  --loom-r-ctl: 8px;
+  --loom-r-chip: 6px;
+
+  /* 字号 */
+  --loom-fs-title: 15px;
+  --loom-fs-h: 16px;
+  --loom-fs-body: 14px;
+  --loom-fs-sm: 12.5px;
+  --loom-fs-xs: 11.5px;
+  --loom-fs-label: 11px;
+  --loom-fs-mono: 13px;
+
+  /* 字体 */
+  --loom-font: "Inter", -apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+  --loom-mono: "Geist Mono", "SF Mono", "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+
+/* 等宽终端/代码区域 */
+.loom-mono {
+  font-family: var(--loom-mono);
+  font-size: var(--loom-fs-mono);
+  line-height: 1.6;
+}
+
+/* Agent 头像基础样式 */
+.loom-agent-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: 0.02em;
+}
+.loom-agent-avatar.codex { background: var(--loom-agent-codex); }
+.loom-agent-avatar.claude { background: var(--loom-agent-claude); }
+.loom-agent-avatar.hermes { background: var(--loom-agent-hermes); }
+.loom-agent-avatar.empty {
+  background: var(--loom-surface-2);
+  color: var(--loom-text-3);
+  border: 1px dashed var(--loom-border-strong);
+}
+
+/* 状态圆点 */
+.loom-status-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-accent: var(--loom-accent);
+    --color-border: var(--loom-border);
+    --color-sidebar: var(--loom-sidebar);
+  }
+  @layer base {
+    body { background: var(--loom-surface); color: var(--loom-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <main>
+      <!-- ===== Loom App Shell (shared fragment) =====
+           固定全视口布局：左侧侧栏 + 右侧主区域，无整页滚动。
+           4 个 SLOT 供叶子页替换：
+             · mainContent       — 主工作区
+             · activeNavItem     — 通过 data-nav-key 设定侧栏激活态
+             · breadcrumbCurrent — 面包屑当前页名
+             · miniStepperState  — 计划/实施/测试/完成 4 段状态
+      -->
+      <div class="loom-app">
+        <!-- ---------- 侧栏 ---------- -->
+        <aside class="loom-sidebar">
+          <!-- Logo 行 -->
+          <div class="sb-logo">
+            <span class="sb-mark" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <path d="M4 3v18"/><path d="M20 3v18"/>
+                <path d="M4 7h16"/><path d="M4 17h16"/>
+              </svg>
+            </span>
+            <span class="sb-word">Loom</span>
+          </div>
+
+          <!-- 搜索行 -->
+          <div class="sb-search">
+            <div class="sb-search-input">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>
+              </svg>
+              <span class="sb-search-ph">搜索任务…</span>
+            </div>
+            <button type="button" class="sb-add-project">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                <path d="M12 5v14M5 12h14"/>
+              </svg>
+              <span>添加项目</span>
+            </button>
+          </div>
+
+          <!-- 项目树 -->
+          <nav class="sb-tree" aria-label="项目导航">
+            <!-- 项目：loom（展开，激活） -->
+            <div class="sb-project is-expanded is-active" data-nav-key="loom">
+              <div class="sb-project-row">
+                <svg class="sb-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="m9 6 6 6-6 6"/>
+                </svg>
+                <svg class="sb-folder" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M4 7a2 2 0 0 1 2-2h3.2a2 2 0 0 1 1.4.6L12 6.8h6a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/>
+                </svg>
+                <span class="sb-project-name">loom</span>
+                <span class="sb-count">4</span>
+              </div>
+              <div class="sb-tasks">
+                <!-- 进行中 -->
+                <div class="sb-task is-active" data-nav-key="loom-add-log-search">
+                  <span class="loom-status-dot sb-dot sb-dot-progress" aria-label="进行中">
+                    <svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="none" stroke="var(--loom-accent)" stroke-width="1.6"/><path d="M7 1.5A5.5 5.5 0 0 1 7 12.5Z" fill="var(--loom-accent)"/></svg>
+                  </span>
+                  <span class="sb-task-title">Add log search &amp; filter</span>
+                  <span class="sb-task-time">3m</span>
+                </div>
+                <!-- 阻塞 -->
+                <div class="sb-task" data-nav-key="loom-api-504">
+                  <span class="loom-status-dot sb-dot sb-dot-blocked" aria-label="阻塞">
+                    <svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="var(--loom-red)"/><path d="M7 4v3.5M7 9.6v.4" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/></svg>
+                  </span>
+                  <span class="sb-task-title">API 504 on /v1/assets</span>
+                  <span class="sb-task-time">5h</span>
+                </div>
+                <!-- 测试中 -->
+                <div class="sb-task" data-nav-key="loom-ios-ga">
+                  <span class="loom-status-dot sb-dot sb-dot-testing" aria-label="测试中">
+                    <svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="none" stroke="var(--loom-amber)" stroke-width="1.6"/><circle cx="7" cy="7" r="2.2" fill="var(--loom-amber)"/></svg>
+                  </span>
+                  <span class="sb-task-title">Fix iOS GA reporting</span>
+                  <span class="sb-task-time">2h</span>
+                </div>
+                <!-- 已完成 -->
+                <div class="sb-task" data-nav-key="loom-launch-screen">
+                  <span class="loom-status-dot sb-dot sb-dot-done" aria-label="已完成">
+                    <svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="var(--loom-green)"/><path d="m4.6 7 1.8 1.8 3-3.2" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </span>
+                  <span class="sb-task-title">Optimize launch screen</span>
+                  <span class="sb-task-time">1d</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 项目：speaker（折叠） -->
+            <div class="sb-project is-collapsed" data-nav-key="speaker">
+              <div class="sb-project-row">
+                <svg class="sb-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="m9 6 6 6-6 6"/>
+                </svg>
+                <svg class="sb-folder" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M4 7a2 2 0 0 1 2-2h3.2a2 2 0 0 1 1.4.6L12 6.8h6a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/>
+                </svg>
+                <span class="sb-project-name">speaker</span>
+                <span class="sb-count">2</span>
+              </div>
+            </div>
+          </nav>
+
+          <!-- 设置入口（贴底） -->
+          <div class="sb-settings">
+            <button type="button" class="sb-settings-row" data-nav-key="settings">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/>
+              </svg>
+              <span>设置</span>
+            </button>
+          </div>
+        </aside>
+
+        <!-- ---------- 主区域 ---------- -->
+        <div class="loom-main">
+          <!-- 顶栏 -->
+          <header class="loom-header">
+            <div class="hd-left">
+              <button type="button" class="hd-icon-btn" aria-label="收起侧栏" title="收起侧栏">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="3" y="4" width="18" height="16" rx="2"/>
+                  <path d="M9 4v16"/>
+                </svg>
+              </button>
+              <nav class="hd-breadcrumb" aria-label="面包屑">
+                <span class="hd-crumb hd-crumb-link">loom</span>
+                <span class="hd-crumb-sep" aria-hidden="true">›</span>
+                <!-- SLOT: breadcrumbCurrent — 已填充 -->
+                <span class="hd-crumb hd-crumb-current">规划讨论</span>
+              </nav>
+            </div>
+
+            <div class="hd-spacer"></div>
+
+            <!-- SLOT: miniStepperState — 计划=on (● accent)，其余 off -->
+            <div class="hd-stepper" id="loom-mini-stepper">
+              <span class="hd-step is-on" data-stage="plan">
+                <svg class="hd-step-ico" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><circle cx="6" cy="6" r="4.5" fill="var(--loom-accent)" stroke="var(--loom-accent)" stroke-width="1.2"/></svg>
+                <span>计划</span>
+              </span>
+              <span class="hd-step-sep" aria-hidden="true">·</span>
+              <span class="hd-step is-off" data-stage="implement">
+                <svg class="hd-step-ico" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.4"/></svg>
+                <span>实施</span>
+              </span>
+              <span class="hd-step-sep" aria-hidden="true">·</span>
+              <span class="hd-step is-off" data-stage="test">
+                <svg class="hd-step-ico" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.4"/></svg>
+                <span>测试</span>
+              </span>
+              <span class="hd-step-sep" aria-hidden="true">·</span>
+              <span class="hd-step is-off" data-stage="done">
+                <svg class="hd-step-ico" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.4"/></svg>
+                <span>完成</span>
+              </span>
+            </div>
+
+            <!-- 页面级动作插槽（叶子页按需填充） -->
+            <div class="hd-actions" id="loom-header-actions"></div>
+          </header>
+
+          <!-- 主内容区 —— 规划讨论室（已填充） -->
+          <div class="app-content">
+            <!-- ===== 规划讨论室：左聊天流 + 右汇总面板 ===== -->
+            <div class="pl-room">
+              <!-- ---------- 左列：规划聊天 ---------- -->
+              <section class="pl-chat" aria-label="规划讨论">
+                <!-- 聊天头部 -->
+                <div class="pl-chat-head">
+                  <div class="pl-head-info">
+                    <span class="pl-kicker">规划讨论室</span>
+                    <h1 class="pl-head-title">Add log search &amp; filter</h1>
+                  </div>
+                  <a href="#" class="pl-plan-ref" title="最终计划文档" data-dom-id="ref-final-plan">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M14 3v4a1 1 0 0 0 1 1h4"/>
+                      <path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2Z"/>
+                      <path d="M9 9h1M9 13h6M9 17h6"/>
+                    </svg>
+                    <span>docs/plans/final.md</span>
+                  </a>
+                </div>
+
+                <!-- 聊天流（可滚动） -->
+                <div class="pl-stream" id="pl-stream">
+
+                  <!-- 用户消息 -->
+                  <article class="pl-msg pl-msg-user">
+                    <header class="pl-msg-meta">
+                      <span class="pl-avatar pl-avatar-user" aria-hidden="true">你</span>
+                      <span class="pl-name">你</span>
+                      <span class="pl-time">2 分钟前</span>
+                    </header>
+                    <div class="pl-bubble pl-bubble-user">
+                      <p class="pl-body">我需要给调试面板加日志搜索和过滤功能。<span class="pl-mention">@codex</span> <span class="pl-mention">@claude</span> 请分别给出实现方案和风险分析。</p>
+                    </div>
+                  </article>
+
+                  <!-- Codex Agent 消息 -->
+                  <article class="pl-msg pl-msg-agent">
+                    <header class="pl-msg-meta">
+                      <span class="loom-agent-avatar codex" aria-hidden="true">Co</span>
+                      <span class="pl-name">Codex</span>
+                      <span class="pl-agent-role">· 计划</span>
+                      <span class="pl-time">1 分钟前</span>
+                    </header>
+                    <div class="pl-bubble pl-bubble-agent">
+                      <p class="pl-body">建议分三步实现：</p>
+                      <ol class="pl-steps">
+                        <li>1. 在 reducer 中接入 stream filter</li>
+                        <li>2. 搜索栏加正则切换</li>
+                        <li>3. debounce 输入 300ms</li>
+                      </ol>
+                      <pre class="pl-code"><code>// logStream reducer — 接入过滤
+case 'FILTER':
+  return {
+    ...state,
+    query: action.query,
+    visible: state.entries.filter(
+      e => matchQuery(e.text, action.query)
+    ),
+  }</code></pre>
+                      <div class="pl-risk-note">
+                        <span class="pl-risk-mark" aria-hidden="true">⚠</span>
+                        <span>web-worker 正则在大型 fixture 上可能 504</span>
+                      </div>
+                    </div>
+                  </article>
+
+                  <!-- Claude Agent 消息 -->
+                  <article class="pl-msg pl-msg-agent">
+                    <header class="pl-msg-meta">
+                      <span class="loom-agent-avatar claude" aria-hidden="true">Cl</span>
+                      <span class="pl-name">Claude Code</span>
+                      <span class="pl-agent-role">· 风险</span>
+                      <span class="pl-time">45 秒前</span>
+                    </header>
+                    <div class="pl-bubble pl-bubble-agent">
+                      <p class="pl-body">同意 Codex 的三步拆解。补充风险：</p>
+                      <ul class="pl-bullets">
+                        <li>• 跨会话持久化 filter state 需要序列化设计</li>
+                        <li>• 正则高亮在长日志下有性能风险</li>
+                      </ul>
+                      <span class="pl-tag pl-tag-consensus">共识 · 与 Codex 一致：三步拆解</span>
+                    </div>
+                  </article>
+
+                  <!-- 系统汇总消息 -->
+                  <article class="pl-summary-card" aria-label="系统汇总">
+                    <header class="pl-summary-head">
+                      <span class="pl-spark" aria-hidden="true">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M12 3l1.9 4.6L18.5 9l-4.6 1.9L12 15l-1.9-4.1L5.5 9l4.6-1.4L12 3Z"/>
+                          <path d="M19 14l.8 2 .2-.8 2-.2-2-.8-.2-2-.8 2-2 .2 2 .8Z"/>
+                        </svg>
+                      </span>
+                      <span class="pl-summary-title">系统汇总</span>
+                      <span class="pl-summary-sub">已生成最终计划</span>
+                    </header>
+                    <div class="pl-summary-rows">
+                      <div class="pl-summary-row">
+                        <span class="pl-sr-label">共识</span>
+                        <span class="pl-sr-badge pl-sr-green">2</span>
+                        <span class="pl-sr-text">三步拆解 / reducer filter</span>
+                      </div>
+                      <div class="pl-summary-row">
+                        <span class="pl-sr-label">冲突</span>
+                        <span class="pl-sr-badge pl-sr-amber">0</span>
+                        <span class="pl-sr-text">暂无</span>
+                      </div>
+                      <div class="pl-summary-row">
+                        <span class="pl-sr-label">风险</span>
+                        <span class="pl-sr-badge pl-sr-red">2</span>
+                        <span class="pl-sr-text">正则 504 / 持久化序列化</span>
+                      </div>
+                    </div>
+                  </article>
+
+                </div>
+
+                <!-- 输入框（Composer） -->
+                <div class="pl-composer">
+                  <div class="pl-textarea" contenteditable="false" role="textbox" aria-label="输入框">
+                    <span class="pl-textarea-ph">描述任务，输入 @ 调用本地 Agent（如 @codex、@claude）…</span>
+                  </div>
+                  <div class="pl-composer-bar">
+                    <div class="pl-agent-chips">
+                      <span class="pl-chip pl-chip-on" data-dom-id="chip-codex">
+                        <span class="pl-chip-at" aria-hidden="true">@</span>codex
+                      </span>
+                      <span class="pl-chip pl-chip-on" data-dom-id="chip-claude">
+                        <span class="pl-chip-at" aria-hidden="true">@</span>claude
+                      </span>
+                      <span class="pl-chip pl-chip-off" data-dom-id="chip-hermes">
+                        <span class="pl-chip-at" aria-hidden="true">@</span>hermes
+                      </span>
+                    </div>
+                    <button type="button" class="pl-send" data-dom-id="cta-send">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M22 2 11 13"/>
+                        <path d="M22 2 15 22l-4-9-9-4 20-7Z"/>
+                      </svg>
+                      <span>发送</span>
+                    </button>
+                  </div>
+                </div>
+              </section>
+
+              <!-- ---------- 右列：方案汇总面板 ---------- -->
+              <aside class="pl-panel" aria-label="方案汇总">
+                <header class="pl-panel-head">
+                  <h2>方案汇总</h2>
+                </header>
+
+                <div class="pl-panel-body">
+                  <!-- 共识 -->
+                  <section class="pl-psection">
+                    <header class="pl-ps-head">
+                      <span class="pl-ps-title pl-ps-green">共识</span>
+                      <span class="pl-ps-count pl-ps-green">2</span>
+                    </header>
+                    <ul class="pl-ps-items">
+                      <li>三步拆解：filter / regex / debounce</li>
+                      <li>reducer 接入 stream filter</li>
+                    </ul>
+                  </section>
+
+                  <!-- 冲突 -->
+                  <section class="pl-psection">
+                    <header class="pl-ps-head">
+                      <span class="pl-ps-title pl-ps-amber">冲突</span>
+                      <span class="pl-ps-count pl-ps-amber">0</span>
+                    </header>
+                    <p class="pl-ps-empty">暂无冲突</p>
+                  </section>
+
+                  <!-- 风险 -->
+                  <section class="pl-psection">
+                    <header class="pl-ps-head">
+                      <span class="pl-ps-title pl-ps-red">风险</span>
+                      <span class="pl-ps-count pl-ps-red">2</span>
+                    </header>
+                    <ul class="pl-ps-items">
+                      <li class="pl-ps-risk">web-worker 正则 504</li>
+                      <li class="pl-ps-risk">跨会话持久化设计</li>
+                    </ul>
+                  </section>
+
+                  <!-- 参与 Agent -->
+                  <section class="pl-psection">
+                    <header class="pl-ps-head">
+                      <span class="pl-ps-title pl-ps-neutral">参与 Agent</span>
+                    </header>
+                    <ul class="pl-ps-agents">
+                      <li class="pl-agent-row">
+                        <span class="loom-agent-avatar codex" aria-hidden="true">Co</span>
+                        <span class="pl-agent-name">Codex</span>
+                        <span class="pl-agent-tags">
+                          <span class="pl-agent-tag">计划</span>
+                          <span class="pl-agent-tag">编码</span>
+                        </span>
+                      </li>
+                      <li class="pl-agent-row">
+                        <span class="loom-agent-avatar claude" aria-hidden="true">Cl</span>
+                        <span class="pl-agent-name">Claude Code</span>
+                        <span class="pl-agent-tags">
+                          <span class="pl-agent-tag">风险</span>
+                          <span class="pl-agent-tag">Review</span>
+                        </span>
+                      </li>
+                    </ul>
+                  </section>
+                </div>
+
+                <!-- 底部 CTA -->
+                <div class="pl-panel-foot">
+                  <button type="button" class="pl-cta" data-dom-id="cta-create-tasks">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M12 5v14M5 12h14"/>
+                    </svg>
+                    <span>从计划生成任务</span>
+                  </button>
+                </div>
+              </aside>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== Shell 专属样式（Free-explore 模式，置于 body 末尾） ===== -->
+      <style>
+        /* —— 应用骨架 —— */
+        html, body { height: 100%; }
+        body {
+          background: var(--loom-bg);
+          color: var(--loom-text);
+          font-family: var(--loom-font);
+          overflow: hidden; /* 桌面应用固定视口，整页不滚动 */
+        }
+        .loom-app {
+          display: flex;
+          width: 100vw;
+          height: 100vh;
+          overflow: hidden;
+        }
+
+        /* —— 侧栏 —— */
+        .loom-sidebar {
+          width: 256px;
+          flex-shrink: 0;
+          background: var(--loom-sidebar);
+          border-right: 1px solid var(--loom-border);
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+        .sb-logo {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 16px 16px 12px;
+        }
+        .sb-mark { color: var(--loom-accent); display: inline-flex; }
+        .sb-word {
+          font-size: var(--loom-fs-title);
+          font-weight: 600;
+          color: var(--loom-text);
+          letter-spacing: -0.01em;
+        }
+
+        /* 搜索 + 添加项目 */
+        .sb-search {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          padding: 0 16px 12px;
+        }
+        .sb-search-input {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          height: 30px;
+          padding: 0 10px;
+          background: var(--loom-surface);
+          border: 1px solid var(--loom-border);
+          border-radius: var(--loom-r-ctl);
+          color: var(--loom-text-3);
+        }
+        .sb-search-ph {
+          font-size: var(--loom-fs-sm);
+          color: var(--loom-text-3);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .sb-add-project {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          width: 100%;
+          height: 28px;
+          background: transparent;
+          border: 1px dashed var(--loom-border-strong);
+          border-radius: var(--loom-r-ctl);
+          color: var(--loom-text-2);
+          font-size: var(--loom-fs-sm);
+          cursor: pointer;
+          transition: background-color 140ms cubic-bezier(.2,.8,.2,1), border-color 140ms cubic-bezier(.2,.8,.2,1);
+        }
+        .sb-add-project:hover { background: var(--loom-hover); border-color: var(--loom-text-3); }
+        .sb-add-project:active { background: var(--loom-selected); }
+
+        /* —— 项目树 —— */
+        .sb-tree {
+          flex: 1;
+          padding: 4px 8px 8px;
+          overflow: hidden;
+        }
+        .sb-project { margin-bottom: 2px; }
+        .sb-project-row {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          height: 28px;
+          padding: 0 8px;
+          border-radius: var(--loom-r-chip);
+          cursor: pointer;
+          color: var(--loom-text-2);
+          transition: background-color 140ms cubic-bezier(.2,.8,.2,1);
+        }
+        .sb-project-row:hover { background: var(--loom-hover); }
+        .sb-chevron { color: var(--loom-text-3); flex-shrink: 0; transition: transform 160ms cubic-bezier(.2,.8,.2,1); }
+        .sb-folder { flex-shrink: 0; }
+        .sb-project-name {
+          font-size: var(--loom-fs-body);
+          font-weight: 500;
+          flex: 1;
+          min-width: 0;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .sb-count {
+          flex-shrink: 0;
+          font-size: var(--loom-fs-label);
+          color: var(--loom-text-3);
+          background: var(--loom-surface);
+          border-radius: var(--loom-r-chip);
+          padding: 1px 6px;
+          line-height: 1.4;
+          font-variant-numeric: tabular-nums;
+        }
+
+        /* 激活项目：文件夹 + 名称高亮为 accent */
+        .sb-project.is-active > .sb-project-row .sb-folder { color: var(--loom-accent); }
+        .sb-project.is-active > .sb-project-row .sb-project-name { color: var(--loom-text); }
+        .sb-project.is-active > .sb-project-row .sb-count {
+          background: var(--loom-accent-soft);
+          color: var(--loom-accent);
+        }
+        /* 展开态：chevron 旋转 90deg */
+        .sb-project.is-expanded > .sb-project-row .sb-chevron { transform: rotate(90deg); }
+        /* 折叠态隐藏任务列表 */
+        .sb-project.is-collapsed > .sb-tasks { display: none; }
+
+        /* —— 任务行 —— */
+        .sb-tasks { padding: 2px 0 6px; }
+        .sb-task {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          height: 28px;
+          padding-left: 36px; /* 相对项目行再缩进 ~28px */
+          padding-right: 8px;
+          border-radius: var(--loom-r-chip);
+          cursor: pointer;
+          color: var(--loom-text-2);
+          transition: background-color 140ms cubic-bezier(.2,.8,.2,1);
+        }
+        .sb-task:hover { background: var(--loom-hover); }
+        .sb-task.is-active { background: var(--loom-selected); }
+        .sb-task .sb-dot { flex-shrink: 0; }
+        .sb-task-title {
+          flex: 1;
+          min-width: 0;
+          font-size: var(--loom-fs-sm);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          color: var(--loom-text-2);
+        }
+        .sb-task.is-active .sb-task-title { color: var(--loom-text); }
+        .sb-task-time {
+          flex-shrink: 0;
+          font-size: var(--loom-fs-label);
+          color: var(--loom-text-3);
+          font-variant-numeric: tabular-nums;
+          font-family: var(--loom-mono);
+        }
+
+        /* —— 设置入口（贴底） —— */
+        .sb-settings {
+          margin-top: auto;
+          padding: 8px 8px 12px;
+          border-top: 1px solid var(--loom-border);
+        }
+        .sb-settings-row {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          width: 100%;
+          height: 30px;
+          padding: 0 10px;
+          background: transparent;
+          border: none;
+          border-radius: var(--loom-r-chip);
+          color: var(--loom-text-2);
+          font-size: 13px;
+          cursor: pointer;
+          transition: background-color 140ms cubic-bezier(.2,.8,.2,1);
+        }
+        .sb-settings-row:hover { background: var(--loom-hover); }
+        .sb-settings-row.is-active { background: var(--loom-selected); color: var(--loom-text); }
+
+        /* —— 主区域 —— */
+        .loom-main {
+          flex: 1;
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+
+        /* —— 顶栏 —— */
+        .loom-header {
+          height: 44px;
+          flex-shrink: 0;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 0 16px;
+          background: var(--loom-bg);
+          border-bottom: 1px solid var(--loom-border);
+        }
+        .hd-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+        .hd-icon-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 28px;
+          height: 28px;
+          background: transparent;
+          border: 1px solid transparent;
+          border-radius: var(--loom-r-chip);
+          color: var(--loom-text-2);
+          cursor: pointer;
+          flex-shrink: 0;
+          transition: background-color 140ms cubic-bezier(.2,.8,.2,1), color 140ms cubic-bezier(.2,.8,.2,1);
+        }
+        .hd-icon-btn:hover { background: var(--loom-hover); color: var(--loom-text); }
+        .hd-icon-btn:active { background: var(--loom-selected); }
+
+        .hd-breadcrumb {
+          display: flex;
+          align-items: baseline;
+          gap: 6px;
+          min-width: 0;
+        }
+        .hd-crumb {
+          font-size: var(--loom-fs-sm);
+          white-space: nowrap;
+        }
+        .hd-crumb-link { color: var(--loom-text-2); cursor: pointer; }
+        .hd-crumb-link:hover { color: var(--loom-text); }
+        .hd-crumb-sep { color: var(--loom-text-3); }
+        .hd-crumb-current {
+          color: var(--loom-text);
+          font-weight: 500;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .hd-spacer { flex: 1; min-width: 0; }
+
+        /* —— 迷你步骤指示 —— */
+        .hd-stepper {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          flex-shrink: 0;
+        }
+        .hd-step {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          height: 22px;
+          padding: 0 8px;
+          border-radius: var(--loom-r-chip);
+          font-size: var(--loom-fs-label);
+          color: var(--loom-text-3);
+          background: transparent;
+          white-space: nowrap;
+          font-weight: 500;
+        }
+        .hd-step .hd-step-ico { flex-shrink: 0; }
+        .hd-step.is-ok { color: var(--loom-green); }
+        .hd-step.is-on { color: var(--loom-accent); background: var(--loom-accent-soft); }
+        .hd-step-sep { color: var(--loom-text-3); font-size: 10px; }
+
+        .hd-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+        /* —— 主内容容器 —— */
+        .app-content {
+          flex: 1;
+          overflow: hidden; /* 内部滚动由叶子页决定 */
+        }
+
+        /* —— 全局通用工具（供叶子页复用） —— */
+        .loom-mono { font-family: var(--loom-mono); }
+
+        /* —— 触控/减少动效兜底 —— */
+        @media (prefers-reduced-motion: reduce) {
+          * { transition-duration: 0.01ms !important; }
+        }
+      </style>
+
+      <!-- ===== 规划讨论室专属样式（叶子页私有） ===== -->
+      <style>
+        /* —— 两列布局：左聊天 + 右汇总 —— */
+        .pl-room {
+          display: flex;
+          width: 100%;
+          height: 100%;
+          overflow: hidden;
+        }
+
+        /* ---------- 左列：聊天区 ---------- */
+        .pl-chat {
+          flex: 1;
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          background: var(--loom-bg);
+          overflow: hidden;
+        }
+
+        /* —— 聊天头部 —— */
+        .pl-chat-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 16px 20px;
+          border-bottom: 1px solid var(--loom-border);
+          flex-shrink: 0;
+        }
+        .pl-head-info { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+        .pl-kicker {
+          font-size: var(--loom-fs-label);
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          color: var(--loom-text-3);
+          font-weight: 500;
+        }
+        .pl-head-title {
+          font-size: var(--loom-fs-h);
+          font-weight: 600;
+          color: var(--loom-text);
+          letter-spacing: -0.01em;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          margin: 0;
+        }
+
+        /* 计划引用 chip */
+        .pl-plan-ref {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          background: var(--loom-surface);
+          border: 1px solid var(--loom-border);
+          border-radius: var(--loom-r-chip);
+          padding: 4px 8px;
+          color: var(--loom-text-2);
+          text-decoration: none;
+          flex-shrink: 0;
+          transition: border-color 140ms cubic-bezier(.2,.8,.2,1), background-color 140ms cubic-bezier(.2,.8,.2,1);
+        }
+        .pl-plan-ref:hover { border-color: var(--loom-border-strong); background: var(--loom-hover); }
+        .pl-plan-ref svg { color: var(--loom-text-3); flex-shrink: 0; }
+        .pl-plan-ref span {
+          font-family: var(--loom-mono);
+          font-size: var(--loom-fs-sm);
+          color: var(--loom-text-2);
+          white-space: nowrap;
+        }
+
+        /* —— 聊天流（滚动区） —— */
+        .pl-stream {
+          flex: 1;
+          overflow-y: auto;
+          overflow-x: hidden;
+          padding: 16px 20px;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          scrollbar-width: thin;
+          scrollbar-color: var(--loom-border-strong) transparent;
+        }
+        .pl-stream::-webkit-scrollbar { width: 8px; }
+        .pl-stream::-webkit-scrollbar-track { background: transparent; }
+        .pl-stream::-webkit-scrollbar-thumb {
+          background: var(--loom-border-strong);
+          border-radius: 4px;
+        }
+        .pl-stream::-webkit-scrollbar-thumb:hover { background: var(--loom-text-3); }
+
+        /* —— 消息通用 —— */
+        .pl-msg { display: flex; flex-direction: column; gap: 6px; }
+        .pl-msg-meta {
+          display: flex;
+          align-items: center;
+          gap: 7px;
+        }
+        .pl-avatar { flex-shrink: 0; }
+        .pl-avatar-user {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 22px;
+          height: 22px;
+          border-radius: 50%;
+          background: var(--loom-selected);
+          color: var(--loom-text);
+          font-size: 10px;
+          font-weight: 500;
+        }
+        .pl-name {
+          font-size: var(--loom-fs-sm);
+          font-weight: 500;
+          color: var(--loom-text);
+        }
+        .pl-agent-role {
+          font-size: var(--loom-fs-label);
+          color: var(--loom-text-3);
+        }
+        .pl-time {
+          font-size: var(--loom-fs-label);
+          color: var(--loom-text-3);
+          margin-left: 2px;
+        }
+
+        /* —— 消息气泡 —— */
+        .pl-bubble {
+          background: var(--loom-surface);
+          border: 1px solid var(--loom-border);
+          border-radius: var(--loom-r-card);
+          padding: 10px 14px;
+          max-width: 80%;
+        }
+        .pl-body {
+          font-size: var(--loom-fs-body);
+          color: var(--loom-text);
+          line-height: 1.6;
+          margin: 0;
+        }
+        /* @提及高亮 */
+        .pl-mention {
+          color: var(--loom-accent);
+          font-weight: 500;
+          background: var(--loom-accent-soft);
+          padding: 0 4px;
+          border-radius: 4px;
+        }
+
+        /* —— 有序列表 / 无序列表 —— */
+        .pl-steps {
+          margin: 6px 0 0;
+          padding: 0;
+          list-style: none;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+        .pl-steps li {
+          font-size: var(--loom-fs-body);
+          color: var(--loom-text-2);
+          line-height: 1.7;
+        }
+        .pl-bullets {
+          margin: 6px 0 0;
+          padding: 0;
+          list-style: none;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+        .pl-bullets li {
+          font-size: var(--loom-fs-sm);
+          color: var(--loom-text-2);
+          line-height: 1.7;
+        }
+
+        /* —— 代码块 —— */
+        .pl-code {
+          margin: 8px 0 0;
+          background: var(--loom-inset);
+          border-radius: var(--loom-r-ctl);
+          padding: 10px 12px;
+          overflow-x: auto;
+        }
+        .pl-code code {
+          font-family: var(--loom-mono);
+          font-size: var(--loom-fs-mono);
+          color: var(--loom-text);
+          line-height: 1.6;
+          white-space: pre;
+        }
+
+        /* —— 风险提示（琥珀色左边框） —— */
+        .pl-risk-note {
+          display: flex;
+          align-items: flex-start;
+          gap: 8px;
+          margin-top: 10px;
+          padding: 2px 0 2px 10px;
+          border-left: 3px solid var(--loom-amber);
+          font-size: var(--loom-fs-sm);
+          color: var(--loom-amber);
+          line-height: 1.5;
+        }
+        .pl-risk-mark { flex-shrink: 0; line-height: 1.5; }
+
+        /* —— 共识标签 —— */
+        .pl-tag {
+          display: inline-flex;
+          align-items: center;
+          font-size: var(--loom-fs-label);
+          border-radius: 4px;
+          padding: 2px 7px;
+          margin-top: 10px;
+          white-space: nowrap;
+        }
+        .pl-tag-consensus {
+          background: var(--loom-green-soft);
+          color: var(--loom-green);
+        }
+
+        /* —— 系统汇总卡片（accent 左边框，全宽） —— */
+        .pl-summary-card {
+          background: var(--loom-bg-2);
+          border: 1px solid var(--loom-border);
+          border-left: 3px solid var(--loom-accent);
+          border-radius: var(--loom-r-ctl);
+          padding: 12px 14px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          max-width: 80%;
+        }
+        .pl-summary-head {
+          display: flex;
+          align-items: center;
+          gap: 7px;
+        }
+        .pl-spark { color: var(--loom-accent); display: inline-flex; flex-shrink: 0; }
+        .pl-summary-title {
+          font-size: var(--loom-fs-sm);
+          font-weight: 600;
+          color: var(--loom-accent);
+        }
+        .pl-summary-sub {
+          font-size: var(--loom-fs-label);
+          color: var(--loom-text-3);
+        }
+        .pl-summary-rows {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+        .pl-summary-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: var(--loom-fs-sm);
+        }
+        .pl-sr-label {
+          color: var(--loom-text-3);
+          width: 32px;
+          flex-shrink: 0;
+        }
+        .pl-sr-badge {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 18px;
+          height: 18px;
+          padding: 0 5px;
+          border-radius: 4px;
+          font-size: var(--loom-fs-label);
+          font-weight: 600;
+          font-variant-numeric: tabular-nums;
+          flex-shrink: 0;
+        }
+        .pl-sr-green { background: var(--loom-green-soft); color: var(--loom-green); }
+        .pl-sr-amber { background: var(--loom-amber-soft); color: var(--loom-amber); }
+        .pl-sr-red { background: var(--loom-red-soft); color: var(--loom-red); }
+        .pl-sr-text {
+          color: var(--loom-text-2);
+          font-size: var(--loom-fs-sm);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        /* ---------- Composer（输入区） ---------- */
+        .pl-composer {
+          flex-shrink: 0;
+          border-top: 1px solid var(--loom-border);
+          padding: 12px 20px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          background: var(--loom-bg);
+        }
+        .pl-textarea {
+          background: var(--loom-surface);
+          border: 1px solid var(--loom-border-strong);
+          border-radius: var(--loom-r-card);
+          min-height: 44px;
+          padding: 12px 14px;
+          display: flex;
+          align-items: center;
+          cursor: text;
+          transition: border-color 140ms cubic-bezier(.2,.8,.2,1);
+        }
+        .pl-textarea:hover { border-color: var(--loom-text-3); }
+        .pl-textarea:focus-within { border-color: var(--loom-accent); }
+        .pl-textarea-ph {
+          font-size: var(--loom-fs-body);
+          color: var(--loom-text-3);
+        }
+
+        /* Composer 工具栏：左 Agent chips + 右发送 */
+        .pl-composer-bar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+        }
+        .pl-agent-chips {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          flex-wrap: wrap;
+        }
+        .pl-chip {
+          display: inline-flex;
+          align-items: center;
+          gap: 1px;
+          border-radius: var(--loom-r-chip);
+          padding: 3px 8px;
+          font-size: var(--loom-fs-sm);
+          font-weight: 500;
+          white-space: nowrap;
+          cursor: pointer;
+          transition: background-color 140ms cubic-bezier(.2,.8,.2,1), border-color 140ms cubic-bezier(.2,.8,.2,1), color 140ms cubic-bezier(.2,.8,.2,1);
+        }
+        .pl-chip-at { font-weight: 600; opacity: 0.8; }
+        /* 激活态 chip：accent-soft 背景 + accent 描边 + accent 文字 */
+        .pl-chip-on {
+          background: var(--loom-accent-soft);
+          border: 1px solid var(--loom-accent);
+          color: var(--loom-accent);
+        }
+        .pl-chip-on:hover { background: rgba(151, 201, 248, 0.22); }
+        /* 未激活 chip：ghost 边框 + 次要文字 */
+        .pl-chip-off {
+          background: transparent;
+          border: 1px solid var(--loom-border-strong);
+          color: var(--loom-text-3);
+        }
+        .pl-chip-off:hover { border-color: var(--loom-text-3); color: var(--loom-text-2); }
+
+        /* 发送按钮（主操作） */
+        .pl-send {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          background: var(--loom-accent-fill);
+          color: var(--loom-text);
+          border: none;
+          border-radius: var(--loom-r-ctl);
+          padding: 6px 14px;
+          font-size: var(--loom-fs-sm);
+          font-weight: 500;
+          cursor: pointer;
+          flex-shrink: 0;
+          transition: background-color 140ms cubic-bezier(.2,.8,.2,1), transform 140ms cubic-bezier(.2,.8,.2,1);
+        }
+        .pl-send:hover { background: #3A7FC0; }
+        .pl-send:active { transform: scale(0.98); }
+        .pl-send:focus-visible { outline: 2px solid var(--loom-accent); outline-offset: 2px; }
+
+        /* ---------- 右列：方案汇总面板 ---------- */
+        .pl-panel {
+          width: 300px;
+          flex-shrink: 0;
+          background: var(--loom-bg-2);
+          border-left: 1px solid var(--loom-border);
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+        .pl-panel-head {
+          padding: 16px 16px 12px;
+          border-bottom: 1px solid var(--loom-border);
+          flex-shrink: 0;
+        }
+        .pl-panel-head h2 {
+          font-size: var(--loom-fs-body);
+          font-weight: 600;
+          color: var(--loom-text);
+          margin: 0;
+        }
+        .pl-panel-body {
+          flex: 1;
+          overflow-y: auto;
+          padding: 12px 16px;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          scrollbar-width: thin;
+          scrollbar-color: var(--loom-border-strong) transparent;
+        }
+        .pl-panel-body::-webkit-scrollbar { width: 6px; }
+        .pl-panel-body::-webkit-scrollbar-thumb { background: var(--loom-border-strong); border-radius: 3px; }
+
+        /* 汇总分区 */
+        .pl-psection { display: flex; flex-direction: column; gap: 8px; }
+        .pl-ps-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+        }
+        .pl-ps-title {
+          font-size: var(--loom-fs-label);
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+        }
+        .pl-ps-count {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 18px;
+          height: 18px;
+          padding: 0 5px;
+          border-radius: 4px;
+          font-size: var(--loom-fs-label);
+          font-weight: 600;
+          font-variant-numeric: tabular-nums;
+        }
+        .pl-ps-green { color: var(--loom-green); }
+        .pl-ps-green.pl-ps-count { background: var(--loom-green-soft); }
+        .pl-ps-amber { color: var(--loom-amber); }
+        .pl-ps-amber.pl-ps-count { background: var(--loom-amber-soft); }
+        .pl-ps-red { color: var(--loom-red); }
+        .pl-ps-red.pl-ps-count { background: var(--loom-red-soft); }
+        .pl-ps-neutral { color: var(--loom-text-3); }
+
+        .pl-ps-items {
+          margin: 0;
+          padding: 0;
+          list-style: none;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+        .pl-ps-items li {
+          font-size: var(--loom-fs-sm);
+          color: var(--loom-text-2);
+          line-height: 1.5;
+        }
+        /* 风险项：琥珀色左边框 */
+        .pl-ps-risk {
+          padding-left: 10px;
+          border-left: 2px solid var(--loom-amber);
+        }
+        .pl-ps-empty {
+          font-size: var(--loom-fs-sm);
+          color: var(--loom-text-3);
+          margin: 0;
+        }
+
+        /* 参与 Agent 行 */
+        .pl-ps-agents {
+          margin: 0;
+          padding: 0;
+          list-style: none;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+        .pl-agent-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .pl-agent-name {
+          font-size: var(--loom-fs-sm);
+          font-weight: 500;
+          color: var(--loom-text);
+          flex: 1;
+          min-width: 0;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .pl-agent-tags {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          flex-shrink: 0;
+        }
+        .pl-agent-tag {
+          font-size: var(--loom-fs-label);
+          color: var(--loom-text-3);
+          background: var(--loom-surface);
+          border-radius: 4px;
+          padding: 1px 6px;
+          white-space: nowrap;
+        }
+
+        /* —— 底部 CTA —— */
+        .pl-panel-foot {
+          flex-shrink: 0;
+          padding: 12px 16px;
+          border-top: 1px solid var(--loom-border);
+        }
+        .pl-cta {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 7px;
+          width: 100%;
+          background: var(--loom-accent-fill);
+          color: var(--loom-text);
+          border: none;
+          border-radius: var(--loom-r-ctl);
+          padding: 8px;
+          font-size: var(--loom-fs-sm);
+          font-weight: 500;
+          cursor: pointer;
+          transition: background-color 140ms cubic-bezier(.2,.8,.2,1), transform 140ms cubic-bezier(.2,.8,.2,1);
+        }
+        .pl-cta:hover { background: #3A7FC0; }
+        .pl-cta:active { transform: scale(0.99); }
+        .pl-cta:focus-visible { outline: 2px solid var(--loom-accent); outline-offset: 2px; }
+
+        /* —— 响应式：窄屏收起右栏 —— */
+        @media (max-width: 960px) {
+          .pl-panel { display: none; }
+          .pl-bubble, .pl-summary-card { max-width: 100%; }
+        }
+      </style>
+    </main>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

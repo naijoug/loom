@@ -1,0 +1,98 @@
+/* Loom — Dark Technical Workbench
+   设计令牌：深色优先，Linear/Claude 桌面端风格
+   等宽字体强调日志/代码，Agent 各自配色编码 */
+
+:root {
+  /* 品牌主色 — 冷调天蓝，用于链接/active/主操作 */
+  --loom-accent: #97C9F8;
+  --loom-accent-ink: #0B1F33;
+  --loom-accent-fill: #2F6FB0;
+  --loom-accent-soft: rgba(151, 201, 248, 0.14);
+
+  /* 背景层级 */
+  --loom-bg: #181818;
+  --loom-bg-2: #1F1F1F;
+  --loom-sidebar: #272727;
+  --loom-surface: #222222;
+  --loom-surface-2: #2D2D2D;
+  --loom-inset: #303030;
+  --loom-selected: #3B3D41;
+  --loom-hover: #2E2E2E;
+  --loom-border: #2F2F2F;
+  --loom-border-strong: #3A3A3C;
+
+  /* 文字层级 */
+  --loom-text: #ECECEC;
+  --loom-text-2: #A3A4A5;
+  --loom-text-3: #6E6F70;
+
+  /* 语义状态色 */
+  --loom-green: #4FB477;
+  --loom-green-soft: rgba(79, 180, 119, 0.16);
+  --loom-amber: #D6A23C;
+  --loom-amber-soft: rgba(214, 162, 60, 0.16);
+  --loom-red: #E2645C;
+  --loom-red-soft: rgba(226, 100, 92, 0.16);
+
+  /* Agent 配色编码 */
+  --loom-agent-codex: #10A37F;
+  --loom-agent-claude: #D97757;
+  --loom-agent-hermes: #7C5CFC;
+
+  /* 圆角 */
+  --loom-r-card: 10px;
+  --loom-r-ctl: 8px;
+  --loom-r-chip: 6px;
+
+  /* 字号 */
+  --loom-fs-title: 15px;
+  --loom-fs-h: 16px;
+  --loom-fs-body: 14px;
+  --loom-fs-sm: 12.5px;
+  --loom-fs-xs: 11.5px;
+  --loom-fs-label: 11px;
+  --loom-fs-mono: 13px;
+
+  /* 字体 */
+  --loom-font: "Inter", -apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+  --loom-mono: "Geist Mono", "SF Mono", "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+
+/* 等宽终端/代码区域 */
+.loom-mono {
+  font-family: var(--loom-mono);
+  font-size: var(--loom-fs-mono);
+  line-height: 1.6;
+}
+
+/* Agent 头像基础样式 */
+.loom-agent-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: 0.02em;
+}
+.loom-agent-avatar.codex { background: var(--loom-agent-codex); }
+.loom-agent-avatar.claude { background: var(--loom-agent-claude); }
+.loom-agent-avatar.hermes { background: var(--loom-agent-hermes); }
+.loom-agent-avatar.empty {
+  background: var(--loom-surface-2);
+  color: var(--loom-text-3);
+  border: 1px dashed var(--loom-border-strong);
+}
+
+/* 状态圆点 */
+.loom-status-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
