@@ -6,6 +6,20 @@ export interface HealthCheckResult {
   timestampMs: number;
 }
 
+export type ThemeMode = "light" | "dark" | "system";
+
+export interface AppSettings {
+  themeMode: ThemeMode;
+  confirmBeforeCommands: boolean;
+  commandTimeoutSeconds: number;
+}
+
+export const DEFAULT_APP_SETTINGS: AppSettings = {
+  themeMode: "system",
+  confirmBeforeCommands: true,
+  commandTimeoutSeconds: 600,
+};
+
 export interface WorkflowStage {
   id: "planning" | "implementation" | "debugging" | "summary";
   title: string;

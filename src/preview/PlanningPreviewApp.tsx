@@ -1,7 +1,7 @@
 import { ThemeProvider } from "../contexts/ThemeContext";
 import { AppLayout } from "../layouts/AppLayout";
 import { Board } from "../components/Board";
-import { NewTaskModal } from "../components/Board";
+import { NewTaskModal, NewTaskModalHost } from "../components/Board";
 import { Header } from "../components/Header";
 import { Sidebar } from "../components/Sidebar";
 import { AddProjectModal } from "../components/Sidebar/AddProjectModal";
@@ -521,6 +521,7 @@ const previewState: AppState = {
     selectedTaskId: previewTask.id,
     selectedTodoId: null,
     viewedStage: null,
+    isCreatingTask: false,
     activeCommandRunId: null,
     isLoadingProjects: false,
     isLoadingAgents: false,
@@ -627,7 +628,7 @@ const previewState: AppState = {
 	};
 
 type PreviewScreen = "planning" | "board" | "board-speaker" | "new-task" | "add-project" | "session" | "testing" | "done" | "settings";
-type PreviewSettingsTab = "general" | "appearance" | "agents" | "safety" | "notifications" | "about";
+type PreviewSettingsTab = "general" | "appearance" | "agents" | "safety" | "about";
 type PreviewTheme = "dark" | "light";
 
 function previewScreen(value: string | null): PreviewScreen {
@@ -688,7 +689,6 @@ function previewSettingsTab(value: string | null): PreviewSettingsTab {
     value === "appearance" ||
     value === "agents" ||
     value === "safety" ||
-    value === "notifications" ||
     value === "about"
   ) {
     return value;
@@ -723,6 +723,7 @@ function PreviewRoute({ screen, settingsTab }: { screen: PreviewScreen; settings
   return (
     <AppLayout sidebar={<Sidebar />} header={<Header />}>
       {content}
+      <NewTaskModalHost />
       {screen === "new-task" && previewState.projects.current && (
         <NewTaskModal project={previewState.projects.current} onClose={() => undefined} />
       )}

@@ -4,7 +4,7 @@ import { AppStateProvider } from "./state/AppStateContext";
 import { AppLayout } from "./layouts/AppLayout";
 import { Sidebar } from "./components/Sidebar";
 import { Header } from "./components/Header";
-import { Board } from "./components/Board";
+import { Board, NewTaskModalHost } from "./components/Board";
 import { WorkspaceSplit } from "./components/Workspace";
 import { SettingsPage } from "./components/Settings";
 import { useAppState } from "./state/AppStateContext";
@@ -56,6 +56,7 @@ function AppContent() {
       onToggleSidebar={() => setSidebarCollapsed((value) => !value)}
     >
       {content}
+      <NewTaskModalHost />
     </AppLayout>
   );
 }

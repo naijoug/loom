@@ -203,7 +203,7 @@ async function main() {
         mobile: false,
       });
       await navigate(client, `${baseUrl}?screen=board`);
-      await waitFor(client, textIncludes("Add log search & filter", "LOOM-12"), "board screen");
+      await waitFor(client, textIncludes("Wire stream filter into reducer", "LOOM-12"), "board screen");
 
       await clickRequired(client, ".project-add-button", "add project button");
       await waitFor(client, textIncludes("Open a local directory", "Detected"), "add project modal");
@@ -239,29 +239,21 @@ async function main() {
       `, "new task submit enabled");
       await clickRequired(client, ".task-modal-close", "new task close button");
       await waitFor(client, `(${textIncludes("Invite agents to discuss")}) === false`, "new task modal close");
+      await navigate(client, `${baseUrl}?screen=board`);
+      await waitFor(client, textIncludes("Wire stream filter into reducer", "LOOM-12"), "board screen after modal");
 
-      await evaluate(client, `
-        (() => {
-          const element = [...document.querySelectorAll('.nav-item')].find((item) => item.textContent.includes('speaker'));
-          if (!element) return false;
-          element.scrollIntoView({ block: 'center', inline: 'center' });
-          element.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
-          return true;
-        })()
-      `);
-      await waitFor(client, textIncludes("Children Three Kingdoms"), "speaker project click");
       await navigate(client, `${baseUrl}?screen=board-speaker`);
-      await waitFor(client, textIncludes("Children Three Kingdoms", "SPK-4", "Voice preset"), "speaker board");
+      await waitFor(client, textIncludes("speaker", "SPK-4", "Voice preset"), "speaker board");
 
       await clickRequired(client, ".sidebar-settings-entry", "settings button");
-      await waitFor(client, textIncludes("Workspace", "Startup"), "settings general");
+      await waitFor(client, textIncludes("Current project", "Runtime model"), "settings general");
       await evaluate(client, "[...document.querySelectorAll('.settings-nav-item')].find((item) => item.textContent.includes('Agents'))?.click(); true");
       await waitFor(client, textIncludes("Installed agents", "Add custom Agent"), "settings agents tab");
 
       await navigate(client, `${baseUrl}?screen=session`);
       await waitFor(client, textIncludes("Mark ready for testing", "Subtasks"), "session screen");
       await navigate(client, `${baseUrl}?screen=testing`);
-      await waitFor(client, textIncludes("Debug agent", "Detected error"), "testing screen");
+      await waitFor(client, textIncludes("Debug validation", "Acceptance gate"), "testing screen");
 
       client.close();
     } finally {

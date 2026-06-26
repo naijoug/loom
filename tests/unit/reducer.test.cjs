@@ -325,7 +325,7 @@ test("upserting a different task resets the viewed stage", () => {
   assert.equal(state.app.viewedStage, null);
 });
 
-test("starting a new task opens the planning room with no task selected", () => {
+test("starting a new task opens the task modal without changing the current task", () => {
   const task = taskFixture();
   let state = appReducer(initialAppState, tasksLoaded([task]));
   state = appReducer(state, { type: "tasks/selected", taskId: task.id });
@@ -333,10 +333,24 @@ test("starting a new task opens the planning room with no task selected", () => 
 
   state = appReducer(state, { type: "tasks/new" });
 
-  assert.equal(state.app.currentView, "planning");
-  assert.equal(state.app.selectedTaskId, null);
-  assert.equal(state.app.selectedTodoId, null);
-  assert.equal(state.app.viewedStage, null);
+  assert.equal(state.app.isCreatingTask, true);
+  assert.equal(state.app.currentView, "task-detail");
+  assert.equal(state.app.selectedTaskId, task.id);
+  assert.equal(state.app.selectedTodoId, "todo-1");
+  assert.equal(state.app.viewedStage, "implementing");
+});
+
+test("closing the new task modal clears only the modal state", () => {
+  const task = taskFixture();
+  let state = appReducer(initialAppState, tasksLoaded([task]));
+  state = appReducer(state, { type: "tasks/selected", taskId: task.id });
+  state = appReducer(state, { type: "tasks/new" });
+
+  state = appReducer(state, { type: "tasks/newClosed" });
+
+  assert.equal(state.app.isCreatingTask, false);
+  assert.equal(state.app.currentView, "task-detail");
+  assert.equal(state.app.selectedTaskId, task.id);
 });
 
 test("removing the selected task drops it and returns to the board", () => {

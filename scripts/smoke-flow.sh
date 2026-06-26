@@ -39,7 +39,7 @@ for screen in planning board board-speaker new-task add-project session testing 
   check_url "screen:${screen}" "${BASE_URL}?screen=${screen}"
 done
 
-for tab in general appearance agents safety notifications about; do
+for tab in general appearance agents safety about; do
   check_url "settings:${tab}" "${BASE_URL}?screen=settings&tab=${tab}"
 done
 

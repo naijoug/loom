@@ -22,6 +22,7 @@ export interface AppSlice {
   // stage (default). Purely a UI/view concern — never persisted, never changes
   // task.status. See selectors.WorkflowStageId.
   viewedStage: WorkflowStageId | null;
+  isCreatingTask: boolean;
   activeCommandRunId: string | null;
   isLoadingProjects: boolean;
   isLoadingAgents: boolean;
@@ -72,6 +73,7 @@ export type AppAction =
   | { type: "tasks/selected"; taskId: string }
   | { type: "tasks/removed"; taskId: string; projectPath?: string }
   | { type: "tasks/new" }
+  | { type: "tasks/newClosed" }
   | { type: "tasks/todoSelected"; taskId: string; todoId: string }
   | { type: "tasks/todoCompleted"; taskId: string; todoId: string }
   | { type: "commands/started"; run: CommandRun }
@@ -95,6 +97,7 @@ export const initialAppState: AppState = {
     selectedTaskId: null,
     selectedTodoId: null,
     viewedStage: null,
+    isCreatingTask: false,
     activeCommandRunId: null,
     isLoadingProjects: false,
     isLoadingAgents: false,
@@ -349,6 +352,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         app: {
           ...state.app,
           currentView: normalizeAppView(action.view),
+          isCreatingTask: false,
         },
       };
 
@@ -410,6 +414,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           selectedTaskId: null,
           selectedTodoId: null,
           viewedStage: null,
+          isCreatingTask: false,
           isLoadingProjects: false,
           projectError: null,
         },
@@ -439,6 +444,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           selectedTaskId: null,
           selectedTodoId: null,
           viewedStage: null,
+          isCreatingTask: false,
           projectError: null,
         },
         projects: {
@@ -580,6 +586,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           selectedTaskId: action.taskId,
           selectedTodoId: selectedTodoIdForTask(task, state.app.selectedTodoId),
           viewedStage: null,
+          isCreatingTask: false,
         },
       };
     }
@@ -589,10 +596,17 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         ...state,
         app: {
           ...state.app,
-          currentView: "planning",
-          selectedTaskId: null,
-          selectedTodoId: null,
-          viewedStage: null,
+          isCreatingTask: true,
+          taskError: null,
+        },
+      };
+
+    case "tasks/newClosed":
+      return {
+        ...state,
+        app: {
+          ...state.app,
+          isCreatingTask: false,
         },
       };
 

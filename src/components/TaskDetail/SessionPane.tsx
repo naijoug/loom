@@ -17,8 +17,10 @@ import type {
   Task,
   TerminalSlot,
 } from "../../domain";
+import { DEFAULT_APP_SETTINGS } from "../../domain";
 import { useAgentBridge } from "../../hooks/useAgentBridge";
 import { useCommandBridge } from "../../hooks/useCommandBridge";
+import { useSettingsBridge } from "../../hooks/useSettingsBridge";
 import { useTaskBridge } from "../../hooks/useTaskBridge";
 import { useTerminalBridge } from "../../hooks/useTerminalBridge";
 import { useAppState } from "../../state/AppStateContext";
@@ -37,7 +39,8 @@ import {
   escalationNotice,
   isTimedOut,
 } from "../../utils/loopPolicy";
-import { parseCommandLine } from "../../utils/commandLine";
+import { detectDangerousCommand, parseCommandLine } from "../../utils/commandLine";
+import { resolveTerminalSlotCwd } from "../../utils/terminalSlots";
 import { Button } from "../common/Button";
 import { TaskTimeline } from "./TaskTimeline";
 import "./TaskDetail.css";
@@ -94,6 +97,7 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
     markReadyForTesting,
     startTodo,
   } = useTaskBridge();
+  const { loadSettings } = useSettingsBridge();
   const { listTerminalSlots, suggestTerminalSlots } = useTerminalBridge();
   const implementationAgents = useMemo(
     () => state.agents.filter((agent) => hasImplementationCapability(agent)),
@@ -103,6 +107,7 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
   const [guidance, setGuidance] = useState("");
   const [autoValidate, setAutoValidate] = useState(false);
   const [validationSlots, setValidationSlots] = useState<TerminalSlot[]>([]);
+  const [settings, setSettings] = useState(DEFAULT_APP_SETTINGS);
   const [validationNotice, setValidationNotice] = useState<string | null>(null);
   const [autoLoop, setAutoLoop] = useState<AutoImplementationLoop | null>(null);
   const handledLoopRunsRef = useRef<Set<string>>(new Set());
@@ -159,6 +164,18 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
   }, [loadAgents]);
 
   useEffect(() => {
+    let cancelled = false;
+    void loadSettings().then((loaded) => {
+      if (!cancelled) {
+        setSettings(loaded);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [loadSettings]);
+
+  useEffect(() => {
     if (!selectedAgentId && selectedAgent) {
       setSelectedAgentId(selectedAgent.id);
     }
@@ -178,7 +195,20 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
   }, [project.path, listTerminalSlots, suggestTerminalSlots]);
 
   function slotCwd(slot: { cwd?: string }) {
-    return slot.cwd ? `${project.path}/${slot.cwd}` : project.path;
+    return resolveTerminalSlotCwd(project.path, slot);
+  }
+
+  function confirmDangerousCommand(command: string) {
+    if (!settings.confirmBeforeCommands) {
+      return true;
+    }
+    const finding = detectDangerousCommand(command);
+    if (!finding) {
+      return true;
+    }
+    return window.confirm(
+      `Run potentially risky command?\n\n${command}\n\n${finding.detail}`,
+    );
   }
 
   async function startAutoValidationRun(
@@ -186,6 +216,12 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
     iteration: number,
     attempt: number,
   ) {
+    if (!confirmDangerousCommand(loop.validationCommand)) {
+      setAutoLoop((current) => (current?.loopId === loop.loopId ? { ...current, status: "escalated" } : current));
+      setValidationNotice("Auto validation stopped because the command was not confirmed.");
+      return null;
+    }
+
     try {
       const parsed = parseCommandLine(loop.validationCommand);
       if (!parsed.program) {

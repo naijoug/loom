@@ -16,10 +16,11 @@ import {
   User,
   X,
 } from "lucide-react";
-import type { CommandRun, ProjectSummary, Task, TerminalSlot, TerminalSlotKind } from "../../domain";
+import { DEFAULT_APP_SETTINGS, type CommandRun, type ProjectSummary, type Task, type TerminalSlot } from "../../domain";
 import { useAgentBridge } from "../../hooks/useAgentBridge";
 import { useCommandBridge } from "../../hooks/useCommandBridge";
 import { usePtyBridge } from "../../hooks/usePtyBridge";
+import { useSettingsBridge } from "../../hooks/useSettingsBridge";
 import { useTaskBridge } from "../../hooks/useTaskBridge";
 import { useTerminalBridge } from "../../hooks/useTerminalBridge";
 import { useAppState } from "../../state/AppStateContext";
@@ -29,7 +30,7 @@ import {
   formatQuotedFeedback,
   hasImplementationCapability,
 } from "../../utils/agentRun";
-import { parseCommandLine } from "../../utils/commandLine";
+import { detectDangerousCommand, parseCommandLine } from "../../utils/commandLine";
 import {
   isFailedValidationRun,
   isSuccessfulValidationRun,
@@ -43,6 +44,14 @@ import {
   escalationNotice,
   isTimedOut,
 } from "../../utils/loopPolicy";
+import {
+  applyTerminalSlotDraft,
+  blankTerminalSlotDraft,
+  buildDefaultSlots,
+  draftFromTerminalSlot,
+  resolveTerminalSlotCwd,
+  type TerminalSlotDraft,
+} from "../../utils/terminalSlots";
 import { Button } from "../common/Button";
 import { TerminalCard } from "./TerminalCard";
 import "./TaskDetail.css";
@@ -78,70 +87,6 @@ interface TestingPaneProps {
   project: ProjectSummary;
   task: Task;
   readOnly?: boolean;
-}
-
-function preferredPreviewCommand(project: ProjectSummary) {
-  return (
-    project.suggestedCommands.find((command) =>
-      /\b(pnpm|npm|yarn)\s+(dev|run\s+dev)\b/.test(command),
-    ) ?? "pnpm dev"
-  );
-}
-
-function commandPriority(command: string) {
-  if (/\b(test|smoke)\b/.test(command)) {
-    return 0;
-  }
-  if (/\b(typecheck|check)\b/.test(command)) {
-    return 1;
-  }
-  if (/\bbuild\b/.test(command)) {
-    return 2;
-  }
-  if (/\blint\b/.test(command)) {
-    return 3;
-  }
-  return 4;
-}
-
-function isValidationCommand(command: string) {
-  return /\b(test|smoke|typecheck|check|build|lint)\b/.test(command);
-}
-
-function preferredValidationCommand(project: ProjectSummary) {
-  const validationCommands = project.suggestedCommands
-    .filter(isValidationCommand)
-    .sort((left, right) => commandPriority(left) - commandPriority(right));
-
-  if (validationCommands[0]) {
-    return validationCommands[0];
-  }
-  if (project.detectedStacks.includes("Tauri")) {
-    return "cargo check --manifest-path src-tauri/Cargo.toml";
-  }
-  if (project.detectedStacks.includes("Rust")) {
-    return "cargo test";
-  }
-  if (project.detectedStacks.includes("Go")) {
-    return "go test ./...";
-  }
-  return "pnpm test";
-}
-
-function newSlotId() {
-  return `slot-${crypto.randomUUID()}`;
-}
-
-function buildDefaultSlots(project: ProjectSummary): TerminalSlot[] {
-  return [
-    { id: newSlotId(), name: "Preview", command: preferredPreviewCommand(project), kind: "preview" },
-    {
-      id: newSlotId(),
-      name: "Validation",
-      command: preferredValidationCommand(project),
-      kind: "validation",
-    },
-  ];
 }
 
 function slotEndpoint(slot: TerminalSlot) {
@@ -270,25 +215,19 @@ function gateStatus({
   };
 }
 
-interface SlotDraft {
-  id: string | null;
-  name: string;
-  command: string;
-  kind: TerminalSlotKind;
-  cwd: string;
-}
-
 export function TestingPane({ project, task, readOnly = false }: TestingPaneProps) {
   const { state } = useAppState();
   const { loadAgents } = useAgentBridge();
   const { startCommandRun, stopCommandRun } = useCommandBridge();
   const { startPtyRun, stopPtyRun } = usePtyBridge();
+  const { loadSettings } = useSettingsBridge();
   const { listTerminalSlots, saveTerminalSlots, suggestTerminalSlots } = useTerminalBridge();
   const { appendFeedback, completeTask, generateRepairContext } = useTaskBridge();
 
   const [slots, setSlots] = useState<TerminalSlot[]>([]);
   const [runIds, setRunIds] = useState<Record<string, string>>({});
-  const [draft, setDraft] = useState<SlotDraft | null>(null);
+  const [draft, setDraft] = useState<TerminalSlotDraft | null>(null);
+  const [settings, setSettings] = useState(DEFAULT_APP_SETTINGS);
   const [note, setNote] = useState("");
   const [quote, setQuote] = useState<QuoteDraft | null>(null);
   const [autoMode, setAutoMode] = useState(false);
@@ -315,6 +254,18 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
   useEffect(() => {
     void loadAgents();
   }, [loadAgents]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadSettings().then((loaded) => {
+      if (!cancelled) {
+        setSettings(loaded);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [loadSettings]);
 
   useEffect(() => {
     if (!selectedAgentId && selectedAgent) {
@@ -414,8 +365,20 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
   const runningAutoLoopRun = autoLoopRuns.find((run) => run.status === "running") ?? null;
 
   function slotCwd(slot: TerminalSlot) {
-    // cwd may be a relative subdir (monorepo app) or absent (project root).
-    return slot.cwd ? `${project.path}/${slot.cwd}` : project.path;
+    return resolveTerminalSlotCwd(project.path, slot);
+  }
+
+  function confirmDangerousCommand(command: string) {
+    if (!settings.confirmBeforeCommands) {
+      return true;
+    }
+    const finding = detectDangerousCommand(command);
+    if (!finding) {
+      return true;
+    }
+    return window.confirm(
+      `Run potentially risky command?\n\n${command}\n\n${finding.detail}`,
+    );
   }
 
   function validationSlotForRun(run: CommandRun) {
@@ -427,6 +390,14 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
   }
 
   async function startAutoValidationRun(loop: AutoTestingLoop) {
+    if (!confirmDangerousCommand(loop.validationCommand)) {
+      setAutoLoop((current) =>
+        current?.loopId === loop.loopId ? { ...current, status: "escalated" } : current,
+      );
+      setAutoNotice("Auto validation stopped because the command was not confirmed.");
+      return null;
+    }
+
     try {
       const parsed = parseCommandLine(loop.validationCommand);
       if (!parsed.program) {
@@ -473,7 +444,11 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
   async function runSlot(slot: TerminalSlot) {
     if (!slot.command.trim()) {
       // Unconfigured slot — open the editor instead of running an empty command.
-      setDraft({ id: slot.id, name: slot.name, command: slot.command, kind: slot.kind, cwd: slot.cwd ?? "" });
+      setDraft(draftFromTerminalSlot(slot));
+      return;
+    }
+    if (!confirmDangerousCommand(slot.command)) {
+      setCommandError("Command was not run because it was not confirmed.");
       return;
     }
     try {
@@ -527,26 +502,13 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
   }
 
   function saveDraft() {
-    if (!draft || !draft.name.trim() || !draft.command.trim()) {
+    if (!draft) {
       return;
     }
-    const cwd = draft.cwd.trim() || undefined;
-    const next = draft.id
-      ? slots.map((slot) =>
-          slot.id === draft.id
-            ? { ...slot, name: draft.name.trim(), command: draft.command.trim(), kind: draft.kind, cwd }
-            : slot,
-        )
-      : [
-          ...slots,
-          {
-            id: newSlotId(),
-            name: draft.name.trim(),
-            command: draft.command.trim(),
-            kind: draft.kind,
-            cwd,
-          },
-        ];
+    const next = applyTerminalSlotDraft(slots, draft);
+    if (!next) {
+      return;
+    }
     persistSlots(next);
     setDraft(null);
   }
@@ -885,17 +847,10 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
                 logs={slot.kind === "validation" && run ? state.commandLogs[run.id] ?? [] : []}
                 onRun={() => runSlot(slot)}
                 onStop={() => stopSlot(slot, run)}
-                onEdit={
+                      onEdit={
                   readOnly
                     ? undefined
-                    : () =>
-                        setDraft({
-                          id: slot.id,
-                          name: slot.name,
-                          command: slot.command,
-                          kind: slot.kind,
-                          cwd: slot.cwd ?? "",
-                        })
+                    : () => setDraft(draftFromTerminalSlot(slot))
                 }
                 onRemove={readOnly ? undefined : () => removeSlot(slot)}
                 onQuote={readOnly ? undefined : handleQuote}
@@ -909,7 +864,7 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
               <button
                 type="button"
                 className="testing-add-terminal"
-                onClick={() => setDraft({ id: null, name: "", command: "", kind: "validation", cwd: "" })}
+                onClick={() => setDraft(blankTerminalSlotDraft())}
               >
                 <Plus size={14} />
                 Add terminal
@@ -1225,7 +1180,7 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
               <select
                 value={draft.kind}
                 onChange={(event) =>
-                  setDraft({ ...draft, kind: event.target.value as TerminalSlotKind })
+                  setDraft({ ...draft, kind: event.target.value as TerminalSlot["kind"] })
                 }
               >
                 <option value="preview">Preview (live dev server)</option>

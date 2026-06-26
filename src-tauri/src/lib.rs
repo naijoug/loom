@@ -6,6 +6,7 @@ mod plan_html;
 mod projects;
 mod pty;
 mod session_capture;
+mod settings;
 mod storage;
 mod tasks;
 mod terminals;
@@ -60,6 +61,8 @@ pub fn run() {
             agents::set_agent_enabled,
             agents::update_agent,
             command_runner::command_runner_ready,
+            settings::load_app_settings,
+            settings::save_app_settings,
             command_runner::start_command_run,
             command_runner::stop_command_run,
             pty::start_pty_run,

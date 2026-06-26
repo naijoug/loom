@@ -1,16 +1,12 @@
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { type CSSProperties, type MouseEvent, useEffect, useState } from "react";
 import {
-  Archive,
   ChevronRight,
   Circle,
   Folder,
   FolderOpen,
   FolderPlus,
-  GitBranchPlus,
   LayoutGrid,
-  Pencil,
-  PinOff,
   Plus,
   Search,
   Settings,
@@ -39,7 +35,7 @@ interface ProjectMenuState {
   y: number;
 }
 
-type ProjectMenuAction = "unpin" | "reveal" | "worktree" | "rename" | "archive" | "remove";
+type ProjectMenuAction = "reveal" | "remove";
 
 function statusClass(status: TaskStatus) {
   if (status === "completed") {
@@ -341,48 +337,12 @@ export function Navigation() {
             type="button"
             className="context-menu-item"
             role="menuitem"
-            onClick={() => void handleProjectMenuAction("unpin", menuProject)}
-          >
-            <PinOff size={13} />
-            Unpin project
-          </button>
-          <button
-            type="button"
-            className="context-menu-item"
-            role="menuitem"
             onClick={() => void handleProjectMenuAction("reveal", menuProject)}
           >
             <FolderOpen size={13} />
             Reveal in Finder
           </button>
-          <button
-            type="button"
-            className="context-menu-item"
-            role="menuitem"
-            onClick={() => void handleProjectMenuAction("worktree", menuProject)}
-          >
-            <GitBranchPlus size={13} />
-            Create permanent worktree
-          </button>
-          <button
-            type="button"
-            className="context-menu-item"
-            role="menuitem"
-            onClick={() => void handleProjectMenuAction("rename", menuProject)}
-          >
-            <Pencil size={13} />
-            Rename project
-          </button>
           <div className="context-menu-divider" role="separator" />
-          <button
-            type="button"
-            className="context-menu-item"
-            role="menuitem"
-            onClick={() => void handleProjectMenuAction("archive", menuProject)}
-          >
-            <Archive size={13} />
-            Archive chats
-          </button>
           <button
             type="button"
             className="context-menu-item danger"

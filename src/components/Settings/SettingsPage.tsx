@@ -1,22 +1,44 @@
+import { invoke } from "@tauri-apps/api/core";
+import { openPath } from "@tauri-apps/plugin-opener";
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import {
   ArrowLeft,
-  Bell,
   Bot,
   CheckCircle2,
+  ExternalLink,
   Info,
   Palette,
   Pencil,
   Plus,
+  RefreshCw,
   ShieldCheck,
   SlidersHorizontal,
   Trash2,
   XCircle,
 } from "lucide-react";
 import { useTheme } from "../../contexts/ThemeContext";
-import type { AgentAdapterType, AgentCapability, AgentConfig, AgentConfigInput } from "../../domain";
+import {
+  DEFAULT_APP_SETTINGS,
+  type AgentAdapterType,
+  type AgentCapability,
+  type AgentConfig,
+  type AgentConfigInput,
+  type AppSettings,
+  type HealthCheckResult,
+  type TerminalSlot,
+} from "../../domain";
 import { useAgentBridge } from "../../hooks/useAgentBridge";
+import { hasTauriRuntime } from "../../hooks/runtime";
+import { useSettingsBridge } from "../../hooks/useSettingsBridge";
+import { useTerminalBridge } from "../../hooks/useTerminalBridge";
 import { useAppState } from "../../state/AppStateContext";
+import {
+  applyTerminalSlotDraft,
+  blankTerminalSlotDraft,
+  draftFromTerminalSlot,
+  resolveTerminalSlotCwd,
+  type TerminalSlotDraft,
+} from "../../utils/terminalSlots";
 import { Button } from "../common/Button";
 import "./SettingsPage.css";
 
@@ -25,7 +47,7 @@ interface SettingsPageProps {
   initialTab?: SettingsTab;
 }
 
-type SettingsTab = "general" | "appearance" | "agents" | "safety" | "notifications" | "about";
+type SettingsTab = "general" | "appearance" | "agents" | "safety" | "about";
 
 const cliAdapterTypes = new Set(["codex_cli", "claude_code_cli", "dummy", "cli"]);
 const capabilityOptions: AgentCapability[] = [
@@ -47,7 +69,6 @@ const settingsTabs: Array<{ id: SettingsTab; label: string; icon: ReactNode }> =
   { id: "appearance", label: "Appearance", icon: <Palette size={15} /> },
   { id: "agents", label: "Agents", icon: <Bot size={15} /> },
   { id: "safety", label: "Commands & Safety", icon: <ShieldCheck size={15} /> },
-  { id: "notifications", label: "Notifications", icon: <Bell size={15} /> },
   { id: "about", label: "About", icon: <Info size={15} /> },
 ];
 
@@ -96,6 +117,19 @@ function profileSummary(agent: AgentConfig) {
   }
 }
 
+function shortTimestamp(timestampMs?: number) {
+  if (!timestampMs) {
+    return "not available";
+  }
+  return new Date(timestampMs).toLocaleString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+  });
+}
+
 function SettingCard({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="setcard">
@@ -129,24 +163,25 @@ function Switch({ on }: { on: boolean }) {
   return <span className={`settings-switch ${on ? "on" : ""}`} />;
 }
 
-function SelectPill({ value }: { value: string }) {
+function ToggleControl({
+  checked,
+  disabled,
+  onChange,
+}: {
+  checked: boolean;
+  disabled?: boolean;
+  onChange: (checked: boolean) => void;
+}) {
   return (
-    <span className="settings-select-pill">
-      {value}
-      <span>▾</span>
-    </span>
-  );
-}
-
-function Segmented({ values, active }: { values: string[]; active: number }) {
-  return (
-    <span className="settings-segmented">
-      {values.map((value, index) => (
-        <b className={index === active ? "on" : ""} key={value}>
-          {value}
-        </b>
-      ))}
-    </span>
+    <button
+      type="button"
+      className="settings-toggle-control"
+      aria-pressed={checked}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+    >
+      <Switch on={checked} />
+    </button>
   );
 }
 
@@ -159,14 +194,13 @@ function ThemePreview({
   label: string;
   active: boolean;
   mode: "light" | "dark" | "system";
-  onClick?: () => void;
+  onClick: () => void;
 }) {
   return (
     <button
       type="button"
       className={`theme-card ${active ? "on" : ""}`}
       onClick={onClick}
-      disabled={!onClick}
     >
       <div className={`theme-preview theme-preview-${mode}`}>
         <div className="theme-preview-side" />
@@ -184,38 +218,114 @@ function ThemePreview({
   );
 }
 
-function policyControl(value: "Ask" | "Allow" | "Block") {
-  return (
-    <Segmented values={["Ask", "Allow", "Block"]} active={["Ask", "Allow", "Block"].indexOf(value)} />
-  );
-}
-
 export function SettingsPage({ onBack, initialTab = "general" }: SettingsPageProps) {
-  const { theme, toggleTheme } = useTheme();
+  const { theme, themeMode, setThemeMode } = useTheme();
   const { state } = useAppState();
   const { createAgent, deleteAgent, loadAgents, setAgentEnabled, updateAgent } = useAgentBridge();
+  const { loadSettings, saveSettings } = useSettingsBridge();
+  const { listTerminalSlots, saveTerminalSlots, suggestTerminalSlots } = useTerminalBridge();
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
   const [agentDraft, setAgentDraft] = useState<AgentConfigInput>(defaultAgentDraft);
   const [argsText, setArgsText] = useState("");
   const [editingAgentId, setEditingAgentId] = useState<string | null>(null);
+  const [appSettings, setAppSettings] = useState<AppSettings>(DEFAULT_APP_SETTINGS);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
+  const [health, setHealth] = useState<HealthCheckResult | null>(null);
+  const [slots, setSlots] = useState<TerminalSlot[]>([]);
+  const [slotsLoaded, setSlotsLoaded] = useState(false);
+  const [slotDraft, setSlotDraft] = useState<TerminalSlotDraft | null>(null);
+  const [slotError, setSlotError] = useState<string | null>(null);
+
+  const project = state.projects.current;
 
   useEffect(() => {
     void loadAgents();
   }, [loadAgents]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadSettings()
+      .then((loaded) => {
+        if (!cancelled) {
+          setAppSettings(loaded);
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setSettingsError(error instanceof Error ? error.message : String(error));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [loadSettings]);
+
+  useEffect(() => {
+    if (!hasTauriRuntime()) {
+      setHealth({
+        status: "ok",
+        app: "Loom",
+        version: "preview",
+        backend: "tauri",
+        timestampMs: Date.now(),
+      });
+      return;
+    }
+
+    let cancelled = false;
+    void invoke<HealthCheckResult>("health_check").then((result) => {
+      if (!cancelled) {
+        setHealth(result);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setSlotsLoaded(false);
+    setSlotDraft(null);
+    setSlotError(null);
+
+    if (!project) {
+      setSlots([]);
+      setSlotsLoaded(true);
+      return;
+    }
+
+    void listTerminalSlots(project.path).then(async (loaded) => {
+      const next = loaded.length > 0 ? loaded : await suggestTerminalSlots(project.path);
+      if (!cancelled) {
+        setSlots(next);
+        setSlotsLoaded(true);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [project, listTerminalSlots, suggestTerminalSlots]);
 
   const cliAgents = state.agents.filter((agent) => cliAdapterTypes.has(agent.adapterType));
   const selectedAdapter = adapterOptions.find((option) => option.value === agentDraft.adapterType);
   const editingAgent = editingAgentId
     ? cliAgents.find((agent) => agent.id === editingAgentId) ?? null
     : null;
-  const suggestedCommands = useMemo(() => {
-    const commands = state.projects.current?.suggestedCommands ?? [];
-    return commands.length > 0
-      ? commands
-      : ["pnpm install", "pnpm dev", "pnpm exec tsc --noEmit", "pnpm build"];
-  }, [state.projects.current?.suggestedCommands]);
   const availableAgents = cliAgents.filter((agent) => agent.available);
-  const phaseCoverage = new Set(cliAgents.flatMap((agent) => agent.capabilities));
+  const phaseCoverage = useMemo(() => new Set(cliAgents.flatMap((agent) => agent.capabilities)), [cliAgents]);
+
+  function updateAppSettings(patch: Partial<AppSettings>) {
+    const next = { ...appSettings, ...patch };
+    setAppSettings(next);
+    setSettingsError(null);
+    void saveSettings(next)
+      .then((saved) => setAppSettings(saved))
+      .catch((error: unknown) => {
+        setSettingsError(error instanceof Error ? error.message : String(error));
+      });
+  }
 
   function handleAdapterChange(adapterType: AgentAdapterType) {
     const adapter = adapterOptions.find((option) => option.value === adapterType);
@@ -269,6 +379,9 @@ export function SettingsPage({ onBack, initialTab = "general" }: SettingsPagePro
   }
 
   function handleEditAgent(agent: AgentConfig) {
+    if (isBuiltInAgent(agent)) {
+      return;
+    }
     setEditingAgentId(agent.id);
     setAgentDraft(draftFromAgent(agent));
     setArgsText(agent.args.join("\n"));
@@ -281,41 +394,86 @@ export function SettingsPage({ onBack, initialTab = "general" }: SettingsPagePro
     setArgsText("");
   }
 
+  async function persistSlots(next: TerminalSlot[]) {
+    if (!project) {
+      return;
+    }
+    setSlotError(null);
+    const saved = await saveTerminalSlots(project.path, next);
+    if (saved) {
+      setSlots(saved);
+    } else {
+      setSlotError("Terminal slots could not be saved in this environment.");
+    }
+  }
+
+  function saveSlotDraft() {
+    if (!slotDraft) {
+      return;
+    }
+    const next = applyTerminalSlotDraft(slots, slotDraft);
+    if (!next) {
+      return;
+    }
+    void persistSlots(next);
+    setSlotDraft(null);
+  }
+
+  function removeSlot(slot: TerminalSlot) {
+    void persistSlots(slots.filter((candidate) => candidate.id !== slot.id));
+  }
+
+  async function resetSlotsToDetected() {
+    if (!project) {
+      return;
+    }
+    const detected = await suggestTerminalSlots(project.path);
+    await persistSlots(detected);
+  }
+
+  function openResource(path: string) {
+    if (!hasTauriRuntime()) {
+      return;
+    }
+    void openPath(path);
+  }
+
   function renderGeneral() {
     return (
       <>
-        <div className="setsec-title">General</div>
-        <SettingCard title="Workspace">
-          <Field title="Workspace name" control={<span className="settings-input-pill">Loom</span>} />
+        <SettingCard title="Current project">
           <Field
-            title="Default project location"
-            description="New projects open from here."
-            control={
-              <span className="settings-row-control">
-                <span className="settings-chip mono">~/Workspace</span>
-                <button className="settings-small-btn" type="button">
-                  Change
-                </button>
-              </span>
-            }
+            title="Project"
+            description={project ? project.path : "Open a local project before configuring project-specific settings."}
+            control={<span className="settings-input-pill">{project?.name ?? "No project open"}</span>}
+          />
+          <Field
+            title="Repository"
+            description={project?.gitBranch ? `Current branch: ${project.gitBranch}` : "Git branch is shown when the current project is a git repository."}
+            control={<span className={`settings-tag ${project?.isGitRepository ? "ok" : ""}`}>{project?.isGitRepository ? "Git" : "Not git"}</span>}
+          />
+          <Field
+            title="Loom project store"
+            description=".loom stores local task history, logs, terminal slots, and validation evidence."
+            control={<span className={`settings-tag ${project?.loomDirReady ? "ok" : ""}`}>{project?.loomDirReady ? "Ready" : "Not initialized"}</span>}
           />
         </SettingCard>
-        <SettingCard title="Startup">
-          <Field title="Restore last session on launch" description="Reopen projects, tasks and panels." control={<Switch on />} />
-          <Field title="Reopen last active task" control={<Switch on />} />
-          <Field title="Launch Loom at login" control={<Switch on={false} />} />
-        </SettingCard>
-        <SettingCard title="Behavior">
-          <Field title="Max parallel agents" description="How many agent sessions can run at once." control={<Segmented values={["1", "2", "3"]} active={2} />} />
-          <Field title="Confirm before running commands" control={<Switch on />} />
-          <Field title="Language" control={<SelectPill value="English (US)" />} />
-        </SettingCard>
-        <SettingCard title="Privacy & data">
-          <Field title="Share anonymous usage data" control={<Switch on={false} />} />
+        <SettingCard title="Runtime model">
           <Field
-            title="Local cache"
-            description="Logs, analysis and session history · 248 MB"
-            control={<button className="settings-small-btn" type="button">Clear cache</button>}
+            title="Data location"
+            description="Agent profiles and app settings are stored locally in the desktop app data directory."
+            control={<span className="settings-chip">Local only</span>}
+          />
+          <Field
+            title="Project stacks"
+            description="Detected stacks drive command suggestions and terminal slot defaults."
+            control={
+              <span className="settings-row-control wrap">
+                {(project?.detectedStacks.length ? project.detectedStacks : ["Not detected"]).map((stack) => (
+                  <span className="settings-chip" key={stack}>{stack}</span>
+                ))}
+              </span>
+            }
           />
         </SettingCard>
       </>
@@ -325,44 +483,24 @@ export function SettingsPage({ onBack, initialTab = "general" }: SettingsPagePro
   function renderAppearance() {
     return (
       <>
-        <div className="setsec-title">Appearance</div>
         <SettingCard title="Theme">
           <div className="theme-grid">
-            <ThemePreview label="Light" mode="light" active={theme === "light"} onClick={theme === "dark" ? toggleTheme : undefined} />
-            <ThemePreview label="Dark" mode="dark" active={theme === "dark"} onClick={theme === "light" ? toggleTheme : undefined} />
-            <ThemePreview label="System" mode="system" active={false} />
+            <ThemePreview label="Light" mode="light" active={themeMode === "light"} onClick={() => setThemeMode("light")} />
+            <ThemePreview label="Dark" mode="dark" active={themeMode === "dark"} onClick={() => setThemeMode("dark")} />
+            <ThemePreview label="System" mode="system" active={themeMode === "system"} onClick={() => setThemeMode("system")} />
           </div>
         </SettingCard>
-        <SettingCard title="Accent color">
+        <SettingCard title="Interface">
           <Field
-            title="Highlight & primary action color"
-            description="Active state, links and primary buttons."
-            control={
-              <div className="settings-swatches">
-                {["#3485D1", "#0D9488", "#7C5CFC", "#2E9E5B", "#D97706"].map((color, index) => (
-                  <span className={`settings-swatch ${index === 0 ? "on" : ""}`} style={{ background: color }} key={color} />
-                ))}
-              </div>
-            }
+            title="Effective theme"
+            description="System mode follows the operating system until you choose Light or Dark explicitly."
+            control={<span className="settings-chip">{theme}</span>}
           />
-        </SettingCard>
-        <SettingCard title="Typography">
-          <Field title="Interface font" description="Navigation, labels and body text." control={<SelectPill value="System (SF Pro)" />} />
-          <Field title="Monospace font" description="Logs, commands, paths and code." control={<SelectPill value="JetBrains Mono" />} />
           <Field
-            title="Font size"
-            description="Base UI text size."
-            control={
-              <span className="settings-row-control">
-                <Segmented values={["Small", "Default", "Large"]} active={1} />
-                <span className="settings-chip mono">14px</span>
-              </span>
-            }
+            title="Typography and density"
+            description="Loom currently uses the bundled interface fonts and fixed workbench density."
+            control={<span className="settings-chip">Built in</span>}
           />
-          <Field title="Density" description="Row height and padding for dense work." control={<Segmented values={["Compact", "Cozy"]} active={0} />} />
-          <div className="settings-font-preview">
-            The quick brown fox jumps. <span>$ pnpm tauri dev -- log search 100k+ lines</span>
-          </div>
         </SettingCard>
       </>
     );
@@ -373,12 +511,24 @@ export function SettingsPage({ onBack, initialTab = "general" }: SettingsPagePro
       <>
         <div className="settings-page-heading">
           <div>
-            <div className="setsec-title">Agents</div>
             <div className="settings-sub">Local AI coding agents available to orchestrate</div>
           </div>
-          <Button type="button" variant="primary" iconLeft={<Plus size={14} />} onClick={() => setEditingAgentId(null)}>
-            Add Agent
-          </Button>
+          <div className="settings-heading-actions">
+            <Button type="button" variant="ghost" iconLeft={<RefreshCw size={14} />} onClick={() => void loadAgents()}>
+              Refresh availability
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              iconLeft={<Plus size={14} />}
+              onClick={() => {
+                handleCancelEdit();
+                setActiveTab("agents");
+              }}
+            >
+              Add Agent
+            </Button>
+          </div>
         </div>
         <div className="settings-tiles">
           <div className="settings-tile"><span>Total</span><strong>{cliAgents.length}</strong></div>
@@ -396,7 +546,7 @@ export function SettingsPage({ onBack, initialTab = "general" }: SettingsPagePro
                   <th>Capabilities</th>
                   <th>Permissions</th>
                   <th>Status</th>
-                  <th>Default</th>
+                  <th>Implementation</th>
                   <th />
                 </tr>
               </thead>
@@ -425,16 +575,19 @@ export function SettingsPage({ onBack, initialTab = "general" }: SettingsPagePro
                         {agent.available ? "Available" : "Missing"}
                       </span>
                     </td>
-                    <td>{agent.capabilities.includes("implementation") ? <span className="settings-tag primary">IMPLEMENT</span> : <span className="settings-dim">None</span>}</td>
+                    <td>{agent.capabilities.includes("implementation") ? <span className="settings-tag primary">Capable</span> : <span className="settings-dim">No</span>}</td>
                     <td>
                       <div className="settings-agent-actions">
-                        <button type="button" className="settings-icon-control" title={`Edit ${agent.name}`} onClick={() => handleEditAgent(agent)}>
-                          <Pencil size={14} />
-                        </button>
+                        {isBuiltInAgent(agent) ? (
+                          <span className="settings-dim">Built-in</span>
+                        ) : (
+                          <button type="button" className="settings-icon-control" title={`Edit ${agent.name}`} onClick={() => handleEditAgent(agent)}>
+                            <Pencil size={14} />
+                          </button>
+                        )}
                         <button
                           type="button"
                           className="settings-text-control"
-                          disabled={!agent.available}
                           onClick={() => void setAgentEnabled(agent.id, !agent.enabled)}
                         >
                           {agent.enabled ? "Disable" : "Enable"}
@@ -455,7 +608,7 @@ export function SettingsPage({ onBack, initialTab = "general" }: SettingsPagePro
             <div className="settings-form-header">
               <div>
                 <div className="settings-row-title">{editingAgent ? `Edit ${editingAgent.name}` : "Add custom Agent"}</div>
-                <div className="settings-row-desc">Store reusable CLI profiles behind the adapter interface.</div>
+                <div className="settings-row-desc">Store reusable CLI profiles behind the adapter interface. Built-in profiles can only be enabled or disabled.</div>
               </div>
               <div className="settings-form-actions">
                 {editingAgent && (
@@ -519,102 +672,190 @@ export function SettingsPage({ onBack, initialTab = "general" }: SettingsPagePro
     );
   }
 
-  function renderSafety() {
+  function renderSlotEditor() {
+    if (!slotDraft) {
+      return null;
+    }
+
     return (
-      <>
-        <div className="setsec-title">Commands & Safety</div>
-        <SettingCard title="Command presets (defaults)">
-          <div className="settings-table-wrap">
-            <table className="settings-agent-table settings-command-table">
-              <tbody>
-                {suggestedCommands.map((command, index) => (
-                  <tr key={`${command}-${index}`}>
-                    <td>{index === 0 ? "Primary" : `Preset ${index + 1}`}</td>
-                    <td><span className="settings-chip mono">{command}</span></td>
-                    <td><span className="settings-dim">From project analysis / MVP defaults</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </SettingCard>
-        <SettingCard title="High-risk action policy">
-          <Field title="Delete files" control={policyControl("Ask")} />
-          <Field title="Reset git" control={policyControl("Block")} />
-          <Field title="Install dependencies" control={policyControl("Ask")} />
-          <Field title="Network & production access" control={policyControl("Block")} />
-        </SettingCard>
-        <SettingCard title="Execution guards">
-          <Field title="Command timeout" description="Kill long-running commands after..." control={<SelectPill value="10 min" />} />
-          <Field
-            title="Allowed working directories"
-            control={
-              <span className="settings-row-control wrap">
-                <span className="settings-chip mono">project root</span>
-                <span className="settings-chip mono">~/.loom/tmp</span>
-                <span className="settings-chip dashed">+ Add</span>
-              </span>
-            }
-          />
-          <Field title="Redact secrets from logs" description="Mask tokens, keys and env values." control={<Switch on />} />
-        </SettingCard>
-      </>
+      <form className="settings-slot-editor" onSubmit={(event) => {
+        event.preventDefault();
+        saveSlotDraft();
+      }}>
+        <div className="settings-form-grid">
+          <label className="settings-form-field">
+            <span>Name</span>
+            <input value={slotDraft.name} onChange={(event) => setSlotDraft({ ...slotDraft, name: event.target.value })} />
+          </label>
+          <label className="settings-form-field">
+            <span>Kind</span>
+            <select value={slotDraft.kind} onChange={(event) => setSlotDraft({ ...slotDraft, kind: event.target.value as TerminalSlot["kind"] })}>
+              <option value="preview">Preview</option>
+              <option value="validation">Validation</option>
+            </select>
+          </label>
+          <label className="settings-form-field">
+            <span>Working directory</span>
+            <input value={slotDraft.cwd} placeholder="project root" onChange={(event) => setSlotDraft({ ...slotDraft, cwd: event.target.value })} />
+          </label>
+          <label className="settings-form-field wide">
+            <span>Command</span>
+            <input value={slotDraft.command} placeholder="pnpm test" onChange={(event) => setSlotDraft({ ...slotDraft, command: event.target.value })} />
+          </label>
+        </div>
+        <div className="settings-form-actions">
+          <button type="button" className="settings-text-control" onClick={() => setSlotDraft(null)}>Cancel</button>
+          <Button type="submit" variant="primary" disabled={!slotDraft.name.trim() || !slotDraft.command.trim()}>
+            Save slot
+          </Button>
+        </div>
+      </form>
     );
   }
 
-  function renderNotifications() {
+  function renderSafety() {
     return (
       <>
-        <div className="setsec-title">Notifications</div>
-        <SettingCard title="Notify me when">
-          <Field title="Task completed" control={<Switch on />} />
-          <Field title="Task blocked or errored" control={<Switch on />} />
-          <Field title="Review needed" control={<Switch on />} />
-          <Field title="Test failed" control={<Switch on />} />
-          <Field title="Agent is waiting for input" control={<Switch on />} />
+        <SettingCard title="Project terminal slots">
+          {!project ? (
+            <div className="settings-empty-state">Open a project to configure preview and validation commands.</div>
+          ) : (
+            <>
+              <div className="settings-card-toolbar">
+                <div className="settings-row-desc">
+                  Slots are saved to <code>.loom/terminal-slots.json</code> and are used by the Testing cockpit and implementation auto-validation.
+                </div>
+                <div className="settings-heading-actions">
+                  <Button type="button" variant="ghost" iconLeft={<RefreshCw size={14} />} onClick={() => void resetSlotsToDetected()}>
+                    Reset to detected
+                  </Button>
+                  <Button type="button" variant="primary" iconLeft={<Plus size={14} />} onClick={() => setSlotDraft(blankTerminalSlotDraft())}>
+                    Add slot
+                  </Button>
+                </div>
+              </div>
+              <div className="settings-table-wrap">
+                <table className="settings-agent-table settings-command-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Command</th>
+                      <th>Kind</th>
+                      <th>Working directory</th>
+                      <th />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {slots.map((slot) => (
+                      <tr key={slot.id}>
+                        <td><strong>{slot.name}</strong></td>
+                        <td><span className="settings-chip mono">{slot.command || "Not configured"}</span></td>
+                        <td><span className="settings-tag">{slot.kind}</span></td>
+                        <td><span className="settings-chip mono">{resolveTerminalSlotCwd(project.path, slot)}</span></td>
+                        <td>
+                          <div className="settings-agent-actions">
+                            <button type="button" className="settings-icon-control" title={`Edit ${slot.name}`} onClick={() => setSlotDraft(draftFromTerminalSlot(slot))}>
+                              <Pencil size={14} />
+                            </button>
+                            <button type="button" className="settings-icon-control danger" title={`Delete ${slot.name}`} onClick={() => removeSlot(slot)}>
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {slotsLoaded && slots.length === 0 && (
+                      <tr>
+                        <td colSpan={5}><span className="settings-dim">No slots configured yet.</span></td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              {renderSlotEditor()}
+              {slotError && <div className="settings-inline-error">{slotError}</div>}
+            </>
+          )}
         </SettingCard>
-        <SettingCard title="Delivery">
-          <Field title="Desktop notifications" control={<Switch on />} />
-          <Field title="Play sound" control={<Switch on />} />
+        <SettingCard title="Execution guards">
           <Field
-            title="Quiet hours"
-            description="Silence notifications overnight."
-            control={<span className="settings-row-control"><Switch on={false} /><SelectPill value="22:00 - 08:00" /></span>}
+            title="Confirm dangerous commands"
+            description="Prompts before rm -rf, git reset --hard, dependency installs, or production-like targets."
+            control={
+              <ToggleControl
+                checked={appSettings.confirmBeforeCommands}
+                onChange={(checked) => updateAppSettings({ confirmBeforeCommands: checked })}
+              />
+            }
           />
+          <Field
+            title="Command timeout"
+            description="One-shot validation commands stop after this many seconds. Preview terminals run until stopped manually."
+            control={
+              <input
+                className="settings-number-input"
+                type="number"
+                min={5}
+                max={3600}
+                value={appSettings.commandTimeoutSeconds}
+                onChange={(event) => setAppSettings((current) => ({ ...current, commandTimeoutSeconds: Number(event.target.value) }))}
+                onBlur={(event) => updateAppSettings({ commandTimeoutSeconds: Number(event.target.value) })}
+              />
+            }
+          />
+          <Field
+            title="Redact secrets from logs"
+            description="Command text and output are always passed through the backend redaction rules before persistence."
+            control={<span className="settings-tag ok">Always on</span>}
+          />
+          {settingsError && <div className="settings-inline-error">{settingsError}</div>}
         </SettingCard>
       </>
     );
   }
 
   function renderAbout() {
+    const resources = project
+      ? [
+          { label: "Requirements document", path: `${project.path}/docs/requirements.md` },
+          { label: "Plans index", path: `${project.path}/docs/PLANS.md` },
+        ]
+      : [];
+
     return (
       <>
-        <div className="setsec-title">About</div>
         <SettingCard title="Loom">
           <div className="settings-about-head">
             <div className="settings-bigmark">L</div>
             <div>
-              <h2>Loom</h2>
+              <h2>{health?.app ?? "Loom"}</h2>
               <p>Multi-agent local development workbench</p>
               <div className="settings-tag-row">
-                <span className="settings-chip mono">v0.4.0</span>
-                <span className="settings-chip mono">build 2026.06.05</span>
-                <span className="settings-tag ok">Up to date</span>
+                <span className="settings-chip mono">v{health?.version ?? "unknown"}</span>
+                <span className="settings-chip mono">{health?.backend ?? "backend pending"}</span>
+                <span className="settings-tag ok">{health?.status ?? "loading"}</span>
               </div>
             </div>
-            <button className="settings-small-btn" type="button">Check for updates</button>
           </div>
         </SettingCard>
-        <SettingCard title="Update channel">
-          <Field title="Channel" control={<Segmented values={["Stable", "Beta"]} active={0} />} />
-          <Field title="Auto-install updates" control={<Switch on />} />
+        <SettingCard title="Backend health">
+          <Field title="Status" description="Reported by the Tauri health_check command." control={<span className="settings-tag ok">{health?.status ?? "Loading"}</span>} />
+          <Field title="Last checked" control={<span className="settings-chip mono">{shortTimestamp(health?.timestampMs)}</span>} />
         </SettingCard>
         <SettingCard title="Resources">
-          {["Documentation", "Changelog", "GitHub repository", "Report an issue", "License (MIT)"].map((item) => (
-            <div className="settings-link-row" key={item}>
-              <span>{item}</span>
-              <span>↗</span>
-            </div>
+          {resources.length === 0 ? (
+            <div className="settings-empty-state">Open a project to reveal local docs from its workspace.</div>
+          ) : resources.map((item) => (
+            <button
+              type="button"
+              className="settings-link-row"
+              disabled={!hasTauriRuntime()}
+              onClick={() => openResource(item.path)}
+              key={item.path}
+            >
+              <span>{item.label}</span>
+              <ExternalLink size={13} />
+            </button>
           ))}
         </SettingCard>
       </>
@@ -626,38 +867,37 @@ export function SettingsPage({ onBack, initialTab = "general" }: SettingsPagePro
     appearance: renderAppearance,
     agents: renderAgents,
     safety: renderSafety,
-    notifications: renderNotifications,
     about: renderAbout,
   }[activeTab]();
 
   return (
     <div className="settings-page">
-      <div className="settings-topbar">
-        <button type="button" className="settings-back-link" aria-label="Back" title="Back" onClick={onBack}>
-          <ArrowLeft size={14} />
-        </button>
-        <div className="settings-crumb">Settings</div>
-        <div className="settings-topbar-spacer" />
-        <span className="settings-segmented">
-          <b className={theme === "light" ? "on" : ""} onClick={theme === "dark" ? toggleTheme : undefined}>Light</b>
-          <b className={theme === "dark" ? "on" : ""} onClick={theme === "light" ? toggleTheme : undefined}>Dark</b>
-        </span>
+      <div className="settings-topbar" data-tauri-drag-region>
+        <div className="settings-topbar-spacer" data-tauri-drag-region />
       </div>
 
       <main className="settings-main">
         <div className="settings-columns">
           <nav className="settings-nav">
-            {settingsTabs.map((tab) => (
-              <button
-                type="button"
-                className={`settings-nav-item ${tab.id === activeTab ? "active" : ""}`}
-                onClick={() => setActiveTab(tab.id)}
-                key={tab.id}
-              >
-                <span className="settings-nav-icon">{tab.icon}</span>
-                {tab.label}
-              </button>
-            ))}
+            <button type="button" className="settings-nav-back" aria-label="Back" onClick={onBack}>
+              <span className="settings-nav-icon">
+                <ArrowLeft size={15} />
+              </span>
+              Settings
+            </button>
+            <div className="settings-nav-items">
+              {settingsTabs.map((tab) => (
+                <button
+                  type="button"
+                  className={`settings-nav-item ${tab.id === activeTab ? "active" : ""}`}
+                  onClick={() => setActiveTab(tab.id)}
+                  key={tab.id}
+                >
+                  <span className="settings-nav-icon">{tab.icon}</span>
+                  {tab.label}
+                </button>
+              ))}
+            </div>
           </nav>
 
           <div className="settings-body">{body}</div>

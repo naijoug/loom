@@ -34,6 +34,50 @@ pub fn now_ms() -> u128 {
 
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub enum ThemeMode {
+    #[serde(rename = "light")]
+    Light,
+    #[serde(rename = "dark")]
+    Dark,
+    #[serde(rename = "system")]
+    System,
+}
+
+fn default_theme_mode() -> ThemeMode {
+    ThemeMode::System
+}
+
+fn default_confirm_before_commands() -> bool {
+    true
+}
+
+fn default_command_timeout_seconds() -> u64 {
+    600
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AppSettings {
+    #[serde(default = "default_theme_mode")]
+    pub theme_mode: ThemeMode,
+    #[serde(default = "default_confirm_before_commands")]
+    pub confirm_before_commands: bool,
+    #[serde(default = "default_command_timeout_seconds")]
+    pub command_timeout_seconds: u64,
+}
+
+impl Default for AppSettings {
+    fn default() -> Self {
+        Self {
+            theme_mode: default_theme_mode(),
+            confirm_before_commands: default_confirm_before_commands(),
+            command_timeout_seconds: default_command_timeout_seconds(),
+        }
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProjectSummary {
     pub id: String,
     pub path: String,

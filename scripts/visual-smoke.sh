@@ -73,12 +73,11 @@ capture_theme() {
   capture "${prefix}testing" "${BASE_URL}?screen=testing&theme=${theme}" "Debug agent|Frontend|Backend|Detected error"
   capture "${prefix}done" "${BASE_URL}?screen=done&theme=${theme}" "Completed items|Verification evidence|Start follow-up"
 
-  capture "${prefix}settings-general" "${BASE_URL}?screen=settings&tab=general&theme=${theme}" "Workspace|Startup|Privacy"
-  capture "${prefix}settings-appearance" "${BASE_URL}?screen=settings&tab=appearance&theme=${theme}" "Theme|Accent color|Typography"
+  capture "${prefix}settings-general" "${BASE_URL}?screen=settings&tab=general&theme=${theme}" "Current project|Runtime model|Project stacks"
+  capture "${prefix}settings-appearance" "${BASE_URL}?screen=settings&tab=appearance&theme=${theme}" "Theme|Effective theme|Typography and density"
   capture "${prefix}settings-agents" "${BASE_URL}?screen=settings&tab=agents&theme=${theme}" "Installed agents|Add custom Agent"
-  capture "${prefix}settings-safety" "${BASE_URL}?screen=settings&tab=safety&theme=${theme}" "Command presets|High-risk action policy"
-  capture "${prefix}settings-notifications" "${BASE_URL}?screen=settings&tab=notifications&theme=${theme}" "Notify me when|Delivery"
-  capture "${prefix}settings-about" "${BASE_URL}?screen=settings&tab=about&theme=${theme}" "Loom|Resources|Update channel"
+  capture "${prefix}settings-safety" "${BASE_URL}?screen=settings&tab=safety&theme=${theme}" "Project terminal slots|Execution guards|Redact secrets"
+  capture "${prefix}settings-about" "${BASE_URL}?screen=settings&tab=about&theme=${theme}" "Loom|Backend health|Resources"
 }
 
 capture_theme "dark"
