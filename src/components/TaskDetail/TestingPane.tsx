@@ -30,6 +30,19 @@ import {
   hasImplementationCapability,
 } from "../../utils/agentRun";
 import { parseCommandLine } from "../../utils/commandLine";
+import {
+  isFailedValidationRun,
+  isSuccessfulValidationRun,
+  isValidationRun,
+} from "../../utils/commandRun";
+import {
+  DEFAULT_LOOP_BUDGET,
+  MAX_AUTO_REPAIR_ATTEMPTS,
+  decideAfterRepair,
+  decideAfterValidation,
+  escalationNotice,
+  isTimedOut,
+} from "../../utils/loopPolicy";
 import { Button } from "../common/Button";
 import { TerminalCard } from "./TerminalCard";
 import "./TaskDetail.css";
@@ -48,6 +61,18 @@ interface ConversationTurn {
   run?: CommandRun;
 }
 
+interface AutoTestingLoop {
+  loopId: string;
+  sourceFailureRunId: string;
+  validationSlotId?: string;
+  validationCommand: string;
+  validationCwd: string;
+  repairAttempts: number;
+  lastFailureFingerprint?: string;
+  repeatedFailureCount: number;
+  startedAtMs: number;
+  status: "repairing" | "validating" | "passed" | "escalated";
+}
 
 interface TestingPaneProps {
   project: ProjectSummary;
@@ -143,14 +168,14 @@ function latestSuccessfulValidationRun(
   return runs
     .filter(
       (run) =>
-        run.taskId === taskId && run.status === "succeeded" && validationCommands.has(run.command),
+        run.taskId === taskId && isSuccessfulValidationRun(run, validationCommands),
     )
     .sort((left, right) => right.startedAtMs - left.startedAtMs)[0];
 }
 
-function latestFailedRun(runs: CommandRun[], taskId: string) {
+function latestFailedRun(runs: CommandRun[], taskId: string, validationCommands: Set<string>) {
   return runs
-    .filter((run) => run.taskId === taskId && (run.status === "failed" || run.errorSummary?.failed))
+    .filter((run) => run.taskId === taskId && isFailedValidationRun(run, validationCommands))
     .sort((left, right) => right.startedAtMs - left.startedAtMs)[0];
 }
 
@@ -267,13 +292,15 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
   const [note, setNote] = useState("");
   const [quote, setQuote] = useState<QuoteDraft | null>(null);
   const [autoMode, setAutoMode] = useState(false);
+  const [autoLoop, setAutoLoop] = useState<AutoTestingLoop | null>(null);
+  const [autoNotice, setAutoNotice] = useState<string | null>(null);
   const [selectedAgentId, setSelectedAgentId] = useState("");
   const [fixRunIds, setFixRunIds] = useState<string[]>([]);
   const [expandedCycle, setExpandedCycle] = useState<string | null>(null);
   const [cyclesOpen, setCyclesOpen] = useState(false);
   const [cockpitOpen, setCockpitOpen] = useState(true);
   const [commandError, setCommandError] = useState<string | null>(null);
-  const autoHandledRef = useRef<Set<string>>(new Set());
+  const handledAutoLoopRunsRef = useRef<Set<string>>(new Set());
 
   const implementationAgents = useMemo(
     () => state.agents.filter(hasImplementationCapability),
@@ -340,7 +367,7 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
   const taskRuns = state.commandRuns
     .filter((run) => run.taskId === task.id)
     .sort((left, right) => left.startedAtMs - right.startedAtMs);
-  const failedRun = latestFailedRun(state.commandRuns, task.id);
+  const failedRun = latestFailedRun(state.commandRuns, task.id, validationCommands);
   const latestTaskRun = latestRun(state.commandRuns, task.id);
   const successfulValidationRun = latestSuccessfulValidationRun(
     state.commandRuns,
@@ -353,7 +380,7 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
       ? failedRun
       : undefined;
   const hasValidationEvidence = state.commandRuns.some(
-    (run) => run.taskId === task.id && validationCommands.has(run.command),
+    (run) => run.taskId === task.id && isValidationRun(run, validationCommands),
   );
   const hasRunningValidationRun = slots
     .filter((slot) => slot.kind === "validation")
@@ -369,10 +396,78 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
     task.status === "verifying" && hasPassingEvidence && !hasRunningValidationRun && !readOnly;
   const validationCommandLabel =
     [...validationCommands].join("  ·  ") || "No validation command configured";
+  const validationSlots = useMemo(
+    () => slots.filter((slot) => slot.kind === "validation"),
+    [slots],
+  );
+  const autoLoopRuns = useMemo(
+    () =>
+      autoLoop
+        ? state.commandRuns
+            .filter((run) => run.taskId === task.id && run.loopId === autoLoop.loopId)
+            .sort((left, right) => left.startedAtMs - right.startedAtMs)
+        : [],
+    [autoLoop, state.commandRuns, task.id],
+  );
+  const latestAutoCompletedRun =
+    autoLoopRuns.filter((run) => run.status !== "running").slice(-1)[0] ?? null;
+  const runningAutoLoopRun = autoLoopRuns.find((run) => run.status === "running") ?? null;
 
   function slotCwd(slot: TerminalSlot) {
     // cwd may be a relative subdir (monorepo app) or absent (project root).
     return slot.cwd ? `${project.path}/${slot.cwd}` : project.path;
+  }
+
+  function validationSlotForRun(run: CommandRun) {
+    return (
+      validationSlots.find((slot) => slot.command === run.command) ??
+      validationSlots[0] ??
+      null
+    );
+  }
+
+  async function startAutoValidationRun(loop: AutoTestingLoop) {
+    try {
+      const parsed = parseCommandLine(loop.validationCommand);
+      if (!parsed.program) {
+        setAutoLoop((current) =>
+          current?.loopId === loop.loopId ? { ...current, status: "escalated" } : current,
+        );
+        setAutoNotice("Auto repair stopped because the validation command is empty.");
+        return null;
+      }
+
+      const run = await startCommandRun({
+        program: parsed.program,
+        args: parsed.args,
+        cwd: loop.validationCwd,
+        taskId: task.id,
+        intent: "validation",
+        loopId: loop.loopId,
+        iteration: loop.repairAttempts + 1,
+        attempt: loop.repairAttempts,
+      });
+      if (run && loop.validationSlotId) {
+        setRunIds((prev) => ({ ...prev, [loop.validationSlotId as string]: run.id }));
+      }
+      setAutoNotice(
+        run
+          ? `Auto validation started: ${loop.validationCommand}`
+          : "Auto validation failed to start.",
+      );
+      if (!run) {
+        setAutoLoop((current) =>
+          current?.loopId === loop.loopId ? { ...current, status: "escalated" } : current,
+        );
+      }
+      return run;
+    } catch (error) {
+      setAutoLoop((current) =>
+        current?.loopId === loop.loopId ? { ...current, status: "escalated" } : current,
+      );
+      setAutoNotice(error instanceof Error ? error.message : "Invalid validation command.");
+      return null;
+    }
   }
 
   async function runSlot(slot: TerminalSlot) {
@@ -402,6 +497,7 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
               args: parsed.args,
               cwd,
               taskId: task.id,
+              intent: "validation",
             });
       if (run) {
         setRunIds((prev) => ({ ...prev, [slot.id]: run.id }));
@@ -469,25 +565,55 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
     setQuote({ text, command, failedRunId: latestBlockingFailure?.id });
   }
 
-  async function startFixRun(noteText: string, quoteDraft: QuoteDraft | null) {
+  async function startFixRun(
+    noteText: string,
+    quoteDraft: QuoteDraft | null,
+    auto?: { loop: AutoTestingLoop; failedRun: CommandRun; attempt: number },
+  ) {
     if (!selectedAgent) {
       setCommandError("No implementation agent available to run a fix.");
+      if (auto) {
+        setAutoLoop((current) =>
+          current?.loopId === auto.loop.loopId ? { ...current, status: "escalated" } : current,
+        );
+        setAutoNotice("Auto repair stopped because no implementation agent is available.");
+      }
       return;
     }
     setCommandError(null);
     // Refresh the repair context (packages logs / todo / feedback) so the
     // prompt carries the latest evidence, then hand off to the agent.
+    const sourceFailure = auto?.failedRun ?? latestBlockingFailure;
     const refreshed =
-      (latestBlockingFailure ? await generateRepairContext(project.path, task.id) : null) ?? task;
+      (sourceFailure ? await generateRepairContext(project.path, task.id) : null) ?? task;
     const prompt = buildRepairPrompt(refreshed, quoteDraft?.text ?? "", noteText);
+    if (auto) {
+      setAutoLoop((current) =>
+        current?.loopId === auto.loop.loopId
+          ? { ...current, repairAttempts: auto.attempt, status: "repairing" }
+          : current,
+      );
+    }
     const run = await startCommandRun({
       program: selectedAgent.command,
       args: buildAgentCommandArgs(selectedAgent, project.path, prompt),
       cwd: project.path,
       taskId: task.id,
+      intent: "agent_action",
+      loopId: auto?.loop.loopId,
+      iteration: auto?.attempt,
+      attempt: auto?.attempt,
     });
     if (run) {
       setFixRunIds((prev) => [...prev, run.id]);
+      if (auto) {
+        setAutoNotice(`Auto repair attempt ${auto.attempt}/${MAX_AUTO_REPAIR_ATTEMPTS} started.`);
+      }
+    } else if (auto) {
+      setAutoLoop((current) =>
+        current?.loopId === auto.loop.loopId ? { ...current, status: "escalated" } : current,
+      );
+      setAutoNotice("Auto repair failed to start.");
     }
   }
 
@@ -502,18 +628,181 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
     setQuote(null);
   }
 
-  // Auto mode: on a fresh blocking failure, kick off one fix run (deduped).
+  async function startAutoLoopFromFailure(failureRun: CommandRun) {
+    const validationSlot = validationSlotForRun(failureRun);
+    if (!validationSlot) {
+      setAutoNotice("Auto repair stopped because no validation command is configured.");
+      return;
+    }
+
+    const startedAtMs = Date.now();
+    const loop: AutoTestingLoop = {
+      loopId: `loop-${task.id}-testing-${failureRun.id}-${startedAtMs}`,
+      sourceFailureRunId: failureRun.id,
+      validationSlotId: validationSlot.id,
+      validationCommand: validationSlot.command.trim(),
+      validationCwd: slotCwd(validationSlot),
+      repairAttempts: 0,
+      repeatedFailureCount: 0,
+      startedAtMs,
+      status: "repairing",
+    };
+    const decision = decideAfterValidation(
+      loop,
+      failureRun,
+      DEFAULT_LOOP_BUDGET,
+      startedAtMs,
+    );
+
+    handledAutoLoopRunsRef.current = new Set();
+    if (decision.kind === "pass") {
+      setAutoLoop({ ...loop, status: "passed" });
+      setAutoNotice("Auto validation passed. The task has passing evidence.");
+      return;
+    }
+    if (decision.kind === "escalate") {
+      setAutoLoop({
+        ...loop,
+        lastFailureFingerprint: decision.fingerprint,
+        repeatedFailureCount: decision.repeatedFailureCount ?? loop.repeatedFailureCount,
+        status: "escalated",
+      });
+      setAutoNotice(escalationNotice(decision.reason, DEFAULT_LOOP_BUDGET));
+      return;
+    }
+
+    const nextLoop: AutoTestingLoop = {
+      ...loop,
+      lastFailureFingerprint: decision.fingerprint,
+      repeatedFailureCount: decision.repeatedFailureCount,
+      repairAttempts: decision.attempt,
+      status: "repairing",
+    };
+    setAutoLoop(nextLoop);
+    await startFixRun(
+      `Auto repair attempt ${decision.attempt}/${MAX_AUTO_REPAIR_ATTEMPTS}: validation failed in \`${failureRun.command}\`.`,
+      null,
+      { loop: nextLoop, failedRun: failureRun, attempt: decision.attempt },
+    );
+  }
+
+  // Auto mode: a fresh blocking failure enters the shared bounded loop policy.
   useEffect(() => {
     if (!autoMode || readOnly || !latestBlockingFailure) {
       return;
     }
-    if (autoHandledRef.current.has(latestBlockingFailure.id)) {
+    if (autoLoop?.sourceFailureRunId === latestBlockingFailure.id) {
       return;
     }
-    autoHandledRef.current.add(latestBlockingFailure.id);
-    void startFixRun("Auto repair: a validation command failed.", null);
+    if (autoLoop && autoLoop.status !== "passed" && autoLoop.status !== "escalated") {
+      return;
+    }
+    void startAutoLoopFromFailure(latestBlockingFailure);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoMode, readOnly, latestBlockingFailure?.id]);
+  }, [autoMode, readOnly, latestBlockingFailure?.id, autoLoop?.sourceFailureRunId, autoLoop?.status]);
+
+  useEffect(() => {
+    if (
+      !autoMode ||
+      readOnly ||
+      !autoLoop ||
+      autoLoop.status === "passed" ||
+      autoLoop.status === "escalated"
+    ) {
+      return;
+    }
+
+    const tick = () => {
+      const timedOut = isTimedOut(autoLoop, DEFAULT_LOOP_BUDGET, Date.now());
+      if (!timedOut) {
+        return;
+      }
+
+      setAutoLoop((current) =>
+        current?.loopId === autoLoop.loopId ? { ...current, status: "escalated" } : current,
+      );
+      setAutoNotice(escalationNotice("timeout", DEFAULT_LOOP_BUDGET));
+      if (runningAutoLoopRun) {
+        void stopCommandRun(runningAutoLoopRun.id, "timeout");
+      }
+    };
+
+    tick();
+    const timer = window.setInterval(tick, 1_000);
+    return () => window.clearInterval(timer);
+  }, [autoMode, autoLoop, readOnly, runningAutoLoopRun, stopCommandRun]);
+
+  useEffect(() => {
+    if (
+      !autoMode ||
+      readOnly ||
+      !autoLoop ||
+      autoLoop.status === "passed" ||
+      autoLoop.status === "escalated" ||
+      !latestAutoCompletedRun
+    ) {
+      return;
+    }
+    if (handledAutoLoopRunsRef.current.has(latestAutoCompletedRun.id)) {
+      return;
+    }
+    handledAutoLoopRunsRef.current.add(latestAutoCompletedRun.id);
+
+    if (latestAutoCompletedRun.intent === "validation") {
+      const decision = decideAfterValidation(
+        autoLoop,
+        latestAutoCompletedRun,
+        DEFAULT_LOOP_BUDGET,
+        Date.now(),
+      );
+      if (decision.kind === "pass") {
+        setAutoLoop({ ...autoLoop, sourceFailureRunId: latestAutoCompletedRun.id, status: "passed" });
+        setAutoNotice("Auto validation passed. The task has passing evidence.");
+        return;
+      }
+      if (decision.kind === "escalate") {
+        setAutoLoop({
+          ...autoLoop,
+          sourceFailureRunId: latestAutoCompletedRun.id,
+          lastFailureFingerprint: decision.fingerprint ?? autoLoop.lastFailureFingerprint,
+          repeatedFailureCount: decision.repeatedFailureCount ?? autoLoop.repeatedFailureCount,
+          status: "escalated",
+        });
+        setAutoNotice(escalationNotice(decision.reason, DEFAULT_LOOP_BUDGET));
+        return;
+      }
+
+      const nextLoop: AutoTestingLoop = {
+        ...autoLoop,
+        sourceFailureRunId: latestAutoCompletedRun.id,
+        lastFailureFingerprint: decision.fingerprint,
+        repeatedFailureCount: decision.repeatedFailureCount,
+        repairAttempts: decision.attempt,
+        status: "repairing",
+      };
+      setAutoLoop(nextLoop);
+      void startFixRun(
+        `Auto repair attempt ${decision.attempt}/${MAX_AUTO_REPAIR_ATTEMPTS}: validation failed in \`${latestAutoCompletedRun.command}\`.`,
+        null,
+        { loop: nextLoop, failedRun: latestAutoCompletedRun, attempt: decision.attempt },
+      );
+      return;
+    }
+
+    if (latestAutoCompletedRun.intent === "agent_action") {
+      const decision = decideAfterRepair(autoLoop, latestAutoCompletedRun, DEFAULT_LOOP_BUDGET, Date.now());
+      if (decision.kind === "escalate") {
+        setAutoLoop({ ...autoLoop, status: "escalated" });
+        setAutoNotice(escalationNotice(decision.reason, DEFAULT_LOOP_BUDGET));
+        return;
+      }
+
+      const nextLoop: AutoTestingLoop = { ...autoLoop, status: "validating" };
+      setAutoLoop(nextLoop);
+      void startAutoValidationRun(nextLoop);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoMode, readOnly, autoLoop, latestAutoCompletedRun?.id]);
 
   const conversation = useMemo<ConversationTurn[]>(() => {
     const humanTurns: ConversationTurn[] = task.feedback.map((entry) => ({
@@ -640,6 +929,7 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
           {(commandError || state.app.commandError) && (
             <div className="testing-inline-error">{commandError ?? state.app.commandError}</div>
           )}
+          {autoNotice && <div className="testing-inline-note">{autoNotice}</div>}
         </div>
 
         {cockpitOpen && (
@@ -738,7 +1028,11 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
                       type="button"
                       className={autoMode ? "" : "active"}
                       disabled={readOnly}
-                      onClick={() => setAutoMode(false)}
+                      onClick={() => {
+                        setAutoMode(false);
+                        setAutoLoop(null);
+                        setAutoNotice(null);
+                      }}
                     >
                       Manual
                     </button>
@@ -746,7 +1040,10 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
                       type="button"
                       className={autoMode ? "active" : ""}
                       disabled={readOnly}
-                      onClick={() => setAutoMode(true)}
+                      onClick={() => {
+                        setAutoMode(true);
+                        setAutoNotice(null);
+                      }}
                     >
                       Auto
                     </button>

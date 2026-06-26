@@ -1,4 +1,5 @@
-import type { AgentConfig, Task } from "../domain";
+import type { AgentConfig, PlanTodoItem, Task } from "../domain";
+import { parseCommandLine } from "./commandLine";
 
 export function hasImplementationCapability(agent: AgentConfig) {
   return (
@@ -26,6 +27,7 @@ export function buildAgentCommandArgs(agent: AgentConfig, projectPath: string, p
     case "codex_cli":
       return [
         "exec",
+        "--json",
         "--cd",
         projectPath,
         "--sandbox",
@@ -38,12 +40,109 @@ export function buildAgentCommandArgs(agent: AgentConfig, projectPath: string, p
         prompt,
         "--permission-mode",
         agent.canWriteFiles ? "acceptEdits" : "plan",
+        "--verbose",
         "--output-format",
-        "text",
+        "stream-json",
+        "--include-partial-messages",
       ];
     default:
       return [prompt];
   }
+}
+
+export interface AgentCommandInvocation {
+  program: string;
+  args: string[];
+  resumed: boolean;
+}
+
+function hasFlag(args: string[], names: string[]) {
+  return args.some((arg) => names.includes(arg));
+}
+
+function buildCodexResumeArgs(resumeArgs: string[], prompt: string) {
+  if (resumeArgs[0] !== "resume" || !resumeArgs[1]) {
+    return null;
+  }
+
+  return ["exec", "resume", "--json", resumeArgs[1], prompt];
+}
+
+function buildClaudeResumeArgs(resumeArgs: string[], agent: AgentConfig, prompt: string) {
+  const args = [...resumeArgs];
+  if (!hasFlag(args, ["-p", "--print"])) {
+    args.unshift("-p");
+  }
+  if (!hasFlag(args, ["--permission-mode"])) {
+    args.push("--permission-mode", agent.canWriteFiles ? "acceptEdits" : "plan");
+  }
+  if (!hasFlag(args, ["--verbose"])) {
+    args.push("--verbose");
+  }
+  if (!hasFlag(args, ["--output-format"])) {
+    args.push("--output-format", "stream-json");
+  }
+  if (!hasFlag(args, ["--include-partial-messages"])) {
+    args.push("--include-partial-messages");
+  }
+  args.push(prompt);
+  return args;
+}
+
+export function buildAgentCommandInvocation(
+  agent: AgentConfig,
+  projectPath: string,
+  prompt: string,
+  resumeCommand?: string | null,
+): AgentCommandInvocation {
+  if (resumeCommand?.trim()) {
+    try {
+      const parsed = parseCommandLine(resumeCommand);
+      if (parsed.program) {
+        const resumedArgs =
+          agent.adapterType === "codex_cli"
+            ? buildCodexResumeArgs(parsed.args, prompt)
+            : agent.adapterType === "claude_code_cli"
+              ? buildClaudeResumeArgs(parsed.args, agent, prompt)
+              : null;
+        if (resumedArgs) {
+          return { program: parsed.program, args: resumedArgs, resumed: true };
+        }
+      }
+    } catch {
+      // Fall back to a fresh invocation if the stored display command is stale.
+    }
+  }
+
+  return {
+    program: agent.command,
+    args: buildAgentCommandArgs(agent, projectPath, prompt),
+    resumed: false,
+  };
+}
+
+export function buildImplementationPrompt(task: Task, todo: PlanTodoItem, todoIndex: number) {
+  return [
+    "# Loom Implementation Handoff",
+    "",
+    "You are implementing one selected todo from a confirmed Loom plan.",
+    "",
+    `Project: ${task.projectPath}`,
+    `Task: ${task.title}`,
+    `Todo ${todoIndex + 1}: ${todo.title}`,
+    "",
+    "Todo description:",
+    todo.description,
+    "",
+    "Execution rules:",
+    "- Modify only the files needed for this todo.",
+    "- Preserve unrelated user changes.",
+    "- Run the smallest relevant verification before reporting completion.",
+    "- Report changed files, verification evidence, blockers, and remaining risk.",
+    "",
+    "Confirmed final plan:",
+    task.finalPlan ?? "(none)",
+  ].join("\n");
 }
 
 /**
@@ -89,5 +188,29 @@ export function buildRepairPrompt(task: Task, quotedLogs: string, note: string) 
     "",
     "Confirmed final plan:",
     task.finalPlan ?? "(none)",
+  ].join("\n");
+}
+
+export function buildResumeRepairPrompt(task: Task, note: string) {
+  return [
+    "# Loom Incremental Repair",
+    "",
+    "Continue the existing implementation session and fix the latest validation failure.",
+    "",
+    `Project: ${task.projectPath}`,
+    `Task: ${task.title}`,
+    "",
+    "New repair context:",
+    task.repairContextPreview?.trim() || "(none captured yet)",
+    "",
+    "New instruction:",
+    note.trim() || "(none)",
+    "",
+    "Execution rules:",
+    "- Treat this as an incremental continuation of the existing session.",
+    "- Change only what is needed for the current validation failure.",
+    "- Preserve unrelated user changes.",
+    "- Re-run the relevant validation command before reporting completion.",
+    "- Report changed files, the fix, verification evidence, and remaining risk.",
   ].join("\n");
 }

@@ -3,6 +3,7 @@ import { CheckCircle2, FileText, GitBranch, Plus, ShieldCheck } from "lucide-rea
 import type { ProjectSummary, Task } from "../../domain";
 import { NewTaskModal } from "../Board";
 import { Button } from "../common/Button";
+import { TaskTimeline } from "./TaskTimeline";
 import "./TaskDetail.css";
 
 interface DonePaneProps {
@@ -21,7 +22,6 @@ export function DonePane({ project, task, readOnly = false }: DonePaneProps) {
   const [followUpOpen, setFollowUpOpen] = useState(false);
   const validation = useMemo(() => latestValidation(task), [task]);
   const completedTodos = task.planTodos.filter((todo) => todo.status === "done");
-  const recentEvents = task.events.slice(-6).reverse();
 
   return (
     <div className="done-pane">
@@ -86,18 +86,7 @@ export function DonePane({ project, task, readOnly = false }: DonePaneProps) {
             <GitBranch size={16} />
             Timeline
           </div>
-          {recentEvents.length > 0 ? (
-            <ol className="done-timeline">
-              {recentEvents.map((event) => (
-                <li key={event.id}>
-                  <span>{event.status.split("_").join(" ")}</span>
-                  <p>{event.outputSummary ?? event.inputSummary ?? event.actor}</p>
-                </li>
-              ))}
-            </ol>
-          ) : (
-            <p>No task events were recorded.</p>
-          )}
+          <TaskTimeline task={task} maxItems={6} />
         </section>
       </div>
 

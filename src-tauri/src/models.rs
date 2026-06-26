@@ -94,6 +94,32 @@ pub struct CommandSpec {
     pub args: Vec<String>,
     pub cwd: String,
     pub task_id: Option<String>,
+    #[serde(default)]
+    pub intent: Option<CommandRunIntent>,
+    #[serde(default)]
+    pub loop_id: Option<String>,
+    #[serde(default)]
+    pub iteration: Option<u32>,
+    #[serde(default)]
+    pub attempt: Option<u32>,
+    #[serde(default)]
+    pub termination_reason: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CommandRunIntent {
+    AgentAction,
+    Validation,
+    Preview,
+    LoopStep,
+    Legacy,
+}
+
+impl Default for CommandRunIntent {
+    fn default() -> Self {
+        Self::Legacy
+    }
 }
 
 /// A persisted terminal slot for the Testing cockpit. `kind` is "preview"
@@ -119,6 +145,20 @@ pub struct CommandRun {
     pub task_id: String,
     pub command: String,
     pub cwd: String,
+    #[serde(default)]
+    pub intent: CommandRunIntent,
+    #[serde(default)]
+    pub loop_id: Option<String>,
+    #[serde(default)]
+    pub iteration: Option<u32>,
+    #[serde(default)]
+    pub attempt: Option<u32>,
+    #[serde(default)]
+    pub termination_reason: Option<String>,
+    #[serde(default)]
+    pub session_id: Option<String>,
+    #[serde(default)]
+    pub resume_command: Option<String>,
     pub started_at_ms: u128,
     pub ended_at_ms: Option<u128>,
     pub status: String,
@@ -161,6 +201,38 @@ pub struct CommandFinishedEvent {
     pub status: String,
     pub exit_code: Option<i32>,
     pub error_summary: Option<ErrorSummary>,
+    #[serde(default)]
+    pub session_id: Option<String>,
+    #[serde(default)]
+    pub resume_command: Option<String>,
+    #[serde(default)]
+    pub termination_reason: Option<String>,
+    pub timestamp_ms: u128,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LoopTraceEntry {
+    pub id: String,
+    pub task_id: String,
+    pub loop_id: String,
+    pub stage: String,
+    pub entry_type: String,
+    #[serde(default)]
+    pub iteration: Option<u32>,
+    #[serde(default)]
+    pub attempt: Option<u32>,
+    pub context_summary: String,
+    pub action_summary: String,
+    pub verification_summary: String,
+    #[serde(default)]
+    pub command_run_id: Option<String>,
+    #[serde(default)]
+    pub fingerprint: Option<String>,
+    #[serde(default)]
+    pub termination_reason: Option<String>,
+    #[serde(default)]
+    pub token_usage: Option<u64>,
     pub timestamp_ms: u128,
 }
 
@@ -201,9 +273,14 @@ pub struct Task {
     pub planning_decisions: Vec<PlanningDecision>,
     #[serde(default)]
     pub plan_todos: Vec<PlanTodoItem>,
+    #[serde(default)]
+    pub loop_trace: Vec<LoopTraceEntry>,
     pub events: Vec<TaskEvent>,
     pub command_runs: Vec<CommandRun>,
     pub feedback: Vec<UserFeedback>,
+    #[serde(default)]
+    pub loop_compact_summary: Option<String>,
+    #[serde(default)]
     pub repair_context_preview: Option<String>,
     pub created_at_ms: u128,
     pub updated_at_ms: u128,

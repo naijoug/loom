@@ -21,9 +21,10 @@ export function WorkspaceSplit() {
     return (
       <div className="workspace-empty-state redesigned-empty">
         <Radar size={28} />
-        <div className="workspace-empty-title">先打开一个项目</div>
+        <div className="workspace-empty-title">Open a project to get started</div>
         <div className="workspace-empty-copy">
-          Loom 会识别项目、加载 Agent，并把计划、互评、人工决策和最终文档记录下来。
+          Loom will analyze the project, load agents, and keep plans, reviews,
+          human decisions, and final documents in one place.
         </div>
       </div>
     );
@@ -61,14 +62,15 @@ export function WorkspaceSplit() {
       <div className="stage-review-banner">
         <History size={14} />
         <span>
-          正在回看 <b>{STAGE_LABELS[effectiveStage]}</b> 阶段（任务当前在 {STAGE_LABELS[currentStage]}）
+          Viewing the <b>{STAGE_LABELS[effectiveStage]}</b> stage. The task is
+          currently in {STAGE_LABELS[currentStage]}.
         </span>
         <button
           type="button"
           className="stage-review-return"
           onClick={() => dispatch({ type: "app/stageViewed", stage: null })}
         >
-          回到当前阶段
+          Return to current stage
         </button>
       </div>
       <div className="stage-review-content">{pane}</div>

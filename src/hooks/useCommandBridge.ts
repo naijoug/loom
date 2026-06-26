@@ -46,9 +46,12 @@ export function useCommandBridge() {
   );
 
   const stopCommandRun = useCallback(
-    async (runId: string) => {
+    async (runId: string, terminationReason?: string) => {
       try {
-        const result = await invoke<CommandRunStopResult>("stop_command_run", { runId });
+        const result = await invoke<CommandRunStopResult>("stop_command_run", {
+          runId,
+          terminationReason,
+        });
         dispatch({
           type: "commands/finished",
           event: {
@@ -57,6 +60,7 @@ export function useCommandBridge() {
             status: "cancelled",
             exitCode: result.exitCode,
             errorSummary: undefined,
+            terminationReason: terminationReason ?? "cancelled",
             timestampMs: Date.now(),
           },
         });

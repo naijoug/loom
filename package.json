@@ -8,6 +8,7 @@
     "debug": "scripts/debug.sh",
     "test": "node scripts/run-tests.mjs",
     "test:watch": "node --watch scripts/run-tests.mjs",
+    "dogfood:verify": "node scripts/verify-dogfood.mjs",
     "smoke": "./scripts/smoke-flow.sh",
     "smoke:interaction": "./scripts/interaction-smoke.sh",
     "smoke:visual": "./scripts/visual-smoke.sh",

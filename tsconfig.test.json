@@ -17,6 +17,9 @@
     "src/state/reducer.ts",
     "src/state/selectors.ts",
     "src/utils/agentRun.ts",
+    "src/utils/commandRun.ts",
+    "src/utils/loopPolicy.ts",
+    "src/utils/taskTimeline.ts",
     "src/utils/commandLine.ts"
   ],
   "references": []

@@ -103,6 +103,76 @@
   font-size: var(--fs-sm);
 }
 
+.task-timeline {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+}
+
+.task-timeline li {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.task-timeline-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+
+.task-timeline-body {
+  min-width: 0;
+}
+
+.task-timeline-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: var(--fs-sm);
+}
+
+.task-timeline-title span {
+  color: var(--text);
+  font-weight: 650;
+}
+
+.task-timeline-title em,
+.task-timeline-body code {
+  color: var(--text-3);
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  font-style: normal;
+}
+
+.task-timeline-body p {
+  margin: 2px 0 0;
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+}
+
+.task-timeline-body code {
+  display: block;
+  margin-top: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-timeline-empty {
+  margin: 0;
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+}
+
 @media (max-width: 900px) {
   .done-grid {
     grid-template-columns: 1fr;
@@ -406,6 +476,15 @@
   border-radius: 8px;
   background: var(--red-soft);
   color: var(--red);
+  padding: 9px 10px;
+  font-size: var(--fs-sm);
+}
+
+.testing-inline-note {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text-2);
   padding: 9px 10px;
   font-size: var(--fs-sm);
 }
@@ -1143,7 +1222,8 @@
 
 /* Toolbar + inline errors span the full width below the terminal grid. */
 .testing-terminal-actions,
-.testing-inline-error {
+.testing-inline-error,
+.testing-inline-note {
   grid-column: 1 / -1;
 }
 

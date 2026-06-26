@@ -1,4 +1,5 @@
 export type CommandRunStatus = "queued" | "running" | "succeeded" | "failed" | "cancelled";
+export type CommandRunIntent = "agent_action" | "validation" | "preview" | "loop_step" | "legacy";
 
 export interface ErrorSummary {
   exitCode?: number;
@@ -12,6 +13,13 @@ export interface CommandRun {
   taskId: string;
   command: string;
   cwd: string;
+  intent?: CommandRunIntent;
+  loopId?: string;
+  iteration?: number;
+  attempt?: number;
+  terminationReason?: string;
+  sessionId?: string;
+  resumeCommand?: string;
   startedAtMs: number;
   endedAtMs?: number;
   status: CommandRunStatus;
@@ -26,6 +34,11 @@ export interface CommandSpec {
   args: string[];
   cwd: string;
   taskId?: string;
+  intent?: Exclude<CommandRunIntent, "legacy">;
+  loopId?: string;
+  iteration?: number;
+  attempt?: number;
+  terminationReason?: string;
 }
 
 export interface PtySpec {
@@ -75,5 +88,8 @@ export interface CommandFinishedEvent {
   status: CommandRunStatus;
   exitCode?: number;
   errorSummary?: ErrorSummary;
+  sessionId?: string;
+  resumeCommand?: string;
+  terminationReason?: string;
   timestampMs: number;
 }

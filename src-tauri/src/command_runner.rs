@@ -1,9 +1,10 @@
 use crate::{
     agents::redact_sensitive_text,
     models::{
-        now_ms, CommandFinishedEvent, CommandLogEvent, CommandRun, CommandSpec, ErrorSummary,
-        IdGenerator,
+        now_ms, CommandFinishedEvent, CommandLogEvent, CommandRun, CommandRunIntent, CommandSpec,
+        ErrorSummary, IdGenerator,
     },
+    session_capture::{capture_session_from_lines, display_log_lines_for_command},
     storage, tasks,
 };
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
@@ -13,7 +14,7 @@ use tokio::{
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
     process::{Child, Command},
     sync::Mutex,
-    time::{sleep, Duration},
+    time::{sleep, timeout, Duration},
 };
 
 #[cfg(unix)]
@@ -118,30 +119,34 @@ async fn start_command_run_inner<E: CommandEventEmitter>(
     let pid = child.id();
     let stdout = child.stdout.take();
     let stderr = child.stderr.take();
+    let stdout_lines = Arc::new(Mutex::new(Vec::new()));
     let stderr_lines = Arc::new(Mutex::new(Vec::new()));
+    let mut reader_tasks = Vec::new();
 
     if let Some(stdout) = stdout {
-        spawn_log_reader(
+        reader_tasks.push(spawn_log_reader(
             app.clone(),
             task_id.clone(),
             run_id.clone(),
             "stdout",
             stdout,
             stdout_log.clone(),
-            None,
-        );
+            spec.program.clone(),
+            Some(stdout_lines.clone()),
+        ));
     }
 
     if let Some(stderr) = stderr {
-        spawn_log_reader(
+        reader_tasks.push(spawn_log_reader(
             app.clone(),
             task_id.clone(),
             run_id.clone(),
             "stderr",
             stderr,
             stderr_log.clone(),
+            spec.program.clone(),
             Some(stderr_lines.clone()),
-        );
+        ));
     }
 
     let run = CommandRun {
@@ -149,6 +154,13 @@ async fn start_command_run_inner<E: CommandEventEmitter>(
         task_id: task_id.clone(),
         command: command_text,
         cwd: spec.cwd.clone(),
+        intent: spec.intent.clone().unwrap_or(CommandRunIntent::Validation),
+        loop_id: spec.loop_id.clone(),
+        iteration: spec.iteration,
+        attempt: spec.attempt,
+        termination_reason: spec.termination_reason.clone(),
+        session_id: None,
+        resume_command: None,
         started_at_ms: now_ms(),
         ended_at_ms: None,
         status: "running".to_string(),
@@ -177,7 +189,10 @@ async fn start_command_run_inner<E: CommandEventEmitter>(
         project_path,
         run.task_id.clone(),
         run.id.clone(),
+        spec.program.clone(),
+        stdout_lines,
         stderr_lines,
+        reader_tasks,
     );
 
     Ok(run)
@@ -187,13 +202,15 @@ async fn start_command_run_inner<E: CommandEventEmitter>(
 pub async fn stop_command_run(
     registry: State<'_, CommandRegistry>,
     run_id: String,
+    termination_reason: Option<String>,
 ) -> Result<CommandRunStopResult, String> {
-    stop_command_run_inner(registry.inner(), run_id).await
+    stop_command_run_inner(registry.inner(), run_id, termination_reason).await
 }
 
 async fn stop_command_run_inner(
     registry: &CommandRegistry,
     run_id: String,
+    termination_reason: Option<String>,
 ) -> Result<CommandRunStopResult, String> {
     let Some(managed) = registry.runs.lock().await.remove(&run_id) else {
         return Ok(CommandRunStopResult {
@@ -226,6 +243,9 @@ async fn stop_command_run_inner(
             "cancelled",
             exit_code,
             None,
+            None,
+            None,
+            termination_reason,
         );
     }
 
@@ -251,8 +271,10 @@ fn spawn_log_reader<E, Reader>(
     stream: &'static str,
     reader: Reader,
     log_path: PathBuf,
+    command: String,
     captured_lines: Option<Arc<Mutex<Vec<String>>>>,
-) where
+) -> tauri::async_runtime::JoinHandle<()>
+where
     E: CommandEventEmitter,
     Reader: tokio::io::AsyncRead + Unpin + Send + 'static,
 {
@@ -279,25 +301,28 @@ fn spawn_log_reader<E, Reader>(
 
         while let Ok(Some(line)) = lines.next_line().await {
             let redacted_line = redact_sensitive_text(&line);
-
-            if let Some(file) = log_file.as_mut() {
-                let _ = file.write_all(redacted_line.as_bytes()).await;
-                let _ = file.write_all(b"\n").await;
-            }
+            let display_lines = display_log_lines_for_command(&command, &redacted_line);
 
             if let Some(captured) = captured_lines.as_ref() {
-                captured.lock().await.push(redacted_line.clone());
+                captured.lock().await.push(redacted_line);
             }
 
-            app.emit_log(CommandLogEvent {
-                task_id: Some(task_id.clone()),
-                run_id: run_id.clone(),
-                stream: stream.to_string(),
-                line: redacted_line,
-                timestamp_ms: now_ms(),
-            });
+            for display_line in display_lines {
+                if let Some(file) = log_file.as_mut() {
+                    let _ = file.write_all(display_line.as_bytes()).await;
+                    let _ = file.write_all(b"\n").await;
+                }
+
+                app.emit_log(CommandLogEvent {
+                    task_id: Some(task_id.clone()),
+                    run_id: run_id.clone(),
+                    stream: stream.to_string(),
+                    line: display_line,
+                    timestamp_ms: now_ms(),
+                });
+            }
         }
-    });
+    })
 }
 
 fn spawn_command_monitor<E: CommandEventEmitter>(
@@ -307,7 +332,10 @@ fn spawn_command_monitor<E: CommandEventEmitter>(
     project_path: PathBuf,
     task_id: String,
     run_id: String,
+    command: String,
+    stdout_lines: Arc<Mutex<Vec<String>>>,
     stderr_lines: Arc<Mutex<Vec<String>>>,
+    reader_tasks: Vec<tauri::async_runtime::JoinHandle<()>>,
 ) {
     tauri::async_runtime::spawn(async move {
         loop {
@@ -324,18 +352,26 @@ fn spawn_command_monitor<E: CommandEventEmitter>(
                 if runs.lock().await.remove(&run_id).is_none() {
                     break;
                 }
+                for mut task in reader_tasks {
+                    if timeout(Duration::from_secs(2), &mut task).await.is_err() {
+                        task.abort();
+                    }
+                }
                 let exit_code = status.code();
                 let command_status = if status.success() {
                     "succeeded"
                 } else {
                     "failed"
                 };
+                let stdout_lines = stdout_lines.lock().await.clone();
                 let stderr_lines = stderr_lines.lock().await.clone();
                 let error_summary = if status.success() {
                     None
                 } else {
                     Some(analyze_error(exit_code, &stderr_lines))
                 };
+                let captured_session =
+                    capture_session_from_lines(&command, &stdout_lines, &stderr_lines);
                 let _ = tasks::finish_command_run(
                     &project_path,
                     &task_id,
@@ -343,6 +379,9 @@ fn spawn_command_monitor<E: CommandEventEmitter>(
                     command_status,
                     exit_code,
                     error_summary.clone(),
+                    captured_session.session_id.clone(),
+                    captured_session.resume_command.clone(),
+                    None,
                 );
                 app.emit_finished(CommandFinishedEvent {
                     task_id: task_id.clone(),
@@ -350,6 +389,9 @@ fn spawn_command_monitor<E: CommandEventEmitter>(
                     status: command_status.to_string(),
                     exit_code,
                     error_summary,
+                    session_id: captured_session.session_id,
+                    resume_command: captured_session.resume_command,
+                    termination_reason: None,
                     timestamp_ms: now_ms(),
                 });
                 break;
@@ -431,6 +473,19 @@ mod tests {
         fn emit_finished(&self, _event: CommandFinishedEvent) {}
     }
 
+    #[derive(Clone, Default)]
+    struct CapturingCommandEmitter {
+        finished: Arc<std::sync::Mutex<Vec<CommandFinishedEvent>>>,
+    }
+
+    impl CommandEventEmitter for CapturingCommandEmitter {
+        fn emit_log(&self, _event: CommandLogEvent) {}
+
+        fn emit_finished(&self, event: CommandFinishedEvent) {
+            self.finished.lock().unwrap().push(event);
+        }
+    }
+
     fn command_smoke_task(root: &Path) -> Task {
         Task {
             id: "task-command-smoke".to_string(),
@@ -463,9 +518,11 @@ mod tests {
                 order: 0,
                 plan_ref: Some("docs/plans/command-smoke.md".to_string()),
             }],
+            loop_trace: Vec::new(),
             events: Vec::new(),
             command_runs: Vec::new(),
             feedback: Vec::new(),
+            loop_compact_summary: None,
             repair_context_preview: None,
             created_at_ms: now_ms(),
             updated_at_ms: now_ms(),
@@ -478,6 +535,11 @@ mod tests {
             args: vec!["-c".to_string(), script.to_string()],
             cwd: root.display().to_string(),
             task_id: Some(task_id.to_string()),
+            intent: Some(CommandRunIntent::Validation),
+            loop_id: None,
+            iteration: None,
+            attempt: None,
+            termination_reason: None,
         }
     }
 
@@ -525,13 +587,23 @@ mod tests {
         .await
         .expect("cancellable command should start");
         sleep(Duration::from_millis(200)).await;
-        let stop_result = stop_command_run_inner(&registry, cancellable.id.clone())
+        let stop_result = stop_command_run_inner(
+            &registry,
+            cancellable.id.clone(),
+            Some("timeout".to_string()),
+        )
             .await
             .expect("running command should stop");
         assert!(stop_result.stopped);
         let cancelled_task = tasks::load_task(&root, &task.id).expect("task should be readable");
         assert_eq!(cancelled_task.status, "debugging");
         assert_eq!(run_status(&cancelled_task, &cancellable.id), "cancelled");
+        let cancelled_run = cancelled_task
+            .command_runs
+            .iter()
+            .find(|run| run.id == cancellable.id)
+            .expect("cancelled run should be recorded");
+        assert_eq!(cancelled_run.termination_reason.as_deref(), Some("timeout"));
 
         let failed_one = start_command_run_inner(
             app.clone(),
@@ -564,6 +636,11 @@ mod tests {
         assert_eq!(repair_one.status, "fixing");
         assert!(repair_one
             .repair_context_preview
+            .as_deref()
+            .unwrap_or_default()
+            .contains(&failed_one.id));
+        assert!(repair_one
+            .loop_compact_summary
             .as_deref()
             .unwrap_or_default()
             .contains(&failed_one.id));
@@ -619,6 +696,85 @@ mod tests {
         );
         assert_eq!(completed.command_runs.len(), 4);
 
+        fs::remove_dir_all(root).expect("test project should be cleaned up");
+    }
+
+    #[tokio::test]
+    async fn command_runner_persists_captured_session_metadata() {
+        let root = std::env::temp_dir().join(format!("loom-command-session-{}", now_ms()));
+        fs::create_dir_all(&root).expect("test project should be created");
+
+        let app = CapturingCommandEmitter::default();
+        let registry = CommandRegistry::default();
+        let ids = IdGenerator::default();
+        let task = command_smoke_task(&root);
+        tasks::save_task(&task).expect("task should be persisted");
+
+        let run = start_command_run_inner(
+            app.clone(),
+            &registry,
+            &ids,
+            shell_spec(
+                &root,
+                &task.id,
+                "printf '%s\\n' '{\"session_id\":\"agent-session-1\"}'",
+            ),
+        )
+        .await
+        .expect("session command should start");
+        let finished_task = wait_for_run(&root, &task.id, &run.id).await;
+        let persisted_run = finished_task
+            .command_runs
+            .iter()
+            .find(|candidate| candidate.id == run.id)
+            .expect("finished run should be persisted");
+
+        assert_eq!(persisted_run.status, "succeeded");
+        assert_eq!(persisted_run.session_id.as_deref(), Some("agent-session-1"));
+        assert_eq!(persisted_run.resume_command, None);
+
+        let emitted = app.finished.lock().unwrap();
+        let event = emitted
+            .iter()
+            .find(|event| event.run_id == run.id)
+            .expect("finish event should be emitted");
+        assert_eq!(event.session_id.as_deref(), Some("agent-session-1"));
+        assert_eq!(event.resume_command, None);
+
+        fs::remove_dir_all(root).expect("test project should be cleaned up");
+    }
+
+    #[tokio::test]
+    async fn command_runner_finishes_when_descendant_keeps_stdout_open() {
+        let root = std::env::temp_dir().join(format!("loom-command-reader-timeout-{}", now_ms()));
+        fs::create_dir_all(&root).expect("test project should be created");
+
+        let app = CapturingCommandEmitter::default();
+        let registry = CommandRegistry::default();
+        let ids = IdGenerator::default();
+        let task = command_smoke_task(&root);
+        tasks::save_task(&task).expect("task should be persisted");
+
+        let run = start_command_run_inner(
+            app.clone(),
+            &registry,
+            &ids,
+            shell_spec(
+                &root,
+                &task.id,
+                "printf 'parent done\\n'; (sleep 20) & echo $! > bg.pid; exit 0",
+            ),
+        )
+        .await
+        .expect("command with inherited stdout should start");
+        let finished_task = wait_for_run(&root, &task.id, &run.id).await;
+        assert_eq!(run_status(&finished_task, &run.id), "succeeded");
+
+        if let Ok(pid) = fs::read_to_string(root.join("bg.pid")) {
+            let _ = std::process::Command::new("/bin/kill")
+                .arg(pid.trim())
+                .status();
+        }
         fs::remove_dir_all(root).expect("test project should be cleaned up");
     }
 

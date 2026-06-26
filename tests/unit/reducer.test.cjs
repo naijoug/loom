@@ -2,7 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { appReducer, initialAppState } = require("../../.tmp/test-build/src/state/reducer.js");
 
-function commandRun(id, taskId = "task-1") {
+function commandRun(id, taskId = "task-1", overrides = {}) {
   return {
     id,
     taskId,
@@ -10,6 +10,7 @@ function commandRun(id, taskId = "task-1") {
     cwd: "/tmp/project",
     startedAtMs: Date.now(),
     status: "running",
+    ...overrides,
   };
 }
 
@@ -122,6 +123,104 @@ test("command log buckets are independently capped", () => {
   assert.equal(state.commandLogs["run-1"][0].line, "line-5");
   assert.equal(state.commandLogs["run-2"].length, 1);
   assert.equal(state.commandLogs["run-2"][0].line, "only-line");
+});
+
+test("loop command events stay visible on the loaded task timeline", () => {
+  const task = taskFixture();
+  const run = commandRun("run-loop", task.id, {
+    command: "pnpm test",
+    intent: "validation",
+    loopId: "loop-1",
+    iteration: 1,
+    attempt: 0,
+    startedAtMs: 10,
+  });
+  let state = appReducer(initialAppState, tasksLoaded([task]));
+
+  state = appReducer(state, { type: "commands/started", run });
+
+  assert.equal(state.tasks[0].status, "debugging");
+  assert.equal(state.tasks[0].commandRuns.length, 1);
+  assert.equal(state.tasks[0].loopTrace.length, 1);
+  assert.equal(state.tasks[0].loopTrace[0].entryType, "command_started");
+  assert.equal(state.tasks[0].loopTrace[0].stage, "testing");
+
+  state = appReducer(state, {
+    type: "commands/finished",
+    event: {
+      taskId: task.id,
+      runId: run.id,
+      status: "failed",
+      exitCode: 1,
+      errorSummary: {
+        exitCode: 1,
+        stderrTail: ["error: failed"],
+        matchedLines: ["error: failed"],
+        failed: true,
+      },
+      timestampMs: 20,
+    },
+  });
+
+  assert.equal(state.tasks[0].status, "debugging");
+  assert.equal(state.tasks[0].commandRuns[0].status, "failed");
+  assert.equal(state.tasks[0].loopTrace.length, 2);
+  assert.equal(state.tasks[0].loopTrace[1].entryType, "command_finished");
+  assert.equal(state.tasks[0].loopTrace[1].terminationReason, "failed");
+  assert.equal(state.tasks[0].loopTrace[1].fingerprint, "error: failed");
+});
+
+test("implementation loop validation failure keeps task in implementation stage", () => {
+  const task = taskFixture({
+    status: "reviewing",
+    planTodos: [
+      {
+        id: "todo-1",
+        taskId: "task-1",
+        title: "Todo 1",
+        description: "First todo",
+        status: "done",
+        order: 0,
+      },
+    ],
+  });
+  const run = commandRun("run-loop-validation", task.id, {
+    command: "node .loom/dogfood/ui-auto-validation.cjs",
+    intent: "validation",
+    loopId: "loop-task-1-todo-1",
+    iteration: 1,
+    attempt: 0,
+    startedAtMs: 10,
+  });
+  let state = appReducer(initialAppState, tasksLoaded([task]));
+
+  state = appReducer(state, { type: "commands/started", run });
+
+  assert.equal(state.tasks[0].status, "reviewing");
+
+  state = appReducer(state, {
+    type: "commands/finished",
+    event: {
+      taskId: task.id,
+      runId: run.id,
+      status: "failed",
+      exitCode: 43,
+      errorSummary: {
+        exitCode: 43,
+        stderrTail: ["error: sentinel missing"],
+        matchedLines: ["error: sentinel missing"],
+        failed: true,
+      },
+      terminationReason: "timeout",
+      timestampMs: 20,
+    },
+  });
+
+  assert.equal(state.tasks[0].status, "reviewing");
+  assert.equal(state.tasks[0].commandRuns[0].status, "failed");
+  assert.equal(state.tasks[0].commandRuns[0].terminationReason, "timeout");
+  assert.equal(state.tasks[0].loopTrace[1].fingerprint, "error: sentinel missing");
+  assert.equal(state.tasks[0].loopTrace[1].terminationReason, "timeout");
 });
 
 test("selecting a task routes to task-detail and preserves a valid selected todo", () => {

@@ -1,5 +1,16 @@
 # 计划文档索引
 
+## 2026-06-25
+
+- 19:35-settings-refactor.md
+  > 规划 Settings 页面真实化重构：盘点当前假功能，删除无实现的通知/外观/更新等控件，保留并实现主题、Agent 管理、项目命令、安全护栏和真实 About 信息。（2026-06-26 plan-review 修订：补开工前置条件——须先落地在途 loop-engine 重构；改正 main.tsx 主题误读，主题改走 settings-backed 而非改 main.tsx；明确保留 `safety` tab 不新建 commands tab；SessionPane 纳入 slot 共享一致性；校准代码行锚。）
+
+- 14:54-loop-engine-consolidation-fix.md
+  > （已完成，方案 B）承接 10:21 的 code review：用 `loopPolicy` 作为 implement/testing 自动修复循环的单一策略源，已补 `SessionPane.startedAtMs`、TestingPane 有界自动修复、wall-clock timeout ticker、`terminationReason=timeout` 持久化通道，并删除测过但不跑的 `loop_engine.rs`/`validation.rs`。
+
+- 10:21-loop-engineering-refactor.md
+  > （实施中，M0-M4 与 M6 已落地）以 Loop Engineering 范式重构 Loom 编排核心：已拆分 `CommandRun` intent 与状态推进边界，落地 Rust Loop Engine、implement validation/repair 回路、context builder、session resume、compact memory 和统一 trace/timeline；M6 已完成 timeline canary、headless real-agent repair-loop canary、真实桌面 UI Auto repair canary 与 `pnpm dogfood:verify -- --strict` 机器校验。worktree 隔离 + verifier sub-agent + L1/L2/L3 自主化列为可选战略里程碑。
+
 ## 2026-06-24
 
 - 17:56-testing-cockpit-redesign.md

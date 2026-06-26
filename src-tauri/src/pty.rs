@@ -15,7 +15,7 @@
 use crate::{
     agents::redact_sensitive_text,
     command_runner::CommandRunStopResult,
-    models::{now_ms, CommandFinishedEvent, CommandRun, IdGenerator},
+    models::{now_ms, CommandFinishedEvent, CommandRun, CommandRunIntent, IdGenerator},
     tasks,
 };
 use portable_pty::{native_pty_system, CommandBuilder, MasterPty, PtySize};
@@ -173,6 +173,13 @@ fn start_pty_run_inner<E: PtyEventEmitter>(
         task_id: task_id.clone(),
         command: command_text,
         cwd: spec.cwd.clone(),
+        intent: CommandRunIntent::Preview,
+        loop_id: None,
+        iteration: None,
+        attempt: None,
+        termination_reason: None,
+        session_id: None,
+        resume_command: None,
         started_at_ms: now_ms(),
         ended_at_ms: None,
         status: "running".to_string(),
@@ -292,6 +299,9 @@ fn stop_pty_run_inner(
             "cancelled",
             exit_code,
             None,
+            None,
+            None,
+            None,
         );
     }
 
@@ -355,6 +365,9 @@ fn spawn_pty_monitor<E: PtyEventEmitter>(
             command_status,
             exit_code,
             None,
+            None,
+            None,
+            None,
         );
         app.emit_finished(CommandFinishedEvent {
             task_id,
@@ -362,6 +375,9 @@ fn spawn_pty_monitor<E: PtyEventEmitter>(
             status: command_status.to_string(),
             exit_code,
             error_summary: None,
+            session_id: None,
+            resume_command: None,
+            termination_reason: None,
             timestamp_ms: now_ms(),
         });
     });
@@ -413,9 +429,11 @@ mod tests {
                 order: 0,
                 plan_ref: None,
             }],
+            loop_trace: Vec::new(),
             events: Vec::new(),
             command_runs: Vec::new(),
             feedback: Vec::new(),
+            loop_compact_summary: None,
             repair_context_preview: None,
             created_at_ms: now_ms(),
             updated_at_ms: now_ms(),
@@ -495,7 +513,11 @@ mod tests {
             app.clone(),
             &registry,
             &ids,
-            pty_spec(&root, &task.id, "sleep 300 & printf 'GRANDCHILD=%s\\n' \"$!\"; wait"),
+            pty_spec(
+                &root,
+                &task.id,
+                "sleep 300 & printf 'GRANDCHILD=%s\\n' \"$!\"; wait",
+            ),
         )
         .expect("pty run should start");
 
@@ -504,7 +526,10 @@ mod tests {
         for _ in 0..100 {
             let captured = String::from_utf8_lossy(&app.output.lock().unwrap()).to_string();
             if let Some(rest) = captured.split("GRANDCHILD=").nth(1) {
-                if let Some(pid) = rest.split_whitespace().next().and_then(|v| v.parse::<i32>().ok())
+                if let Some(pid) = rest
+                    .split_whitespace()
+                    .next()
+                    .and_then(|v| v.parse::<i32>().ok())
                 {
                     grandchild_pid = Some(pid);
                     break;
@@ -515,7 +540,11 @@ mod tests {
         let grandchild_pid = grandchild_pid.expect("grandchild pid should be printed");
 
         // The grandchild is alive before stopping.
-        assert_eq!(unsafe { kill(grandchild_pid, 0) }, 0, "grandchild should be alive");
+        assert_eq!(
+            unsafe { kill(grandchild_pid, 0) },
+            0,
+            "grandchild should be alive"
+        );
 
         let result = stop_pty_run_inner(&registry, run.id.clone()).expect("stop should succeed");
         assert!(result.stopped);

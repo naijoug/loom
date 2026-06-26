@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback } from "react";
-import type { CreateTaskInput, PlanningDecisionInput, Task } from "../domain";
+import type { ContextBuildOptions, ContextBuildOutput, CreateTaskInput, PlanningDecisionInput, Task } from "../domain";
 import { useAppState } from "../state/AppStateContext";
 import { hasTauriRuntime } from "./runtime";
 
@@ -141,6 +141,32 @@ export function useTaskBridge() {
     [dispatch],
   );
 
+  const buildImplementationContext = useCallback(
+    async (
+      projectPath: string | null,
+      taskId: string,
+      todoId: string,
+      options?: ContextBuildOptions,
+    ) => {
+      if (!projectPath || !hasTauriRuntime()) {
+        return null;
+      }
+
+      try {
+        return await invoke<ContextBuildOutput>("build_implementation_context", {
+          projectPath,
+          taskId,
+          todoId,
+          options,
+        });
+      } catch (error) {
+        dispatch({ type: "tasks/loadFailed", error: toErrorMessage(error) });
+        return null;
+      }
+    },
+    [dispatch],
+  );
+
   const markReadyForTesting = useCallback(
     async (projectPath: string | null, taskId: string) => {
       if (!projectPath || !hasTauriRuntime()) {
@@ -273,6 +299,7 @@ export function useTaskBridge() {
     confirmPlan,
     startTodo,
     completeTodo,
+    buildImplementationContext,
     markReadyForTesting,
     completeTask,
     deleteTask,

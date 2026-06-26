@@ -1,10 +1,11 @@
 use crate::{
+    context_builder::{self, ContextBuildOptions, ContextBuildOutput},
     models::{
-        now_ms, CommandRun, CreateTaskInput, ErrorSummary, FeedbackInput, IdGenerator,
-        PlanTodoItem, PlanningDecision, PlanningDecisionInput, Task, TaskEvent, UserFeedback,
+        now_ms, CommandRun, CommandRunIntent, CreateTaskInput, ErrorSummary, FeedbackInput,
+        IdGenerator, LoopTraceEntry, PlanTodoItem, PlanningDecision, PlanningDecisionInput, Task,
+        TaskEvent, UserFeedback,
     },
-    plan_html,
-    storage,
+    plan_html, storage,
 };
 use std::{
     fs,
@@ -59,6 +60,7 @@ pub fn create_task(ids: State<'_, IdGenerator>, input: CreateTaskInput) -> Resul
         plan_reviews: Vec::new(),
         planning_decisions: Vec::new(),
         plan_todos: Vec::new(),
+        loop_trace: Vec::new(),
         events: vec![TaskEvent {
             id: event_id,
             task_id: task_id.clone(),
@@ -71,6 +73,7 @@ pub fn create_task(ids: State<'_, IdGenerator>, input: CreateTaskInput) -> Resul
         }],
         command_runs: Vec::new(),
         feedback: Vec::new(),
+        loop_compact_summary: None,
         repair_context_preview: None,
         created_at_ms: timestamp_ms,
         updated_at_ms: timestamp_ms,
@@ -211,6 +214,17 @@ pub fn complete_todo(
     save_task(&task)?;
 
     Ok(task)
+}
+
+#[tauri::command]
+pub fn build_implementation_context(
+    project_path: String,
+    task_id: String,
+    todo_id: String,
+    options: Option<ContextBuildOptions>,
+) -> Result<ContextBuildOutput, String> {
+    let task = load_task(Path::new(&project_path), &task_id)?;
+    context_builder::build_implementation_context(&task, &todo_id, options.unwrap_or_default())
 }
 
 #[tauri::command]
@@ -472,6 +486,12 @@ pub fn generate_repair_context(project_path: String, task_id: String) -> Result<
         .last()
         .map(|feedback| feedback.content.clone());
     let current_todo_context = format_current_todo_context(&task.plan_todos);
+    let compact_summary = format_loop_compact_summary(
+        &task,
+        latest_failed_run.as_ref(),
+        latest_feedback.as_deref(),
+        &current_todo_context,
+    );
     let context = format!(
         "Task: {}\n\nRequirement:\n{}\n\nFinal plan:\n{}\n\nCurrent implementation scope:\n{}\n\nLatest failure:\n{}\n\nLatest feedback:\n{}\n\nRepair handoff checklist:\n- Reproduce or explain the failure using the command and log references above.\n- Keep the fix scoped to the current implementation todo unless the evidence proves a wider issue.\n- Re-run the most relevant validation command and attach the result.",
         task.title,
@@ -488,8 +508,16 @@ pub fn generate_repair_context(project_path: String, task_id: String) -> Result<
         .as_ref()
         .map(|run| run.id.clone())
         .or_else(|| task.feedback.last().map(|feedback| feedback.id.clone()));
+    let keep_implementation_stage = latest_failed_run.as_ref().is_some_and(|run| {
+        run.intent == CommandRunIntent::Validation
+            && run.loop_id.is_some()
+            && matches!(task.status.as_str(), "implementing" | "reviewing")
+    });
     task.repair_context_preview = Some(context);
-    task.status = "fixing".to_string();
+    task.loop_compact_summary = Some(compact_summary);
+    if !keep_implementation_stage {
+        task.status = "fixing".to_string();
+    }
     task.updated_at_ms = now_ms();
     task.events.push(TaskEvent {
         id: format!("event-{}-repair-context", task.updated_at_ms),
@@ -509,6 +537,47 @@ pub fn generate_repair_context(project_path: String, task_id: String) -> Result<
     Ok(task)
 }
 
+fn format_loop_compact_summary(
+    task: &Task,
+    latest_failed_run: Option<&CommandRun>,
+    latest_feedback: Option<&str>,
+    current_todo_context: &str,
+) -> String {
+    let failure = latest_failed_run
+        .map(|run| {
+            format!(
+                "run={} intent={:?} status={} exit={:?} command={}",
+                run.id, run.intent, run.status, run.exit_code, run.command
+            )
+        })
+        .unwrap_or_else(|| "none".to_string());
+
+    format!(
+        "Task status: {}. Current scope: {}. Latest failure: {}. Latest feedback: {}.",
+        task.status,
+        compact_summary_line(current_todo_context, 500),
+        failure,
+        latest_feedback
+            .map(|feedback| compact_summary_line(feedback, 500))
+            .unwrap_or_else(|| "none".to_string())
+    )
+}
+
+fn compact_summary_line(value: &str, limit: usize) -> String {
+    let compacted = value.split_whitespace().collect::<Vec<_>>().join(" ");
+    if compacted.chars().count() > limit {
+        format!(
+            "{}...",
+            compacted
+                .chars()
+                .take(limit.saturating_sub(3))
+                .collect::<String>()
+        )
+    } else {
+        compacted
+    }
+}
+
 pub fn load_task(project_path: &Path, task_id: &str) -> Result<Task, String> {
     storage::read_json_file(&task_path(project_path, task_id))
 }
@@ -520,8 +589,12 @@ pub fn save_task(task: &Task) -> Result<(), String> {
 
 pub fn add_command_run(project_path: &Path, task_id: &str, run: CommandRun) -> Result<(), String> {
     let mut task = load_task(project_path, task_id)?;
-    task.status = "debugging".to_string();
+    apply_command_start_status(&mut task, &run);
     task.command_runs.push(run.clone());
+    if run.loop_id.is_some() {
+        task.loop_trace
+            .push(command_loop_trace_entry(&task.id, &run, "command_started"));
+    }
     task.events.push(TaskEvent {
         id: format!("event-{}-command-start", now_ms()),
         task_id: task.id.clone(),
@@ -543,21 +616,36 @@ pub fn finish_command_run(
     status: &str,
     exit_code: Option<i32>,
     error_summary: Option<ErrorSummary>,
+    session_id: Option<String>,
+    resume_command: Option<String>,
+    termination_reason: Option<String>,
 ) -> Result<(), String> {
     let mut task = load_task(project_path, task_id)?;
     let mut command_text = None;
+    let mut finished_run = None;
     if let Some(run) = task.command_runs.iter_mut().find(|run| run.id == run_id) {
         run.status = status.to_string();
         run.exit_code = exit_code;
         run.ended_at_ms = Some(now_ms());
         run.error_summary = error_summary;
+        run.session_id = session_id;
+        run.resume_command = resume_command;
+        if let Some(reason) = termination_reason {
+            run.termination_reason = Some(reason);
+        }
+        if status == "cancelled" && run.termination_reason.is_none() {
+            run.termination_reason = Some("cancelled".to_string());
+        }
         command_text = Some(run.command.clone());
+        finished_run = Some(run.clone());
     }
-    task.status = if status == "succeeded" {
-        "verifying".to_string()
-    } else {
-        "debugging".to_string()
-    };
+    if let Some(run) = finished_run.as_ref() {
+        apply_command_finish_status(&mut task, run, status);
+    }
+    if let Some(run) = finished_run.as_ref().filter(|run| run.loop_id.is_some()) {
+        task.loop_trace
+            .push(command_loop_trace_entry(&task.id, run, "command_finished"));
+    }
     task.events.push(TaskEvent {
         id: format!("event-{}-command-end", now_ms()),
         task_id: task.id.clone(),
@@ -570,6 +658,128 @@ pub fn finish_command_run(
     });
     task.updated_at_ms = now_ms();
     save_task(&task)
+}
+
+fn command_loop_trace_entry(task_id: &str, run: &CommandRun, entry_type: &str) -> LoopTraceEntry {
+    let timestamp_ms = now_ms();
+    let fingerprint = run.error_summary.as_ref().and_then(error_fingerprint);
+    LoopTraceEntry {
+        id: format!("trace-{timestamp_ms}-{entry_type}-{}", run.id),
+        task_id: task_id.to_string(),
+        loop_id: run.loop_id.clone().unwrap_or_default(),
+        stage: command_trace_stage(&run.intent).to_string(),
+        entry_type: entry_type.to_string(),
+        iteration: run.iteration,
+        attempt: run.attempt,
+        context_summary: format!(
+            "loop={} iteration={} attempt={}",
+            run.loop_id.as_deref().unwrap_or("(none)"),
+            run.iteration
+                .map(|value| value.to_string())
+                .unwrap_or_else(|| "(none)".to_string()),
+            run.attempt
+                .map(|value| value.to_string())
+                .unwrap_or_else(|| "(none)".to_string())
+        ),
+        action_summary: run.command.clone(),
+        verification_summary: command_trace_verification(run),
+        command_run_id: Some(run.id.clone()),
+        fingerprint,
+        termination_reason: run
+            .termination_reason
+            .clone()
+            .or_else(|| run.ended_at_ms.map(|_| run.status.clone())),
+        token_usage: None,
+        timestamp_ms,
+    }
+}
+
+fn command_trace_stage(intent: &CommandRunIntent) -> &'static str {
+    match intent {
+        CommandRunIntent::AgentAction => "implement",
+        CommandRunIntent::Validation => "testing",
+        CommandRunIntent::Preview => "preview",
+        CommandRunIntent::LoopStep => "loop",
+        CommandRunIntent::Legacy => "legacy",
+    }
+}
+
+fn command_trace_verification(run: &CommandRun) -> String {
+    match run.status.as_str() {
+        "running" => "Command started; awaiting process exit.".to_string(),
+        status => format!(
+            "Command {status}; exitCode={}; error={}",
+            run.exit_code
+                .map(|value| value.to_string())
+                .unwrap_or_else(|| "(none)".to_string()),
+            run.error_summary
+                .as_ref()
+                .and_then(|summary| summary
+                    .matched_lines
+                    .first()
+                    .or_else(|| summary.stderr_tail.last()))
+                .map(String::as_str)
+                .unwrap_or("(none)")
+        ),
+    }
+}
+
+fn error_fingerprint(summary: &ErrorSummary) -> Option<String> {
+    let evidence = if summary.matched_lines.is_empty() {
+        &summary.stderr_tail
+    } else {
+        &summary.matched_lines
+    };
+    let compacted = evidence
+        .iter()
+        .map(|line| line.trim().to_ascii_lowercase())
+        .filter(|line| !line.is_empty())
+        .collect::<Vec<_>>()
+        .join("\n");
+    if compacted.is_empty() {
+        None
+    } else {
+        Some(compact_summary_line(&compacted, 600))
+    }
+}
+
+fn is_implementation_loop_validation(task: &Task, run: &CommandRun) -> bool {
+    run.intent == CommandRunIntent::Validation
+        && run.loop_id.is_some()
+        && matches!(task.status.as_str(), "implementing" | "reviewing")
+}
+
+fn apply_command_start_status(task: &mut Task, run: &CommandRun) {
+    if is_implementation_loop_validation(task, run) {
+        return;
+    }
+
+    if matches!(
+        &run.intent,
+        CommandRunIntent::Validation | CommandRunIntent::Legacy
+    ) {
+        task.status = "debugging".to_string();
+    }
+}
+
+fn apply_command_finish_status(task: &mut Task, run: &CommandRun, status: &str) {
+    if is_implementation_loop_validation(task, run) {
+        if status == "succeeded" {
+            task.status = "verifying".to_string();
+        }
+        return;
+    }
+
+    if matches!(
+        &run.intent,
+        CommandRunIntent::Validation | CommandRunIntent::Legacy
+    ) {
+        task.status = if status == "succeeded" {
+            "verifying".to_string()
+        } else {
+            "debugging".to_string()
+        };
+    }
 }
 
 fn task_path(project_path: &Path, task_id: &str) -> PathBuf {
@@ -1031,9 +1241,11 @@ mod tests {
                     plan_ref: None,
                 },
             ],
+            loop_trace: Vec::new(),
             events: Vec::new(),
             command_runs: Vec::new(),
             feedback: Vec::new(),
+            loop_compact_summary: None,
             repair_context_preview: None,
             created_at_ms: 1,
             updated_at_ms: 1,
@@ -1092,9 +1304,11 @@ mod tests {
                 order: 0,
                 plan_ref: None,
             }],
+            loop_trace: Vec::new(),
             events: Vec::new(),
             command_runs: Vec::new(),
             feedback: Vec::new(),
+            loop_compact_summary: None,
             repair_context_preview: None,
             created_at_ms: 1,
             updated_at_ms: 1,
@@ -1141,9 +1355,11 @@ mod tests {
                 order: 0,
                 plan_ref: None,
             }],
+            loop_trace: Vec::new(),
             events: Vec::new(),
             command_runs: Vec::new(),
             feedback: Vec::new(),
+            loop_compact_summary: None,
             repair_context_preview: None,
             created_at_ms: 1,
             updated_at_ms: 1,
@@ -1192,13 +1408,206 @@ mod tests {
                     plan_ref: None,
                 })
                 .collect(),
+            loop_trace: Vec::new(),
             events: Vec::new(),
             command_runs,
             feedback: Vec::new(),
+            loop_compact_summary: None,
             repair_context_preview: None,
             created_at_ms: 1,
             updated_at_ms: 1,
         }
+    }
+
+    fn transition_command_run(intent: CommandRunIntent, loop_id: Option<String>) -> CommandRun {
+        CommandRun {
+            id: "run-1".to_string(),
+            task_id: "task-1".to_string(),
+            command: "pnpm test".to_string(),
+            cwd: "/repo".to_string(),
+            intent,
+            loop_id,
+            iteration: None,
+            attempt: None,
+            termination_reason: None,
+            session_id: None,
+            resume_command: None,
+            started_at_ms: 1,
+            ended_at_ms: None,
+            status: "running".to_string(),
+            exit_code: None,
+            stdout_log_ref: None,
+            stderr_log_ref: None,
+            error_summary: None,
+        }
+    }
+
+    #[test]
+    fn command_run_old_json_defaults_to_legacy_intent() {
+        let run: CommandRun = serde_json::from_value(serde_json::json!({
+            "id": "run-1",
+            "taskId": "task-1",
+            "command": "pnpm test",
+            "cwd": "/repo",
+            "startedAtMs": 1,
+            "endedAtMs": null,
+            "status": "succeeded",
+            "exitCode": 0,
+            "stdoutLogRef": null,
+            "stderrLogRef": null,
+            "errorSummary": null
+        }))
+        .expect("old command run json should deserialize");
+
+        assert_eq!(run.intent, CommandRunIntent::Legacy);
+        assert_eq!(run.loop_id, None);
+        assert_eq!(run.iteration, None);
+        assert_eq!(run.attempt, None);
+        assert_eq!(run.termination_reason, None);
+    }
+
+    #[test]
+    fn command_run_intent_policy_keeps_agent_and_preview_from_advancing_task() {
+        let mut task = transition_task_fixture("implementing", &["implementing"], Vec::new());
+        let agent_run = transition_command_run(CommandRunIntent::AgentAction, None);
+
+        apply_command_start_status(&mut task, &agent_run);
+        assert_eq!(task.status, "implementing");
+        apply_command_finish_status(&mut task, &agent_run, "succeeded");
+        assert_eq!(task.status, "implementing");
+
+        let mut preview_task = transition_task_fixture("debugging", &["done"], Vec::new());
+        let preview_run = transition_command_run(CommandRunIntent::Preview, None);
+        apply_command_start_status(&mut preview_task, &preview_run);
+        assert_eq!(preview_task.status, "debugging");
+        apply_command_finish_status(&mut preview_task, &preview_run, "failed");
+        assert_eq!(preview_task.status, "debugging");
+    }
+
+    #[test]
+    fn command_run_intent_policy_preserves_validation_acceptance_flow() {
+        let mut task = transition_task_fixture("reviewing", &["done"], Vec::new());
+        let run = transition_command_run(CommandRunIntent::Validation, None);
+
+        apply_command_start_status(&mut task, &run);
+        assert_eq!(task.status, "debugging");
+        apply_command_finish_status(&mut task, &run, "succeeded");
+        assert_eq!(task.status, "verifying");
+        apply_command_finish_status(&mut task, &run, "failed");
+        assert_eq!(task.status, "debugging");
+    }
+
+    #[test]
+    fn loop_bound_validation_stays_in_implementation_until_it_passes() {
+        let mut task = transition_task_fixture("reviewing", &["done"], Vec::new());
+        let run = transition_command_run(
+            CommandRunIntent::Validation,
+            Some("loop-task-1-todo-1".to_string()),
+        );
+
+        apply_command_start_status(&mut task, &run);
+        assert_eq!(task.status, "reviewing");
+        apply_command_finish_status(&mut task, &run, "failed");
+        assert_eq!(task.status, "reviewing");
+        apply_command_finish_status(&mut task, &run, "succeeded");
+        assert_eq!(task.status, "verifying");
+    }
+
+    #[test]
+    fn repair_context_keeps_loop_bound_implementation_stage() {
+        let root = std::env::temp_dir().join(format!("loom-loop-repair-context-{}", now_ms()));
+        std::fs::create_dir_all(&root).expect("test project should be created");
+        let mut failed_run = transition_command_run(
+            CommandRunIntent::Validation,
+            Some("loop-task-1-todo-0".to_string()),
+        );
+        failed_run.id = "run-loop-failed".to_string();
+        failed_run.status = "failed".to_string();
+        failed_run.exit_code = Some(43);
+        failed_run.error_summary = Some(ErrorSummary {
+            exit_code: Some(43),
+            stderr_tail: vec!["sentinel missing".to_string()],
+            matched_lines: vec!["sentinel missing".to_string()],
+            failed: true,
+        });
+        let mut task = transition_task_fixture("reviewing", &["done"], vec![failed_run]);
+        task.project_path = root.display().to_string();
+        save_task(&task).expect("task should be saved");
+
+        let updated = generate_repair_context(root.display().to_string(), task.id.clone())
+            .expect("repair context should be generated");
+
+        assert_eq!(updated.status, "reviewing");
+        assert!(updated.repair_context_preview.is_some());
+        assert_eq!(updated.events.last().unwrap().status, "reviewing");
+
+        let persisted = load_task(&root, &task.id).expect("task should persist");
+        assert_eq!(persisted.status, "reviewing");
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn loop_bound_command_runs_append_trace_entries() {
+        let root = std::env::temp_dir().join(format!("loom-loop-trace-{}", now_ms()));
+        std::fs::create_dir_all(&root).expect("test project should be created");
+        let mut task = transition_task_fixture("reviewing", &["done"], Vec::new());
+        task.id = "task-trace".to_string();
+        task.project_path = root.display().to_string();
+        save_task(&task).expect("task should be saved");
+
+        let run = CommandRun {
+            id: "run-trace".to_string(),
+            task_id: task.id.clone(),
+            command: "pnpm test".to_string(),
+            cwd: root.display().to_string(),
+            intent: CommandRunIntent::Validation,
+            loop_id: Some("loop-1".to_string()),
+            iteration: Some(2),
+            attempt: Some(1),
+            termination_reason: None,
+            session_id: None,
+            resume_command: None,
+            started_at_ms: 1,
+            ended_at_ms: None,
+            status: "running".to_string(),
+            exit_code: None,
+            stdout_log_ref: None,
+            stderr_log_ref: None,
+            error_summary: None,
+        };
+
+        add_command_run(&root, &task.id, run).expect("command run should start");
+        let started = load_task(&root, &task.id).expect("task should reload");
+        assert_eq!(started.loop_trace.len(), 1);
+        assert_eq!(started.loop_trace[0].entry_type, "command_started");
+        assert_eq!(started.loop_trace[0].stage, "testing");
+        assert_eq!(started.loop_trace[0].iteration, Some(2));
+
+        finish_command_run(
+            &root,
+            &task.id,
+            "run-trace",
+            "failed",
+            Some(1),
+            Some(ErrorSummary {
+                exit_code: Some(1),
+                stderr_tail: vec!["error: failed".to_string()],
+                matched_lines: vec!["error: failed".to_string()],
+                failed: true,
+            }),
+            None,
+            None,
+            None,
+        )
+        .expect("command run should finish");
+        let finished = load_task(&root, &task.id).expect("task should reload");
+        assert_eq!(finished.loop_trace.len(), 2);
+        assert_eq!(finished.loop_trace[1].entry_type, "command_finished");
+        assert_eq!(finished.loop_trace[1].termination_reason.as_deref(), Some("failed"));
+        assert_eq!(finished.loop_trace[1].fingerprint.as_deref(), Some("error: failed"));
+
+        std::fs::remove_dir_all(root).expect("test project should be cleaned up");
     }
 
     #[test]
@@ -1246,6 +1655,13 @@ mod tests {
             task_id: "task-1".to_string(),
             command: "pnpm build".to_string(),
             cwd: "/repo".to_string(),
+            intent: CommandRunIntent::Validation,
+            loop_id: None,
+            iteration: None,
+            attempt: None,
+            termination_reason: None,
+            session_id: None,
+            resume_command: None,
             started_at_ms: 1,
             ended_at_ms: Some(2),
             status: "succeeded".to_string(),
@@ -1324,9 +1740,11 @@ mod tests {
                 order: 0,
                 plan_ref: None,
             }],
+            loop_trace: Vec::new(),
             events: Vec::new(),
             command_runs: Vec::new(),
             feedback: Vec::new(),
+            loop_compact_summary: None,
             repair_context_preview: None,
             created_at_ms: 1,
             updated_at_ms: 1,
@@ -1399,6 +1817,13 @@ mod tests {
             task_id: "task-1".to_string(),
             command: "pnpm build".to_string(),
             cwd: "/repo".to_string(),
+            intent: CommandRunIntent::Validation,
+            loop_id: None,
+            iteration: None,
+            attempt: None,
+            termination_reason: None,
+            session_id: None,
+            resume_command: None,
             started_at_ms: 1,
             ended_at_ms: Some(2),
             status: "failed".to_string(),

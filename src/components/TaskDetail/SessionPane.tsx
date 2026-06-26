@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   CheckCircle2,
   Circle,
@@ -8,12 +8,38 @@ import {
   Send,
   Terminal,
 } from "lucide-react";
-import type { AgentConfig, PlanTodoItem, PlanTodoStatus, ProjectSummary, Task } from "../../domain";
+import type {
+  AgentConfig,
+  CommandRun,
+  PlanTodoItem,
+  PlanTodoStatus,
+  ProjectSummary,
+  Task,
+  TerminalSlot,
+} from "../../domain";
 import { useAgentBridge } from "../../hooks/useAgentBridge";
 import { useCommandBridge } from "../../hooks/useCommandBridge";
 import { useTaskBridge } from "../../hooks/useTaskBridge";
+import { useTerminalBridge } from "../../hooks/useTerminalBridge";
 import { useAppState } from "../../state/AppStateContext";
+import {
+  buildAgentCommandInvocation,
+  buildImplementationPrompt,
+  buildRepairPrompt,
+  buildResumeRepairPrompt,
+  hasImplementationCapability,
+} from "../../utils/agentRun";
+import {
+  DEFAULT_LOOP_BUDGET,
+  MAX_AUTO_REPAIR_ATTEMPTS,
+  decideAfterRepair,
+  decideAfterValidation,
+  escalationNotice,
+  isTimedOut,
+} from "../../utils/loopPolicy";
+import { parseCommandLine } from "../../utils/commandLine";
 import { Button } from "../common/Button";
+import { TaskTimeline } from "./TaskTimeline";
 import "./TaskDetail.css";
 
 interface SessionPaneProps {
@@ -28,74 +54,16 @@ const TODO_STATUS_LABELS: Record<PlanTodoStatus, string> = {
   done: "Done",
   blocked: "Blocked",
 };
-
-function hasImplementationCapability(agent: AgentConfig) {
-  return (
-    agent.enabled &&
-    agent.available &&
-    agent.adapterType !== "dummy" &&
-    agent.capabilities.includes("implementation")
-  );
-}
-
-function replaceRuntimePlaceholders(args: string[], projectPath: string, prompt: string) {
-  return args.map((arg) =>
-    arg.split("{projectPath}").join(projectPath).split("{prompt}").join(prompt),
-  );
-}
-
-function buildImplementationPrompt(task: Task, todo: PlanTodoItem, todoIndex: number) {
-  return [
-    "# Loom Implementation Handoff",
-    "",
-    "You are implementing one selected todo from a confirmed Loom plan.",
-    "",
-    `Project: ${task.projectPath}`,
-    `Task: ${task.title}`,
-    `Todo ${todoIndex + 1}: ${todo.title}`,
-    "",
-    "Todo description:",
-    todo.description,
-    "",
-    "Execution rules:",
-    "- Modify only the files needed for this todo.",
-    "- Preserve unrelated user changes.",
-    "- Run the smallest relevant verification before reporting completion.",
-    "- Report changed files, verification evidence, blockers, and remaining risk.",
-    "",
-    "Confirmed final plan:",
-    task.finalPlan ?? "(none)",
-  ].join("\n");
-}
-
-function buildAgentCommandArgs(agent: AgentConfig, projectPath: string, prompt: string) {
-  if (agent.args.length > 0) {
-    const args = replaceRuntimePlaceholders(agent.args, projectPath, prompt);
-    return agent.args.some((arg) => arg.includes("{prompt}")) ? args : [...args, prompt];
-  }
-
-  switch (agent.adapterType) {
-    case "codex_cli":
-      return [
-        "exec",
-        "--cd",
-        projectPath,
-        "--sandbox",
-        agent.canWriteFiles ? "workspace-write" : "read-only",
-        prompt,
-      ];
-    case "claude_code_cli":
-      return [
-        "-p",
-        prompt,
-        "--permission-mode",
-        agent.canWriteFiles ? "acceptEdits" : "plan",
-        "--output-format",
-        "text",
-      ];
-    default:
-      return [prompt];
-  }
+interface AutoImplementationLoop {
+  loopId: string;
+  todoId: string;
+  validationCommand: string;
+  validationCwd: string;
+  repairAttempts: number;
+  lastFailureFingerprint?: string;
+  repeatedFailureCount: number;
+  startedAtMs: number;
+  status: "validating" | "repairing" | "passed" | "escalated";
 }
 
 function agentInitials(agent?: AgentConfig | null) {
@@ -117,14 +85,27 @@ function summarizeCommand(command: string) {
 export function SessionPane({ project, task, readOnly = false }: SessionPaneProps) {
   const { state } = useAppState();
   const { loadAgents } = useAgentBridge();
-  const { startCommandRun } = useCommandBridge();
-  const { appendFeedback, completeTodo, markReadyForTesting, startTodo } = useTaskBridge();
+  const { startCommandRun, stopCommandRun } = useCommandBridge();
+  const {
+    appendFeedback,
+    buildImplementationContext,
+    completeTodo,
+    generateRepairContext,
+    markReadyForTesting,
+    startTodo,
+  } = useTaskBridge();
+  const { listTerminalSlots, suggestTerminalSlots } = useTerminalBridge();
   const implementationAgents = useMemo(
     () => state.agents.filter((agent) => hasImplementationCapability(agent)),
     [state.agents],
   );
   const [selectedAgentId, setSelectedAgentId] = useState(task.primaryAgentId ?? "");
   const [guidance, setGuidance] = useState("");
+  const [autoValidate, setAutoValidate] = useState(false);
+  const [validationSlots, setValidationSlots] = useState<TerminalSlot[]>([]);
+  const [validationNotice, setValidationNotice] = useState<string | null>(null);
+  const [autoLoop, setAutoLoop] = useState<AutoImplementationLoop | null>(null);
+  const handledLoopRunsRef = useRef<Set<string>>(new Set());
   const selectedAgent =
     implementationAgents.find((agent) => agent.id === selectedAgentId) ??
     implementationAgents.find((agent) => agent.id === task.primaryAgentId) ??
@@ -135,7 +116,9 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
     task.planTodos.find((todo) => todo.status === "implementing") ??
     task.planTodos[0] ??
     null;
-  const commandRunning = state.commandRuns.some((run) => run.taskId === task.id && run.status === "running");
+  const commandRunning = state.commandRuns.some(
+    (run) => run.taskId === task.id && run.status === "running",
+  );
   const latestRun =
     state.commandRuns
       .filter((run) => run.taskId === task.id)
@@ -144,6 +127,32 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
   const allTodosDone =
     task.planTodos.length > 0 && task.planTodos.every((todo) => todo.status === "done");
   const canMarkReadyForTesting = !readOnly && task.status === "reviewing" && allTodosDone;
+  const preferredValidationSlot = useMemo(
+    () => validationSlots.find((slot) => slot.kind === "validation" && slot.command.trim()),
+    [validationSlots],
+  );
+  const loopRuns = useMemo(
+    () =>
+      autoLoop
+        ? state.commandRuns
+            .filter((run) => run.taskId === task.id && run.loopId === autoLoop.loopId)
+            .sort((left, right) => left.startedAtMs - right.startedAtMs)
+        : [],
+    [autoLoop, state.commandRuns, task.id],
+  );
+  const completedLoopRuns = loopRuns.filter((run) => run.status !== "running");
+  const latestCompletedLoopRun = completedLoopRuns[completedLoopRuns.length - 1] ?? null;
+  const runningLoopRun = loopRuns.find((run) => run.status === "running") ?? null;
+  const latestAgentResumeCommand =
+    state.commandRuns
+      .filter(
+        (run) =>
+          run.taskId === task.id &&
+          run.intent === "agent_action" &&
+          run.status === "succeeded" &&
+          run.resumeCommand,
+      )
+      .sort((left, right) => right.startedAtMs - left.startedAtMs)[0]?.resumeCommand ?? null;
 
   useEffect(() => {
     void loadAgents();
@@ -155,23 +164,272 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
     }
   }, [selectedAgent, selectedAgentId]);
 
+  useEffect(() => {
+    let cancelled = false;
+    void listTerminalSlots(project.path).then(async (loaded) => {
+      const slots = loaded.length > 0 ? loaded : await suggestTerminalSlots(project.path);
+      if (!cancelled) {
+        setValidationSlots(slots);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [project.path, listTerminalSlots, suggestTerminalSlots]);
+
+  function slotCwd(slot: { cwd?: string }) {
+    return slot.cwd ? `${project.path}/${slot.cwd}` : project.path;
+  }
+
+  async function startAutoValidationRun(
+    loop: AutoImplementationLoop,
+    iteration: number,
+    attempt: number,
+  ) {
+    try {
+      const parsed = parseCommandLine(loop.validationCommand);
+      if (!parsed.program) {
+        setAutoLoop((current) => (current?.loopId === loop.loopId ? { ...current, status: "escalated" } : current));
+        setValidationNotice("The configured validation command is empty.");
+        return null;
+      }
+
+      const run = await startCommandRun({
+        program: parsed.program,
+        args: parsed.args,
+        cwd: loop.validationCwd,
+        taskId: task.id,
+        intent: "validation",
+        loopId: loop.loopId,
+        iteration,
+        attempt,
+      });
+      setValidationNotice(
+        run ? `Auto validation started: ${loop.validationCommand}` : "Auto validation failed to start.",
+      );
+      if (!run) {
+        setAutoLoop((current) =>
+          current?.loopId === loop.loopId ? { ...current, status: "escalated" } : current,
+        );
+      }
+      return run;
+    } catch (error) {
+      setAutoLoop((current) => (current?.loopId === loop.loopId ? { ...current, status: "escalated" } : current));
+      setValidationNotice(error instanceof Error ? error.message : "Invalid validation command.");
+      return null;
+    }
+  }
+
+  async function startAutoRepairRun(loop: AutoImplementationLoop, failedRun: CommandRun, attempt: number) {
+    if (!selectedAgent) {
+      setAutoLoop((current) => (current?.loopId === loop.loopId ? { ...current, status: "escalated" } : current));
+      setValidationNotice("Auto repair stopped because no implementation agent is available.");
+      return;
+    }
+
+    setAutoLoop((current) =>
+      current?.loopId === loop.loopId
+        ? { ...current, repairAttempts: attempt, status: "repairing" }
+        : current,
+    );
+    const refreshed = await generateRepairContext(project.path, task.id);
+    const repairNote = `Auto repair attempt ${attempt}/${MAX_AUTO_REPAIR_ATTEMPTS}: validation failed in \`${failedRun.command}\`.`;
+    const prompt = latestAgentResumeCommand
+      ? buildResumeRepairPrompt(refreshed ?? task, repairNote)
+      : buildRepairPrompt(refreshed ?? task, "", repairNote);
+    const invocation = buildAgentCommandInvocation(
+      selectedAgent,
+      project.path,
+      prompt,
+      latestAgentResumeCommand,
+    );
+    const run = await startCommandRun({
+      program: invocation.program,
+      args: invocation.args,
+      cwd: project.path,
+      taskId: task.id,
+      intent: "agent_action",
+      loopId: loop.loopId,
+      iteration: attempt,
+      attempt,
+    });
+    setValidationNotice(
+      run
+        ? invocation.resumed
+          ? `Auto repair attempt ${attempt}/${MAX_AUTO_REPAIR_ATTEMPTS} resumed the previous agent session.`
+          : `Auto repair attempt ${attempt}/${MAX_AUTO_REPAIR_ATTEMPTS} started.`
+        : "Auto repair failed to start.",
+    );
+    if (!run) {
+      setAutoLoop((current) =>
+        current?.loopId === loop.loopId ? { ...current, status: "escalated" } : current,
+      );
+    }
+  }
+
+  useEffect(() => {
+    if (
+      !autoValidate ||
+      readOnly ||
+      !autoLoop ||
+      autoLoop.status === "passed" ||
+      autoLoop.status === "escalated"
+    ) {
+      return;
+    }
+
+    const tick = () => {
+      const timedOut = isTimedOut(
+        {
+          repairAttempts: autoLoop.repairAttempts,
+          repeatedFailureCount: autoLoop.repeatedFailureCount,
+          lastFailureFingerprint: autoLoop.lastFailureFingerprint,
+          startedAtMs: autoLoop.startedAtMs,
+        },
+        DEFAULT_LOOP_BUDGET,
+        Date.now(),
+      );
+      if (!timedOut) {
+        return;
+      }
+
+      setAutoLoop((current) =>
+        current?.loopId === autoLoop.loopId ? { ...current, status: "escalated" } : current,
+      );
+      setValidationNotice(escalationNotice("timeout", DEFAULT_LOOP_BUDGET));
+      if (runningLoopRun) {
+        void stopCommandRun(runningLoopRun.id, "timeout");
+      }
+    };
+
+    tick();
+    const timer = window.setInterval(tick, 1_000);
+    return () => window.clearInterval(timer);
+  }, [autoValidate, autoLoop, readOnly, runningLoopRun, stopCommandRun]);
+
+  useEffect(() => {
+    if (
+      !autoValidate ||
+      readOnly ||
+      !autoLoop ||
+      autoLoop.status === "passed" ||
+      autoLoop.status === "escalated" ||
+      !latestCompletedLoopRun
+    ) {
+      return;
+    }
+    if (handledLoopRunsRef.current.has(latestCompletedLoopRun.id)) {
+      return;
+    }
+    handledLoopRunsRef.current.add(latestCompletedLoopRun.id);
+
+    const loopProgress = {
+      repairAttempts: autoLoop.repairAttempts,
+      repeatedFailureCount: autoLoop.repeatedFailureCount,
+      lastFailureFingerprint: autoLoop.lastFailureFingerprint,
+      startedAtMs: autoLoop.startedAtMs,
+    };
+
+    if (latestCompletedLoopRun.intent === "validation") {
+      const decision = decideAfterValidation(
+        loopProgress,
+        latestCompletedLoopRun,
+        DEFAULT_LOOP_BUDGET,
+        Date.now(),
+      );
+      if (decision.kind === "pass") {
+        setAutoLoop({ ...autoLoop, status: "passed" });
+        setValidationNotice("Auto validation passed. This todo has passing evidence.");
+        return;
+      }
+      if (decision.kind === "escalate") {
+        setAutoLoop({
+          ...autoLoop,
+          lastFailureFingerprint: decision.fingerprint ?? autoLoop.lastFailureFingerprint,
+          repeatedFailureCount: decision.repeatedFailureCount ?? autoLoop.repeatedFailureCount,
+          status: "escalated",
+        });
+        setValidationNotice(escalationNotice(decision.reason, DEFAULT_LOOP_BUDGET));
+        return;
+      }
+
+      setAutoLoop({
+        ...autoLoop,
+        lastFailureFingerprint: decision.fingerprint,
+        repeatedFailureCount: decision.repeatedFailureCount,
+        repairAttempts: decision.attempt,
+        status: "repairing",
+      });
+      void startAutoRepairRun(autoLoop, latestCompletedLoopRun, decision.attempt);
+      return;
+    }
+
+    if (latestCompletedLoopRun.intent === "agent_action") {
+      const decision = decideAfterRepair(
+        loopProgress,
+        latestCompletedLoopRun,
+        DEFAULT_LOOP_BUDGET,
+        Date.now(),
+      );
+      if (decision.kind === "escalate") {
+        setAutoLoop({ ...autoLoop, status: "escalated" });
+        setValidationNotice(escalationNotice(decision.reason, DEFAULT_LOOP_BUDGET));
+        return;
+      }
+      setAutoLoop({ ...autoLoop, status: "validating" });
+      void startAutoValidationRun(autoLoop, autoLoop.repairAttempts + 1, autoLoop.repairAttempts);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoValidate, autoLoop, latestCompletedLoopRun?.id, readOnly]);
+
   async function handleStartTodo(todo: PlanTodoItem, todoIndex: number) {
     if (!selectedAgent) {
       return;
     }
 
     const updatedTask = await startTodo(project.path, task.id, todo.id, selectedAgent.id);
-    const prompt = buildImplementationPrompt(updatedTask ?? task, todo, todoIndex);
+    const context = await buildImplementationContext(project.path, task.id, todo.id);
+    const prompt = context?.prompt ?? buildImplementationPrompt(updatedTask ?? task, todo, todoIndex);
+    const invocation = buildAgentCommandInvocation(selectedAgent, project.path, prompt);
     await startCommandRun({
-      program: selectedAgent.command,
-      args: buildAgentCommandArgs(selectedAgent, project.path, prompt),
+      program: invocation.program,
+      args: invocation.args,
       cwd: project.path,
       taskId: task.id,
+      intent: "agent_action",
     });
   }
 
   async function handleCompleteTodo(todo: PlanTodoItem) {
-    await completeTodo(project.path, task.id, todo.id);
+    if (autoValidate && commandRunning) {
+      setValidationNotice("Wait for the active command run to finish before auto validation.");
+      return;
+    }
+
+    const updatedTask = await completeTodo(project.path, task.id, todo.id);
+    if (!autoValidate || !updatedTask) {
+      return;
+    }
+
+    if (!preferredValidationSlot) {
+      setValidationNotice("No validation command is configured for this project.");
+      return;
+    }
+
+    const loop: AutoImplementationLoop = {
+      loopId: `loop-${task.id}-${todo.id}-${Date.now()}`,
+      todoId: todo.id,
+      validationCommand: preferredValidationSlot.command.trim(),
+      validationCwd: slotCwd(preferredValidationSlot),
+      repairAttempts: 0,
+      repeatedFailureCount: 0,
+      startedAtMs: Date.now(),
+      status: "validating",
+    };
+    handledLoopRunsRef.current = new Set();
+    setAutoLoop(loop);
+    setValidationNotice(null);
+    await startAutoValidationRun(loop, 1, 0);
   }
 
   async function handleGuidanceSubmit(event: FormEvent<HTMLFormElement>) {
@@ -198,6 +456,28 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
           <span />
           {selectedAgent?.name ?? "No implementation Agent"}
         </span>
+        <div className="testing-mode-toggle" role="group" aria-label="Implementation validation mode">
+          <button
+            type="button"
+            className={autoValidate ? "" : "active"}
+            disabled={readOnly}
+            onClick={() => {
+              setAutoValidate(false);
+              setAutoLoop(null);
+              setValidationNotice(null);
+            }}
+          >
+            Manual
+          </button>
+          <button
+            type="button"
+            className={autoValidate ? "active" : ""}
+            disabled={readOnly}
+            onClick={() => setAutoValidate(true)}
+          >
+            Auto
+          </button>
+        </div>
       </div>
 
       <div className="session-grid">
@@ -249,11 +529,22 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
                   </div>
                 )}
 
+                <div className="session-tool">
+                  <div className="session-tool-header">
+                    <FileText size={14} />
+                    <b>Timeline</b>
+                    <span>{autoLoop?.loopId ?? "task history"}</span>
+                    <em>trace</em>
+                  </div>
+                  <TaskTimeline task={task} maxItems={5} />
+                </div>
+
                 <p className="session-agent-copy">
                   {activeTodo
                     ? `Ready to implement "${activeTodo.title}". Start the todo, capture command evidence, then mark it done after review.`
                     : "Confirm a plan to generate implementation todos."}
                 </p>
+                {validationNotice && <p className="session-agent-copy">{validationNotice}</p>}
               </div>
             </article>
           </div>
@@ -326,7 +617,7 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
                       <button
                         type="button"
                         className="session-subtask-check"
-                        disabled={done || readOnly}
+                        disabled={done || readOnly || (autoValidate && commandRunning)}
                         onClick={() => void handleCompleteTodo(todo)}
                       >
                         {done ? <CheckCircle2 size={14} /> : <Circle size={10} />}

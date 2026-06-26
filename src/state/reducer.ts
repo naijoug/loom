@@ -3,6 +3,7 @@ import type {
   CommandFinishedEvent,
   CommandLogEvent,
   CommandRun,
+  LoopTraceEntry,
   PlanningAgentLogEvent,
   PlanningAgentStatusEvent,
   ProjectSummary,
@@ -188,6 +189,156 @@ function cacheProjectTasks(
     ...cache,
     [projectPath]: tasks,
   };
+}
+
+function mapCachedTasks(
+  cache: Record<string, Task[]>,
+  taskId: string,
+  update: (task: Task) => Task,
+) {
+  return Object.fromEntries(
+    Object.entries(cache).map(([projectPath, tasks]) => [
+      projectPath,
+      replaceTask(tasks, taskId, update),
+    ]),
+  );
+}
+
+function commandRunIntent(run: CommandRun) {
+  return run.intent ?? "legacy";
+}
+
+function isImplementationLoopValidation(task: Task, run: CommandRun) {
+  return (
+    commandRunIntent(run) === "validation" &&
+    Boolean(run.loopId) &&
+    (task.status === "implementing" || task.status === "reviewing")
+  );
+}
+
+function applyCommandStartStatus(task: Task, run: CommandRun): Task["status"] {
+  if (isImplementationLoopValidation(task, run)) {
+    return task.status;
+  }
+
+  const intent = commandRunIntent(run);
+  return intent === "validation" || intent === "legacy" ? "debugging" : task.status;
+}
+
+function applyCommandFinishStatus(task: Task, run: CommandRun): Task["status"] {
+  if (isImplementationLoopValidation(task, run)) {
+    return run.status === "succeeded" ? "verifying" : task.status;
+  }
+
+  const intent = commandRunIntent(run);
+  if (intent !== "validation" && intent !== "legacy") {
+    return task.status;
+  }
+
+  return run.status === "succeeded" ? "verifying" : "debugging";
+}
+
+function traceStageForRun(run: CommandRun) {
+  switch (commandRunIntent(run)) {
+    case "agent_action":
+      return "implement";
+    case "validation":
+      return "testing";
+    case "preview":
+      return "preview";
+    case "loop_step":
+      return "loop";
+    case "legacy":
+    default:
+      return "legacy";
+  }
+}
+
+function compactTraceText(value: string, limit = 600) {
+  const compacted = value.split(/\s+/).filter(Boolean).join(" ");
+  return compacted.length > limit ? `${compacted.slice(0, Math.max(0, limit - 3))}...` : compacted;
+}
+
+function commandErrorFingerprint(run: CommandRun) {
+  const summary = run.errorSummary;
+  if (!summary) {
+    return undefined;
+  }
+
+  const evidence = summary.matchedLines.length > 0 ? summary.matchedLines : summary.stderrTail;
+  const fingerprint = evidence
+    .map((line) => line.trim().toLowerCase())
+    .filter(Boolean)
+    .join("\n");
+  return fingerprint ? compactTraceText(fingerprint) : undefined;
+}
+
+function commandTraceVerification(run: CommandRun, entryType: "command_started" | "command_finished") {
+  if (entryType === "command_started") {
+    return "Command started; awaiting process exit.";
+  }
+
+  const stderrTail = run.errorSummary?.stderrTail ?? [];
+  const error =
+    run.errorSummary?.matchedLines[0] ?? stderrTail[stderrTail.length - 1] ?? "(none)";
+  return `Command ${run.status}; exitCode=${run.exitCode ?? "(none)"}; error=${error}`;
+}
+
+function commandTraceEntry(
+  run: CommandRun,
+  entryType: "command_started" | "command_finished",
+  timestampMs: number,
+): LoopTraceEntry {
+  return {
+    id: `trace-${run.id}-${entryType}`,
+    taskId: run.taskId,
+    loopId: run.loopId ?? "",
+    stage: traceStageForRun(run),
+    entryType,
+    iteration: run.iteration,
+    attempt: run.attempt,
+    contextSummary: `loop=${run.loopId ?? "(none)"} iteration=${run.iteration ?? "(none)"} attempt=${run.attempt ?? "(none)"}`,
+    actionSummary: run.command,
+    verificationSummary: commandTraceVerification(run, entryType),
+    commandRunId: run.id,
+    fingerprint: commandErrorFingerprint(run),
+    terminationReason:
+      run.terminationReason ?? (entryType === "command_finished" ? run.status : undefined),
+    tokenUsage: undefined,
+    timestampMs,
+  };
+}
+
+function upsertTraceEntry(trace: LoopTraceEntry[] | undefined, entry: LoopTraceEntry) {
+  const existing = trace ?? [];
+  return [...existing.filter((candidate) => candidate.id !== entry.id), entry].sort(
+    (left, right) => left.timestampMs - right.timestampMs,
+  );
+}
+
+function syncCommandRunStarted(tasks: Task[], run: CommandRun) {
+  return replaceTask(tasks, run.taskId, (task) => ({
+    ...task,
+    status: applyCommandStartStatus(task, run),
+    commandRuns: [...task.commandRuns.filter((candidate) => candidate.id !== run.id), run],
+    loopTrace: run.loopId
+      ? upsertTraceEntry(task.loopTrace, commandTraceEntry(run, "command_started", run.startedAtMs))
+      : task.loopTrace,
+  }));
+}
+
+function syncCommandRunFinished(tasks: Task[], run: CommandRun) {
+  return replaceTask(tasks, run.taskId, (task) => ({
+    ...task,
+    status: applyCommandFinishStatus(task, run),
+    commandRuns: task.commandRuns.map((candidate) => (candidate.id === run.id ? run : candidate)),
+    loopTrace: run.loopId
+      ? upsertTraceEntry(
+          task.loopTrace,
+          commandTraceEntry(run, "command_finished", run.endedAtMs ?? Date.now()),
+        )
+      : task.loopTrace,
+  }));
 }
 
 export function appReducer(state: AppState, action: AppAction): AppState {
@@ -521,7 +672,8 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       };
     }
 
-    case "commands/started":
+    case "commands/started": {
+      const tasks = syncCommandRunStarted(state.tasks, action.run);
       return {
         ...state,
         app: {
@@ -529,12 +681,17 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           activeCommandRunId: action.run.id,
           commandError: null,
         },
+        tasks,
+        taskCache: mapCachedTasks(state.taskCache, action.run.taskId, (task) =>
+          syncCommandRunStarted([task], action.run)[0] ?? task,
+        ),
         commandRuns: [...state.commandRuns.filter((run) => run.id !== action.run.id), action.run],
         commandLogs: {
           ...state.commandLogs,
           [action.run.id]: state.commandLogs[action.run.id] ?? [],
         },
       };
+    }
 
     case "commands/logReceived": {
       const runLogs = state.commandLogs[action.event.runId] ?? [];
@@ -548,7 +705,25 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       };
     }
 
-    case "commands/finished":
+    case "commands/finished": {
+      const finishedRun = state.commandRuns.find((run) => run.id === action.event.runId);
+      const updatedRun = finishedRun
+        ? {
+            ...finishedRun,
+            status: action.event.status,
+            exitCode: action.event.exitCode,
+            errorSummary: action.event.errorSummary,
+            sessionId: action.event.sessionId ?? finishedRun.sessionId,
+            resumeCommand: action.event.resumeCommand ?? finishedRun.resumeCommand,
+            terminationReason:
+              action.event.terminationReason ??
+              finishedRun.terminationReason ??
+              (action.event.status === "cancelled" ? "cancelled" : undefined),
+            endedAtMs: action.event.timestampMs,
+          }
+        : null;
+      const tasks = updatedRun ? syncCommandRunFinished(state.tasks, updatedRun) : state.tasks;
+
       return {
         ...state,
         app: {
@@ -556,18 +731,15 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           activeCommandRunId:
             state.app.activeCommandRunId === action.event.runId ? null : state.app.activeCommandRunId,
         },
-        commandRuns: state.commandRuns.map((run) =>
-          run.id === action.event.runId
-            ? {
-                ...run,
-                status: action.event.status,
-                exitCode: action.event.exitCode,
-                errorSummary: action.event.errorSummary,
-                endedAtMs: action.event.timestampMs,
-              }
-            : run,
-        ),
+        tasks,
+        taskCache: updatedRun
+          ? mapCachedTasks(state.taskCache, updatedRun.taskId, (task) =>
+              syncCommandRunFinished([task], updatedRun)[0] ?? task,
+            )
+          : state.taskCache,
+        commandRuns: state.commandRuns.map((run) => (run.id === action.event.runId && updatedRun ? updatedRun : run)),
       };
+    }
 
     case "commands/failed":
       return {

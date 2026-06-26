@@ -1,9 +1,11 @@
 mod agents;
 mod command_runner;
+pub mod context_builder;
 mod models;
 mod plan_html;
 mod projects;
 mod pty;
+mod session_capture;
 mod storage;
 mod tasks;
 mod terminals;
@@ -74,6 +76,7 @@ pub fn run() {
             projects::list_recent_projects,
             projects::register_project,
             tasks::append_feedback,
+            tasks::build_implementation_context,
             tasks::complete_task,
             tasks::complete_todo,
             tasks::confirm_plan,

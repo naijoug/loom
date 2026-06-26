@@ -147,6 +147,24 @@ export interface PlanTodoItem {
   planRef?: string;
 }
 
+export interface LoopTraceEntry {
+  id: string;
+  taskId: string;
+  loopId: string;
+  stage: string;
+  entryType: string;
+  iteration?: number;
+  attempt?: number;
+  contextSummary: string;
+  actionSummary: string;
+  verificationSummary: string;
+  commandRunId?: string;
+  fingerprint?: string;
+  terminationReason?: string;
+  tokenUsage?: number;
+  timestampMs: number;
+}
+
 export interface Task {
   id: string;
   projectPath: string;
@@ -165,9 +183,11 @@ export interface Task {
   planReviews: PlanReview[];
   planningDecisions: PlanningDecision[];
   planTodos: PlanTodoItem[];
+  loopTrace?: LoopTraceEntry[];
   events: TaskEvent[];
   commandRuns: import("./command").CommandRun[];
   feedback: UserFeedback[];
+  loopCompactSummary?: string;
   repairContextPreview?: string;
   createdAtMs: number;
   updatedAtMs: number;
@@ -193,4 +213,16 @@ export interface PlanningDecisionInput {
   taskId: string;
   title: string;
   content: string;
+}
+
+export interface ContextBuildOptions {
+  maxPromptChars?: number;
+}
+
+export interface ContextBuildOutput {
+  prompt: string;
+  contextSummary: string;
+  compactSummary: string;
+  includedSections: string[];
+  truncated: boolean;
 }

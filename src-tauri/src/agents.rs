@@ -4,7 +4,11 @@ use crate::{
         PlanningAgentLogEvent, PlanningAgentStatusEvent, PlanningDecision, PlanningDiscussionInput,
         PlanningRun, TaskEvent,
     },
-    plan_html, storage, tasks,
+    plan_html,
+    session_capture::{
+        find_session_id, resume_command_for_adapter, ADAPTER_CLAUDE_CODE, ADAPTER_CODEX,
+    },
+    storage, tasks,
 };
 use std::{
     fs,
@@ -20,8 +24,6 @@ use tokio::{
 };
 
 const AGENTS_FILE: &str = "agents.json";
-const ADAPTER_CODEX: &str = "codex_cli";
-const ADAPTER_CLAUDE_CODE: &str = "claude_code_cli";
 const ADAPTER_CLI: &str = "cli";
 // Adapter types that used to ship as built-ins but are retired now (Amp needs
 // paid credits for non-interactive use). Stored configs are dropped on load.
@@ -710,11 +712,7 @@ fn extract_error_lines(stderr: &str) -> Vec<String> {
 }
 
 fn resume_command_for_profile(profile: &CliProfile, session_id: &str) -> Option<String> {
-    match profile.adapter_type.as_str() {
-        ADAPTER_CLAUDE_CODE => Some(format!("{} --resume {}", profile.command, session_id)),
-        ADAPTER_CODEX => Some(format!("{} resume {}", profile.command, session_id)),
-        _ => None,
-    }
+    resume_command_for_adapter(&profile.adapter_type, &profile.command, session_id)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1819,28 +1817,6 @@ fn event_type(value: &serde_json::Value) -> Option<String> {
         })
         .or_else(|| string_field(value, "event"))
         .map(str::to_string)
-}
-
-fn find_session_id(value: &serde_json::Value) -> Option<String> {
-    string_field_deep(
-        value,
-        &[
-            "session_id",
-            "sessionId",
-            "thread_id",
-            "threadId",
-            "conversation_id",
-        ],
-    )
-    .map(str::to_string)
-    .or_else(|| {
-        let event = event_type(value)?;
-        if event == "thread.started" {
-            string_field_deep(value, &["id"]).map(str::to_string)
-        } else {
-            None
-        }
-    })
 }
 
 fn is_agent_message_event(event: &str, value: &serde_json::Value) -> bool {
