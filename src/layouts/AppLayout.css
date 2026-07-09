@@ -1,17 +1,18 @@
 .app-layout {
   display: flex;
   height: 100vh;
-  width: 100%;
+  width: 100vw;
   overflow: hidden;
-  background-color: var(--theme-workspace);
+  background-color: var(--loom-bg);
+  color: var(--loom-text);
 }
 
 .app-sidebar {
-  width: 268px;
+  width: 256px;
   flex-shrink: 0;
   height: 100%;
-  background-color: var(--theme-bg-secondary);
-  border-right: 1px solid var(--theme-border-subtle);
+  background-color: var(--loom-sidebar);
+  border-right: 1px solid var(--loom-border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -37,14 +38,15 @@
 }
 
 .app-header {
-  min-height: 68px;
+  height: 44px;
+  min-height: 44px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 0 20px;
-  background-color: var(--theme-bg-primary);
-  border-bottom: 1px solid var(--theme-border-subtle);
+  padding: 0 16px;
+  background-color: var(--loom-bg);
+  border-bottom: 1px solid var(--loom-border);
 }
 
 .app-header-main {
@@ -65,21 +67,21 @@
    panels portalled into the header (right) so they share one baseline. */
 .panel-toggle-button {
   flex-shrink: 0;
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--loom-r-chip);
   background: transparent;
-  color: var(--theme-text-muted);
-  transition: all 0.15s ease;
+  color: var(--loom-text-2);
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .panel-toggle-button:hover {
-  background: var(--hover);
-  color: var(--theme-text-primary);
+  background: var(--loom-hover);
+  color: var(--loom-text);
 }
 
 .app-content {

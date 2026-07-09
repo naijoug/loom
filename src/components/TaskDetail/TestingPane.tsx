@@ -183,35 +183,35 @@ function gateStatus({
   if (latestBlockingFailure) {
     return {
       tone: "err",
-      title: "Repair required",
-      copy: "A newer failing run blocks acceptance until a validation command succeeds after it.",
+      title: "需要修复",
+      copy: "有新的失败验证阻塞验收，需要在其后重新跑通验证命令。",
     };
   }
   if (hasPassingEvidence) {
     return {
       tone: "ok",
-      title: "Passing evidence captured",
-      copy: "A validation command succeeded and no newer failing run blocks acceptance.",
+      title: "验证已通过",
+      copy: "已有成功验证命令，且没有更新的失败运行阻塞验收。",
     };
   }
   if (hasRunningValidationRun) {
     return {
       tone: "running",
-      title: "Checks running",
-      copy: "Wait for the validation command to finish before accepting the task.",
+      title: "检查运行中",
+      copy: "等待验证命令结束后再验收任务。",
     };
   }
   if (hasValidationEvidence) {
     return {
       tone: "idle",
-      title: "Validation did not pass",
-      copy: "Run a validation command again and capture a successful exit before accepting.",
+      title: "验证未通过",
+      copy: "重新运行验证命令，并捕获成功退出后再验收。",
     };
   }
   return {
     tone: "idle",
-    title: "No validation evidence",
-    copy: "Run a validation command to capture stdout, stderr, exit code, and log references.",
+    title: "暂无验证证据",
+    copy: "运行验证命令以捕获 stdout、stderr、退出码和日志引用。",
   };
 }
 
@@ -794,17 +794,17 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
     <div className="testing-pane">
       <div className="testing-header">
         <div className="testing-title-block">
-          <div className="testing-kicker">Debug validation</div>
+          <div className="testing-kicker">调试验收</div>
           <div className="testing-title-row">
             <span className={`testing-status-pill testing-status-${gate.tone}`}>
               <span />
               {gate.title}
             </span>
             <span className="testing-header-meta">
-              Last activity:{" "}
+              最后活动：
               {latestTaskRun
                 ? `${latestTaskRun.command} · ${shortTime(latestTaskRun.startedAtMs)}`
-                : "none"}
+                : "暂无"}
             </span>
           </div>
         </div>
@@ -816,7 +816,7 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
               iconLeft={<RefreshCw size={14} />}
               onClick={runAllValidations}
             >
-              Run checks
+              运行检查
             </Button>
           )}
           <button
@@ -891,7 +891,7 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
         <aside className="debug-agent-panel">
           <div className="debug-agent-header">
             <div className="debug-agent-avatar">AI</div>
-            <span>Testing cockpit</span>
+            <span>调试验收 Cockpit</span>
             <span className="testing-panel-state">{task.status}</span>
           </div>
 
@@ -899,29 +899,29 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
             <section className={`debug-card testing-gate-card gate-${gate.tone}`}>
               <div className="debug-card-label">
                 <ShieldCheck size={14} />
-                Acceptance gate
+                验收门禁
               </div>
               <strong>{gate.title}</strong>
               <p>{gate.copy}</p>
               <div className="testing-evidence-grid">
                 <div>
-                  <span>Validation command(s)</span>
+                  <span>验证命令</span>
                   <strong>{validationCommandLabel}</strong>
                 </div>
                 <div>
-                  <span>Latest validation</span>
+                  <span>最近验证</span>
                   <strong>{statusLabel(successfulValidationRun ?? failedRun)}</strong>
                 </div>
                 <div>
-                  <span>Passing evidence</span>
+                  <span>通过证据</span>
                   <strong>
-                    {successfulValidationRun ? shortTime(successfulValidationRun.endedAtMs) : "Missing"}
+                    {successfulValidationRun ? shortTime(successfulValidationRun.endedAtMs) : "缺失"}
                   </strong>
                 </div>
                 <div>
-                  <span>Newer failure</span>
+                  <span>更新失败</span>
                   <strong>
-                    {latestBlockingFailure ? shortTime(latestBlockingFailure.startedAtMs) : "None"}
+                    {latestBlockingFailure ? shortTime(latestBlockingFailure.startedAtMs) : "无"}
                   </strong>
                 </div>
               </div>
@@ -934,11 +934,11 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
                     disabled={!canAccept}
                     onClick={handleAccept}
                   >
-                    Accept / Done
+                    全部通过
                   </Button>
                   {!canAccept && (
                     <div className="testing-accept-note">
-                      Acceptance unlocks after a validation command succeeds with no newer failure.
+                      需要验证命令成功，且没有更新失败后才能验收。
                     </div>
                   )}
                 </>
@@ -948,21 +948,59 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
             <section className={`debug-card ${latestBlockingFailure ? "debug-card-error" : ""}`}>
               <div className="debug-card-label">
                 <AlertTriangle size={14} />
-                Failure signal
+                失败信号
               </div>
-              <strong>{latestBlockingFailure ? latestBlockingFailure.command : "No active failure"}</strong>
+              <strong>{latestBlockingFailure ? latestBlockingFailure.command : "无活动失败"}</strong>
               <p>
                 {latestBlockingFailure
                   ? errorFinding(latestBlockingFailure)
-                  : "No failing command is newer than the latest passing validation run."}
+                  : "没有比最近通过验证更新的失败命令。"}
               </p>
+            </section>
+
+            <section className="debug-card fix-cycle-card">
+              <div className="debug-card-label">
+                <RefreshCw size={14} />
+                自动修复循环
+              </div>
+              <div className="fix-cycle">
+                <div className={`fix-step ${latestBlockingFailure || taskRuns.length > 0 ? "is-done" : ""}`}>
+                  <span className="fix-step-no">1</span>
+                  <div className="fix-step-body">
+                    <span className="fix-step-name">发现问题</span>
+                    <span className="fix-step-detail loom-mono">
+                      {latestBlockingFailure ? errorFinding(latestBlockingFailure) : "等待失败日志"}
+                    </span>
+                  </div>
+                </div>
+                <span className="fix-arrow" aria-hidden="true">›</span>
+                <div className={`fix-step ${fixRunIds.length > 0 || autoLoop?.repairAttempts ? "is-done" : ""}`}>
+                  <span className="fix-step-no">2</span>
+                  <div className="fix-step-body">
+                    <span className="fix-step-name">修复</span>
+                    <span className="fix-step-detail loom-mono">
+                      {autoLoop ? `${autoLoop.repairAttempts}/${MAX_AUTO_REPAIR_ATTEMPTS} 轮` : "手动或自动投喂 Agent"}
+                    </span>
+                  </div>
+                </div>
+                <span className="fix-arrow" aria-hidden="true">›</span>
+                <div className={`fix-step is-final ${hasPassingEvidence ? "is-done" : ""}`}>
+                  <span className="fix-step-no">3</span>
+                  <div className="fix-step-body">
+                    <span className="fix-step-name">再验证</span>
+                    <span className="fix-step-detail loom-mono">
+                      {successfulValidationRun ? statusLabel(successfulValidationRun) : "等待通过证据"}
+                    </span>
+                  </div>
+                </div>
+              </div>
             </section>
 
             <section className="debug-card testing-chat-card">
               <div className="testing-chat-head">
                 <div className="debug-card-label">
                   <Bot size={14} />
-                  Debug agent
+                  调试 Agent
                 </div>
                 <div className="testing-chat-controls">
                   <select
@@ -989,7 +1027,7 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
                         setAutoNotice(null);
                       }}
                     >
-                      Manual
+                      手动
                     </button>
                     <button
                       type="button"
@@ -1000,7 +1038,7 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
                         setAutoNotice(null);
                       }}
                     >
-                      Auto
+                      自动
                     </button>
                   </div>
                 </div>
@@ -1009,8 +1047,7 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
               <div className="testing-chat-stream">
                 {conversation.length === 0 ? (
                   <p className="testing-chat-empty">
-                    Select log lines in a terminal and quote them here, or write a note, then ask the
-                    agent to fix it.
+                    选中终端日志并引用到这里，或直接写反馈给 Agent 修复。
                   </p>
                 ) : (
                   conversation.map((turn) => (
@@ -1070,7 +1107,7 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
                   <textarea
                     value={note}
                     onChange={(event) => setNote(event.target.value)}
-                    placeholder="Tell the agent what's wrong (quote log lines from a terminal to point at the error)…"
+                    placeholder="告诉 Agent 哪里不对，也可以从终端引用日志定位问题…"
                   />
                   <Button
                     type="button"
@@ -1079,7 +1116,7 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
                     disabled={(!note.trim() && !quote?.text.trim()) || !selectedAgent}
                     onClick={handleAskAgent}
                   >
-                    Ask agent to fix
+                    打回修复
                   </Button>
                 </div>
               )}
@@ -1093,7 +1130,7 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
                 onClick={() => setCyclesOpen((open) => !open)}
               >
                 <Clock3 size={14} />
-                Test cycles
+                测试循环
                 <span className="testing-cycles-count">{taskRuns.length}</span>
                 <ChevronDown
                   size={14}
@@ -1103,7 +1140,7 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
               {cyclesOpen && (
               <div className="testing-cycle-list">
                 {taskRuns.length === 0 ? (
-                  <span>No command cycles yet.</span>
+                  <span>暂无命令循环。</span>
                 ) : (
                   taskRuns.map((run, index) => {
                     const expanded = expandedCycle === run.id;

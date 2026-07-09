@@ -1,8 +1,15 @@
+import { Columns2 } from "lucide-react";
 import "./Sidebar.css";
 
-// Empty top spacer that reserves room for the overlaid macOS traffic lights and
-// keeps the sidebar's content baseline aligned with the main header. The
-// collapse/expand control lives in the header (see AppLayout).
 export function Brand() {
-  return <div className="sidebar-brand" data-tauri-drag-region />;
+  return (
+    <div className="sidebar-brand" data-tauri-drag-region>
+      <div className="sb-logo">
+        <span className="sb-mark" aria-hidden="true">
+          <Columns2 size={18} />
+        </span>
+        <span className="sb-word">Loom</span>
+      </div>
+    </div>
+  );
 }

@@ -1,4 +1,3 @@
-import { ChevronRight } from "lucide-react";
 import { TaskFlowStep, type StepStatus } from "./TaskFlowStep";
 import type { WorkflowStageId } from "../../state/selectors";
 import "./Header.css";
@@ -28,9 +27,7 @@ export function TaskFlow({ stages, onSelect }: TaskFlowProps) {
             clickable={stage.clickable}
             onClick={() => onSelect(stage.id)}
           />
-          {index < stages.length - 1 && (
-            <ChevronRight size={14} className="step-separator" />
-          )}
+          {index < stages.length - 1 && <span className="hd-step-sep step-separator">·</span>}
         </div>
       ))}
     </div>

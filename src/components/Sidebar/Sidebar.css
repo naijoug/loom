@@ -1,9 +1,28 @@
 .sidebar-brand {
-  /* Empty spacer that reserves the macOS traffic-light strip and matches the
-     main header height so the sidebar content lines up with it. */
   flex-shrink: 0;
-  height: 68px;
+  min-height: 52px;
   width: 100%;
+  padding: 14px 16px 8px;
+}
+
+.sb-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  padding-left: 62px;
+}
+
+.sb-mark {
+  display: inline-flex;
+  color: var(--loom-accent);
+}
+
+.sb-word {
+  color: var(--loom-text);
+  font-size: var(--loom-fs-title);
+  font-weight: 650;
+  letter-spacing: 0;
 }
 
 .sidebar-nav-container {
@@ -16,8 +35,8 @@
 .sidebar-nav-section {
   display: flex;
   flex-direction: column;
-  padding: 10px 14px;
-  gap: 10px;
+  padding: 0 16px 8px;
+  gap: 8px;
   min-height: 0;
 }
 
@@ -28,14 +47,15 @@
 .sidebar-search {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 8px;
   width: 100%;
-  min-height: 38px;
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--text-3);
-  padding: 0 11px;
-  font-size: var(--fs-sm);
+  min-height: 30px;
+  border: 1px solid var(--loom-border);
+  border-radius: var(--loom-r-ctl);
+  background: var(--loom-surface);
+  color: var(--loom-text-3);
+  padding: 0 10px;
+  font-size: var(--loom-fs-sm);
 }
 
 .nav-list {
@@ -44,25 +64,26 @@
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   overflow: auto;
+  padding-top: 4px;
 }
 
 .project-add-button {
   width: 100%;
-  min-height: 40px;
-  border: 1px dashed var(--theme-border-strong);
-  border-radius: 7px;
+  min-height: 28px;
+  border: 1px dashed var(--loom-border-strong);
+  border-radius: var(--loom-r-ctl);
   background: transparent;
-  color: var(--theme-text-muted);
+  color: var(--loom-text-2);
   display: flex;
   align-items: center;
   justify-content: flex-start;
   gap: 8px;
-  padding: 0 9px;
+  padding: 0 10px;
   cursor: pointer;
   flex-shrink: 0;
-  font-size: 12.5px;
+  font-size: var(--loom-fs-sm);
   text-align: left;
 }
 
@@ -72,22 +93,22 @@
 }
 
 .project-add-button:hover:not(:disabled) {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--theme-bg-primary) 42%, transparent);
-  color: var(--theme-text-primary);
+  border-color: var(--loom-text-3);
+  background: var(--loom-hover);
+  color: var(--loom-text);
 }
 
 .nav-empty,
 .nav-error {
   font-family: var(--font-body);
   font-size: 12px;
-  color: var(--theme-text-muted);
+  color: var(--loom-text-3);
   padding: 6px 4px;
   line-height: 1.4;
 }
 
 .nav-error {
-  color: var(--theme-error);
+  color: var(--loom-red);
 }
 
 .nav-item {
@@ -95,16 +116,16 @@
   align-items: center;
   gap: 6px;
   width: 100%;
-  min-height: 36px;
+  min-height: 28px;
   padding: 0 8px;
   text-decoration: none;
   border: 1px solid transparent;
-  border-radius: 7px;
+  border-radius: var(--loom-r-chip);
   background: transparent;
-  color: var(--theme-text-secondary);
-  font-family: var(--font-body);
-  font-size: 13px;
-  transition: all 0.2s ease;
+  color: var(--loom-text-2);
+  font-family: var(--loom-font);
+  font-size: var(--loom-fs-body);
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .project-select-area {
@@ -125,14 +146,14 @@
 
 .nav-disclosure {
   flex: 0 0 14px;
-  color: var(--theme-text-muted);
+  color: var(--loom-text-3);
   transform: rotate(0deg);
   transition: transform 0.22s cubic-bezier(0.32, 0.72, 0, 1), color 0.2s ease;
 }
 
 .nav-disclosure.expanded {
   transform: rotate(90deg);
-  color: var(--theme-text-secondary);
+  color: var(--loom-text-2);
 }
 
 .nav-disclosure.hidden {
@@ -140,7 +161,7 @@
 }
 
 .nav-item:hover .nav-disclosure {
-  color: var(--theme-text-secondary);
+  color: var(--loom-text-2);
 }
 
 .project-nav-item:hover .project-inline-add,
@@ -150,8 +171,11 @@
 
 .project-task-count {
   margin-left: auto;
-  color: var(--text-3);
-  font-size: var(--fs-xs);
+  color: var(--loom-text-3);
+  background: var(--loom-surface);
+  border-radius: var(--loom-r-chip);
+  padding: 1px 6px;
+  font-size: var(--loom-fs-label);
   min-width: 12px;
   text-align: right;
 }
@@ -180,22 +204,27 @@
 }
 
 .nav-icon {
-  color: var(--theme-text-muted);
+  color: var(--loom-text-3);
 }
 
 /* Active project keeps only a text/icon emphasis — no persistent box.
    The highlight box appears purely on hover (and the active row is still
    identifiable by its expanded task list + rotated chevron). */
 .nav-item.active {
-  color: var(--theme-text-primary);
+  color: var(--loom-text);
 }
 
 .nav-item.active .active-icon {
-  color: var(--theme-text-primary);
+  color: var(--loom-accent);
+}
+
+.nav-item.active .project-task-count {
+  background: var(--loom-accent-soft);
+  color: var(--loom-accent);
 }
 
 .nav-item:hover {
-  background-color: color-mix(in srgb, var(--theme-bg-primary) 64%, transparent);
+  background: var(--loom-hover);
 }
 
 .project-inline-add {
@@ -204,7 +233,7 @@
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: var(--theme-text-muted);
+  color: var(--loom-text-3);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -213,8 +242,8 @@
 }
 
 .project-inline-add:hover {
-  color: var(--theme-text-primary);
-  background: var(--theme-border-subtle);
+  color: var(--loom-text);
+  background: var(--loom-selected);
 }
 
 /* Animated disclosure: grid-template-rows 0fr→1fr lets us transition to an
@@ -244,7 +273,7 @@
   margin: 3px 0 8px 0;
   margin-left: 15px;
   padding: 0 0 0 6px;
-  border-left: 1px solid var(--theme-border-subtle);
+  border-left: 1px solid var(--loom-border);
   min-height: 0;
   overflow: hidden;
   display: flex;
@@ -284,22 +313,22 @@
   width: 100%;
   min-height: 28px;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--loom-r-chip);
   background: transparent;
-  color: var(--theme-text-secondary);
+  color: var(--loom-text-2);
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 5px 6px;
   text-align: left;
-  font-size: 12px;
+  font-size: var(--loom-fs-sm);
   transition: background 0.15s ease, color 0.15s ease;
 }
 
 .task-nav-item:hover,
 .task-nav-item.selected {
-  background: color-mix(in srgb, var(--theme-bg-primary) 72%, transparent);
-  color: var(--theme-text-primary);
+  background: var(--loom-selected);
+  color: var(--loom-text);
 }
 
 .task-dot {
@@ -308,37 +337,38 @@
 }
 
 .task-todo {
-  color: var(--theme-text-muted);
+  color: var(--loom-text-3);
 }
 
 .task-running {
-  color: var(--accent);
+  color: var(--loom-accent);
 }
 
 .task-testing {
-  color: var(--amber);
+  color: var(--loom-amber);
 }
 
 .task-blocked {
-  color: var(--red);
+  color: var(--loom-red);
 }
 
 .task-done {
-  color: var(--green);
+  color: var(--loom-green);
 }
 
 .sidebar-footer {
   margin-top: auto;
-  padding: 10px 14px 14px;
+  padding: 8px 8px 12px;
+  border-top: 1px solid var(--loom-border);
 }
 
 .sidebar-settings-entry {
   width: 100%;
-  height: 34px;
+  height: 30px;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--loom-r-chip);
   background: transparent;
-  color: var(--theme-text-secondary);
+  color: var(--loom-text-2);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -347,8 +377,8 @@
 }
 
 .sidebar-settings-entry:hover {
-  background: color-mix(in srgb, var(--theme-bg-primary) 64%, transparent);
-  color: var(--theme-text-primary);
+  background: var(--loom-hover);
+  color: var(--loom-text);
 }
 
 .project-modal-backdrop {

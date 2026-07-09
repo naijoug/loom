@@ -213,7 +213,7 @@ export function TerminalCard({
           disabled={disabled}
           onClick={running ? onStop : onRun}
         >
-          {running ? "Stop" : "Run"}
+          {running ? "停止" : "运行"}
         </Button>
         {onQuote && (
           <button

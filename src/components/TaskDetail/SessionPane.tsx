@@ -52,10 +52,10 @@ interface SessionPaneProps {
 }
 
 const TODO_STATUS_LABELS: Record<PlanTodoStatus, string> = {
-  pending: "Pending",
-  implementing: "Implementing",
-  done: "Done",
-  blocked: "Blocked",
+  pending: "待办",
+  implementing: "实施中",
+  done: "完成",
+  blocked: "阻塞",
 };
 interface AutoImplementationLoop {
   loopId: string;
@@ -71,7 +71,14 @@ interface AutoImplementationLoop {
 
 function agentInitials(agent?: AgentConfig | null) {
   if (!agent) {
-    return "Ag";
+    return "";
+  }
+
+  if (agent.adapterType === "codex_cli" || agent.id.includes("codex")) {
+    return "Co";
+  }
+  if (agent.adapterType === "claude_code_cli" || agent.id.includes("claude")) {
+    return "Cl";
   }
 
   return agent.name
@@ -79,6 +86,19 @@ function agentInitials(agent?: AgentConfig | null) {
     .map((part) => part[0])
     .join("")
     .slice(0, 2);
+}
+
+function agentClass(agent?: AgentConfig | null) {
+  if (!agent) {
+    return "empty";
+  }
+  if (agent.adapterType === "codex_cli" || agent.id.includes("codex")) {
+    return "codex";
+  }
+  if (agent.adapterType === "claude_code_cli" || agent.id.includes("claude")) {
+    return "claude";
+  }
+  return "hermes";
 }
 
 function summarizeCommand(command: string) {
@@ -488,10 +508,19 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
   return (
     <div className="session-pane">
       <div className="session-header">
-        <span className="testing-status-pill testing-status-ok">
-          <span />
-          {selectedAgent?.name ?? "No implementation Agent"}
-        </span>
+        <div className="session-header-left">
+          <span className={`loom-agent-avatar ${agentClass(selectedAgent)}`}>
+            {agentInitials(selectedAgent)}
+          </span>
+          <span className="session-agent-name">{selectedAgent?.name ?? "未选择实施 Agent"}</span>
+          <span className={`session-status-pill ${commandRunning ? "is-running" : ""}`}>
+            <span className="status-pulse-dot" aria-hidden="true" />
+            {commandRunning ? "执行中" : "待命"}
+          </span>
+          <span className="session-elapsed loom-mono">
+            {latestRun ? summarizeCommand(latestRun.command) : "等待启动"}
+          </span>
+        </div>
         <div className="testing-mode-toggle" role="group" aria-label="Implementation validation mode">
           <button
             type="button"
@@ -503,7 +532,7 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
               setValidationNotice(null);
             }}
           >
-            Manual
+            手动
           </button>
           <button
             type="button"
@@ -511,7 +540,7 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
             disabled={readOnly}
             onClick={() => setAutoValidate(true)}
           >
-            Auto
+            自动
           </button>
         </div>
       </div>
@@ -520,7 +549,7 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
         <section className="session-main-panel">
           <div className="session-thread">
             <article className="session-turn">
-              <div className="session-avatar user">ME</div>
+              <div className="session-avatar user">你</div>
               <div className="session-turn-body">
                 <div className="session-name">Task</div>
                 <p>{task.title}</p>
@@ -529,17 +558,19 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
             </article>
 
             <article className="session-turn">
-              <div className="session-avatar agent">{agentInitials(selectedAgent)}</div>
+              <div className={`loom-agent-avatar session-avatar agent ${agentClass(selectedAgent)}`}>
+                {agentInitials(selectedAgent)}
+              </div>
               <div className="session-turn-body">
                 <div className="session-name">
                   {selectedAgent?.name ?? "Implementation Agent"}
                   <span>agent loop</span>
                 </div>
-                <div className="session-thinking">
+                <div className="session-thinking think-block">
                   Reading the confirmed plan and preparing a scoped implementation run for the selected todo.
                 </div>
 
-                <div className="session-tool">
+                <div className="session-tool tool-card">
                   <div className="session-tool-header">
                     <FileText size={14} />
                     <b>Read</b>
@@ -550,7 +581,7 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
                 </div>
 
                 {latestRun && (
-                  <div className="session-tool">
+                  <div className="session-tool tool-card">
                     <div className="session-tool-header">
                       <Terminal size={14} />
                       <b>Run</b>
@@ -565,7 +596,7 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
                   </div>
                 )}
 
-                <div className="session-tool">
+                <div className="session-tool tool-card">
                   <div className="session-tool-header">
                     <FileText size={14} />
                     <b>Timeline</b>
@@ -603,19 +634,21 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
           </form>
         </section>
 
-        <aside className="session-task-panel">
+        <aside className="session-task-panel files-panel">
           <div className="session-task-header">
-            <span>Task</span>
+            <span>任务</span>
             <span className="testing-status-pill testing-status-ok">
               <span />
-              In Progress
+              进行中
             </span>
           </div>
           <div className="session-task-body">
             <div>
-              <div className="debug-card-label">Assignee</div>
+              <div className="debug-card-label">实施 Agent</div>
               <label className="session-assignee">
-                <div className="session-avatar agent">{agentInitials(selectedAgent)}</div>
+                <div className={`loom-agent-avatar session-avatar agent ${agentClass(selectedAgent)}`}>
+                  {agentInitials(selectedAgent)}
+                </div>
                 <select
                   value={selectedAgent?.id ?? ""}
                   disabled={implementationAgents.length === 0 || commandRunning || readOnly}
@@ -631,9 +664,9 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
             </div>
 
             <div>
-              <div className="debug-card-label">Subtasks</div>
+              <div className="debug-card-label">子任务</div>
               <div className="session-subtasks">
-                {task.planTodos.length === 0 && <span>No todos yet.</span>}
+                {task.planTodos.length === 0 && <span>暂无子任务。</span>}
                 {task.planTodos.map((todo, todoIndex) => {
                   const active = todo.id === activeTodo?.id;
                   const done = todo.status === "done";
@@ -665,7 +698,7 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
             </div>
 
             <div>
-              <div className="debug-card-label">Files changed</div>
+              <div className="debug-card-label">文件变更</div>
               <div className="session-file-list">
                 {task.agentInvocations.slice(-3).map((invocation) => (
                   <div key={invocation.id}>
@@ -673,7 +706,7 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
                     <b>{invocation.status}</b>
                   </div>
                 ))}
-                {task.agentInvocations.length === 0 && <span>No file evidence recorded yet.</span>}
+                {task.agentInvocations.length === 0 && <span>尚无文件证据。</span>}
               </div>
             </div>
 
@@ -683,7 +716,7 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
               disabled={!canMarkReadyForTesting}
               onClick={handleMarkReadyForTesting}
             >
-              Mark ready for testing
+              标记为可测试
             </Button>
           </div>
         </aside>

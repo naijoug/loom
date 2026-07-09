@@ -64,14 +64,14 @@ capture_theme() {
     prefix="light-"
   fi
 
-  capture "${prefix}planning" "${BASE_URL}?screen=planning&theme=${theme}" "Planning room|Consensus|Create tasks from plan"
-  capture "${prefix}board" "${BASE_URL}?screen=board&theme=${theme}" "Project board|In Progress|Testing|Done"
+  capture "${prefix}planning" "${BASE_URL}?screen=planning&theme=${theme}" "规划讨论室|Consensus|Create tasks from plan"
+  capture "${prefix}board" "${BASE_URL}?screen=board&theme=${theme}" "任务看板|进行中|测试中|已完成"
   capture "${prefix}board-speaker" "${BASE_URL}?screen=board-speaker&theme=${theme}" "Children Three Kingdoms|TTS narration pipeline|Voice preset"
   capture "${prefix}new-task" "${BASE_URL}?screen=new-task&theme=${theme}" "New task|Invite agents to discuss|Suggested primary|Start discussion"
   capture "${prefix}add-project" "${BASE_URL}?screen=add-project&theme=${theme}" "Add project|Open a local directory|Detected"
-  capture "${prefix}session" "${BASE_URL}?screen=session&theme=${theme}" "Claude Code|Subtasks|Mark ready for testing"
-  capture "${prefix}testing" "${BASE_URL}?screen=testing&theme=${theme}" "Debug agent|Frontend|Backend|Detected error"
-  capture "${prefix}done" "${BASE_URL}?screen=done&theme=${theme}" "Completed items|Verification evidence|Start follow-up"
+  capture "${prefix}session" "${BASE_URL}?screen=session&theme=${theme}" "Claude Code|子任务|标记为可测试"
+  capture "${prefix}testing" "${BASE_URL}?screen=testing&theme=${theme}" "调试 Agent|Frontend|Backend|Detected error"
+  capture "${prefix}done" "${BASE_URL}?screen=done&theme=${theme}" "完成的需求|验证证据|开始后续任务"
 
   capture "${prefix}settings-general" "${BASE_URL}?screen=settings&tab=general&theme=${theme}" "Current project|Runtime model|Project stacks"
   capture "${prefix}settings-appearance" "${BASE_URL}?screen=settings&tab=appearance&theme=${theme}" "Theme|Effective theme|Typography and density"

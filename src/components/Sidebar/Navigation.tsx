@@ -172,7 +172,7 @@ export function Navigation() {
       <nav className="sidebar-nav-section">
         <div className="sidebar-search">
           <Search size={14} />
-          <span>Search tasks...</span>
+          <span>搜索任务…</span>
         </div>
         <button
           type="button"
@@ -182,7 +182,7 @@ export function Navigation() {
           onClick={() => setAddProjectOpen(true)}
         >
           <FolderPlus size={15} />
-          <span>Add project</span>
+          <span>添加项目</span>
         </button>
         {state.app.projectError && <div className="nav-error">{state.app.projectError}</div>}
         <ul className="nav-list">
@@ -266,7 +266,7 @@ export function Navigation() {
                           }}
                         >
                           <LayoutGrid size={12} className="task-allboard-icon" />
-                          <span>All tasks</span>
+                          <span>任务看板</span>
                         </button>
                       </li>
                       {projectTasks.map((task, index) => {
@@ -306,7 +306,7 @@ export function Navigation() {
             );
           })}
           {state.projects.recent.length === 0 && (
-            <li className="nav-empty">No recent projects</li>
+            <li className="nav-empty">暂无最近项目</li>
           )}
         </ul>
       </nav>
@@ -318,7 +318,7 @@ export function Navigation() {
           onClick={() => dispatch({ type: "app/viewSelected", view: "settings" })}
         >
           <Settings size={15} />
-          <span>Settings</span>
+          <span>设置</span>
         </button>
       </div>
 

@@ -10,20 +10,18 @@ export type WorkflowStageId = "planning" | "implementing" | "testing" | "done";
 const flowOrder: WorkflowStageId[] = ["planning", "implementing", "testing", "done"];
 
 const STAGE_LABELS: Record<WorkflowStageId, string> = {
-  planning: "Planning",
-  implementing: "Implementing",
-  testing: "Testing",
-  done: "Done",
+  planning: "计划",
+  implementing: "实施",
+  testing: "测试",
+  done: "完成",
 };
 
-// Past-tense labels for stages the task has already cleared, so a completed
-// step reads as finished ("Implemented") rather than still in progress
-// ("Implementing"). Current/pending stages keep the present-tense labels.
+// The design keeps the mini stepper labels stable while color/icons carry state.
 const STAGE_DONE_LABELS: Record<WorkflowStageId, string> = {
-  planning: "Planned",
-  implementing: "Implemented",
-  testing: "Tested",
-  done: "Done",
+  planning: "计划",
+  implementing: "实施",
+  testing: "测试",
+  done: "完成",
 };
 
 const statusToFlowStep: Record<TaskStatus, WorkflowStageId> = {

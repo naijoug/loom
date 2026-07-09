@@ -23,21 +23,21 @@ export function AppLayout({
   onToggleSidebar,
 }: AppLayoutProps) {
   return (
-    <div className={`app-layout${sidebarCollapsed ? " sidebar-collapsed" : ""}`}>
-      <aside className="app-sidebar">{sidebar}</aside>
-      <main className="app-main">
-        <header className="app-header" data-tauri-drag-region>
+    <div className={`loom-app app-layout${sidebarCollapsed ? " sidebar-collapsed" : ""}`}>
+      <aside className="loom-sidebar app-sidebar">{sidebar}</aside>
+      <main className="loom-main app-main">
+        <header className="loom-header app-header" data-tauri-drag-region>
           <button
             type="button"
-            className="panel-toggle-button"
-            title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            className="hd-icon-btn panel-toggle-button"
+            title={sidebarCollapsed ? "展开侧栏" : "收起侧栏"}
+            aria-label={sidebarCollapsed ? "展开侧栏" : "收起侧栏"}
             onClick={onToggleSidebar}
           >
             {sidebarCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
           </button>
           <div className="app-header-main">{header}</div>
-          <div className="app-header-actions" id={HEADER_ACTIONS_SLOT_ID} />
+          <div className="hd-actions app-header-actions" id={HEADER_ACTIONS_SLOT_ID} />
         </header>
         <div className="app-content">{children}</div>
       </main>

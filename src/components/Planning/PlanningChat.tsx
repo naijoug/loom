@@ -53,6 +53,30 @@ function canonicalMention(agent: AgentConfig) {
   return agent.name.toLowerCase().replace(/\s+/g, "-");
 }
 
+function agentBadgeClass(agent: AgentConfig) {
+  if (agent.adapterType === "codex_cli" || agent.id.includes("codex")) {
+    return "codex";
+  }
+  if (agent.adapterType === "claude_code_cli" || agent.id.includes("claude")) {
+    return "claude";
+  }
+  return "hermes";
+}
+
+function agentInitials(agent: AgentConfig) {
+  if (agent.adapterType === "codex_cli" || agent.id.includes("codex")) {
+    return "Co";
+  }
+  if (agent.adapterType === "claude_code_cli" || agent.id.includes("claude")) {
+    return "Cl";
+  }
+  return agent.name
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2);
+}
+
 function planningCapable(agent: AgentConfig) {
   return agent.enabled && agent.available && agent.capabilities.includes("planning");
 }
@@ -279,8 +303,8 @@ export function PlanningChat({ readOnly = false }: PlanningChatProps) {
       <section className="planning-chat-main">
         <div className="planning-chat-header">
           <div>
-            <div className="planning-kicker">Planning room</div>
-            <h1>{task?.title ?? "New planning discussion"}</h1>
+            <div className="planning-kicker">规划讨论室</div>
+            <h1>{task?.title ?? "新的规划讨论"}</h1>
           </div>
           {task?.finalPlanPath && (
             <span className="planning-plan-ref" title={task.finalPlanPath}>
@@ -309,7 +333,7 @@ export function PlanningChat({ readOnly = false }: PlanningChatProps) {
                 syncMentionMenu(event.currentTarget.value, event.currentTarget.selectionStart)
               }
               onBlur={() => setMentionQuery(null)}
-              placeholder="Describe the task. Type @ to invoke a local agent (e.g. @codex, @claude)."
+              placeholder="描述需求。输入 @ 调用本地 Agent，例如 @codex 或 @claude。"
             />
             {mentionQuery !== null && mentionSuggestions.length > 0 && (
               <ul className="mention-menu" role="listbox">
@@ -349,7 +373,9 @@ export function PlanningChat({ readOnly = false }: PlanningChatProps) {
                         : `Invoke @${canonicalMention(agent)} in this discussion`
                     }
                   >
-                    <AtSign size={12} />
+                    <span className={`loom-agent-avatar ${agentBadgeClass(agent)}`}>
+                      {agentInitials(agent)}
+                    </span>
                     {agent.name}
                   </button>
                 );
@@ -364,13 +390,55 @@ export function PlanningChat({ readOnly = false }: PlanningChatProps) {
               iconRight={<Send size={14} />}
               disabled={!message.trim() || selectedAgents.length === 0 || discussionRunning}
             >
-              {discussionRunning ? "Sending…" : "Send"}
+              {discussionRunning ? "发送中…" : "发送"}
             </Button>
           </div>
           {state.app.taskError && <div className="planning-error">{state.app.taskError}</div>}
         </form>
         )}
       </section>
+      <aside className="planning-summary-panel" aria-label="规划汇总">
+        <section className="planning-summary-card">
+          <div className="planning-summary-label">参与 Agent</div>
+          <div className="planning-summary-agents">
+            {selectedAgents.map((agent) => (
+              <span className="planning-summary-agent" key={agent.id}>
+                <span className={`loom-agent-avatar ${agentBadgeClass(agent)}`}>
+                  {agentInitials(agent)}
+                </span>
+                <span>{agent.name}</span>
+              </span>
+            ))}
+            {selectedAgents.length === 0 && <span className="planning-summary-muted">暂无可用 Agent</span>}
+          </div>
+        </section>
+
+        <section className="planning-summary-card">
+          <div className="planning-summary-label">讨论摘要</div>
+          <p>{task?.discussionSummary || "发送需求后，Loom 会在这里汇总多 Agent 的规划结论、风险和待确认项。"}</p>
+        </section>
+
+        <section className="planning-summary-card">
+          <div className="planning-summary-label">最终计划</div>
+          <p>{task?.finalPlanPath ? task.finalPlanPath.split("/").slice(-2).join("/") : "尚未生成最终计划文档"}</p>
+        </section>
+
+        <section className="planning-summary-card">
+          <div className="planning-summary-label">决策记录</div>
+          {task?.planningDecisions.length ? (
+            <ul className="planning-summary-list">
+              {task.planningDecisions.slice(-4).map((decision) => (
+                <li key={decision.id}>
+                  <strong>{decision.title}</strong>
+                  <span>{decision.content}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>暂无人工决策。</p>
+          )}
+        </section>
+      </aside>
     </div>
   );
 }

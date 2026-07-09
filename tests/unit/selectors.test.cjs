@@ -28,32 +28,32 @@ test("verifying tasks remain in the running Testing stage before manual accept",
   assert.equal(stages.done, "pending");
 });
 
-test("cleared stages use past-tense labels, in-progress stages stay present-tense", () => {
+test("step labels stay stable and Chinese while status carries progress", () => {
   const labels = labelById("verifying");
 
-  assert.equal(labels.planning, "Planned");
-  assert.equal(labels.implementing, "Implemented");
-  assert.equal(labels.testing, "Testing");
-  assert.equal(labels.done, "Done");
+  assert.equal(labels.planning, "计划");
+  assert.equal(labels.implementing, "实施");
+  assert.equal(labels.testing, "测试");
+  assert.equal(labels.done, "完成");
 });
 
-test("a fully completed task labels every cleared stage in past tense", () => {
+test("a fully completed task keeps the same Chinese mini stepper labels", () => {
   const labels = labelById("completed");
 
-  assert.equal(labels.planning, "Planned");
-  assert.equal(labels.implementing, "Implemented");
-  assert.equal(labels.testing, "Tested");
-  assert.equal(labels.done, "Done");
+  assert.equal(labels.planning, "计划");
+  assert.equal(labels.implementing, "实施");
+  assert.equal(labels.testing, "测试");
+  assert.equal(labels.done, "完成");
 });
 
 test("empty task state exposes the four planned stages", () => {
   const stages = deriveTaskStages(null).map((stage) => [stage.label, stage.status]);
 
   assert.deepEqual(stages, [
-    ["Planning", "pending"],
-    ["Implementing", "pending"],
-    ["Testing", "pending"],
-    ["Done", "pending"],
+    ["计划", "pending"],
+    ["实施", "pending"],
+    ["测试", "pending"],
+    ["完成", "pending"],
   ]);
 });
 

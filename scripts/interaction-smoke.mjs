@@ -212,7 +212,7 @@ async function main() {
 
       await evaluate(client, `
         (() => {
-          const element = [...document.querySelectorAll('button')].find((button) => button.textContent.includes('New task'));
+          const element = [...document.querySelectorAll('button')].find((button) => button.textContent.includes('新建任务'));
           if (!element || element.disabled) return false;
           element.scrollIntoView({ block: 'center', inline: 'center' });
           for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) {
@@ -251,9 +251,9 @@ async function main() {
       await waitFor(client, textIncludes("Installed agents", "Add custom Agent"), "settings agents tab");
 
       await navigate(client, `${baseUrl}?screen=session`);
-      await waitFor(client, textIncludes("Mark ready for testing", "Subtasks"), "session screen");
+      await waitFor(client, textIncludes("标记为可测试", "子任务"), "session screen");
       await navigate(client, `${baseUrl}?screen=testing`);
-      await waitFor(client, textIncludes("Debug validation", "Acceptance gate"), "testing screen");
+      await waitFor(client, textIncludes("调试验收", "验收门禁"), "testing screen");
 
       client.close();
     } finally {

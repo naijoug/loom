@@ -3,7 +3,7 @@
   align-items: center;
   width: 100%;
   min-width: 0;
-  gap: 18px;
+  gap: 12px;
 }
 
 [data-tauri-drag-region] {
@@ -15,13 +15,20 @@
   align-items: center;
   gap: 6px;
   min-width: 180px;
-  max-width: 360px;
-  font-family: var(--font-headings);
-  font-weight: 600;
-  font-size: 16px;
-  color: var(--theme-text-primary);
+  max-width: min(420px, 42vw);
+  font-family: var(--loom-font);
+  font-weight: 500;
+  font-size: var(--loom-fs-sm);
+  color: var(--loom-text);
   overflow: hidden;
   white-space: nowrap;
+}
+
+.hd-breadcrumb {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
 }
 
 .breadcrumb-project {
@@ -32,19 +39,19 @@
   margin: -2px -4px;
   border-radius: 6px;
   font: inherit;
-  color: var(--theme-text-secondary);
+  color: var(--loom-text-2);
   cursor: pointer;
   -webkit-app-region: no-drag;
 }
 
 .breadcrumb-project:hover {
-  color: var(--theme-text-primary);
-  background: var(--theme-bg-secondary);
+  color: var(--loom-text);
+  background: var(--loom-hover);
 }
 
 .breadcrumb-sep {
   flex: none;
-  color: var(--theme-text-muted);
+  color: var(--loom-text-3);
 }
 
 .breadcrumb-current {
@@ -56,6 +63,7 @@
 
 .header-flow {
   flex: 1;
+  justify-content: center;
   display: flex;
   align-items: center;
   min-width: 0;
@@ -65,7 +73,7 @@
 .task-flow-container {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
   overflow: auto;
   scrollbar-width: none;
@@ -78,39 +86,43 @@
 .task-flow-node {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .task-flow-step {
   display: flex;
   align-items: center;
-  gap: 6px;
-  border: 1px solid var(--theme-border-subtle);
-  border-radius: 999px;
-  background: var(--theme-bg-secondary);
-  padding: 5px 9px;
+  gap: 5px;
+  height: 22px;
+  border: 0;
+  border-radius: var(--loom-r-chip);
+  background: transparent;
+  padding: 0 8px;
   font: inherit;
+  font-size: var(--loom-fs-label);
+  font-weight: 600;
   cursor: pointer;
   -webkit-app-region: no-drag;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  color: var(--loom-text-3);
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .task-flow-step:not(:disabled):hover {
-  border-color: var(--theme-border-strong);
+  background: var(--loom-hover);
 }
 
 .task-flow-step:disabled {
   cursor: default;
-  opacity: 0.55;
+  opacity: 1;
 }
 
 .task-flow-step.viewing {
-  border-color: var(--theme-accent);
-  background: var(--accent-soft);
+  background: var(--loom-accent-soft);
 }
 
 .step-separator {
-  color: var(--theme-border-strong);
+  color: var(--loom-text-3);
+  font-size: 10px;
 }
 
 .step-icon {
@@ -118,37 +130,37 @@
 }
 
 .done-icon {
-  color: var(--theme-text-muted);
+  color: var(--loom-green);
 }
 
 .active-icon {
-  color: var(--theme-accent);
+  color: var(--loom-accent);
 }
 
 .pending-icon {
-  color: var(--theme-text-muted);
+  color: var(--loom-text-3);
 }
 
 .step-label {
-  font-family: var(--font-body);
-  font-size: 12px;
+  font-family: var(--loom-font);
+  font-size: var(--loom-fs-label);
   white-space: nowrap;
 }
 
 .step-label.status-done {
-  color: var(--theme-text-muted);
+  color: var(--loom-green);
 }
 
 .step-label.status-active {
-  color: var(--theme-text-primary);
+  color: var(--loom-accent);
 }
 
 .step-label.status-running {
-  color: var(--theme-text-primary);
+  color: var(--loom-accent);
 }
 
 .step-label.status-pending {
-  color: var(--theme-text-muted);
+  color: var(--loom-text-3);
 }
 
 @keyframes spin {

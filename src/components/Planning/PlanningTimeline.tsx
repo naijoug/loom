@@ -230,6 +230,38 @@ function StageMarker({ icon, label }: { icon: React.ReactNode; label: string }) 
   );
 }
 
+function agentClassFromName(value: string) {
+  const normalized = value.toLowerCase();
+  if (normalized.includes("codex")) {
+    return "codex";
+  }
+  if (normalized.includes("claude")) {
+    return "claude";
+  }
+  if (normalized.includes("hermes")) {
+    return "hermes";
+  }
+  return "other";
+}
+
+function agentInitialsFromName(value: string) {
+  const normalized = value.toLowerCase();
+  if (normalized.includes("codex")) {
+    return "Co";
+  }
+  if (normalized.includes("claude")) {
+    return "Cl";
+  }
+  if (normalized.includes("hermes")) {
+    return "He";
+  }
+  return value
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2);
+}
+
 function AgentLogPanel({
   events,
   live,
@@ -316,6 +348,9 @@ function DraftStage({
           return (
             <div className={`timeline-agent-row status-${row.status}`} key={row.agentId}>
               <div className="timeline-agent-head">
+                <span className={`loom-agent-avatar ${agentClassFromName(row.agentName)}`}>
+                  {agentInitialsFromName(row.agentName)}
+                </span>
                 {statusIcon(row.status)}
                 <span className="timeline-agent-name">{row.agentName}</span>
                 {row.attempt > 1 && (
@@ -426,6 +461,9 @@ function ReviewStage({
         {liveReviews.map((event) => (
           <div className="timeline-review-block" key={`live-${event.agentId}`}>
             <div className="timeline-review-row">
+              <span className={`loom-agent-avatar ${agentClassFromName(event.agentName)}`}>
+                {agentInitialsFromName(event.agentName)}
+              </span>
               {statusIcon(event.status)}
               <span className="timeline-review-pair">{event.agentName}</span>
               <span className="timeline-agent-meta">reviewing…</span>
@@ -439,6 +477,9 @@ function ReviewStage({
         {reviews.map((review) => (
           <div className="timeline-review-block" key={review.id}>
             <div className="timeline-review-row">
+              <span className={`loom-agent-avatar ${agentClassFromName(review.reviewerAgentName)}`}>
+                {agentInitialsFromName(review.reviewerAgentName)}
+              </span>
               {statusIcon(review.status)}
               <span className="timeline-review-pair">
                 {review.reviewerAgentName} → {review.targetAgentName}
@@ -494,6 +535,15 @@ function SynthesisStage({
       <StageMarker icon={<GitMerge size={13} />} label="Synthesis" />
       <div className="timeline-stage-body">
         <div className="timeline-review-row">
+          {(liveSynthesis?.agentName || synthesis?.agentName) && (
+            <span
+              className={`loom-agent-avatar ${agentClassFromName(
+                liveSynthesis?.agentName ?? synthesis?.agentName ?? "",
+              )}`}
+            >
+              {agentInitialsFromName(liveSynthesis?.agentName ?? synthesis?.agentName ?? "")}
+            </span>
+          )}
           {statusIcon(status)}
           <span className="timeline-review-finding">
             {liveSynthesis
@@ -849,6 +899,9 @@ export function PlanningTimeline({ projectPath, task, readOnly = false }: Planni
                       key={`${event.planningRunId}:${event.agentId}`}
                     >
                       <div className="timeline-agent-head">
+                        <span className={`loom-agent-avatar ${agentClassFromName(event.agentName)}`}>
+                          {agentInitialsFromName(event.agentName)}
+                        </span>
                         {statusIcon(event.status)}
                         <span className="timeline-agent-name">{event.agentName}</span>
                         {event.attempt > 1 && (

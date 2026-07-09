@@ -108,6 +108,48 @@
   --theme-border-subtle: var(--border);
   --theme-border-strong: var(--border-strong);
   --theme-error: var(--red);
+
+  --loom-bg: var(--bg);
+  --loom-bg-2: var(--bg-2);
+  --loom-sidebar: var(--sidebar);
+  --loom-surface: var(--surface);
+  --loom-surface-2: var(--surface-2);
+  --loom-inset: var(--inset);
+  --loom-selected: var(--selected);
+  --loom-hover: var(--hover);
+  --loom-border: var(--border);
+  --loom-border-strong: var(--border-strong);
+  --loom-text: var(--text);
+  --loom-text-2: var(--text-2);
+  --loom-text-3: var(--text-3);
+  --loom-accent: var(--accent);
+  --loom-accent-ink: var(--accent-ink);
+  --loom-accent-fill: var(--accent-fill);
+  --loom-accent-soft: var(--accent-soft);
+  --loom-green: var(--green);
+  --loom-green-soft: var(--green-soft);
+  --loom-amber: var(--amber);
+  --loom-amber-soft: var(--amber-soft);
+  --loom-red: var(--red);
+  --loom-red-soft: var(--red-soft);
+  --loom-add: var(--add);
+  --loom-del: var(--del);
+  --loom-agent-codex: var(--agent-codex);
+  --loom-agent-claude: var(--agent-claude);
+  --loom-agent-hermes: var(--agent-hermes);
+  --loom-shadow: var(--shadow);
+  --loom-font: var(--font);
+  --loom-mono: var(--mono);
+  --loom-fs-title: 15px;
+  --loom-fs-h: var(--fs-h);
+  --loom-fs-body: var(--fs-body);
+  --loom-fs-sm: var(--fs-sm);
+  --loom-fs-xs: var(--fs-xs);
+  --loom-fs-label: var(--fs-label);
+  --loom-fs-mono: var(--fs-mono);
+  --loom-r-card: var(--r-card);
+  --loom-r-ctl: var(--r-ctl);
+  --loom-r-chip: var(--r-chip);
 }
 
 html,
@@ -131,4 +173,53 @@ body {
 #root {
   height: 100%;
   width: 100%;
+}
+
+.loom-mono {
+  font-family: var(--loom-mono);
+  font-size: var(--loom-fs-mono);
+  line-height: 1.6;
+}
+
+.loom-agent-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  border-radius: 6px;
+  color: #ffffff;
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0;
+}
+
+.loom-agent-avatar.codex {
+  background: var(--loom-agent-codex);
+}
+
+.loom-agent-avatar.claude {
+  background: var(--loom-agent-claude);
+}
+
+.loom-agent-avatar.hermes,
+.loom-agent-avatar.other {
+  background: var(--loom-agent-hermes);
+}
+
+.loom-agent-avatar.empty {
+  border: 1px dashed var(--loom-border-strong);
+  background: var(--loom-surface-2);
+  color: var(--loom-text-3);
+}
+
+.loom-status-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  border-radius: 999px;
 }

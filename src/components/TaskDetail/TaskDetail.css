@@ -1601,3 +1601,589 @@
   min-height: 0;
   max-height: none;
 }
+
+/* ---------------------------------------------------------------------------
+ * Loom UI 2026-06 redesign overrides
+ * ------------------------------------------------------------------------ */
+
+.session-pane,
+.testing-pane,
+.done-pane {
+  background: var(--loom-bg);
+  color: var(--loom-text);
+}
+
+.session-header {
+  justify-content: space-between;
+}
+
+.session-header-left {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.session-agent-name {
+  color: var(--loom-text);
+  font-size: var(--loom-fs-sm);
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.session-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  border-radius: 999px;
+  background: var(--loom-surface-2);
+  color: var(--loom-text-2);
+  padding: 2px 8px;
+  font-size: var(--loom-fs-sm);
+  font-weight: 600;
+}
+
+.session-status-pill.is-running {
+  background: var(--loom-accent-soft);
+  color: var(--loom-accent);
+}
+
+.status-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: currentColor;
+  box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 45%, transparent);
+  animation: loom-pulse 1.4s ease-out infinite;
+}
+
+.session-elapsed {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--loom-text-3);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-grid {
+  grid-template-columns: minmax(0, 1fr) 260px;
+}
+
+.session-main-panel,
+.session-task-panel,
+.debug-agent-panel,
+.testing-terminal-card {
+  border-color: var(--loom-border);
+  border-radius: var(--loom-r-card);
+  background: var(--loom-bg);
+}
+
+.session-thread {
+  background: var(--loom-bg);
+}
+
+.session-turn {
+  max-width: 920px;
+}
+
+.session-avatar {
+  border-radius: 7px;
+  letter-spacing: 0;
+}
+
+.session-avatar.user {
+  background: var(--loom-selected);
+  color: var(--loom-text);
+}
+
+.session-name,
+.session-agent-copy {
+  color: var(--loom-text);
+}
+
+.session-thinking,
+.think-block {
+  margin-top: 6px;
+  border-left: 2px solid var(--loom-border-strong);
+  color: var(--loom-text-2);
+  padding: 3px 0 3px 12px;
+  font-size: var(--loom-fs-sm);
+  line-height: 1.55;
+}
+
+.tool-card,
+.session-tool {
+  border-color: var(--loom-border);
+  border-radius: var(--loom-r-card);
+  background: var(--loom-surface);
+}
+
+.session-tool-header {
+  color: var(--loom-text-2);
+}
+
+.session-tool-header b,
+.session-tool-header em {
+  font-family: var(--loom-mono);
+}
+
+.session-tool-header em {
+  background: var(--loom-accent-soft);
+  color: var(--loom-accent);
+}
+
+.session-tool pre {
+  border-top-color: var(--loom-border);
+  background: var(--loom-inset);
+  color: var(--loom-text-2);
+  font-family: var(--loom-mono);
+}
+
+.session-composer {
+  border: 1px solid var(--loom-border-strong);
+  border-radius: 10px;
+  background: var(--loom-surface-2);
+}
+
+.session-composer input {
+  color: var(--loom-text);
+}
+
+.files-panel {
+  background: var(--loom-bg-2);
+}
+
+.session-task-header {
+  border-bottom-color: var(--loom-border);
+}
+
+.session-task-body {
+  background: var(--loom-bg-2);
+}
+
+.session-assignee select {
+  border-color: var(--loom-border-strong);
+  background: var(--loom-surface-2);
+  color: var(--loom-text);
+}
+
+.session-subtask.active {
+  background: var(--loom-selected);
+}
+
+.session-file-list div {
+  min-height: 28px;
+  border: 1px solid var(--loom-border);
+  border-radius: var(--loom-r-chip);
+  background: var(--loom-surface);
+  padding: 0 8px;
+}
+
+.testing-header {
+  min-height: 42px;
+}
+
+.testing-kicker,
+.debug-card-label {
+  color: var(--loom-text-3);
+  letter-spacing: 0;
+}
+
+.testing-status-pill {
+  border-radius: 999px;
+}
+
+.testing-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
+}
+
+.testing-terminals {
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  grid-auto-rows: minmax(240px, 1fr);
+}
+
+.testing-terminal-header {
+  min-height: 42px;
+  border-bottom-color: var(--loom-border);
+}
+
+.testing-terminal-body {
+  background: var(--loom-inset);
+  font-family: var(--loom-mono);
+}
+
+.debug-agent-header {
+  border-bottom-color: var(--loom-border);
+}
+
+.debug-agent-avatar {
+  border-radius: 6px;
+  background: var(--loom-agent-claude);
+}
+
+.debug-agent-body {
+  gap: 12px;
+  background: var(--loom-bg-2);
+}
+
+.debug-card {
+  border-color: var(--loom-border);
+  border-radius: var(--loom-r-card);
+  background: var(--loom-surface);
+}
+
+.fix-cycle-card {
+  overflow: hidden;
+}
+
+.fix-cycle {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.fix-step {
+  display: grid;
+  grid-template-columns: 22px minmax(120px, 1fr);
+  gap: 8px;
+  min-width: 160px;
+  border: 1px solid var(--loom-border);
+  border-radius: var(--loom-r-ctl);
+  background: var(--loom-inset);
+  padding: 9px;
+}
+
+.fix-step.is-done {
+  border-color: color-mix(in srgb, var(--loom-green) 40%, var(--loom-border));
+  background: var(--loom-green-soft);
+}
+
+.fix-step.is-final.is-done {
+  border-color: var(--loom-green);
+}
+
+.fix-step-no {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--loom-surface-2);
+  color: var(--loom-text-2);
+  font-family: var(--loom-mono);
+  font-size: var(--loom-fs-xs);
+  font-weight: 700;
+}
+
+.fix-step.is-done .fix-step-no {
+  background: var(--loom-green);
+  color: #ffffff;
+}
+
+.fix-step-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fix-step-name {
+  color: var(--loom-text);
+  font-size: var(--loom-fs-sm);
+  font-weight: 650;
+}
+
+.fix-step-detail {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--loom-text-3);
+  font-size: var(--loom-fs-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fix-arrow {
+  align-self: center;
+  color: var(--loom-text-3);
+  font-size: 18px;
+}
+
+.delivery {
+  padding: 18px;
+}
+
+.dl-head {
+  align-items: center;
+}
+
+.dl-head-left,
+.dl-head-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.dl-head-info {
+  min-width: 0;
+}
+
+.dl-head-info h1 {
+  margin: 1px 0 2px;
+  overflow: hidden;
+  color: var(--loom-text);
+  font-size: 20px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dl-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  background: var(--loom-green-soft);
+  color: var(--loom-green);
+  padding: 4px 9px;
+  font-size: var(--loom-fs-sm);
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.dl-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.dl-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.metric-card,
+.dl-block {
+  border: 1px solid var(--loom-border);
+  border-radius: var(--loom-r-card);
+  background: var(--loom-surface);
+}
+
+.metric-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 12px;
+}
+
+.metric-label,
+.metric-sub,
+.dl-block-sub {
+  color: var(--loom-text-3);
+  font-size: var(--loom-fs-xs);
+}
+
+.metric-value {
+  color: var(--loom-text);
+  font-family: var(--loom-mono);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.metric-unit {
+  font-size: var(--loom-fs-xs);
+  color: var(--loom-text-2);
+}
+
+.dl-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
+  gap: 14px;
+}
+
+.dl-col {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.dl-block {
+  padding: 14px;
+}
+
+.dl-block-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.dl-block-head h2 {
+  margin: 0;
+  color: var(--loom-text);
+  font-size: var(--loom-fs-h);
+}
+
+.dl-block p {
+  margin: 0;
+  color: var(--loom-text-2);
+  font-size: var(--loom-fs-sm);
+  line-height: 1.5;
+}
+
+.req-list,
+.file-list,
+.decision-list,
+.risk-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.req-item,
+.file-row,
+.decision-item,
+.risk-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+  color: var(--loom-text-2);
+  font-size: var(--loom-fs-sm);
+}
+
+.req-check {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  border-radius: 999px;
+  background: var(--loom-green-soft);
+  color: var(--loom-green);
+}
+
+.file-row {
+  align-items: center;
+}
+
+.file-row.empty {
+  color: var(--loom-text-3);
+}
+
+.file-ico {
+  flex: 0 0 auto;
+  color: var(--loom-text-3);
+}
+
+.file-path {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--loom-text-2);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-stat {
+  border-radius: var(--loom-r-chip);
+  background: var(--loom-surface-2);
+  padding: 2px 7px;
+  font-family: var(--loom-mono);
+  font-size: var(--loom-fs-xs);
+}
+
+.file-add,
+.proof-green {
+  color: var(--loom-green);
+}
+
+.proof-red {
+  color: var(--loom-red);
+}
+
+.proof-box {
+  border: 1px solid var(--loom-border);
+  border-radius: var(--loom-r-ctl);
+  background: var(--loom-inset);
+  padding: 10px;
+}
+
+.proof-line {
+  color: var(--loom-text-2);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.proof-dim {
+  color: var(--loom-text-3);
+}
+
+.decision-item {
+  flex-direction: column;
+  gap: 4px;
+}
+
+.decision-tag {
+  align-self: flex-start;
+  border-radius: var(--loom-r-chip);
+  background: var(--loom-accent-soft);
+  color: var(--loom-accent);
+  padding: 2px 7px;
+  font-size: var(--loom-fs-xs);
+  font-weight: 650;
+}
+
+.decision-text {
+  color: var(--loom-text-2);
+  line-height: 1.5;
+}
+
+.risk-item span {
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  flex: 0 0 8px;
+  border-radius: 999px;
+  background: var(--loom-green);
+}
+
+.risk-item.risk-medium span {
+  background: var(--loom-amber);
+}
+
+.risk-item.risk-high span {
+  background: var(--loom-red);
+}
+
+.risk-item p {
+  margin: 0;
+}
+
+@keyframes loom-pulse {
+  70% {
+    box-shadow: 0 0 0 7px color-mix(in srgb, currentColor 0%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 0%, transparent);
+  }
+}
+
+@media (max-width: 1120px) {
+  .dl-metrics,
+  .dl-grid {
+    grid-template-columns: 1fr;
+  }
+}

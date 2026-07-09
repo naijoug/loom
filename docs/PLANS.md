@@ -1,5 +1,10 @@
 # 计划文档索引
 
+## 2026-06-26
+
+- 17:38-ui-2026-06-impl.md
+  > （已完成，M0–M6）把 `designs/loom-ui-2026-06/` 深色技术工作台设计（5 个核心流程页面 + 共享 Shell + 设计令牌）落地到现有 Tauri + React 代码：先行落地 `--loom-*` 别名层与重构 AppLayout/Sidebar/Header miniStepper 外壳（M0），再逐页对齐规划讨论室/任务看板/执行中/调试验收/交付总结（M1–M5），仅覆盖视觉与交互层，后端能力与状态机保持现状。验证：`pnpm test` 81/81、`pnpm build`、`cargo test` 123/123、`pnpm smoke:visual` 26 屏全过。（2026-06-26 plan-review 修订：明确令牌为命名空间对齐而非值迁移，定方案 A 别名层、不强制改名存量约 1144 处旧引用；删除冗余 CDN 字体任务、确认 Geist Mono 已 `@fontsource` 自托管；miniStepper 已是 4 段，改为只调状态色 + 标签中文化并列入待确认。）
+
 ## 2026-06-25
 
 - 19:35-settings-refactor.md
