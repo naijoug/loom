@@ -301,6 +301,95 @@ test("selecting a project restores its cached tasks", () => {
   assert.deepEqual(state.commandRuns, []);
 });
 
+test("removing an inactive project drops it from recent projects and cached tasks", () => {
+  const currentProject = projectFixture();
+  const otherProject = projectFixture({ id: "project-2", path: "/tmp/other", name: "Other" });
+  const currentTask = taskFixture({ id: "task-current", projectPath: currentProject.path });
+  const otherTask = taskFixture({ id: "task-other", projectPath: otherProject.path });
+  const state = {
+    ...initialAppState,
+    app: { ...initialAppState.app, activeProjectId: currentProject.id, currentView: "board" },
+    projects: { current: currentProject, recent: [currentProject, otherProject] },
+    tasks: [currentTask],
+    taskCache: {
+      [currentProject.path]: [currentTask],
+      [otherProject.path]: [otherTask],
+    },
+  };
+
+  const nextState = appReducer(state, {
+    type: "projects/removed",
+    projectId: otherProject.id,
+    projectPath: otherProject.path,
+  });
+
+  assert.deepEqual(nextState.projects.recent.map((project) => project.id), [currentProject.id]);
+  assert.equal(nextState.projects.current.id, currentProject.id);
+  assert.deepEqual(nextState.tasks.map((task) => task.id), [currentTask.id]);
+  assert.equal(nextState.taskCache[otherProject.path], undefined);
+});
+
+test("removing the active project clears the selected workspace state", () => {
+  const project = projectFixture();
+  const otherProject = projectFixture({ id: "project-2", path: "/tmp/other", name: "Other" });
+  const task = taskFixture();
+  const run = commandRun("run-1", task.id);
+  const state = {
+    ...initialAppState,
+    app: {
+      ...initialAppState.app,
+      activeProjectId: project.id,
+      currentView: "task-detail",
+      selectedTaskId: task.id,
+      selectedTodoId: "todo-1",
+      viewedStage: "testing",
+    },
+    projects: { current: project, recent: [project, otherProject] },
+    tasks: [task],
+    taskCache: {
+      [project.path]: [task],
+    },
+    commandRuns: [run],
+    commandLogs: {
+      [run.id]: [logEvent(run.id, "running")],
+    },
+    planningLogs: {
+      "planning-1:planning:agent-codex": [planningLogEvent("planning")],
+    },
+    planningProgress: {
+      "planning-1:planning:agent-codex": {
+        taskId: task.id,
+        planningRunId: "planning-1",
+        agentId: "agent-codex",
+        agentName: "Codex",
+        phase: "planning",
+        status: "running",
+        startedAtMs: 10,
+      },
+    },
+  };
+
+  const nextState = appReducer(state, {
+    type: "projects/removed",
+    projectId: project.id,
+    projectPath: project.path,
+  });
+
+  assert.deepEqual(nextState.projects.recent.map((candidate) => candidate.id), [otherProject.id]);
+  assert.equal(nextState.projects.current, null);
+  assert.equal(nextState.app.activeProjectId, null);
+  assert.equal(nextState.app.currentView, "board");
+  assert.equal(nextState.app.selectedTaskId, null);
+  assert.equal(nextState.app.selectedTodoId, null);
+  assert.equal(nextState.app.viewedStage, null);
+  assert.deepEqual(nextState.tasks, []);
+  assert.equal(nextState.taskCache[project.path], undefined);
+  assert.deepEqual(nextState.commandRuns, []);
+  assert.deepEqual(nextState.commandLogs, {});
+  assert.deepEqual(nextState.planningLogs, {});
+  assert.deepEqual(nextState.planningProgress, {});
+});
+
 test("upserting the selected task preserves the viewed stage", () => {
   const task = taskFixture();
   let state = appReducer(initialAppState, tasksLoaded([task]));
@@ -325,7 +414,7 @@ test("upserting a different task resets the viewed stage", () => {
   assert.equal(state.app.viewedStage, null);
 });
 
-test("starting a new task opens the task modal without changing the current task", () => {
+test("starting a new task drops into the empty planning composer", () => {
   const task = taskFixture();
   let state = appReducer(initialAppState, tasksLoaded([task]));
   state = appReducer(state, { type: "tasks/selected", taskId: task.id });
@@ -334,23 +423,35 @@ test("starting a new task opens the task modal without changing the current task
   state = appReducer(state, { type: "tasks/new" });
 
   assert.equal(state.app.isCreatingTask, true);
-  assert.equal(state.app.currentView, "task-detail");
-  assert.equal(state.app.selectedTaskId, task.id);
-  assert.equal(state.app.selectedTodoId, "todo-1");
-  assert.equal(state.app.viewedStage, "implementing");
+  assert.equal(state.app.currentView, "planning");
+  assert.equal(state.app.selectedTaskId, null);
+  assert.equal(state.app.selectedTodoId, null);
+  assert.equal(state.app.viewedStage, null);
 });
 
-test("closing the new task modal clears only the modal state", () => {
-  const task = taskFixture();
-  let state = appReducer(initialAppState, tasksLoaded([task]));
-  state = appReducer(state, { type: "tasks/selected", taskId: task.id });
+test("a tasks reload while drafting keeps the composer empty", () => {
+  const existing = taskFixture();
+  let state = appReducer(initialAppState, tasksLoaded([existing]));
   state = appReducer(state, { type: "tasks/new" });
 
-  state = appReducer(state, { type: "tasks/newClosed" });
+  // App + PlanningChat both reload tasks on mount; this must not re-select the
+  // last task and bounce the user into its detail view.
+  state = appReducer(state, tasksLoaded([existing]));
+
+  assert.equal(state.app.isCreatingTask, true);
+  assert.equal(state.app.currentView, "planning");
+  assert.equal(state.app.selectedTaskId, null);
+});
+
+test("creating the task from a draft leaves draft mode and selects it", () => {
+  let state = appReducer(initialAppState, tasksLoaded([]));
+  state = appReducer(state, { type: "tasks/new" });
+
+  const created = taskFixture();
+  state = appReducer(state, { type: "tasks/upserted", task: created });
 
   assert.equal(state.app.isCreatingTask, false);
-  assert.equal(state.app.currentView, "task-detail");
-  assert.equal(state.app.selectedTaskId, task.id);
+  assert.equal(state.app.selectedTaskId, created.id);
 });
 
 test("removing the selected task drops it and returns to the board", () => {

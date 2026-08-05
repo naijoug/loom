@@ -12,6 +12,8 @@
     "smoke": "./scripts/smoke-flow.sh",
     "smoke:interaction": "./scripts/interaction-smoke.sh",
     "smoke:visual": "./scripts/visual-smoke.sh",
+    "e2e:complete": "./tests/e2e/complete-version.sh",
+    "check": "./scripts/check.sh",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri"

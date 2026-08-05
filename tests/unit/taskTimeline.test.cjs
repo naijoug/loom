@@ -160,3 +160,57 @@ test("buildTaskTimelineRows omits command runs already represented by loop trace
   assert.equal(rows[0].summary, "error: build failed");
 });
 
+test("buildTaskTimelineRows includes implementation review, feedback, and summary artifacts", () => {
+  const rows = buildTaskTimelineRows(
+    task({
+      implementationReviews: [
+        {
+          id: "review-1",
+          runId: "review-run-1",
+          taskId: "task-1",
+          reviewerAgentId: "agent-2",
+          reviewerAgentName: "Claude",
+          status: "succeeded",
+          summary: "Implementation is ready",
+          rawOutput: "{}",
+          findings: [],
+          startedAtMs: 50,
+          endedAtMs: 60,
+        },
+      ],
+      implementationReviewDecisions: [],
+      feedback: [
+        {
+          id: "feedback-1",
+          taskId: "task-1",
+          content: "Button does not respond",
+          attachments: [],
+          timestampMs: 70,
+        },
+      ],
+      summary: {
+        taskId: "task-1",
+        title: "Task",
+        requirement: "Requirement",
+        completedTodos: [],
+        changedFiles: [{ path: "src/app.ts", status: "M ", attribution: "task_introduced" }],
+        totalAdditions: 1,
+        totalDeletions: 0,
+        decisions: [],
+        reviews: [],
+        validationEvidence: [{ runId: "run-1", command: "pnpm test", status: "succeeded", startedAtMs: 80 }],
+        remainingRisks: [],
+        recommendations: [],
+        generatedAtMs: 90,
+        jsonPath: "/tmp/summary.json",
+        markdownPath: "/tmp/summary.md",
+      },
+    }),
+  );
+
+  assert.deepEqual(rows.map((row) => row.kind), [
+    "delivery summary",
+    "human feedback",
+    "Claude implementation review",
+  ]);
+});

@@ -202,6 +202,71 @@ async function main() {
         deviceScaleFactor: 1,
         mobile: false,
       });
+      await navigate(client, `${baseUrl}?screen=planning&step=review`);
+      await waitFor(
+        client,
+        textIncludes("规划讨论室", "并行起草", "确认计划并生成任务"),
+        "planning review screen",
+      );
+      await waitFor(client, textIncludes("2 个 Agent 将并行起草"), "planning participants ready");
+      const planningLayout = await evaluate(client, `({
+        scrollTop: document.querySelector('.planning-timeline-scroll')?.scrollTop,
+        documentWidth: document.documentElement.scrollWidth,
+        viewport: document.documentElement.clientWidth,
+      })`);
+      if (planningLayout.scrollTop !== 0 || planningLayout.documentWidth > planningLayout.viewport + 1) {
+        throw new Error(`Planning layout did not open at the top: ${JSON.stringify(planningLayout)}`);
+      }
+
+      const participantToggle = await evaluate(client, `
+        (() => {
+          const chip = [...document.querySelectorAll('.planning-agent-chip')]
+            .find((element) => element.textContent.includes('Codex'));
+          if (!chip) return { ok: false };
+          chip.click();
+          return { ok: true };
+        })()
+      `);
+      if (!participantToggle.ok) {
+        throw new Error("Planning Codex participant chip is missing");
+      }
+      await waitFor(client, textIncludes("1 个 Agent 将并行起草"), "planning participant toggle");
+
+      await evaluate(client, `
+        (() => {
+          const input = document.querySelector('.planning-composer-v2 textarea');
+          const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
+          setter.call(input, '@claud 请讨论过滤方案');
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          return true;
+        })()
+      `);
+      await waitFor(client, textIncludes("未找到 @claud"), "unknown planning mention warning");
+      const invalidMention = await evaluate(client, `({
+        sendDisabled: document.querySelector('.planning-composer-v2 button[type="submit"]')?.disabled,
+      })`);
+      if (!invalidMention.sendDisabled) {
+        throw new Error("Unknown planning mention did not disable send");
+      }
+
+      await evaluate(client, `
+        (() => {
+          const input = document.querySelector('.planning-composer-v2 textarea');
+          const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
+          setter.call(input, '@codex 请讨论过滤方案');
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          return true;
+        })()
+      `);
+      const validMention = await evaluate(client, `({
+        sendDisabled: document.querySelector('.planning-composer-v2 button[type="submit"]')?.disabled,
+        selected: [...document.querySelectorAll('.planning-agent-chip[aria-pressed="true"]')]
+          .map((element) => element.textContent.trim()),
+      })`);
+      if (validMention.sendDisabled || validMention.selected.length !== 1 || !validMention.selected[0].includes('Codex')) {
+        throw new Error(`Valid planning mention selection failed: ${JSON.stringify(validMention)}`);
+      }
+
       await navigate(client, `${baseUrl}?screen=board`);
       await waitFor(client, textIncludes("Wire stream filter into reducer", "LOOM-12"), "board screen");
 
@@ -254,6 +319,62 @@ async function main() {
       await waitFor(client, textIncludes("标记为可测试", "子任务"), "session screen");
       await navigate(client, `${baseUrl}?screen=testing`);
       await waitFor(client, textIncludes("调试验收", "验收门禁"), "testing screen");
+      await waitFor(client, `Boolean(
+        document.querySelector('textarea[placeholder="复现步骤（可选）"]') &&
+        document.querySelector('textarea[placeholder="期望行为（可选）"]')
+      )`, "structured feedback fields");
+      await waitFor(client, `Boolean(document.querySelector('.testing-terminal-toolbar input[type="search"]'))`, "log search control");
+      await evaluate(client, `
+        (() => {
+          const input = document.querySelector('.testing-terminal-toolbar input[type="search"]');
+          const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+          setter.call(input, 'panic');
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          return true;
+        })()
+      `);
+
+      await navigate(client, `${baseUrl}?screen=done`);
+      await waitFor(client, textIncludes("交付总结", "真实 Git", "+218 / -12", "导出 MD", "pre_existing"), "done summary screen");
+
+      await client.send("Emulation.setDeviceMetricsOverride", {
+        width: 960,
+        height: 900,
+        deviceScaleFactor: 1,
+        mobile: false,
+      });
+      await navigate(client, `${baseUrl}?screen=testing`);
+      await waitFor(client, textIncludes("调试验收", "验收门禁"), "960px testing screen");
+      const testingLayout = await evaluate(client, `({
+        viewport: document.documentElement.clientWidth,
+        documentWidth: document.documentElement.scrollWidth,
+        headerOverflow: [...document.querySelectorAll('.testing-terminal-header')].some(
+          (element) => element.scrollWidth > element.clientWidth + 1
+        ),
+        controlsVisible: [...document.querySelectorAll('.testing-terminal-controls')].every(
+          (element) => {
+            const rect = element.getBoundingClientRect();
+            return rect.width > 0 && rect.left >= 0 && rect.right <= window.innerWidth + 1;
+          }
+        ),
+      })`);
+      if (
+        testingLayout.documentWidth > testingLayout.viewport + 1 ||
+        testingLayout.headerOverflow ||
+        !testingLayout.controlsVisible
+      ) {
+        throw new Error(`960px testing layout overflow: ${JSON.stringify(testingLayout)}`);
+      }
+
+      await navigate(client, `${baseUrl}?screen=done`);
+      await waitFor(client, textIncludes("交付总结", "验证证据"), "960px done screen");
+      const doneLayout = await evaluate(client, `({
+        viewport: document.documentElement.clientWidth,
+        documentWidth: document.documentElement.scrollWidth,
+      })`);
+      if (doneLayout.documentWidth > doneLayout.viewport + 1) {
+        throw new Error(`960px done layout overflow: ${JSON.stringify(doneLayout)}`);
+      }
 
       client.close();
     } finally {

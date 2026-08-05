@@ -73,6 +73,25 @@ PORT=11421 HOST=127.0.0.1 ./scripts/debug.sh
 
 常规本地启动不要优先使用 `debug.sh`；只有在需要隔离调试端口或临时覆盖 Tauri dev URL 时使用它。
 
+## 完整质量门禁
+
+提交前运行统一检查：
+
+```bash
+pnpm check
+```
+
+该命令依次执行前端单元测试与生产构建，以及 Rust 格式检查、严格 Clippy 和测试套件。GitHub Actions 使用同一脚本，避免本地与 CI 规则漂移。
+
+完整 UI 回归入口：
+
+```bash
+pnpm e2e:complete
+LOOM_E2E_RELEASE=1 pnpm e2e:complete  # 同时生成发布包
+```
+
+该入口在 `pnpm check` 之后继续执行流程、交互和深浅主题视觉冒烟；视觉产物默认写入 `/tmp/loom-visual-smoke`。
+
 ## 使用约定
 
 - 启动 UI 预览前先停止上一轮预览，避免多个 `vite` 进程占用不同端口。
