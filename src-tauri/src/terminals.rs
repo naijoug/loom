@@ -4,7 +4,11 @@
 //! of the strict `loom.json` metadata so a schema bump never wipes them). The
 //! frontend seeds sensible defaults on first load and may edit/add/remove.
 
-use crate::{models::TerminalSlot, storage};
+use crate::{
+    migrations::{self, TERMINAL_STORE_SCHEMA_VERSION},
+    models::TerminalSlot,
+    storage,
+};
 use serde_json::Value;
 use std::{
     fs,
@@ -293,7 +297,7 @@ pub fn list_terminal_slots(project_path: String) -> Result<Vec<TerminalSlot>, St
     if !path.exists() {
         return Ok(Vec::new());
     }
-    storage::read_json_file::<Vec<TerminalSlot>>(&path)
+    migrations::read_versioned_json(&path, "terminal-slots", TERMINAL_STORE_SCHEMA_VERSION)
 }
 
 #[tauri::command]
@@ -302,7 +306,7 @@ pub fn save_terminal_slots(
     slots: Vec<TerminalSlot>,
 ) -> Result<Vec<TerminalSlot>, String> {
     let path = slots_path(Path::new(&project_path));
-    storage::atomic_write_json(&path, &slots)?;
+    migrations::write_versioned_json(&path, TERMINAL_STORE_SCHEMA_VERSION, &slots)?;
     Ok(slots)
 }
 
@@ -450,6 +454,30 @@ mod tests {
         assert_eq!(loaded.len(), 2);
         assert_eq!(loaded[0].command, "pnpm dev");
         assert_eq!(loaded[1].kind, "validation");
+        let stored: serde_json::Value =
+            storage::read_json_file(&slots_path(&root)).expect("versioned terminal store");
+        assert_eq!(stored["schemaVersion"], TERMINAL_STORE_SCHEMA_VERSION);
+        assert_eq!(stored["data"].as_array().map(Vec::len), Some(2));
+
+        fs::remove_dir_all(root).ok();
+    }
+
+    #[test]
+    fn legacy_terminal_slots_are_migrated_on_list() {
+        let root = std::env::temp_dir().join(format!("loom-slots-legacy-{}", now_ms()));
+        fs::create_dir_all(&root).expect("test dir");
+        storage::atomic_write_json(
+            &slots_path(&root),
+            &vec![slot("validation", "validation", "pnpm test")],
+        )
+        .expect("legacy slots");
+
+        let loaded = list_terminal_slots(root.display().to_string()).expect("legacy slots load");
+        let stored: serde_json::Value =
+            storage::read_json_file(&slots_path(&root)).expect("migrated terminal store");
+
+        assert_eq!(loaded.len(), 1);
+        assert_eq!(stored["schemaVersion"], TERMINAL_STORE_SCHEMA_VERSION);
 
         fs::remove_dir_all(root).ok();
     }

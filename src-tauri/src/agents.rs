@@ -3,6 +3,7 @@ use crate::{
         self, AdapterInvocationRequest, PrepareAgentInvocationInput, PreparedAgentInvocation,
     },
     execution_policy::{self, ExecutionDecision, ExecutionRequest},
+    migrations::{self, AGENT_STORE_SCHEMA_VERSION},
     models::{
         now_ms, AgentConfig, AgentConfigInput, AgentInvocation, IdGenerator, PlanReview,
         PlanningAgentLogEvent, PlanningAgentStatusEvent, PlanningDecision, PlanningDiscussionInput,
@@ -539,7 +540,7 @@ pub async fn run_planning_discussion(
             .ok_or_else(|| "invalid plan path".to_string())?,
     )
     .map_err(|error| format!("failed to create plans directory: {error}"))?;
-    fs::write(&plan_path, &final_plan)
+    storage::atomic_write_text(&plan_path, &final_plan)
         .map_err(|error| format!("failed to write final plan: {error}"))?;
     update_project_plans_index(
         Path::new(&input.project_path),
@@ -646,7 +647,8 @@ pub async fn run_plan_reviews(
         render_reviewed_final_plan(&plan, &task.plan_reviews, &task.planning_decisions)
     });
     if let (Some(path), Some(plan)) = (&task.final_plan_path, &task.final_plan) {
-        fs::write(path, plan).map_err(|error| format!("failed to write reviewed plan: {error}"))?;
+        storage::atomic_write_text(Path::new(path), plan)
+            .map_err(|error| format!("failed to write reviewed plan: {error}"))?;
         task.final_plan_html_path = plan_html::write_task_plan_html(&task)?;
     }
     task.status = crate::task_state::transition(
@@ -773,7 +775,7 @@ pub async fn retry_planning_agent(
             .ok_or_else(|| "invalid plan path".to_string())?,
     )
     .map_err(|error| format!("failed to create plans directory: {error}"))?;
-    fs::write(&plan_path, &final_plan)
+    storage::atomic_write_text(&plan_path, &final_plan)
         .map_err(|error| format!("failed to write final plan: {error}"))?;
     update_project_plans_index(
         Path::new(&project_path),
@@ -1476,15 +1478,15 @@ async fn run_plan_review_agent<E: PlanningEventEmitter>(
     let stderr_path = evidence_dir.join(format!("{review_id}.stderr.log"));
     let prompt = render_plan_review_prompt(reviewer, target);
     let redacted_prompt = redact_sensitive_text(&prompt.content);
-    fs::write(&prompt_path, &redacted_prompt)
+    storage::atomic_write_text(&prompt_path, &redacted_prompt)
         .map_err(|error| format!("failed to write review prompt: {error}"))?;
 
     if effective_adapter_type(reviewer) == ADAPTER_DUMMY {
         let started_at_ms = now_ms();
         let output = deterministic_plan_review_output(reviewer, target);
-        fs::write(&stdout_path, &output)
+        storage::atomic_write_text(&stdout_path, &output)
             .map_err(|error| format!("failed to write dummy review output: {error}"))?;
-        fs::write(&stderr_path, "")
+        storage::atomic_write_text(&stderr_path, "")
             .map_err(|error| format!("failed to write dummy review stderr: {error}"))?;
 
         return Ok(PlanReviewInvocationResult {
@@ -1526,9 +1528,9 @@ async fn run_plan_review_agent<E: PlanningEventEmitter>(
     .await
     {
         Ok(result) => {
-            fs::write(&stdout_path, &result.stdout)
+            storage::atomic_write_text(&stdout_path, &result.stdout)
                 .map_err(|error| format!("failed to write review stdout: {error}"))?;
-            fs::write(&stderr_path, &result.stderr)
+            storage::atomic_write_text(&stderr_path, &result.stderr)
                 .map_err(|error| format!("failed to write review stderr: {error}"))?;
             Ok(PlanReviewInvocationResult {
                 status: result.status,
@@ -1546,9 +1548,9 @@ async fn run_plan_review_agent<E: PlanningEventEmitter>(
         Err(error) => {
             let started_at_ms = now_ms();
             let stderr = redact_sensitive_text(&error);
-            fs::write(&stdout_path, "")
+            storage::atomic_write_text(&stdout_path, "")
                 .map_err(|error| format!("failed to write empty review stdout: {error}"))?;
-            fs::write(&stderr_path, &stderr)
+            storage::atomic_write_text(&stderr_path, &stderr)
                 .map_err(|error| format!("failed to write review stderr: {error}"))?;
             Ok(PlanReviewInvocationResult {
                 status: "failed".to_string(),
@@ -1597,20 +1599,20 @@ async fn run_planning_agent<E: PlanningEventEmitter>(
     let plan_path = evidence_dir.join(format!("{}{suffix}.plan.md", agent.id));
     let stderr_path = evidence_dir.join(format!("{}{suffix}.stderr.log", agent.id));
     let redacted_prompt = redact_sensitive_text(&prompt.content);
-    fs::write(&prompt_path, &redacted_prompt)
+    storage::atomic_write_text(&prompt_path, &redacted_prompt)
         .map_err(|error| format!("failed to write planning prompt: {error}"))?;
 
     if effective_adapter_type(agent) == ADAPTER_DUMMY {
         let started_at_ms = now_ms();
         let output = deterministic_planning_output(agent, prompt);
-        fs::write(&stdout_path, &output)
+        storage::atomic_write_text(&stdout_path, &output)
             .map_err(|error| format!("failed to write dummy planning output: {error}"))?;
-        fs::write(
+        storage::atomic_write_text(
             &plan_path,
-            render_candidate_plan_document(agent, prompt, &output, started_at_ms),
+            &render_candidate_plan_document(agent, prompt, &output, started_at_ms),
         )
         .map_err(|error| format!("failed to write dummy candidate plan: {error}"))?;
-        fs::write(&stderr_path, "")
+        storage::atomic_write_text(&stderr_path, "")
             .map_err(|error| format!("failed to write dummy planning stderr: {error}"))?;
 
         return Ok(PlanningInvocationResult {
@@ -1660,14 +1662,19 @@ async fn run_planning_agent<E: PlanningEventEmitter>(
 
     match result {
         Ok(mut result) => {
-            fs::write(&stdout_path, &result.stdout)
+            storage::atomic_write_text(&stdout_path, &result.stdout)
                 .map_err(|error| format!("failed to write planning stdout: {error}"))?;
-            fs::write(
+            storage::atomic_write_text(
                 &plan_path,
-                render_candidate_plan_document(agent, prompt, &result.stdout, result.started_at_ms),
+                &render_candidate_plan_document(
+                    agent,
+                    prompt,
+                    &result.stdout,
+                    result.started_at_ms,
+                ),
             )
             .map_err(|error| format!("failed to write candidate plan: {error}"))?;
-            fs::write(&stderr_path, &result.stderr)
+            storage::atomic_write_text(&stderr_path, &result.stderr)
                 .map_err(|error| format!("failed to write planning stderr: {error}"))?;
             result.evidence_ref = Some(stdout_path.display().to_string());
             result.plan_path = Some(plan_path.display().to_string());
@@ -1677,9 +1684,9 @@ async fn run_planning_agent<E: PlanningEventEmitter>(
         Err(error) => {
             let started_at_ms = now_ms();
             let stderr = redact_sensitive_text(&error);
-            fs::write(&stdout_path, "")
+            storage::atomic_write_text(&stdout_path, "")
                 .map_err(|error| format!("failed to write empty planning stdout: {error}"))?;
-            fs::write(&stderr_path, &stderr)
+            storage::atomic_write_text(&stderr_path, &stderr)
                 .map_err(|error| format!("failed to write planning stderr: {error}"))?;
             Ok(PlanningInvocationResult {
                 status: "failed".to_string(),
@@ -1724,15 +1731,15 @@ async fn run_synthesis_agent<E: PlanningEventEmitter>(
     let stdout_path = evidence_dir.join(format!("synthesis{suffix}.stdout.md"));
     let stderr_path = evidence_dir.join(format!("synthesis{suffix}.stderr.log"));
     let redacted_prompt = redact_sensitive_text(&prompt.content);
-    fs::write(&prompt_path, &redacted_prompt)
+    storage::atomic_write_text(&prompt_path, &redacted_prompt)
         .map_err(|error| format!("failed to write synthesis prompt: {error}"))?;
 
     if effective_adapter_type(agent) == ADAPTER_DUMMY {
         let started_at_ms = now_ms();
         let output = deterministic_synthesis_output(prompt);
-        fs::write(&stdout_path, &output)
+        storage::atomic_write_text(&stdout_path, &output)
             .map_err(|error| format!("failed to write dummy synthesis output: {error}"))?;
-        fs::write(&stderr_path, "")
+        storage::atomic_write_text(&stderr_path, "")
             .map_err(|error| format!("failed to write dummy synthesis stderr: {error}"))?;
 
         return Ok(PlanningInvocationResult {
@@ -1782,9 +1789,9 @@ async fn run_synthesis_agent<E: PlanningEventEmitter>(
 
     match result {
         Ok(mut result) => {
-            fs::write(&stdout_path, &result.stdout)
+            storage::atomic_write_text(&stdout_path, &result.stdout)
                 .map_err(|error| format!("failed to write synthesis stdout: {error}"))?;
-            fs::write(&stderr_path, &result.stderr)
+            storage::atomic_write_text(&stderr_path, &result.stderr)
                 .map_err(|error| format!("failed to write synthesis stderr: {error}"))?;
             result.evidence_ref = Some(stdout_path.display().to_string());
             result.plan_path = None;
@@ -1794,9 +1801,9 @@ async fn run_synthesis_agent<E: PlanningEventEmitter>(
         Err(error) => {
             let started_at_ms = now_ms();
             let stderr = redact_sensitive_text(&error);
-            fs::write(&stdout_path, "")
+            storage::atomic_write_text(&stdout_path, "")
                 .map_err(|error| format!("failed to write empty synthesis stdout: {error}"))?;
-            fs::write(&stderr_path, &stderr)
+            storage::atomic_write_text(&stderr_path, &stderr)
                 .map_err(|error| format!("failed to write synthesis stderr: {error}"))?;
             Ok(PlanningInvocationResult {
                 status: "failed".to_string(),
@@ -3022,7 +3029,8 @@ fn update_project_plans_index(
         fs::create_dir_all(parent)
             .map_err(|error| format!("failed to create plans index directory: {error}"))?;
     }
-    fs::write(&index_path, updated).map_err(|error| format!("failed to write plans index: {error}"))
+    storage::atomic_write_text(&index_path, &updated)
+        .map_err(|error| format!("failed to write plans index: {error}"))
 }
 
 fn render_updated_plans_index(
@@ -3323,7 +3331,7 @@ pub(crate) fn load_agents(app: &AppHandle) -> Result<Vec<AgentConfig>, String> {
         return Ok(agents);
     }
 
-    let mut agents: Vec<AgentConfig> = storage::read_json_file(&path)?;
+    let mut agents = load_agent_store(&path)?;
     merge_missing_default_agents(&mut agents);
     for agent in &mut agents {
         agent.available = command_available(agent);
@@ -3334,7 +3342,15 @@ pub(crate) fn load_agents(app: &AppHandle) -> Result<Vec<AgentConfig>, String> {
 }
 
 fn save_agents(app: &AppHandle, agents: &[AgentConfig]) -> Result<(), String> {
-    storage::atomic_write_json(&agents_path(app)?, &agents)
+    save_agent_store(&agents_path(app)?, agents)
+}
+
+fn load_agent_store(path: &Path) -> Result<Vec<AgentConfig>, String> {
+    migrations::read_versioned_json(path, "agents", AGENT_STORE_SCHEMA_VERSION)
+}
+
+fn save_agent_store(path: &Path, agents: &[AgentConfig]) -> Result<(), String> {
+    migrations::write_versioned_json(path, AGENT_STORE_SCHEMA_VERSION, &agents)
 }
 
 fn agents_path(app: &AppHandle) -> Result<std::path::PathBuf, String> {
@@ -3559,6 +3575,23 @@ mod tests {
             enabled: true,
             available: true,
         }
+    }
+
+    #[test]
+    fn legacy_agent_store_is_migrated_on_load() {
+        let root = std::env::temp_dir().join(format!("loom-agents-legacy-{}", now_ms()));
+        fs::create_dir_all(&root).expect("test root");
+        let path = root.join(AGENTS_FILE);
+        let agents = vec![test_agent("fixture", ADAPTER_CLI, Vec::new())];
+        storage::atomic_write_json(&path, &agents).expect("legacy agent store");
+
+        let loaded = load_agent_store(&path).expect("legacy agent store should migrate");
+        let stored: serde_json::Value = storage::read_json_file(&path).expect("migrated store");
+
+        assert_eq!(loaded.len(), 1);
+        assert_eq!(stored["schemaVersion"], AGENT_STORE_SCHEMA_VERSION);
+        assert_eq!(stored["data"][0]["command"], "fixture");
+        fs::remove_dir_all(root).ok();
     }
 
     fn test_invocation(agent_name: &str, status: &str, raw_output: &str) -> AgentInvocation {

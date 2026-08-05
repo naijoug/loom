@@ -1,5 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
 import { useCallback } from "react";
+import { invokeCommand, TAURI_COMMANDS } from "../api";
 import {
   EMPTY_PROJECT_AGENT_PREFERENCES,
   type ProjectAgentPreferences,
@@ -11,7 +11,9 @@ export function useProjectPreferencesBridge() {
     if (!hasTauriRuntime()) {
       return { ...EMPTY_PROJECT_AGENT_PREFERENCES };
     }
-    return invoke<ProjectAgentPreferences>("load_project_agent_preferences", { projectPath });
+    return invokeCommand<ProjectAgentPreferences>(TAURI_COMMANDS.loadProjectAgentPreferences, {
+      projectPath,
+    });
   }, []);
 
   const saveProjectAgentPreferences = useCallback(
@@ -19,7 +21,7 @@ export function useProjectPreferencesBridge() {
       if (!hasTauriRuntime()) {
         return { ...preferences, updatedAtMs: Date.now() };
       }
-      return invoke<ProjectAgentPreferences>("save_project_agent_preferences", {
+      return invokeCommand<ProjectAgentPreferences>(TAURI_COMMANDS.saveProjectAgentPreferences, {
         projectPath,
         preferences,
       });

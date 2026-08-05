@@ -1,5 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
 import { useCallback } from "react";
+import { invokeCommand, TAURI_COMMANDS } from "../api";
 import type { Task } from "../domain";
 import { useAppState } from "../state/AppStateContext";
 import { hasTauriRuntime } from "./runtime";
@@ -18,7 +18,7 @@ export function useImplementationReviewBridge() {
         return null;
       }
       try {
-        const task = await invoke<Task>("run_implementation_reviews", {
+        const task = await invokeCommand<Task>(TAURI_COMMANDS.runImplementationReviews, {
           input: { projectPath, taskId, reviewerAgentIds },
         });
         dispatch({ type: "tasks/upserted", task });
@@ -40,9 +40,12 @@ export function useImplementationReviewBridge() {
       reason: string,
     ) => {
       try {
-        const task = await invoke<Task>("decide_implementation_review_finding", {
+        const task = await invokeCommand<Task>(
+          TAURI_COMMANDS.decideImplementationReviewFinding,
+          {
           input: { projectPath, taskId, findingId, decision, reason },
-        });
+          },
+        );
         dispatch({ type: "tasks/upserted", task });
         return task;
       } catch (error) {

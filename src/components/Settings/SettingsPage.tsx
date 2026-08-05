@@ -1,4 +1,3 @@
-import { invoke } from "@tauri-apps/api/core";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import {
@@ -16,6 +15,7 @@ import {
   Trash2,
   XCircle,
 } from "lucide-react";
+import { invokeCommand, TAURI_COMMANDS } from "../../api";
 import { useTheme } from "../../contexts/ThemeContext";
 import {
   DEFAULT_APP_SETTINGS,
@@ -307,7 +307,7 @@ export function SettingsPage({ onBack, initialTab = "general" }: SettingsPagePro
     }
 
     let cancelled = false;
-    void invoke<HealthCheckResult>("health_check").then((result) => {
+    void invokeCommand<HealthCheckResult>(TAURI_COMMANDS.healthCheck).then((result) => {
       if (!cancelled) {
         setHealth(result);
       }

@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
-import { listen } from "@tauri-apps/api/event";
 import { MessageSquarePlus, Pencil, Square, Terminal as TerminalIcon, X } from "lucide-react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
+import { listenToEvent, TAURI_EVENTS } from "../../api";
 import type { CommandLogEvent, CommandRun, PtyOutputEvent } from "../../domain";
 import { usePtyBridge } from "../../hooks/usePtyBridge";
 import { Button } from "../common/Button";
@@ -140,9 +140,9 @@ function PtyTerminal({
     });
     observer.observe(containerRef.current);
 
-    const unlisten = listen<PtyOutputEvent>("loom://pty-output", (event) => {
-      if (event.payload.runId === runIdRef.current) {
-        term.write(new Uint8Array(event.payload.bytes));
+    const unlisten = listenToEvent<PtyOutputEvent>(TAURI_EVENTS.ptyOutput, (event) => {
+      if (event.runId === runIdRef.current) {
+        term.write(new Uint8Array(event.bytes));
       }
     });
 

@@ -12,6 +12,7 @@
     "rootDir": "."
   },
   "include": [
+    "src/api/**/*.ts",
     "src/domain/**/*.ts",
     "src/components/Planning/participantSelection.ts",
     "src/components/Planning/roundSummary.ts",

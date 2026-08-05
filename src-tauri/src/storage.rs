@@ -1,5 +1,7 @@
 use crate::models::{now_ms, ProjectMetadata, ProjectSummary, CURRENT_SCHEMA_VERSION};
-use serde::{de::DeserializeOwned, Serialize};
+#[cfg(test)]
+use serde::de::DeserializeOwned;
+use serde::Serialize;
 use serde_json::Value;
 use std::{
     fs,
@@ -181,6 +183,7 @@ fn ensure_parent_dir(path: &Path) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(test)]
 pub fn read_json_file<T>(path: &Path) -> Result<T, String>
 where
     T: DeserializeOwned,

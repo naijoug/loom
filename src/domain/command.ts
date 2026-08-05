@@ -1,10 +1,6 @@
-export type CommandRunStatus =
-  | "queued"
-  | "running"
-  | "succeeded"
-  | "failed"
-  | "cancelled"
-  | "interrupted";
+import type { ContractCommandRunStatus } from "../api/contract";
+
+export type CommandRunStatus = ContractCommandRunStatus;
 export type CommandRunIntent = "agent_action" | "validation" | "preview" | "loop_step" | "legacy";
 
 export interface ErrorSummary {

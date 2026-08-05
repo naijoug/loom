@@ -155,7 +155,8 @@ pub fn write_plan_html_file(
 ) -> Result<PathBuf, String> {
     let html_path = markdown_path.with_extension("html");
     let html = render_plan_html(markdown, meta);
-    fs::write(&html_path, html).map_err(|error| format!("failed to write plan HTML: {error}"))?;
+    storage::atomic_write_text(&html_path, &html)
+        .map_err(|error| format!("failed to write plan HTML: {error}"))?;
     Ok(html_path)
 }
 

@@ -4,8 +4,11 @@ mod agents;
 mod attachments;
 mod command_runner;
 pub mod context_builder;
+#[cfg(test)]
+mod contracts;
 mod execution_policy;
 mod implementation_review;
+mod migrations;
 mod models;
 mod plan_html;
 mod project_git;

@@ -358,7 +358,7 @@ pub async fn run_implementation_reviews(
     fs::create_dir_all(&evidence_dir)
         .map_err(|error| format!("failed to create implementation Review evidence: {error}"))?;
     let context_path = evidence_dir.join("context.md");
-    fs::write(&context_path, agents::redact_sensitive_text(&context))
+    storage::atomic_write_text(&context_path, &agents::redact_sensitive_text(&context))
         .map_err(|error| format!("failed to write implementation Review context: {error}"))?;
     let prompt = review_prompt(&context);
     let prepared_reviewers = reviewers
@@ -491,9 +491,9 @@ pub async fn run_implementation_reviews(
             };
         let output_path = evidence_dir.join(format!("{review_id}.output.txt"));
         let stderr_path = evidence_dir.join(format!("{review_id}.stderr.log"));
-        fs::write(&output_path, agents::redact_sensitive_text(&raw_output))
+        storage::atomic_write_text(&output_path, &agents::redact_sensitive_text(&raw_output))
             .map_err(|error| format!("failed to write Review output: {error}"))?;
-        fs::write(&stderr_path, agents::redact_sensitive_text(&stderr))
+        storage::atomic_write_text(&stderr_path, &agents::redact_sensitive_text(&stderr))
             .map_err(|error| format!("failed to write Review stderr: {error}"))?;
         completed_reviews.push(ImplementationReview {
             id: review_id,

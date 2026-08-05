@@ -15,7 +15,8 @@ Loom 是本地优先的 Tauri 桌面开发工作台。React 负责流程展示�
 | Execution | `execution_policy.rs`, `command_runner.rs`, `pty.rs` | cwd 边界、危险分类、一次性审批、进程组、超时、实时日志和历史 |
 | Project | `projects.rs`, `terminals.rs`, `project_preferences.rs`, `project_git.rs` | 技术栈/脚本发现、终端槽位、阶段偏好、Git baseline 与归因 |
 | Evidence | `context_builder.rs`, `attachments.rs`, `task_summary.rs` | prompt 预算、附件、repair context、JSON/Markdown 交付总结 |
-| Persistence | `storage.rs`, `.loom/` | 原子 JSON/文本写入、任务、日志、配置、附件和总结 |
+| Persistence | `migrations.rs`, `storage.rs`, `.loom/` | 版本化 JSON 迁移、原子 JSON/文本写入、任务、日志、配置、附件和总结 |
+| Contract | `contracts/tauri-contract.json`, `src/api/` | command/event 名称、状态枚举、持久化 wire sample 与前端 typed client |
 
 ## 关键数据流
 
@@ -43,10 +44,14 @@ Loom 是本地优先的 Tauri 桌面开发工作台。React 负责流程展示�
 
 计划文档位于项目的 `docs/plans/YYYY-MM-DD/`，并同步维护 `docs/PLANS.md`。
 
+Task、Agent 配置、App Settings、终端槽位和项目 Agent 偏好均使用 `{ schemaVersion, data }` 信封。首次读取旧版裸 JSON 时会原子迁移为当前版本；遇到无效数据或未来版本时保留 `.bak-<kind>-<timestamp>` 副本并返回明确错误，不静默覆盖。计划、Review 证据、HTML 和索引同样通过临时文件加 rename 原子替换。
+
+`contracts/tauri-contract.json` 是 Rust 与 TypeScript 共享的 canonical contract。Rust 测试校验 Tauri 注册表、事件发送方、枚举解析、schema version 和持久化模型序列化；前端测试校验同一 fixture，并禁止桥接层之外直接调用 `@tauri-apps/api/core` 或 `event`。
+
 ## 并发与恢复
 
 - Planning Agent 可并行运行；命令、PTY 和 Review 进程均按 run id 注册，任务暂停、阻塞或取消会停止关联进程组。
-- Task 与设置使用临时文件加 rename 原子替换，避免半写入 JSON。
+- 所有版本化 store 与结构化产物使用临时文件加 rename 原子替换，避免半写入或悬空索引。
 - 桌面端重启后，持久化为 `running` 但没有本进程注册项的 command/review 会改为 `interrupted`，保留日志、退出原因与可用的原生 session resume 信息。
 - UI 状态只是 Task 的投影。所有阶段推进和验收门禁均在 Rust 再校验，不能通过前端直接 invoke 绕过。
 

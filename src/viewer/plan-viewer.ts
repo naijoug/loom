@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invokeCommand, TAURI_COMMANDS } from "../api";
 import { PLAN_PREVIEW_SANDBOX, wireIframeHashNavigation } from "../utils/iframeNavigation";
 
 // Standalone entry for the plan viewer window opened by `open_plan_viewer`.
@@ -29,7 +29,10 @@ async function main() {
   }
 
   try {
-    const html = await invoke<string>("read_plan_html", { projectPath, mdPath });
+    const html = await invokeCommand<string>(TAURI_COMMANDS.readPlanHtml, {
+      projectPath,
+      mdPath,
+    });
     const fileName = mdPath.split("/").pop() ?? "Plan";
     document.title = `Loom Plan — ${fileName.replace(/\.md$/, "")}`;
 

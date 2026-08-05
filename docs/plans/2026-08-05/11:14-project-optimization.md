@@ -3,7 +3,7 @@
 - **Date**: 2026-08-05
 - **Author**: Codex
 - **Status**: in-progress
-- **Progress**: M0 已完成；M1 实施中
+- **Progress**: M0–M1 已完成；M2 实施中
 
 ## 目标
 
@@ -35,16 +35,18 @@
 - `docs/requirements-audit.md` 已把需求逐项映射到实现与测试，四阶段闭环、独立 Review、安全执行、任务恢复、附件证据和交付总结均有真实 Rust/React 实现。
 - `src-tauri/src/task_state.rs` 已提供 Rust 权威状态机，`src-tauri/src/execution_policy.rs` 已集中项目边界、危险命令和审批策略。
 - `src-tauri/src/agent_adapter.rs` 已隔离 Codex、Claude 和 custom CLI 参数映射，核心流程没有直接依赖单一 Agent。
-- `scripts/check.sh` 已统一 TypeScript 构建、Rust fmt、严格 Clippy 和 Rust 测试；本次评审实跑结果为前端/领域测试 88/88、Rust 166/166（另 1 项真实凭据测试按设计忽略）。
+- `scripts/check.sh` 已统一 TypeScript 构建、Rust fmt、严格 Clippy 和 Rust 测试；M1 后前端/领域测试为 90/90，Rust 测试为 181 项（另 1 项真实凭据测试按设计忽略，最终计数以完整门禁输出为准）。
 - `pnpm smoke`、`pnpm smoke:interaction`、`pnpm smoke:visual` 本次评审全部通过，30 张 1440×940 深浅主题截图生成成功。
+- M0 已将完整版本拆成四个功能提交并建立 `stabilization-baseline-2026-08-05` 标签；release/DMG checksum 见 `docs/dogfood/stabilization-baseline-2026-08-05.md`。
+- M1 已为五类 store 增加版本信封、v0→v1 原子迁移、未来/损坏版本备份；`contracts/tauri-contract.json` 同时约束 56 个 command、5 个 event、状态枚举、schema 版本和关键 wire model sample，前端 Tauri 调用已集中到 `src/api/`。
 
 ### 主要差距
 
-- **交付基线不稳**：当前 `main` 的 HEAD 仍是 UI 设计落地提交，完整闭环主要存在于 55 个已修改条目和 30 个未跟踪条目中；已跟踪 diff 单独就有 5,857 行新增、1,054 行删除。
+- **交付基线已固化（M0）**：完整闭环已进入 `codex/project-stabilization` 的可审查提交与稳定化标签；公开分发仍缺 Developer ID 签名、公证和多平台矩阵。
 - **模块过度集中**：`src-tauri/src/agents.rs` 4,921 行、`tasks.rs` 2,764 行；`TestingPane.tsx` 1,372 行、`PlanningTimeline.tsx` 1,079 行、`SettingsPage.tsx` 1,063 行、`reducer.ts` 944 行。职责、并发控制、持久化和展示逻辑的变更半径过大。
 - **进程运行时重复**：`agents.rs`、`implementation_review.rs`、`command_runner.rs` 和 `pty.rs` 各自维护 spawn/kill/timeout/registry 逻辑；策略虽已共享，生命周期实现仍可能漂移。
-- **持久化缺少任务级迁移**：项目元数据有 `CURRENT_SCHEMA_VERSION`，但 `models::Task` 没有 schema version，`load_task` 直接反序列化；目前依赖 `serde(default)` 兼容增量字段，无法覆盖字段重命名、语义变化或结构拆分。
-- **前后端契约靠人工同步**：Rust 注册约 56 个 Tauri commands，前端调用约 49 个；Rust model 和 `src/domain/*.ts` 重复维护，目前没有 command/event/schema 契约门禁。
+- **持久化迁移已显式化（M1）**：五类 store 已有独立 schema version 和 v0→v1 入口；下一次字段重命名或语义变化必须新增逐版本迁移函数与 fixture。
+- **前后端契约已有门禁（M1）**：canonical fixture 与 typed client 已覆盖 command/event/schema/status/关键模型；command payload 的进一步细化随 M2 service 拆分继续收紧。
 - **测试金字塔断层**：88 个前端测试主要覆盖纯函数、reducer 和 selector，`tsconfig.test.json` 基本不编译页面组件；现有浏览器 smoke 运行 `/preview/planning` 预览壳，CI 只执行 `pnpm check`，不覆盖真实 Tauri invoke、桌面重启恢复和前端桥接错误。
 - **视觉回归判定偏弱**：视觉 smoke 只检查 DOM 文案和 PNG 大小，没有基线图差异；布局错位、对比度下降或操作层级变化仍可能通过。
 - **界面信息密度较高**：Planning、Testing、Done 页面已经具备完整证据，但中英文混用、右侧驾驶舱纵向堆叠和同级操作过多，首次使用时需要更明确的“当前阻塞原因 / 下一步动作”。

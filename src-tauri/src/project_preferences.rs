@@ -1,5 +1,6 @@
 use crate::{
     agents,
+    migrations::{self, PROJECT_PREFERENCES_SCHEMA_VERSION},
     models::{now_ms, AgentConfig},
     storage,
 };
@@ -37,7 +38,11 @@ pub(crate) fn load_for_project(project_path: &Path) -> Result<ProjectAgentPrefer
     if !path.exists() {
         return Ok(ProjectAgentPreferences::default());
     }
-    storage::read_json_file(&path)
+    migrations::read_versioned_json(
+        &path,
+        "project-agent-preferences",
+        PROJECT_PREFERENCES_SCHEMA_VERSION,
+    )
 }
 
 fn agent_supports(agent: &AgentConfig, capabilities: &[&str]) -> bool {
@@ -133,7 +138,11 @@ pub fn save_project_agent_preferences(
 ) -> Result<ProjectAgentPreferences, String> {
     let mut normalized = normalize_preferences(preferences, &agents::load_agents(&app)?);
     normalized.updated_at_ms = now_ms();
-    storage::atomic_write_json(&preferences_path(Path::new(&project_path)), &normalized)?;
+    migrations::write_versioned_json(
+        &preferences_path(Path::new(&project_path)),
+        PROJECT_PREFERENCES_SCHEMA_VERSION,
+        &normalized,
+    )?;
     Ok(normalized)
 }
 
@@ -196,5 +205,26 @@ mod tests {
         let root = std::env::temp_dir().join(format!("loom-project-prefs-{}", now_ms()));
         let loaded = load_for_project(&root).expect("missing preferences should load");
         assert_eq!(loaded, ProjectAgentPreferences::default());
+    }
+
+    #[test]
+    fn legacy_preferences_are_migrated_on_load() {
+        let root = std::env::temp_dir().join(format!("loom-project-prefs-legacy-{}", now_ms()));
+        let preferences = ProjectAgentPreferences {
+            planning_agent_ids: vec!["planner".to_string()],
+            updated_at_ms: 7,
+            ..Default::default()
+        };
+        storage::atomic_write_json(&preferences_path(&root), &preferences)
+            .expect("legacy preferences");
+
+        let loaded = load_for_project(&root).expect("legacy preferences should migrate");
+        let stored: serde_json::Value =
+            storage::read_json_file(&preferences_path(&root)).expect("migrated preferences");
+
+        assert_eq!(loaded.planning_agent_ids, ["planner"]);
+        assert_eq!(stored["schemaVersion"], PROJECT_PREFERENCES_SCHEMA_VERSION);
+        assert_eq!(stored["data"]["updatedAtMs"], 7);
+        std::fs::remove_dir_all(root).ok();
     }
 }

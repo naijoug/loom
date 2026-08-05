@@ -1,16 +1,6 @@
-export type TaskStatus =
-  | "drafting_requirements"
-  | "planning"
-  | "plan_review"
-  | "ready_to_implement"
-  | "implementing"
-  | "reviewing"
-  | "debugging"
-  | "fixing"
-  | "verifying"
-  | "completed"
-  | "blocked"
-  | "cancelled";
+import type { ContractPlanTodoStatus, ContractTaskStatus } from "../api/contract";
+
+export type TaskStatus = ContractTaskStatus;
 
 export interface TaskEvent {
   id: string;
@@ -220,7 +210,7 @@ export interface PlanningRun {
   endedAtMs?: number;
 }
 
-export type PlanTodoStatus = "pending" | "implementing" | "done" | "blocked";
+export type PlanTodoStatus = ContractPlanTodoStatus;
 
 export interface PlanTodoItem {
   id: string;

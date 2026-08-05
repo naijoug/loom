@@ -1,5 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
 import { useCallback } from "react";
+import { invokeCommand, TAURI_COMMANDS } from "../api";
 import type { CommandRun, CommandRunStopResult, PtySpec } from "../domain";
 import { useAppState } from "../state/AppStateContext";
 import { authorizeExecution } from "../utils/executionPolicy";
@@ -22,7 +22,7 @@ export function usePtyBridge() {
     async (spec: PtySpec) => {
       try {
         const approvalId = await authorizeExecution(spec);
-        const run = await invoke<CommandRun>("start_pty_run", {
+        const run = await invokeCommand<CommandRun>(TAURI_COMMANDS.startPtyRun, {
           spec: { ...spec, approvalId },
         });
         dispatch({ type: "commands/started", run });
@@ -38,7 +38,9 @@ export function usePtyBridge() {
   const stopPtyRun = useCallback(
     async (runId: string) => {
       try {
-        const result = await invoke<CommandRunStopResult>("stop_pty_run", { runId });
+        const result = await invokeCommand<CommandRunStopResult>(TAURI_COMMANDS.stopPtyRun, {
+          runId,
+        });
         dispatch({
           type: "commands/finished",
           event: {
@@ -61,7 +63,7 @@ export function usePtyBridge() {
 
   const writePty = useCallback(async (runId: string, data: string) => {
     try {
-      await invoke("write_pty", { runId, data });
+      await invokeCommand<void>(TAURI_COMMANDS.writePty, { runId, data });
     } catch {
       // input best-effort; a dead pty just drops keystrokes
     }
@@ -69,7 +71,7 @@ export function usePtyBridge() {
 
   const resizePty = useCallback(async (runId: string, rows: number, cols: number) => {
     try {
-      await invoke("resize_pty", { runId, rows, cols });
+      await invokeCommand<void>(TAURI_COMMANDS.resizePty, { runId, rows, cols });
     } catch {
       // resize best-effort
     }

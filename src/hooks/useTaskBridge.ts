@@ -1,5 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
 import { useCallback } from "react";
+import { invokeCommand, TAURI_COMMANDS, type TauriCommand } from "../api";
 import type { ContextBuildOptions, ContextBuildOutput, CreateTaskInput, PlanningDecisionInput, StructuredFeedbackInput, Task } from "../domain";
 import { useAppState } from "../state/AppStateContext";
 import { hasTauriRuntime } from "./runtime";
@@ -21,7 +21,7 @@ export function useTaskBridge() {
         dispatch({ type: "tasks/loadStarted" });
       }
       try {
-        const tasks = await invoke<Task[]>("list_tasks", { projectPath });
+        const tasks = await invokeCommand<Task[]>(TAURI_COMMANDS.listTasks, { projectPath });
         dispatch({ type: "tasks/loaded", projectPath, tasks });
       } catch (error) {
         dispatch({ type: "tasks/loadFailed", error: toErrorMessage(error) });
@@ -38,7 +38,7 @@ export function useTaskBridge() {
           throw new Error("Task creation requires the Tauri desktop runtime.");
         }
 
-        const task = await invoke<Task>("create_task", { input });
+        const task = await invokeCommand<Task>(TAURI_COMMANDS.createTask, { input });
         dispatch({ type: "tasks/upserted", task });
         return task;
       } catch (error) {
@@ -58,7 +58,7 @@ export function useTaskBridge() {
     ) => {
       try {
         const structured = typeof feedback === "string" ? { content: feedback } : feedback;
-        const task = await invoke<Task>("append_feedback", {
+        const task = await invokeCommand<Task>(TAURI_COMMANDS.appendFeedback, {
           input: { projectPath, taskId, commandRunId, ...structured },
         });
         dispatch({ type: "tasks/upserted", task });
@@ -74,7 +74,7 @@ export function useTaskBridge() {
   const recordPlanningDecision = useCallback(
     async (input: PlanningDecisionInput) => {
       try {
-        const task = await invoke<Task>("record_planning_decision", { input });
+        const task = await invokeCommand<Task>(TAURI_COMMANDS.recordPlanningDecision, { input });
         dispatch({ type: "tasks/upserted", task });
         return task;
       } catch (error) {
@@ -88,7 +88,7 @@ export function useTaskBridge() {
   const confirmPlan = useCallback(
     async (projectPath: string, taskId: string) => {
       try {
-        const task = await invoke<Task>("confirm_plan", { projectPath, taskId });
+        const task = await invokeCommand<Task>(TAURI_COMMANDS.confirmPlan, { projectPath, taskId });
         dispatch({ type: "tasks/upserted", task });
         return task;
       } catch (error) {
@@ -113,7 +113,7 @@ export function useTaskBridge() {
       }
 
       try {
-        const task = await invoke<Task>("start_todo", {
+        const task = await invokeCommand<Task>(TAURI_COMMANDS.startTodo, {
           projectPath,
           taskId,
           todoId,
@@ -138,7 +138,11 @@ export function useTaskBridge() {
       }
 
       try {
-        const task = await invoke<Task>("complete_todo", { projectPath, taskId, todoId });
+        const task = await invokeCommand<Task>(TAURI_COMMANDS.completeTodo, {
+          projectPath,
+          taskId,
+          todoId,
+        });
         dispatch({ type: "tasks/upserted", task });
         return task;
       } catch (error) {
@@ -152,7 +156,7 @@ export function useTaskBridge() {
   const switchPrimaryAgent = useCallback(
     async (projectPath: string, taskId: string, agentId: string, reason: string) => {
       try {
-        const task = await invoke<Task>("switch_primary_agent", {
+        const task = await invokeCommand<Task>(TAURI_COMMANDS.switchPrimaryAgent, {
           projectPath,
           taskId,
           agentId,
@@ -180,7 +184,7 @@ export function useTaskBridge() {
       }
 
       try {
-        return await invoke<ContextBuildOutput>("build_implementation_context", {
+        return await invokeCommand<ContextBuildOutput>(TAURI_COMMANDS.buildImplementationContext, {
           projectPath,
           taskId,
           todoId,
@@ -201,7 +205,10 @@ export function useTaskBridge() {
       }
 
       try {
-        const task = await invoke<Task>("mark_ready_for_testing", { projectPath, taskId });
+        const task = await invokeCommand<Task>(TAURI_COMMANDS.markReadyForTesting, {
+          projectPath,
+          taskId,
+        });
         dispatch({ type: "tasks/upserted", task });
         return task;
       } catch (error) {
@@ -219,7 +226,7 @@ export function useTaskBridge() {
       }
 
       try {
-        const task = await invoke<Task>("complete_task", { projectPath, taskId });
+        const task = await invokeCommand<Task>(TAURI_COMMANDS.completeTask, { projectPath, taskId });
         dispatch({ type: "tasks/upserted", task });
         return task;
       } catch (error) {
@@ -233,7 +240,10 @@ export function useTaskBridge() {
   const regenerateTaskSummary = useCallback(
     async (projectPath: string, taskId: string) => {
       try {
-        const task = await invoke<Task>("regenerate_task_summary", { projectPath, taskId });
+        const task = await invokeCommand<Task>(TAURI_COMMANDS.regenerateTaskSummary, {
+          projectPath,
+          taskId,
+        });
         dispatch({ type: "tasks/upserted", task });
         return task;
       } catch (error) {
@@ -252,7 +262,7 @@ export function useTaskBridge() {
       format: "markdown" | "json",
     ) => {
       try {
-        return await invoke<string>("export_task_summary", {
+        return await invokeCommand<string>(TAURI_COMMANDS.exportTaskSummary, {
           input: { projectPath, taskId, targetPath, format },
         });
       } catch (error) {
@@ -273,7 +283,7 @@ export function useTaskBridge() {
       }
 
       try {
-        await invoke("delete_task", { projectPath, taskId });
+        await invokeCommand<void>(TAURI_COMMANDS.deleteTask, { projectPath, taskId });
         dispatch({ type: "tasks/removed", taskId, projectPath });
         return true;
       } catch (error) {
@@ -287,7 +297,10 @@ export function useTaskBridge() {
   const generateRepairContext = useCallback(
     async (projectPath: string, taskId: string) => {
       try {
-        const task = await invoke<Task>("generate_repair_context", { projectPath, taskId });
+        const task = await invokeCommand<Task>(TAURI_COMMANDS.generateRepairContext, {
+          projectPath,
+          taskId,
+        });
         dispatch({ type: "tasks/upserted", task });
         return task;
       } catch (error) {
@@ -304,7 +317,7 @@ export function useTaskBridge() {
     }
 
     try {
-      return await invoke<string>("read_plan_html", { projectPath, mdPath });
+      return await invokeCommand<string>(TAURI_COMMANDS.readPlanHtml, { projectPath, mdPath });
     } catch (error) {
       dispatch({ type: "tasks/loadFailed", error: toErrorMessage(error) });
       return null;
@@ -317,7 +330,7 @@ export function useTaskBridge() {
     }
 
     try {
-      await invoke("open_plan_html", { projectPath, htmlPath });
+      await invokeCommand<void>(TAURI_COMMANDS.openPlanHtml, { projectPath, htmlPath });
       return true;
     } catch (error) {
       dispatch({ type: "tasks/loadFailed", error: toErrorMessage(error) });
@@ -331,7 +344,7 @@ export function useTaskBridge() {
     }
 
     try {
-      await invoke("open_plan_viewer", { projectPath, mdPath });
+      await invokeCommand<void>(TAURI_COMMANDS.openPlanViewer, { projectPath, mdPath });
       return true;
     } catch (error) {
       dispatch({ type: "tasks/loadFailed", error: toErrorMessage(error) });
@@ -345,7 +358,10 @@ export function useTaskBridge() {
     }
 
     try {
-      await invoke("open_planning_evidence", { projectPath, evidencePath });
+      await invokeCommand<void>(TAURI_COMMANDS.openPlanningEvidence, {
+        projectPath,
+        evidencePath,
+      });
       return true;
     } catch (error) {
       dispatch({ type: "tasks/loadFailed", error: toErrorMessage(error) });
@@ -355,13 +371,13 @@ export function useTaskBridge() {
 
   const updateTaskLifecycle = useCallback(
     async (
-      command: "pause_task" | "resume_task" | "block_task" | "cancel_task",
+      command: TauriCommand,
       projectPath: string,
       taskId: string,
       reason?: string,
     ) => {
       try {
-        const task = await invoke<Task>(command, {
+        const task = await invokeCommand<Task>(command, {
           input: { projectPath, taskId, reason },
         });
         dispatch({ type: "tasks/upserted", task });
@@ -376,22 +392,22 @@ export function useTaskBridge() {
 
   const pauseTask = useCallback(
     (projectPath: string, taskId: string, reason?: string) =>
-      updateTaskLifecycle("pause_task", projectPath, taskId, reason),
+      updateTaskLifecycle(TAURI_COMMANDS.pauseTask, projectPath, taskId, reason),
     [updateTaskLifecycle],
   );
   const resumeTask = useCallback(
     (projectPath: string, taskId: string, reason?: string) =>
-      updateTaskLifecycle("resume_task", projectPath, taskId, reason),
+      updateTaskLifecycle(TAURI_COMMANDS.resumeTask, projectPath, taskId, reason),
     [updateTaskLifecycle],
   );
   const blockTask = useCallback(
     (projectPath: string, taskId: string, reason?: string) =>
-      updateTaskLifecycle("block_task", projectPath, taskId, reason),
+      updateTaskLifecycle(TAURI_COMMANDS.blockTask, projectPath, taskId, reason),
     [updateTaskLifecycle],
   );
   const cancelTask = useCallback(
     (projectPath: string, taskId: string, reason?: string) =>
-      updateTaskLifecycle("cancel_task", projectPath, taskId, reason),
+      updateTaskLifecycle(TAURI_COMMANDS.cancelTask, projectPath, taskId, reason),
     [updateTaskLifecycle],
   );
 

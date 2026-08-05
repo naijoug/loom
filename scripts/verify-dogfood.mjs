@@ -70,7 +70,10 @@ Pass --validation multiple times to verify a non-default command set.`);
 }
 
 function readJson(path) {
-  return JSON.parse(readFileSync(path, "utf8"));
+  const document = JSON.parse(readFileSync(path, "utf8"));
+  return document && typeof document === "object" && "schemaVersion" in document && "data" in document
+    ? document.data
+    : document;
 }
 
 function check(results, condition, message, { warn = false } = {}) {

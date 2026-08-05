@@ -1,6 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
 import { useCallback, useEffect } from "react";
+import { invokeCommand, listenToEvent, TAURI_COMMANDS, TAURI_EVENTS } from "../api";
 import type {
   AgentConfig,
   AgentDiagnostic,
@@ -36,8 +35,8 @@ export function useAgentBridge() {
     let unlistenStatus: (() => void) | null = null;
     let unlistenLog: (() => void) | null = null;
     let cancelled = false;
-    void listen<PlanningAgentStatusEvent>("loom://planning-agent-status", (event) => {
-      dispatch({ type: "planning/progressUpdated", event: event.payload });
+    void listenToEvent<PlanningAgentStatusEvent>(TAURI_EVENTS.planningAgentStatus, (event) => {
+      dispatch({ type: "planning/progressUpdated", event });
     }).then((cleanup) => {
       if (cancelled) {
         cleanup();
@@ -45,8 +44,8 @@ export function useAgentBridge() {
         unlistenStatus = cleanup;
       }
     });
-    void listen<PlanningAgentLogEvent>("loom://planning-agent-log", (event) => {
-      dispatch({ type: "planning/logReceived", event: event.payload });
+    void listenToEvent<PlanningAgentLogEvent>(TAURI_EVENTS.planningAgentLog, (event) => {
+      dispatch({ type: "planning/logReceived", event });
     }).then((cleanup) => {
       if (cancelled) {
         cleanup();
@@ -69,7 +68,10 @@ export function useAgentBridge() {
 
     dispatch({ type: "agents/loadStarted" });
     try {
-      dispatch({ type: "agents/loaded", agents: await invoke<AgentConfig[]>("list_agents") });
+      dispatch({
+        type: "agents/loaded",
+        agents: await invokeCommand<AgentConfig[]>(TAURI_COMMANDS.listAgents),
+      });
     } catch (error) {
       dispatch({ type: "agents/loadFailed", error: toErrorMessage(error) });
     }
@@ -81,7 +83,7 @@ export function useAgentBridge() {
       try {
         assertTauriRuntime("Creating an Agent");
 
-        const agent = await invoke<AgentConfig>("create_agent", { input });
+        const agent = await invokeCommand<AgentConfig>(TAURI_COMMANDS.createAgent, { input });
         dispatch({ type: "agents/created", agent });
         return agent;
       } catch (error) {
@@ -98,7 +100,10 @@ export function useAgentBridge() {
       try {
         assertTauriRuntime("Updating an Agent");
 
-        const agents = await invoke<AgentConfig[]>("set_agent_enabled", { agentId, enabled });
+        const agents = await invokeCommand<AgentConfig[]>(TAURI_COMMANDS.setAgentEnabled, {
+          agentId,
+          enabled,
+        });
         dispatch({ type: "agents/loaded", agents });
         return agents;
       } catch (error) {
@@ -115,7 +120,10 @@ export function useAgentBridge() {
       try {
         assertTauriRuntime("Updating an Agent");
 
-        const agents = await invoke<AgentConfig[]>("update_agent", { agentId, input });
+        const agents = await invokeCommand<AgentConfig[]>(TAURI_COMMANDS.updateAgent, {
+          agentId,
+          input,
+        });
         dispatch({ type: "agents/loaded", agents });
         return agents;
       } catch (error) {
@@ -132,7 +140,7 @@ export function useAgentBridge() {
       try {
         assertTauriRuntime("Deleting an Agent");
 
-        const agents = await invoke<AgentConfig[]>("delete_agent", { agentId });
+        const agents = await invokeCommand<AgentConfig[]>(TAURI_COMMANDS.deleteAgent, { agentId });
         dispatch({ type: "agents/loaded", agents });
         return agents;
       } catch (error) {
@@ -154,7 +162,7 @@ export function useAgentBridge() {
           .map((agent) => ({ id: agent.id, name: agent.name }));
         dispatch({ type: "planning/progressQueued", taskId: input.taskId, agents });
 
-        const task = await invoke<Task>("run_planning_discussion", { input });
+        const task = await invokeCommand<Task>(TAURI_COMMANDS.runPlanningDiscussion, { input });
         dispatch({ type: "tasks/upserted", task });
         return task;
       } catch (error) {
@@ -171,7 +179,10 @@ export function useAgentBridge() {
       try {
         assertTauriRuntime("Plan review");
 
-        const task = await invoke<Task>("run_plan_reviews", { projectPath, taskId });
+        const task = await invokeCommand<Task>(TAURI_COMMANDS.runPlanReviews, {
+          projectPath,
+          taskId,
+        });
         dispatch({ type: "tasks/upserted", task });
         return task;
       } catch (error) {
@@ -188,7 +199,7 @@ export function useAgentBridge() {
       try {
         assertTauriRuntime("Planning retry");
 
-        const task = await invoke<Task>("retry_planning_agent", {
+        const task = await invokeCommand<Task>(TAURI_COMMANDS.retryPlanningAgent, {
           projectPath,
           taskId,
           agentId,
@@ -207,7 +218,10 @@ export function useAgentBridge() {
     async (input: PrepareAgentInvocationInput) => {
       try {
         assertTauriRuntime("Preparing an Agent invocation");
-        return await invoke<PreparedAgentInvocation>("prepare_agent_invocation", { input });
+        return await invokeCommand<PreparedAgentInvocation>(
+          TAURI_COMMANDS.prepareAgentInvocation,
+          { input },
+        );
       } catch (error) {
         dispatch({ type: "agents/loadFailed", error: toErrorMessage(error) });
         return null;
@@ -220,7 +234,7 @@ export function useAgentBridge() {
     if (!hasTauriRuntime()) {
       return [] as AgentDiagnostic[];
     }
-    return invoke<AgentDiagnostic[]>("diagnose_agents");
+    return invokeCommand<AgentDiagnostic[]>(TAURI_COMMANDS.diagnoseAgents);
   }, []);
 
   return {

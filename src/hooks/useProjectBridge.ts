@@ -1,5 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
 import { useCallback } from "react";
+import { invokeCommand, TAURI_COMMANDS } from "../api";
 import type { ProjectSummary } from "../domain";
 import { useAppState } from "../state/AppStateContext";
 import { hasTauriRuntime } from "./runtime";
@@ -19,7 +19,7 @@ export function useProjectBridge() {
     dispatch({ type: "projects/loadStarted" });
 
     try {
-      const projects = await invoke<ProjectSummary[]>("list_recent_projects");
+      const projects = await invokeCommand<ProjectSummary[]>(TAURI_COMMANDS.listRecentProjects);
       dispatch({ type: "projects/recentLoaded", projects });
     } catch (error) {
       dispatch({ type: "projects/loadFailed", error: toErrorMessage(error) });
@@ -35,7 +35,9 @@ export function useProjectBridge() {
           throw new Error("Project registration requires the Tauri desktop runtime.");
         }
 
-        const project = await invoke<ProjectSummary>("register_project", { path });
+        const project = await invokeCommand<ProjectSummary>(TAURI_COMMANDS.registerProject, {
+          path,
+        });
         dispatch({ type: "projects/registered", project });
         return project;
       } catch (error) {
@@ -60,7 +62,7 @@ export function useProjectBridge() {
           return true;
         }
 
-        const projects = await invoke<ProjectSummary[]>("remove_recent_project", {
+        const projects = await invokeCommand<ProjectSummary[]>(TAURI_COMMANDS.removeRecentProject, {
           projectId: project.id,
         });
         dispatch({ type: "projects/recentLoaded", projects });

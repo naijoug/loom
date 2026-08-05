@@ -2,6 +2,7 @@ use crate::{
     agents, attachments, command_runner,
     context_builder::{self, ContextBuildOptions, ContextBuildOutput},
     implementation_review,
+    migrations::{self, TASK_SCHEMA_VERSION},
     models::{
         now_ms, CommandRun, CommandRunIntent, CommandRunStatus, CreateTaskInput, ErrorSummary,
         FeedbackInput, IdGenerator, LoopTraceEntry, PlanTodoItem, PlanTodoStatus, PlanningDecision,
@@ -39,7 +40,8 @@ pub fn list_tasks(
             .map_err(|error| format!("failed to read task entry: {error}"))?
             .path();
         if path.extension().and_then(|value| value.to_str()) == Some("json") {
-            let mut task: Task = storage::read_json_file(&path)?;
+            let mut task: Task =
+                migrations::read_versioned_json(&path, "task", TASK_SCHEMA_VERSION)?;
             if should_reconcile && run_recovery::reconcile_task(&mut task) > 0 {
                 save_task(&task)?;
             }
@@ -140,7 +142,7 @@ pub fn record_planning_decision(
         .clone()
         .map(|plan| render_plan_with_human_decisions(&plan, &task.planning_decisions));
     if let (Some(path), Some(plan)) = (&task.final_plan_path, &task.final_plan) {
-        fs::write(path, plan)
+        storage::atomic_write_text(Path::new(path), plan)
             .map_err(|error| format!("failed to write decision to plan: {error}"))?;
         task.final_plan_html_path = plan_html::write_task_plan_html(&task)?;
     }
@@ -1015,7 +1017,11 @@ fn compact_summary_line(value: &str, limit: usize) -> String {
 
 pub fn load_task(project_path: &Path, task_id: &str) -> Result<Task, String> {
     validate_task_id(task_id)?;
-    storage::read_json_file(&task_path(project_path, task_id))
+    migrations::read_versioned_json(
+        &task_path(project_path, task_id),
+        "task",
+        TASK_SCHEMA_VERSION,
+    )
 }
 
 pub fn save_task(task: &Task) -> Result<(), String> {
@@ -1026,10 +1032,12 @@ pub fn save_task(task: &Task) -> Result<(), String> {
         .map_err(|_| "task write lock is unavailable".to_string())?;
     let mut persisted = task.clone();
     let path = task_path(Path::new(&task.project_path), &task.id);
-    if let Ok(existing) = storage::read_json_file::<Task>(&path) {
+    if let Ok(existing) =
+        migrations::read_versioned_json::<Task>(&path, "task", TASK_SCHEMA_VERSION)
+    {
         merge_append_only_task_state(&mut persisted, existing);
     }
-    storage::atomic_write_json(&path, &persisted)
+    migrations::write_versioned_json(&path, TASK_SCHEMA_VERSION, &persisted)
 }
 
 fn task_write_locks() -> &'static Mutex<HashMap<String, Arc<Mutex<()>>>> {
@@ -1124,9 +1132,9 @@ fn update_task<T>(
         .lock()
         .map_err(|_| "task write lock is unavailable".to_string())?;
     let path = task_path(project_path, task_id);
-    let mut task: Task = storage::read_json_file(&path)?;
+    let mut task: Task = migrations::read_versioned_json(&path, "task", TASK_SCHEMA_VERSION)?;
     let output = update(&mut task)?;
-    storage::atomic_write_json(&path, &task)?;
+    migrations::write_versioned_json(&path, TASK_SCHEMA_VERSION, &task)?;
     Ok((task, output))
 }
 
@@ -2494,6 +2502,25 @@ mod tests {
                 .contains("invalid task id")
         );
         std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn legacy_task_file_is_migrated_on_load() {
+        let root = std::env::temp_dir().join(format!("loom-task-legacy-{}", now_ms()));
+        std::fs::create_dir_all(storage::project_tasks_dir(&root)).unwrap();
+        let mut task = transition_task_fixture("debugging", &["done"], Vec::new());
+        task.id = "task-legacy".to_string();
+        task.project_path = root.display().to_string();
+        let path = task_path(&root, &task.id);
+        storage::atomic_write_json(&path, &task).unwrap();
+
+        let loaded = load_task(&root, &task.id).expect("legacy task should migrate");
+        let stored: serde_json::Value = storage::read_json_file(&path).unwrap();
+
+        assert_eq!(loaded.id, task.id);
+        assert_eq!(stored["schemaVersion"], TASK_SCHEMA_VERSION);
+        assert_eq!(stored["data"]["id"], "task-legacy");
+        std::fs::remove_dir_all(root).ok();
     }
 
     #[test]

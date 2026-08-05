@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invokeCommand, TAURI_COMMANDS } from "../api";
 import type {
   CommandSpec,
   ExecutionApproval,
@@ -19,7 +19,9 @@ function requestFromSpec(spec: CommandSpec | PtySpec): ExecutionRequest {
 
 export async function authorizeExecution(spec: CommandSpec | PtySpec) {
   const request = requestFromSpec(spec);
-  const assessment = await invoke<ExecutionAssessment>("assess_execution", { request });
+  const assessment = await invokeCommand<ExecutionAssessment>(TAURI_COMMANDS.assessExecution, {
+    request,
+  });
   if (assessment.decision === "denied") {
     throw new Error(assessment.detail);
   }
@@ -41,6 +43,8 @@ export async function authorizeExecution(spec: CommandSpec | PtySpec) {
     throw new Error("Command was not run because approval was declined.");
   }
 
-  const approval = await invoke<ExecutionApproval>("approve_execution", { request });
+  const approval = await invokeCommand<ExecutionApproval>(TAURI_COMMANDS.approveExecution, {
+    request,
+  });
   return approval.id;
 }

@@ -1,8 +1,9 @@
 use crate::{
-    models::{now_ms, AppSettings},
+    migrations::{self, SETTINGS_SCHEMA_VERSION},
+    models::AppSettings,
     storage,
 };
-use std::{fs, path::Path};
+use std::path::Path;
 use tauri::AppHandle;
 
 const SETTINGS_FILE: &str = "settings.json";
@@ -25,17 +26,8 @@ pub fn load_app_settings_from_path(path: &Path) -> Result<AppSettings, String> {
         return Ok(AppSettings::default());
     }
 
-    let content = fs::read_to_string(path)
-        .map_err(|error| format!("failed to read app settings: {error}"))?;
-    match serde_json::from_str::<AppSettings>(&content) {
-        Ok(settings) => Ok(normalize_settings(settings)),
-        Err(error) => {
-            let backup_path = path.with_file_name(format!("{SETTINGS_FILE}.bak-{}", now_ms()));
-            fs::rename(path, &backup_path)
-                .map_err(|rename_error| format!("failed to back up invalid app settings after parse error ({error}): {rename_error}"))?;
-            Ok(AppSettings::default())
-        }
-    }
+    migrations::read_versioned_json(path, "settings", SETTINGS_SCHEMA_VERSION)
+        .map(normalize_settings)
 }
 
 pub fn save_app_settings_to_path(
@@ -43,7 +35,7 @@ pub fn save_app_settings_to_path(
     settings: AppSettings,
 ) -> Result<AppSettings, String> {
     let normalized = normalize_settings(settings);
-    storage::atomic_write_json(path, &normalized)?;
+    migrations::write_versioned_json(path, SETTINGS_SCHEMA_VERSION, &normalized)?;
     Ok(normalized)
 }
 
@@ -66,6 +58,8 @@ pub fn save_app_settings(app: AppHandle, settings: AppSettings) -> Result<AppSet
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::now_ms;
+    use std::fs;
 
     #[test]
     fn missing_settings_returns_defaults() {
@@ -112,27 +106,52 @@ mod tests {
     }
 
     #[test]
-    fn invalid_settings_are_backed_up_and_defaults_returned() {
+    fn invalid_settings_are_backed_up_and_reported() {
         let root = std::env::temp_dir().join(format!("loom-settings-invalid-{}", now_ms()));
         fs::create_dir_all(&root).expect("test dir");
         let path = root.join(SETTINGS_FILE);
         fs::write(&path, "{not valid").expect("invalid settings");
 
-        let settings = load_app_settings_from_path(&path).expect("invalid file should recover");
+        let error = match load_app_settings_from_path(&path) {
+            Ok(_) => panic!("invalid file should fail explicitly"),
+            Err(error) => error,
+        };
 
-        assert!(matches!(
-            settings.theme_mode,
-            crate::models::ThemeMode::System
-        ));
-        assert!(!path.exists());
+        assert!(error.contains("invalid JSON"));
+        assert!(path.exists());
         assert!(fs::read_dir(&root)
             .expect("read dir")
             .flatten()
             .any(|entry| entry
                 .file_name()
                 .to_string_lossy()
-                .starts_with("settings.json.bak-")));
+                .starts_with("settings.json.bak-settings-")));
 
+        fs::remove_dir_all(root).ok();
+    }
+
+    #[test]
+    fn legacy_settings_are_migrated_on_read() {
+        let root = std::env::temp_dir().join(format!("loom-settings-legacy-{}", now_ms()));
+        fs::create_dir_all(&root).expect("test dir");
+        let path = root.join(SETTINGS_FILE);
+        fs::write(
+            &path,
+            r#"{"themeMode":"dark","confirmBeforeCommands":false,"commandTimeoutSeconds":42}"#,
+        )
+        .expect("legacy settings");
+
+        let settings = load_app_settings_from_path(&path).expect("legacy settings should migrate");
+        let stored: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(&path).expect("migrated settings"))
+                .expect("migrated JSON");
+
+        assert!(matches!(
+            settings.theme_mode,
+            crate::models::ThemeMode::Dark
+        ));
+        assert_eq!(stored["schemaVersion"], SETTINGS_SCHEMA_VERSION);
+        assert_eq!(stored["data"]["commandTimeoutSeconds"], 42);
         fs::remove_dir_all(root).ok();
     }
 }

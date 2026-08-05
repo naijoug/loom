@@ -1,6 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
 import { useCallback, useEffect } from "react";
+import { invokeCommand, listenToEvent, TAURI_COMMANDS, TAURI_EVENTS } from "../api";
 import type {
   CommandFinishedEvent,
   CommandLogEvent,
@@ -19,12 +18,15 @@ export function useCommandBridge() {
   const { dispatch } = useAppState();
 
   useEffect(() => {
-    const unlisten = listen<CommandLogEvent>("loom://command-log", (event) => {
-      dispatch({ type: "commands/logReceived", event: event.payload });
+    const unlisten = listenToEvent<CommandLogEvent>(TAURI_EVENTS.commandLog, (event) => {
+      dispatch({ type: "commands/logReceived", event });
     });
-    const unlistenFinished = listen<CommandFinishedEvent>("loom://command-finished", (event) => {
-      dispatch({ type: "commands/finished", event: event.payload });
-    });
+    const unlistenFinished = listenToEvent<CommandFinishedEvent>(
+      TAURI_EVENTS.commandFinished,
+      (event) => {
+        dispatch({ type: "commands/finished", event });
+      },
+    );
 
     return () => {
       void unlisten.then((remove) => remove());
@@ -36,7 +38,7 @@ export function useCommandBridge() {
     async (spec: CommandSpec) => {
       try {
         const approvalId = await authorizeExecution(spec);
-        const run = await invoke<CommandRun>("start_command_run", {
+        const run = await invokeCommand<CommandRun>(TAURI_COMMANDS.startCommandRun, {
           spec: { ...spec, approvalId },
         });
         dispatch({ type: "commands/started", run });
@@ -52,7 +54,7 @@ export function useCommandBridge() {
   const stopCommandRun = useCallback(
     async (runId: string, terminationReason?: string) => {
       try {
-        const result = await invoke<CommandRunStopResult>("stop_command_run", {
+        const result = await invokeCommand<CommandRunStopResult>(TAURI_COMMANDS.stopCommandRun, {
           runId,
           terminationReason,
         });
@@ -80,7 +82,7 @@ export function useCommandBridge() {
   const loadCommandRunLogs = useCallback(
     async (projectPath: string, taskId: string, runId: string) => {
       try {
-        const events = await invoke<CommandLogEvent[]>("read_command_run_logs", {
+        const events = await invokeCommand<CommandLogEvent[]>(TAURI_COMMANDS.readCommandRunLogs, {
           projectPath,
           taskId,
           runId,

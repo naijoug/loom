@@ -1,5 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
 import { useCallback } from "react";
+import { invokeCommand, TAURI_COMMANDS } from "../api";
 import { DEFAULT_APP_SETTINGS, type AppSettings, type ThemeMode } from "../domain";
 import { hasTauriRuntime } from "./runtime";
 
@@ -53,7 +53,7 @@ export async function loadAppSettings(): Promise<AppSettings> {
     return loadFallbackSettings();
   }
 
-  return normalizeSettings(await invoke<AppSettings>("load_app_settings"));
+  return normalizeSettings(await invokeCommand<AppSettings>(TAURI_COMMANDS.loadAppSettings));
 }
 
 export async function saveAppSettings(settings: AppSettings): Promise<AppSettings> {
@@ -64,7 +64,9 @@ export async function saveAppSettings(settings: AppSettings): Promise<AppSetting
     return normalized;
   }
 
-  return normalizeSettings(await invoke<AppSettings>("save_app_settings", { settings: normalized }));
+  return normalizeSettings(
+    await invokeCommand<AppSettings>(TAURI_COMMANDS.saveAppSettings, { settings: normalized }),
+  );
 }
 
 export function useSettingsBridge() {
