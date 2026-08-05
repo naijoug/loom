@@ -75,12 +75,28 @@ function elapsedLabel(ms?: number) {
 }
 
 function timeLabel(ms: number) {
-  return new Date(ms).toLocaleString(undefined, {
+  return new Date(ms).toLocaleString("zh-CN", {
     month: "short",
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function statusLabel(status: string) {
+  if (status === "succeeded") {
+    return "成功";
+  }
+  if (status === "failed") {
+    return "失败";
+  }
+  if (status === "running") {
+    return "运行中…";
+  }
+  if (status === "retrying") {
+    return "重试中…";
+  }
+  return "排队中";
 }
 
 function statusIcon(status: string) {
@@ -99,14 +115,22 @@ function statusIcon(status: string) {
 function failureLabel(kind?: string) {
   switch (kind) {
     case "timeout":
-      return "Timed out";
+      return "运行超时";
     case "empty_output":
-      return "Produced no output";
+      return "Agent 未返回有效内容";
     case "not_retryable":
-      return "Configuration error — fix the agent setup, then retry";
+      return "Agent 配置错误，请先修复设置后再重试";
     default:
-      return "Failed";
+      return "调用失败";
   }
+}
+
+function failureDetailLabel(invocation: AgentInvocation) {
+  if (invocation.failureKind === "timeout") {
+    const duration = invocation.failureDetail?.match(/([\d.]+)s/i)?.[1];
+    return duration ? `运行超时（${duration} 秒）` : "运行超时";
+  }
+  return invocation.failureDetail ?? failureLabel(invocation.failureKind);
 }
 
 function planSource(summary: string) {
@@ -126,6 +150,63 @@ function flattenLogLines(events: PlanningAgentLogEvent[] | undefined) {
       timestampMs: event.timestampMs,
     })),
   );
+}
+
+function escapePreviewHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function renderInlineMarkdown(value: string) {
+  return escapePreviewHtml(value).replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+}
+
+function renderFallbackPlanHtml(markdown: string) {
+  const blocks: string[] = [];
+  let listType: "ul" | "ol" | null = null;
+
+  const closeList = () => {
+    if (listType) {
+      blocks.push(`</${listType}>`);
+      listType = null;
+    }
+  };
+
+  for (const rawLine of markdown.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    const heading = line.match(/^(#{1,4})\s+(.+)$/);
+    const bullet = line.match(/^[-*]\s+(.+)$/);
+    const ordered = line.match(/^\d+[.)]\s+(.+)$/);
+
+    if (heading) {
+      closeList();
+      const level = Math.min(heading[1].length + 1, 4);
+      blocks.push(`<h${level}>${renderInlineMarkdown(heading[2])}</h${level}>`);
+    } else if (bullet || ordered) {
+      const nextType = bullet ? "ul" : "ol";
+      if (listType !== nextType) {
+        closeList();
+        listType = nextType;
+        blocks.push(`<${nextType}>`);
+      }
+      blocks.push(`<li>${renderInlineMarkdown((bullet ?? ordered)![1])}</li>`);
+    } else if (line) {
+      closeList();
+      blocks.push(`<p>${renderInlineMarkdown(line)}</p>`);
+    } else {
+      closeList();
+    }
+  }
+  closeList();
+
+  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
+    :root{color-scheme:light dark;--bg:#f7f8fb;--surface:#fff;--text:#17202a;--muted:#667085;--border:#d9e0ea;--accent:#2563eb}
+    @media(prefers-color-scheme:dark){:root{--bg:#15171c;--surface:#1c1f26;--text:#eef2f7;--muted:#aab3c2;--border:#303642;--accent:#8ab4ff}}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.6 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    article{max-width:780px;margin:0 auto;padding:24px 28px 48px}h2{margin:0 0 22px;font-size:24px;line-height:1.24}h3{margin:24px 0 8px;padding-top:16px;border-top:1px solid var(--border);font-size:17px}h4{margin:18px 0 6px;font-size:15px}p{margin:7px 0;color:var(--muted)}ul,ol{margin:8px 0 14px;padding-left:22px}li{margin:5px 0}strong{color:var(--text)}
+  </style></head><body><article>${blocks.join("")}</article></body></html>`;
 }
 
 async function copyToClipboard(value: string) {
@@ -283,7 +364,7 @@ function AgentLogPanel({
         </pre>
       )}
       <details className="timeline-execution-log">
-        <summary>Execution log</summary>
+        <summary>执行日志</summary>
         <pre>{lines.map((line) => `[${line.stream}] ${line.line}`).join("\n")}</pre>
       </details>
     </div>
@@ -302,7 +383,7 @@ function ResumeCommand({ command }: { command?: string }) {
       iconLeft={<Copy size={13} />}
       onClick={() => void copyToClipboard(command)}
     >
-      Copy resume
+      复制续跑命令
     </Button>
   );
 }
@@ -334,7 +415,7 @@ function DraftStage({
 
   return (
     <div className="timeline-stage">
-      <StageMarker icon={<Bot size={13} />} label="Drafting" />
+      <StageMarker icon={<Bot size={13} />} label="并行起草" />
       <div className="timeline-stage-body">
         {rows.map((row) => {
           const logs = logsByKey[planningLogKey(runId, "planning", row.agentId)];
@@ -354,10 +435,10 @@ function DraftStage({
                 {statusIcon(row.status)}
                 <span className="timeline-agent-name">{row.agentName}</span>
                 {row.attempt > 1 && (
-                  <span className="timeline-attempt-badge">attempt {row.attempt}</span>
+                  <span className="timeline-attempt-badge">第 {row.attempt} 次</span>
                 )}
                 <span className="timeline-agent-meta">
-                  {row.status === "retrying" ? "retrying…" : row.status}
+                  {statusLabel(row.status)}
                   {elapsedLabel(row.elapsedMs) ? ` · ${elapsedLabel(row.elapsedMs)}` : ""}
                   {row.invocation?.sessionId ? ` · ${row.invocation.sessionId.slice(0, 8)}` : ""}
                 </span>
@@ -369,7 +450,7 @@ function DraftStage({
                       variant="ghost"
                       onClick={() => onOpenCandidate(row.invocation!.planPath!)}
                     >
-                      View plan
+                      查看候选计划
                     </Button>
                   )}
                   {row.status === "failed" && row.invocation?.stderrRef && (
@@ -378,7 +459,7 @@ function DraftStage({
                       variant="ghost"
                       onClick={() => onOpenEvidence(row.invocation!.stderrRef!)}
                     >
-                      Open log file
+                      打开失败日志
                     </Button>
                   )}
                   {partialPath && (
@@ -387,7 +468,7 @@ function DraftStage({
                       variant="ghost"
                       onClick={() => onOpenPartial(partialPath)}
                     >
-                      View partial output
+                      查看部分输出
                     </Button>
                   )}
                   {row.status === "failed" && !readOnly && (
@@ -398,7 +479,7 @@ function DraftStage({
                       disabled={busy}
                       onClick={() => onRetry(row.agentId)}
                     >
-                      Retry
+                      重试
                     </Button>
                   )}
                 </span>
@@ -409,14 +490,14 @@ function DraftStage({
               {row.status === "failed" && row.invocation && (
                 <div className="timeline-agent-failure">
                   <span className="timeline-failure-kind">
-                    {row.invocation.failureDetail ?? failureLabel(row.failureKind)}
+                    {failureDetailLabel(row.invocation)}
                   </span>
                   {errorLines.length > 0 && (
                     <pre className="timeline-error-lines">{errorLines.join("\n")}</pre>
                   )}
                   {row.invocation.stderrTail.length > 0 && (
                     <details>
-                      <summary>Error details</summary>
+                      <summary>错误详情</summary>
                       <pre>{row.invocation.stderrTail.join("\n")}</pre>
                     </details>
                   )}
@@ -441,6 +522,16 @@ function severityClass(severity: string) {
   return "severity-info";
 }
 
+function severityLabel(severity: string) {
+  if (severity === "blocker") {
+    return "阻塞";
+  }
+  if (severity === "risk") {
+    return "风险";
+  }
+  return "信息";
+}
+
 function ReviewStage({
   reviews,
   liveReviews,
@@ -456,7 +547,7 @@ function ReviewStage({
 
   return (
     <div className="timeline-stage">
-      <StageMarker icon={<Scale size={13} />} label="Cross-review" />
+      <StageMarker icon={<Scale size={13} />} label="交叉评审" />
       <div className="timeline-stage-body">
         {liveReviews.map((event) => (
           <div className="timeline-review-block" key={`live-${event.agentId}`}>
@@ -466,7 +557,7 @@ function ReviewStage({
               </span>
               {statusIcon(event.status)}
               <span className="timeline-review-pair">{event.agentName}</span>
-              <span className="timeline-agent-meta">reviewing…</span>
+              <span className="timeline-agent-meta">评审中…</span>
             </div>
             <AgentLogPanel
               events={logsByKey[planningLogKey(event.planningRunId, "review", event.agentId)]}
@@ -485,7 +576,7 @@ function ReviewStage({
                 {review.reviewerAgentName} → {review.targetAgentName}
               </span>
               <span className={`timeline-severity ${severityClass(review.severity)}`}>
-                {review.severity}
+                {severityLabel(review.severity)}
               </span>
               <span className="timeline-review-finding">{review.finding}</span>
               <ResumeCommand command={review.resumeCommand} />
@@ -532,7 +623,7 @@ function SynthesisStage({
 
   return (
     <div className="timeline-stage">
-      <StageMarker icon={<GitMerge size={13} />} label="Synthesis" />
+      <StageMarker icon={<GitMerge size={13} />} label="计划合成" />
       <div className="timeline-stage-body">
         <div className="timeline-review-row">
           {(liveSynthesis?.agentName || synthesis?.agentName) && (
@@ -547,7 +638,7 @@ function SynthesisStage({
           {statusIcon(status)}
           <span className="timeline-review-finding">
             {liveSynthesis
-              ? `${liveSynthesis.agentName} is synthesizing the final plan…`
+              ? `${liveSynthesis.agentName} 正在合成最终计划…`
               : source ?? synthesis?.outputSummary ?? ""}
           </span>
           <ResumeCommand command={synthesis?.resumeCommand} />
@@ -609,10 +700,7 @@ function FinalPlanStage({
 
   // Self-contained colors: the srcdoc document defaults to a white body and
   // black text, which clashes with (or disappears on) the app surface.
-  const fallback = `<body style="margin:0;background:#1b1e24;"><pre style="white-space:pre-wrap;font:13px ui-monospace,monospace;line-height:1.5;margin:0;padding:16px;color:#e6e9ef;">${task.finalPlan
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")}</pre></body>`;
+  const fallback = renderFallbackPlanHtml(task.finalPlan);
 
   async function handleRecordDecision(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -622,7 +710,7 @@ function FinalPlanStage({
     const updated = await recordPlanningDecision({
       projectPath,
       taskId: task.id,
-      title: "Planning decision",
+      title: "规划决策",
       content: decision.trim(),
     });
     if (updated) {
@@ -639,7 +727,7 @@ function FinalPlanStage({
 
   return (
     <div className="timeline-stage timeline-final-stage">
-      <StageMarker icon={<FileText size={13} />} label="Final plan" />
+      <StageMarker icon={<FileText size={13} />} label="最终计划" />
       <div className="timeline-stage-body">
         <div className="timeline-final-card">
           <div className="timeline-final-toolbar">
@@ -657,7 +745,7 @@ function FinalPlanStage({
                   }
                 }}
               >
-                Open in Loom
+                在 Loom 中打开
               </Button>
               <Button
                 type="button"
@@ -670,7 +758,7 @@ function FinalPlanStage({
                   }
                 }}
               >
-                Open in browser
+                在浏览器中打开
               </Button>
               {canRerunReviews && !readOnly && (
                 <Button
@@ -679,13 +767,13 @@ function FinalPlanStage({
                   disabled={busy}
                   onClick={() => void runPlanReviews(projectPath, task.id)}
                 >
-                  Re-run reviews
+                  重新评审
                 </Button>
               )}
             </span>
           </div>
           <details className="timeline-final-preview" open>
-            <summary>Preview</summary>
+            <summary>计划预览</summary>
             <iframe
               title="Final plan preview"
               sandbox={PLAN_PREVIEW_SANDBOX}
@@ -707,15 +795,15 @@ function FinalPlanStage({
 
           {!readOnly && (
             <details className="timeline-decision-form">
-              <summary>Record a decision</summary>
+              <summary>补充人工决策</summary>
               <form onSubmit={handleRecordDecision}>
                 <textarea
                   value={decision}
                   onChange={(event) => setDecision(event.target.value)}
-                  placeholder="Record a scope, tradeoff, or risk decision."
+                  placeholder="记录范围、取舍、风险或必须遵守的约束。"
                 />
                 <Button type="submit" variant="ghost" disabled={!decision.trim()}>
-                  Record
+                  记录决策
                 </Button>
               </form>
             </details>
@@ -723,14 +811,14 @@ function FinalPlanStage({
 
           {!readOnly && (
             <div className="timeline-final-cta">
-              <span>Confirm the final plan to generate implementation todos.</span>
+              <span>确认后会从最终计划生成可执行任务，并进入实施阶段。</span>
               <Button
                 type="button"
                 variant="primary"
                 disabled={busy}
                 onClick={() => void handleCreateTasks()}
               >
-                Create tasks from plan
+                确认计划并生成任务
               </Button>
             </div>
           )}
@@ -786,7 +874,7 @@ function RoundSection({
         aria-expanded={expanded}
       >
         <ChevronRight size={14} className="timeline-round-chevron" />
-        <span className="timeline-round-title">Round {round.index + 1}</span>
+        <span className="timeline-round-title">第 {round.index + 1} 轮</span>
         <span className="timeline-round-meta">
           {timeLabel(round.run.startedAtMs)} · {draftSummary}
           {!expanded && source ? ` · ${source}` : ""}
@@ -796,7 +884,7 @@ function RoundSection({
       {expanded && (
         <div className="timeline-round-body">
           <div className="timeline-stage">
-            <StageMarker icon={<MessageSquare size={13} />} label="Requirement" />
+            <StageMarker icon={<MessageSquare size={13} />} label="本轮需求" />
             <div className="timeline-stage-body">
               <p className="timeline-requirement">{round.run.requirement}</p>
             </div>
@@ -868,8 +956,10 @@ export function PlanningTimeline({ projectPath, task, readOnly = false }: Planni
     return (
       <div className="timeline-empty">
         <p>
-          Describe what you want to build and send it to the local agents. Each round
-          shows drafting, cross-review, and the synthesized final plan here.
+          <span className="timeline-empty-icon"><Bot size={20} /></span>
+          <strong>先让多个 Agent 把方案谈清楚</strong>
+          <span>描述开发目标，选择参与者；Loom 会并行起草、交叉评审并合成一份最终计划。</span>
+          <span className="timeline-empty-steps">并行起草 <ChevronRight size={13} /> 交叉评审 <ChevronRight size={13} /> 最终计划</span>
         </p>
       </div>
     );
@@ -884,12 +974,12 @@ export function PlanningTimeline({ projectPath, task, readOnly = false }: Planni
           <div className="timeline-round-header static">
             <Loader2 size={14} className="timeline-spin" />
             <span className="timeline-round-title">
-              Round {rounds.length + 1} · in progress
+              第 {rounds.length + 1} 轮 · 讨论进行中
             </span>
           </div>
           <div className="timeline-round-body">
             <div className="timeline-stage">
-              <StageMarker icon={<Bot size={13} />} label="Drafting" />
+              <StageMarker icon={<Bot size={13} />} label="并行起草" />
               <div className="timeline-stage-body">
                 {liveEvents
                   .filter((event) => event.phase === "planning")
@@ -906,11 +996,11 @@ export function PlanningTimeline({ projectPath, task, readOnly = false }: Planni
                         <span className="timeline-agent-name">{event.agentName}</span>
                         {event.attempt > 1 && (
                           <span className="timeline-attempt-badge">
-                            attempt {event.attempt}
+                            第 {event.attempt} 次
                           </span>
                         )}
 	                        <span className="timeline-agent-meta">
-	                          {event.status === "retrying" ? "retrying…" : event.status}
+		                          {statusLabel(event.status)}
 	                        </span>
 	                      </div>
 	                      <AgentLogPanel
@@ -969,13 +1059,13 @@ export function PlanningTimeline({ projectPath, task, readOnly = false }: Planni
         <div className="timeline-empty">
           {task.rawRequirement ? (
             <div className="timeline-stage">
-              <StageMarker icon={<MessageSquare size={13} />} label="Requirement" />
+              <StageMarker icon={<MessageSquare size={13} />} label="待讨论需求" />
               <div className="timeline-stage-body">
                 <p className="timeline-requirement">{task.rawRequirement}</p>
               </div>
             </div>
           ) : (
-            <p>No planning round yet. Send the requirement below to start one.</p>
+            <p>还没有规划轮次，请在下方描述需求并选择参与 Agent。</p>
           )}
           {task.events.length > 0 && state.app.taskError && (
             <p className="timeline-empty-hint">

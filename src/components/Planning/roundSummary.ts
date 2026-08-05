@@ -1,11 +1,7 @@
-function countLabel(count: number, singular: string, plural = `${singular}s`) {
-  return `${count} ${count === 1 ? singular : plural}`;
-}
-
 export function describeRoundDraftStatus(drafts: Array<{ status: string }>) {
   const total = drafts.length;
   if (total === 0) {
-    return "0 agents";
+    return "0 个 Agent";
   }
 
   const counts = {
@@ -30,21 +26,21 @@ export function describeRoundDraftStatus(drafts: Array<{ status: string }>) {
     }
   }
 
-  const parts = [countLabel(total, "agent")];
+  const parts = [`${total} 个 Agent`];
   if (counts.succeeded > 0) {
-    parts.push(countLabel(counts.succeeded, "succeeded", "succeeded"));
+    parts.push(`${counts.succeeded} 成功`);
   }
   if (counts.failed > 0) {
-    parts.push(countLabel(counts.failed, "failed", "failed"));
+    parts.push(`${counts.failed} 失败`);
   }
   if (counts.retrying > 0) {
-    parts.push(countLabel(counts.retrying, "retrying", "retrying"));
+    parts.push(`${counts.retrying} 重试中`);
   }
   if (counts.running > 0) {
-    parts.push(countLabel(counts.running, "running", "running"));
+    parts.push(`${counts.running} 运行中`);
   }
   if (counts.pending > 0) {
-    parts.push(countLabel(counts.pending, "pending", "pending"));
+    parts.push(`${counts.pending} 排队中`);
   }
 
   return parts.join(" · ");

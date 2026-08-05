@@ -3,10 +3,13 @@ import { listen } from "@tauri-apps/api/event";
 import { useCallback, useEffect } from "react";
 import type {
   AgentConfig,
+  AgentDiagnostic,
   AgentConfigInput,
   PlanningAgentLogEvent,
   PlanningAgentStatusEvent,
   PlanningDiscussionInput,
+  PrepareAgentInvocationInput,
+  PreparedAgentInvocation,
   Task,
 } from "../domain";
 import { useAppState } from "../state/AppStateContext";
@@ -200,6 +203,26 @@ export function useAgentBridge() {
     [dispatch],
   );
 
+  const prepareAgentInvocation = useCallback(
+    async (input: PrepareAgentInvocationInput) => {
+      try {
+        assertTauriRuntime("Preparing an Agent invocation");
+        return await invoke<PreparedAgentInvocation>("prepare_agent_invocation", { input });
+      } catch (error) {
+        dispatch({ type: "agents/loadFailed", error: toErrorMessage(error) });
+        return null;
+      }
+    },
+    [dispatch],
+  );
+
+  const diagnoseAgents = useCallback(async () => {
+    if (!hasTauriRuntime()) {
+      return [] as AgentDiagnostic[];
+    }
+    return invoke<AgentDiagnostic[]>("diagnose_agents");
+  }, []);
+
   return {
     loadAgents,
     createAgent,
@@ -209,5 +232,7 @@ export function useAgentBridge() {
     runPlanningDiscussion,
     runPlanReviews,
     retryPlanningAgent,
+    prepareAgentInvocation,
+    diagnoseAgents,
   };
 }

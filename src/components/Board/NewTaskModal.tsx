@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Bot, X } from "lucide-react";
-import type { AgentConfig, ProjectSummary, Task } from "../../domain";
+import {
+  EMPTY_PROJECT_AGENT_PREFERENCES,
+  type AgentConfig,
+  type ProjectAgentPreferences,
+  type ProjectSummary,
+  type Task,
+} from "../../domain";
 import { useAgentBridge } from "../../hooks/useAgentBridge";
+import { useProjectPreferencesBridge } from "../../hooks/useProjectPreferencesBridge";
 import { useTaskBridge } from "../../hooks/useTaskBridge";
 import { useAppState } from "../../state/AppStateContext";
 import { Button } from "../common/Button";
@@ -35,6 +42,7 @@ function suggestedPrimaryAgent(agents: AgentConfig[]) {
 export function NewTaskModal({ project, onClose, onCreated }: NewTaskModalProps) {
   const { state, dispatch } = useAppState();
   const { loadAgents } = useAgentBridge();
+  const { loadProjectAgentPreferences } = useProjectPreferencesBridge();
   const { createTask } = useTaskBridge();
   const suggested = useMemo(() => suggestedPrimaryAgent(state.agents), [state.agents]);
   const planningAgents = useMemo(() => state.agents.filter(canPlan), [state.agents]);
@@ -43,23 +51,57 @@ export function NewTaskModal({ project, onClose, onCreated }: NewTaskModalProps)
   const [primaryAgentId, setPrimaryAgentId] = useState("");
   const [selectedPlanningAgentIds, setSelectedPlanningAgentIds] = useState<string[]>([]);
   const [planningSelectionInitialized, setPlanningSelectionInitialized] = useState(false);
+  const [preferences, setPreferences] = useState<ProjectAgentPreferences>({
+    ...EMPTY_PROJECT_AGENT_PREFERENCES,
+  });
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
 
   useEffect(() => {
     void loadAgents();
   }, [loadAgents]);
 
   useEffect(() => {
-    if (!primaryAgentId && suggested) {
-      setPrimaryAgentId(suggested.id);
-    }
-  }, [primaryAgentId, suggested]);
+    let cancelled = false;
+    setPreferencesLoaded(false);
+    void loadProjectAgentPreferences(project.path)
+      .then((loaded) => {
+        if (!cancelled) {
+          setPreferences(loaded);
+          setPreferencesLoaded(true);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPreferencesLoaded(true);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [project.path, loadProjectAgentPreferences]);
 
   useEffect(() => {
-    if (!planningSelectionInitialized && planningAgents.length > 0) {
-      setSelectedPlanningAgentIds(planningAgents.slice(0, 3).map((agent) => agent.id));
+    if (!preferencesLoaded || primaryAgentId) {
+      return;
+    }
+    const preferred = state.agents.find(
+      (agent) => agent.id === preferences.implementationAgentId && canImplement(agent),
+    );
+    if (preferred ?? suggested) {
+      setPrimaryAgentId((preferred ?? suggested)?.id ?? "");
+    }
+  }, [preferencesLoaded, preferences.implementationAgentId, primaryAgentId, state.agents, suggested]);
+
+  useEffect(() => {
+    if (preferencesLoaded && !planningSelectionInitialized && planningAgents.length > 0) {
+      const availableIds = new Set(planningAgents.map((agent) => agent.id));
+      const preferred = preferences.planningAgentIds.filter((agentId) => availableIds.has(agentId));
+      setSelectedPlanningAgentIds(
+        preferred.length > 0 ? preferred : planningAgents.slice(0, 3).map((agent) => agent.id),
+      );
       setPlanningSelectionInitialized(true);
     }
-  }, [planningAgents, planningSelectionInitialized]);
+  }, [preferences.planningAgentIds, preferencesLoaded, planningAgents, planningSelectionInitialized]);
 
   function togglePlanningAgent(agentId: string) {
     setSelectedPlanningAgentIds((current) =>

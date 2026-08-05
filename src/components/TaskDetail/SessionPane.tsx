@@ -17,15 +17,14 @@ import type {
   Task,
   TerminalSlot,
 } from "../../domain";
-import { DEFAULT_APP_SETTINGS } from "../../domain";
 import { useAgentBridge } from "../../hooks/useAgentBridge";
 import { useCommandBridge } from "../../hooks/useCommandBridge";
-import { useSettingsBridge } from "../../hooks/useSettingsBridge";
+import { useProjectPreferencesBridge } from "../../hooks/useProjectPreferencesBridge";
 import { useTaskBridge } from "../../hooks/useTaskBridge";
 import { useTerminalBridge } from "../../hooks/useTerminalBridge";
 import { useAppState } from "../../state/AppStateContext";
+import { implementationReviewGate } from "../../utils/implementationReview";
 import {
-  buildAgentCommandInvocation,
   buildImplementationPrompt,
   buildRepairPrompt,
   buildResumeRepairPrompt,
@@ -39,9 +38,10 @@ import {
   escalationNotice,
   isTimedOut,
 } from "../../utils/loopPolicy";
-import { detectDangerousCommand, parseCommandLine } from "../../utils/commandLine";
+import { parseCommandLine } from "../../utils/commandLine";
 import { resolveTerminalSlotCwd } from "../../utils/terminalSlots";
 import { Button } from "../common/Button";
+import { ImplementationReviewPanel } from "./ImplementationReviewPanel";
 import { TaskTimeline } from "./TaskTimeline";
 import "./TaskDetail.css";
 
@@ -105,10 +105,15 @@ function summarizeCommand(command: string) {
   return command.length > 140 ? `${command.slice(0, 140)}...` : command;
 }
 
+function matchesDebuggingStatus(status: Task["status"]) {
+  return status === "debugging" || status === "fixing" || status === "verifying";
+}
+
 export function SessionPane({ project, task, readOnly = false }: SessionPaneProps) {
   const { state } = useAppState();
-  const { loadAgents } = useAgentBridge();
+  const { loadAgents, prepareAgentInvocation } = useAgentBridge();
   const { startCommandRun, stopCommandRun } = useCommandBridge();
+  const { loadProjectAgentPreferences } = useProjectPreferencesBridge();
   const {
     appendFeedback,
     buildImplementationContext,
@@ -117,17 +122,16 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
     markReadyForTesting,
     startTodo,
   } = useTaskBridge();
-  const { loadSettings } = useSettingsBridge();
   const { listTerminalSlots, suggestTerminalSlots } = useTerminalBridge();
   const implementationAgents = useMemo(
     () => state.agents.filter((agent) => hasImplementationCapability(agent)),
     [state.agents],
   );
   const [selectedAgentId, setSelectedAgentId] = useState(task.primaryAgentId ?? "");
+  const [primaryAgentSwitchReason, setPrimaryAgentSwitchReason] = useState("");
   const [guidance, setGuidance] = useState("");
   const [autoValidate, setAutoValidate] = useState(false);
   const [validationSlots, setValidationSlots] = useState<TerminalSlot[]>([]);
-  const [settings, setSettings] = useState(DEFAULT_APP_SETTINGS);
   const [validationNotice, setValidationNotice] = useState<string | null>(null);
   const [autoLoop, setAutoLoop] = useState<AutoImplementationLoop | null>(null);
   const handledLoopRunsRef = useRef<Set<string>>(new Set());
@@ -136,6 +140,9 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
     implementationAgents.find((agent) => agent.id === task.primaryAgentId) ??
     implementationAgents[0] ??
     null;
+  const switchingPrimaryAgent = Boolean(
+    task.primaryAgentId && selectedAgent && task.primaryAgentId !== selectedAgent.id,
+  );
   const activeTodo =
     task.planTodos.find((todo) => todo.id === state.app.selectedTodoId) ??
     task.planTodos.find((todo) => todo.status === "implementing") ??
@@ -151,7 +158,9 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
   const latestRunLogs = latestRun ? state.commandLogs[latestRun.id] ?? [] : [];
   const allTodosDone =
     task.planTodos.length > 0 && task.planTodos.every((todo) => todo.status === "done");
-  const canMarkReadyForTesting = !readOnly && task.status === "reviewing" && allTodosDone;
+  const reviewGate = implementationReviewGate(task);
+  const canMarkReadyForTesting =
+    !readOnly && task.status === "reviewing" && allTodosDone && reviewGate.ready;
   const preferredValidationSlot = useMemo(
     () => validationSlots.find((slot) => slot.kind === "validation" && slot.command.trim()),
     [validationSlots],
@@ -184,22 +193,34 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
   }, [loadAgents]);
 
   useEffect(() => {
+    if (!matchesDebuggingStatus(task.status)) {
+      return;
+    }
     let cancelled = false;
-    void loadSettings().then((loaded) => {
-      if (!cancelled) {
-        setSettings(loaded);
-      }
-    });
+    void loadProjectAgentPreferences(project.path)
+      .then((preferences) => {
+        if (!cancelled && preferences.debuggingAgentId) {
+          setSelectedAgentId(preferences.debuggingAgentId);
+        }
+      })
+      .catch(() => undefined);
     return () => {
       cancelled = true;
     };
-  }, [loadSettings]);
+  }, [loadProjectAgentPreferences, project.path, task.status]);
 
   useEffect(() => {
     if (!selectedAgentId && selectedAgent) {
       setSelectedAgentId(selectedAgent.id);
     }
   }, [selectedAgent, selectedAgentId]);
+
+  useEffect(() => {
+    if (task.status === "reviewing" && task.primaryAgentId) {
+      setSelectedAgentId(task.primaryAgentId);
+      setPrimaryAgentSwitchReason("");
+    }
+  }, [task.primaryAgentId, task.status]);
 
   useEffect(() => {
     let cancelled = false;
@@ -218,30 +239,11 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
     return resolveTerminalSlotCwd(project.path, slot);
   }
 
-  function confirmDangerousCommand(command: string) {
-    if (!settings.confirmBeforeCommands) {
-      return true;
-    }
-    const finding = detectDangerousCommand(command);
-    if (!finding) {
-      return true;
-    }
-    return window.confirm(
-      `Run potentially risky command?\n\n${command}\n\n${finding.detail}`,
-    );
-  }
-
   async function startAutoValidationRun(
     loop: AutoImplementationLoop,
     iteration: number,
     attempt: number,
   ) {
-    if (!confirmDangerousCommand(loop.validationCommand)) {
-      setAutoLoop((current) => (current?.loopId === loop.loopId ? { ...current, status: "escalated" } : current));
-      setValidationNotice("Auto validation stopped because the command was not confirmed.");
-      return null;
-    }
-
     try {
       const parsed = parseCommandLine(loop.validationCommand);
       if (!parsed.program) {
@@ -254,6 +256,7 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
         program: parsed.program,
         args: parsed.args,
         cwd: loop.validationCwd,
+        projectPath: project.path,
         taskId: task.id,
         intent: "validation",
         loopId: loop.loopId,
@@ -293,17 +296,28 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
     const prompt = latestAgentResumeCommand
       ? buildResumeRepairPrompt(refreshed ?? task, repairNote)
       : buildRepairPrompt(refreshed ?? task, "", repairNote);
-    const invocation = buildAgentCommandInvocation(
-      selectedAgent,
-      project.path,
+    const invocation = await prepareAgentInvocation({
+      projectPath: project.path,
+      taskId: task.id,
+      agentId: selectedAgent.id,
+      stage: "debugging",
       prompt,
-      latestAgentResumeCommand,
-    );
+      resumeCommand: latestAgentResumeCommand ?? undefined,
+    });
+    if (!invocation) {
+      setAutoLoop((current) =>
+        current?.loopId === loop.loopId ? { ...current, status: "escalated" } : current,
+      );
+      setValidationNotice("Auto repair stopped because the backend rejected the Agent invocation.");
+      return;
+    }
     const run = await startCommandRun({
       program: invocation.program,
       args: invocation.args,
-      cwd: project.path,
+      cwd: invocation.cwd,
+      projectPath: project.path,
       taskId: task.id,
+      agentId: selectedAgent.id,
       intent: "agent_action",
       loopId: loop.loopId,
       iteration: attempt,
@@ -443,15 +457,32 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
       return;
     }
 
-    const updatedTask = await startTodo(project.path, task.id, todo.id, selectedAgent.id);
+    const updatedTask = await startTodo(
+      project.path,
+      task.id,
+      todo.id,
+      selectedAgent.id,
+      switchingPrimaryAgent ? primaryAgentSwitchReason.trim() : undefined,
+    );
     const context = await buildImplementationContext(project.path, task.id, todo.id);
     const prompt = context?.prompt ?? buildImplementationPrompt(updatedTask ?? task, todo, todoIndex);
-    const invocation = buildAgentCommandInvocation(selectedAgent, project.path, prompt);
+    const invocation = await prepareAgentInvocation({
+      projectPath: project.path,
+      taskId: task.id,
+      agentId: selectedAgent.id,
+      stage: "implementation",
+      prompt,
+    });
+    if (!invocation) {
+      return;
+    }
     await startCommandRun({
       program: invocation.program,
       args: invocation.args,
-      cwd: project.path,
+      cwd: invocation.cwd,
+      projectPath: project.path,
       taskId: task.id,
+      agentId: selectedAgent.id,
       intent: "agent_action",
     });
   }
@@ -661,6 +692,15 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
                   ))}
                 </select>
               </label>
+              {switchingPrimaryAgent && (
+                <input
+                  className="session-agent-switch-reason"
+                  value={primaryAgentSwitchReason}
+                  placeholder="说明切换主 Agent 的原因"
+                  disabled={commandRunning || readOnly}
+                  onChange={(event) => setPrimaryAgentSwitchReason(event.target.value)}
+                />
+              )}
             </div>
 
             <div>
@@ -676,7 +716,13 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
                       <button
                         type="button"
                         className="session-subtask-main"
-                        disabled={done || !selectedAgent || commandRunning || readOnly}
+                        disabled={
+                          done ||
+                          !selectedAgent ||
+                          commandRunning ||
+                          readOnly ||
+                          (switchingPrimaryAgent && primaryAgentSwitchReason.trim().length < 5)
+                        }
                         onClick={() => void handleStartTodo(todo, todoIndex)}
                       >
                         {todo.status === "implementing" ? <PlayCircle size={15} /> : <Play size={15} />}
@@ -709,6 +755,8 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
                 {task.agentInvocations.length === 0 && <span>尚无文件证据。</span>}
               </div>
             </div>
+
+            <ImplementationReviewPanel project={project} task={task} readOnly={readOnly} />
 
             <Button
               type="button"

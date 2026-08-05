@@ -62,6 +62,7 @@ export type AppAction =
   | { type: "projects/recentLoaded"; projects: ProjectSummary[] }
   | { type: "projects/registered"; project: ProjectSummary }
   | { type: "projects/selected"; projectId: string }
+  | { type: "projects/removed"; projectId: string; projectPath?: string }
   | { type: "agents/loadStarted" }
   | { type: "agents/loadFailed"; error: string }
   | { type: "agents/loaded"; agents: AgentConfig[] }
@@ -78,6 +79,7 @@ export type AppAction =
   | { type: "tasks/todoCompleted"; taskId: string; todoId: string }
   | { type: "commands/started"; run: CommandRun }
   | { type: "commands/logReceived"; event: CommandLogEvent }
+  | { type: "commands/logHistoryLoaded"; runId: string; events: CommandLogEvent[] }
   | { type: "commands/finished"; event: CommandFinishedEvent }
   | { type: "commands/failed"; error: string }
   | { type: "commands/cleared" }
@@ -192,6 +194,12 @@ function cacheProjectTasks(
     ...cache,
     [projectPath]: tasks,
   };
+}
+
+function removeCachedProjectTasks(cache: Record<string, Task[]>, projectPath: string) {
+  return Object.fromEntries(
+    Object.entries(cache).filter(([cachedProjectPath]) => cachedProjectPath !== projectPath),
+  );
 }
 
 function mapCachedTasks(
@@ -459,6 +467,60 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       };
     }
 
+    case "projects/removed": {
+      const removedProject =
+        state.projects.recent.find((candidate) => candidate.id === action.projectId) ??
+        (state.projects.current?.id === action.projectId ? state.projects.current : null);
+      const removedProjectPath = action.projectPath ?? removedProject?.path ?? null;
+      const taskCache = removedProjectPath
+        ? removeCachedProjectTasks(state.taskCache, removedProjectPath)
+        : state.taskCache;
+      const removesCurrentProject =
+        state.app.activeProjectId === action.projectId ||
+        state.projects.current?.id === action.projectId;
+
+      if (!removesCurrentProject) {
+        return {
+          ...state,
+          app: {
+            ...state.app,
+            isLoadingProjects: false,
+            projectError: null,
+          },
+          projects: {
+            ...state.projects,
+            recent: state.projects.recent.filter((project) => project.id !== action.projectId),
+          },
+          taskCache,
+        };
+      }
+
+      return {
+        ...state,
+        app: {
+          ...state.app,
+          activeProjectId: null,
+          selectedTaskId: null,
+          selectedTodoId: null,
+          viewedStage: null,
+          currentView: "board",
+          isCreatingTask: false,
+          isLoadingProjects: false,
+          projectError: null,
+        },
+        projects: {
+          current: null,
+          recent: state.projects.recent.filter((project) => project.id !== action.projectId),
+        },
+        tasks: [],
+        taskCache,
+        commandRuns: [],
+        commandLogs: {},
+        planningLogs: {},
+        planningProgress: {},
+      };
+    }
+
     case "agents/loadStarted":
       return {
         ...state,
@@ -514,7 +576,11 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         };
       }
 
-      const selectedTask = selectedTaskAfterLoad(action.tasks, state.app.selectedTaskId);
+      // While drafting a brand-new task the composer is intentionally empty;
+      // don't let a reload fall back to the last task and replace it.
+      const selectedTask = state.app.isCreatingTask
+        ? null
+        : selectedTaskAfterLoad(action.tasks, state.app.selectedTaskId);
 
       return {
         ...state,
@@ -567,6 +633,9 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           selectedTaskId: action.task.id,
           selectedTodoId: selectedTodoIdForTask(action.task, state.app.selectedTodoId),
           viewedStage: sameSelectedTask ? state.app.viewedStage : null,
+          // The draft just became a real, selected task — leave draft mode so
+          // future reloads track this task normally.
+          isCreatingTask: false,
         },
         tasks: projectTasks,
         taskCache: cacheProjectTasks(state.taskCache, action.task.projectPath, projectTasks),
@@ -592,10 +661,19 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     }
 
     case "tasks/new":
+      // Skip the modal entirely: drop straight into the planning composer with
+      // no task selected. The composer creates the task on first send and lets
+      // the user pick which agents join via its chips / @mentions.
+      // `isCreatingTask` marks this draft state so a tasks/loaded reload does
+      // not auto-select the last task and yank us back into its detail view.
       return {
         ...state,
         app: {
           ...state.app,
+          currentView: "planning",
+          selectedTaskId: null,
+          selectedTodoId: null,
+          viewedStage: null,
           isCreatingTask: true,
           taskError: null,
         },
@@ -715,6 +793,19 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         commandLogs: {
           ...state.commandLogs,
           [action.event.runId]: [...runLogs.slice(-299), action.event],
+        },
+      };
+    }
+
+    case "commands/logHistoryLoaded": {
+      if ((state.commandLogs[action.runId]?.length ?? 0) > 0) {
+        return state;
+      }
+      return {
+        ...state,
+        commandLogs: {
+          ...state.commandLogs,
+          [action.runId]: action.events,
         },
       };
     }

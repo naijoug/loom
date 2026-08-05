@@ -1,4 +1,5 @@
 export { DEFAULT_APP_SETTINGS } from "./app";
+export { EMPTY_PROJECT_AGENT_PREFERENCES } from "./agent";
 export type * from "./agent";
 export type * from "./app";
 export type * from "./command";

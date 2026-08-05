@@ -223,3 +223,11 @@ body {
   flex: 0 0 14px;
   border-radius: 999px;
 }
+:root .app-bootstrap-loading {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  background: var(--bg);
+  color: var(--text-2);
+  font-family: var(--font-body);
+}

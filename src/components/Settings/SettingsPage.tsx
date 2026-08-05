@@ -19,17 +19,21 @@ import {
 import { useTheme } from "../../contexts/ThemeContext";
 import {
   DEFAULT_APP_SETTINGS,
+  EMPTY_PROJECT_AGENT_PREFERENCES,
   type AgentAdapterType,
   type AgentCapability,
   type AgentConfig,
   type AgentConfigInput,
+  type AgentDiagnostic,
   type AppSettings,
   type HealthCheckResult,
+  type ProjectAgentPreferences,
   type TerminalSlot,
 } from "../../domain";
 import { useAgentBridge } from "../../hooks/useAgentBridge";
 import { hasTauriRuntime } from "../../hooks/runtime";
 import { useSettingsBridge } from "../../hooks/useSettingsBridge";
+import { useProjectPreferencesBridge } from "../../hooks/useProjectPreferencesBridge";
 import { useTerminalBridge } from "../../hooks/useTerminalBridge";
 import { useAppState } from "../../state/AppStateContext";
 import {
@@ -221,8 +225,9 @@ function ThemePreview({
 export function SettingsPage({ onBack, initialTab = "general" }: SettingsPageProps) {
   const { theme, themeMode, setThemeMode } = useTheme();
   const { state } = useAppState();
-  const { createAgent, deleteAgent, loadAgents, setAgentEnabled, updateAgent } = useAgentBridge();
+  const { createAgent, deleteAgent, diagnoseAgents, loadAgents, setAgentEnabled, updateAgent } = useAgentBridge();
   const { loadSettings, saveSettings } = useSettingsBridge();
+  const { loadProjectAgentPreferences, saveProjectAgentPreferences } = useProjectPreferencesBridge();
   const { listTerminalSlots, saveTerminalSlots, suggestTerminalSlots } = useTerminalBridge();
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
   const [agentDraft, setAgentDraft] = useState<AgentConfigInput>(defaultAgentDraft);
@@ -230,6 +235,11 @@ export function SettingsPage({ onBack, initialTab = "general" }: SettingsPagePro
   const [editingAgentId, setEditingAgentId] = useState<string | null>(null);
   const [appSettings, setAppSettings] = useState<AppSettings>(DEFAULT_APP_SETTINGS);
   const [settingsError, setSettingsError] = useState<string | null>(null);
+  const [projectPreferences, setProjectPreferences] = useState<ProjectAgentPreferences>({
+    ...EMPTY_PROJECT_AGENT_PREFERENCES,
+  });
+  const [projectPreferencesError, setProjectPreferencesError] = useState<string | null>(null);
+  const [agentDiagnostics, setAgentDiagnostics] = useState<AgentDiagnostic[]>([]);
   const [health, setHealth] = useState<HealthCheckResult | null>(null);
   const [slots, setSlots] = useState<TerminalSlot[]>([]);
   const [slotsLoaded, setSlotsLoaded] = useState(false);
@@ -240,7 +250,8 @@ export function SettingsPage({ onBack, initialTab = "general" }: SettingsPagePro
 
   useEffect(() => {
     void loadAgents();
-  }, [loadAgents]);
+    void diagnoseAgents().then(setAgentDiagnostics);
+  }, [diagnoseAgents, loadAgents]);
 
   useEffect(() => {
     let cancelled = false;
@@ -259,6 +270,29 @@ export function SettingsPage({ onBack, initialTab = "general" }: SettingsPagePro
       cancelled = true;
     };
   }, [loadSettings]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setProjectPreferencesError(null);
+    if (!project) {
+      setProjectPreferences({ ...EMPTY_PROJECT_AGENT_PREFERENCES });
+      return;
+    }
+    void loadProjectAgentPreferences(project.path)
+      .then((loaded) => {
+        if (!cancelled) {
+          setProjectPreferences(loaded);
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setProjectPreferencesError(error instanceof Error ? error.message : String(error));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [project, loadProjectAgentPreferences]);
 
   useEffect(() => {
     if (!hasTauriRuntime()) {
@@ -325,6 +359,32 @@ export function SettingsPage({ onBack, initialTab = "general" }: SettingsPagePro
       .catch((error: unknown) => {
         setSettingsError(error instanceof Error ? error.message : String(error));
       });
+  }
+
+  function updateProjectPreferences(patch: Partial<ProjectAgentPreferences>) {
+    if (!project) {
+      return;
+    }
+    const next = { ...projectPreferences, ...patch };
+    setProjectPreferences(next);
+    setProjectPreferencesError(null);
+    void saveProjectAgentPreferences(project.path, next)
+      .then((saved) => setProjectPreferences(saved))
+      .catch((error: unknown) => {
+        setProjectPreferencesError(error instanceof Error ? error.message : String(error));
+      });
+  }
+
+  function toggleProjectPreference(
+    key: "planningAgentIds" | "reviewAgentIds",
+    agentId: string,
+  ) {
+    const current = projectPreferences[key];
+    updateProjectPreferences({
+      [key]: current.includes(agentId)
+        ? current.filter((id) => id !== agentId)
+        : [...current, agentId],
+    });
   }
 
   function handleAdapterChange(adapterType: AgentAdapterType) {
@@ -507,6 +567,27 @@ export function SettingsPage({ onBack, initialTab = "general" }: SettingsPagePro
   }
 
   function renderAgents() {
+    const stageAgents = (capabilities: AgentCapability[]) => cliAgents.filter(
+      (agent) => agent.enabled && agent.capabilities.some((capability) => capabilities.includes(capability)),
+    );
+    const agentSelect = (
+      value: string | undefined,
+      capabilities: AgentCapability[],
+      onChange: (agentId: string | undefined) => void,
+    ) => (
+      <select
+        className="settings-stage-select"
+        value={value ?? ""}
+        disabled={!project}
+        onChange={(event) => onChange(event.target.value || undefined)}
+      >
+        <option value="">No default</option>
+        {stageAgents(capabilities).map((agent) => (
+          <option key={agent.id} value={agent.id}>{agent.name}{agent.available ? "" : " (unavailable)"}</option>
+        ))}
+      </select>
+    );
+
     return (
       <>
         <div className="settings-page-heading">
@@ -514,8 +595,11 @@ export function SettingsPage({ onBack, initialTab = "general" }: SettingsPagePro
             <div className="settings-sub">Local AI coding agents available to orchestrate</div>
           </div>
           <div className="settings-heading-actions">
-            <Button type="button" variant="ghost" iconLeft={<RefreshCw size={14} />} onClick={() => void loadAgents()}>
-              Refresh availability
+            <Button type="button" variant="ghost" iconLeft={<RefreshCw size={14} />} onClick={() => {
+              void loadAgents();
+              void diagnoseAgents().then(setAgentDiagnostics);
+            }}>
+              Refresh diagnostics
             </Button>
             <Button
               type="button"
@@ -536,6 +620,72 @@ export function SettingsPage({ onBack, initialTab = "general" }: SettingsPagePro
           <div className="settings-tile"><span>Unreachable</span><strong className="err">{cliAgents.length - availableAgents.length}</strong></div>
           <div className="settings-tile"><span>Coverage</span><strong>{Math.min(phaseCoverage.size, 4)}/4</strong></div>
         </div>
+        <SettingCard title="Project stage defaults">
+          <Field
+            title="Project scope"
+            description={project ? `Saved in ${project.path}/.loom/agent-preferences.json and applied to new tasks.` : "Open a project to configure stage defaults."}
+            control={<span className="settings-chip">{project?.name ?? "No project"}</span>}
+          />
+          <Field
+            title="Planning Agents"
+            description="Agents selected automatically for a new planning discussion."
+            control={
+              <span className="settings-row-control wrap">
+                {stageAgents(["planning"]).map((agent) => (
+                  <label className="settings-check" key={agent.id}>
+                    <input
+                      type="checkbox"
+                      disabled={!project}
+                      checked={projectPreferences.planningAgentIds.includes(agent.id)}
+                      onChange={() => toggleProjectPreference("planningAgentIds", agent.id)}
+                    />
+                    <span>{agent.name}</span>
+                  </label>
+                ))}
+              </span>
+            }
+          />
+          <Field
+            title="Implementation Agent"
+            description="Primary Agent inherited by new tasks when one is not selected explicitly."
+            control={agentSelect(projectPreferences.implementationAgentId, ["implementation"], (implementationAgentId) => updateProjectPreferences({ implementationAgentId }))}
+          />
+          <Field
+            title="Review Agents"
+            description="Collaborators assigned to implementation and plan review."
+            control={
+              <span className="settings-row-control wrap">
+                {stageAgents(["review"]).map((agent) => (
+                  <label className="settings-check" key={agent.id}>
+                    <input
+                      type="checkbox"
+                      disabled={!project}
+                      checked={projectPreferences.reviewAgentIds.includes(agent.id)}
+                      onChange={() => toggleProjectPreference("reviewAgentIds", agent.id)}
+                    />
+                    <span>{agent.name}</span>
+                  </label>
+                ))}
+              </span>
+            }
+          />
+          <Field
+            title="Debugging Agent"
+            description="Default Agent for repair and feedback-driven debugging."
+            control={agentSelect(projectPreferences.debuggingAgentId, ["debugging", "implementation"], (debuggingAgentId) => updateProjectPreferences({ debuggingAgentId }))}
+          />
+          <Field
+            title="Testing Agent"
+            description="Default Agent for validation failures and test analysis."
+            control={agentSelect(projectPreferences.testingAgentId, ["testing"], (testingAgentId) => updateProjectPreferences({ testingAgentId }))}
+          />
+          <Field
+            title="Documentation Agent"
+            description="Default Agent for task summaries and documentation work."
+            control={agentSelect(projectPreferences.documentationAgentId, ["documentation"], (documentationAgentId) => updateProjectPreferences({ documentationAgentId }))}
+          />
+          {projectPreferencesError && <div className="settings-inline-error">{projectPreferencesError}</div>}
+        </SettingCard>
         <SettingCard title="Installed agents">
           <div className="settings-table-wrap">
             <table className="settings-agent-table">
@@ -551,7 +701,9 @@ export function SettingsPage({ onBack, initialTab = "general" }: SettingsPagePro
                 </tr>
               </thead>
               <tbody>
-                {cliAgents.map((agent) => (
+                {cliAgents.map((agent) => {
+                  const diagnostic = agentDiagnostics.find((candidate) => candidate.agentId === agent.id);
+                  return (
                   <tr key={agent.id}>
                     <td>
                       <strong>{agent.name}</strong>
@@ -570,10 +722,12 @@ export function SettingsPage({ onBack, initialTab = "general" }: SettingsPagePro
                       <span className="settings-perm"><Switch on={agent.canRunCommands} /> Cmd</span>
                     </td>
                     <td>
-                      <span className={`settings-pill ${agent.available ? "ok" : "err"}`}>
-                        {agent.available ? <CheckCircle2 size={13} /> : <XCircle size={13} />}
-                        {agent.available ? "Available" : "Missing"}
+                      <span className={`settings-pill ${diagnostic?.status === "ready" ? "ok" : "err"}`} title={diagnostic?.detail}>
+                        {diagnostic?.status === "ready" ? <CheckCircle2 size={13} /> : <XCircle size={13} />}
+                        {diagnostic?.status ?? (agent.available ? "available" : "missing")}
                       </span>
+                      {diagnostic?.version && <code title={diagnostic.resolvedPath}>{diagnostic.version}</code>}
+                      {diagnostic?.resolvedPath && <span className="settings-diagnostic-path" title={diagnostic.resolvedPath}>{diagnostic.resolvedPath}</span>}
                     </td>
                     <td>{agent.capabilities.includes("implementation") ? <span className="settings-tag primary">Capable</span> : <span className="settings-dim">No</span>}</td>
                     <td>
@@ -600,7 +754,8 @@ export function SettingsPage({ onBack, initialTab = "general" }: SettingsPagePro
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -779,8 +934,8 @@ export function SettingsPage({ onBack, initialTab = "general" }: SettingsPagePro
         </SettingCard>
         <SettingCard title="Execution guards">
           <Field
-            title="Confirm dangerous commands"
-            description="Prompts before rm -rf, git reset --hard, dependency installs, or production-like targets."
+            title="Confirm dependency changes"
+            description="Prompts before dependency installs. Destructive file/Git commands and production-like targets always require a one-time backend approval."
             control={
               <ToggleControl
                 checked={appSettings.confirmBeforeCommands}

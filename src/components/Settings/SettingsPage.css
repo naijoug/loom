@@ -234,6 +234,16 @@
   font-size: var(--fs-sm);
 }
 
+.settings-stage-select {
+  min-width: 180px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  padding: 7px 10px;
+  font: inherit;
+}
+
 .settings-select-pill span {
   color: var(--text-2);
 }
@@ -619,6 +629,17 @@
   font-family: var(--mono);
   font-size: 11px;
   white-space: normal;
+}
+
+.settings-diagnostic-path {
+  display: block;
+  max-width: 190px;
+  margin-top: 4px;
+  overflow: hidden;
+  color: var(--text-3);
+  font-size: var(--fs-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .settings-command-table td:first-child {

@@ -11,3 +11,10 @@ button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
+.app-view-loading {
+  display: grid;
+  min-height: 240px;
+  place-items: center;
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+}

@@ -28,7 +28,92 @@ export interface UserFeedback {
   taskId: string;
   commandRunId?: string;
   content: string;
+  reproductionSteps?: string;
+  expectedBehavior?: string;
+  quotedLog?: string;
+  attachments: FeedbackAttachment[];
   timestampMs: number;
+}
+
+export interface FeedbackAttachment {
+  id: string;
+  name: string;
+  mimeType: string;
+  sizeBytes: number;
+  storedPath: string;
+  createdAtMs: number;
+}
+
+export interface StructuredFeedbackInput {
+  content: string;
+  reproductionSteps?: string;
+  expectedBehavior?: string;
+  quotedLog?: string;
+  attachmentPaths?: string[];
+}
+
+export interface GitBaselineFile {
+  path: string;
+  status: string;
+}
+
+export interface GitBaseline {
+  capturedAtMs: number;
+  available: boolean;
+  head?: string;
+  files: GitBaselineFile[];
+  failureDetail?: string;
+}
+
+export interface ChangedFileSummary {
+  path: string;
+  status: string;
+  additions?: number;
+  deletions?: number;
+  attribution: "pre_existing" | "task_introduced" | "unknown" | string;
+}
+
+export interface TaskSummaryDecision {
+  kind: string;
+  title: string;
+  detail: string;
+}
+
+export interface TaskSummaryReview {
+  reviewer: string;
+  status: string;
+  summary: string;
+  findingCount: number;
+  evidenceRef?: string;
+}
+
+export interface TaskSummaryValidation {
+  runId: string;
+  command: string;
+  status: import("./command").CommandRunStatus;
+  exitCode?: number;
+  stdoutLogRef?: string;
+  stderrLogRef?: string;
+  startedAtMs: number;
+  endedAtMs?: number;
+}
+
+export interface TaskSummary {
+  taskId: string;
+  title: string;
+  requirement: string;
+  completedTodos: string[];
+  changedFiles: ChangedFileSummary[];
+  totalAdditions: number;
+  totalDeletions: number;
+  decisions: TaskSummaryDecision[];
+  reviews: TaskSummaryReview[];
+  validationEvidence: TaskSummaryValidation[];
+  remainingRisks: string[];
+  recommendations: string[];
+  generatedAtMs: number;
+  jsonPath: string;
+  markdownPath: string;
 }
 
 export type AgentInvocationStatus = "pending" | "running" | "succeeded" | "failed";
@@ -171,9 +256,19 @@ export interface Task {
   title: string;
   rawRequirement: string;
   status: TaskStatus;
+  lifecycle?: {
+    paused: boolean;
+    resumeStatus?: TaskStatus;
+    pauseReason?: string;
+    blockedReason?: string;
+    cancelledReason?: string;
+  };
   selectedPlanningAgentIds: string[];
   primaryAgentId?: string;
   reviewAgentIds: string[];
+  implementationReviewRuns: ImplementationReviewRun[];
+  implementationReviews: ImplementationReview[];
+  implementationReviewDecisions: ImplementationReviewDecision[];
   finalPlan?: string;
   finalPlanPath?: string;
   finalPlanHtmlPath?: string;
@@ -189,8 +284,68 @@ export interface Task {
   feedback: UserFeedback[];
   loopCompactSummary?: string;
   repairContextPreview?: string;
+  gitBaseline?: GitBaseline;
+  summary?: TaskSummary;
   createdAtMs: number;
   updatedAtMs: number;
+}
+
+export type ImplementationReviewFindingSeverity = "blocker" | "risk" | "suggestion" | "info";
+export type ImplementationReviewFindingStatus =
+  | "open"
+  | "pending_re_review"
+  | "accepted_risk"
+  | "dismissed"
+  | "superseded";
+
+export interface ImplementationReviewFinding {
+  id: string;
+  reviewId: string;
+  severity: ImplementationReviewFindingSeverity;
+  title: string;
+  detail: string;
+  file?: string;
+  line?: number;
+  status: ImplementationReviewFindingStatus;
+  createdAtMs: number;
+}
+
+export interface ImplementationReview {
+  id: string;
+  runId: string;
+  taskId: string;
+  reviewerAgentId: string;
+  reviewerAgentName: string;
+  status: "running" | "succeeded" | "failed" | "interrupted";
+  summary: string;
+  rawOutput: string;
+  evidenceRef?: string;
+  stderrRef?: string;
+  exitCode?: number;
+  failureDetail?: string;
+  findings: ImplementationReviewFinding[];
+  startedAtMs: number;
+  endedAtMs?: number;
+}
+
+export interface ImplementationReviewRun {
+  id: string;
+  taskId: string;
+  reviewerAgentIds: string[];
+  status: "running" | "succeeded" | "failed" | "interrupted";
+  contextRef: string;
+  reviewIds: string[];
+  startedAtMs: number;
+  endedAtMs?: number;
+}
+
+export interface ImplementationReviewDecision {
+  id: string;
+  findingId: string;
+  decision: "resolved" | "accepted_risk" | "dismissed";
+  reason: string;
+  actor: string;
+  createdAtMs: number;
 }
 
 export interface CreateTaskInput {

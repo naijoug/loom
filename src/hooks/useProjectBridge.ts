@@ -46,8 +46,41 @@ export function useProjectBridge() {
     [dispatch],
   );
 
+  const removeRecentProject = useCallback(
+    async (project: ProjectSummary) => {
+      dispatch({ type: "projects/loadStarted" });
+
+      try {
+        if (!hasTauriRuntime()) {
+          dispatch({
+            type: "projects/removed",
+            projectId: project.id,
+            projectPath: project.path,
+          });
+          return true;
+        }
+
+        const projects = await invoke<ProjectSummary[]>("remove_recent_project", {
+          projectId: project.id,
+        });
+        dispatch({ type: "projects/recentLoaded", projects });
+        dispatch({
+          type: "projects/removed",
+          projectId: project.id,
+          projectPath: project.path,
+        });
+        return true;
+      } catch (error) {
+        dispatch({ type: "projects/loadFailed", error: toErrorMessage(error) });
+        return false;
+      }
+    },
+    [dispatch],
+  );
+
   return {
     loadRecentProjects,
+    removeRecentProject,
     registerProject,
   };
 }

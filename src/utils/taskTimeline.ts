@@ -79,6 +79,58 @@ export function buildTaskTimelineRows(task: Task, maxItems = 12): TaskTimelineRo
     });
   }
 
+  for (const review of task.implementationReviews ?? []) {
+    rows.push({
+      id: `implementation-review-${review.id}`,
+      timestampMs: review.endedAtMs ?? review.startedAtMs,
+      stage: "reviewing",
+      kind: `${review.reviewerAgentName} implementation review`,
+      summary: review.summary || `${review.findings.length} finding(s)`,
+      detail: `${review.status} · ${review.findings.length} finding(s)`,
+      evidenceRef: review.evidenceRef,
+    });
+  }
+
+  for (const decision of task.implementationReviewDecisions ?? []) {
+    rows.push({
+      id: `implementation-review-decision-${decision.id}`,
+      timestampMs: decision.createdAtMs,
+      stage: "reviewing",
+      kind: "finding decision",
+      summary: decision.reason,
+      detail: `${decision.decision} · ${decision.actor}`,
+      evidenceRef: decision.findingId,
+    });
+  }
+
+  for (const feedback of task.feedback) {
+    rows.push({
+      id: `feedback-${feedback.id}`,
+      timestampMs: feedback.timestampMs,
+      stage: "debugging",
+      kind: "human feedback",
+      summary:
+        feedback.content ||
+        feedback.expectedBehavior ||
+        feedback.reproductionSteps ||
+        `${feedback.attachments?.length ?? 0} attachment(s)`,
+      detail: feedback.commandRunId,
+      evidenceRef: feedback.attachments?.[0]?.storedPath ?? feedback.commandRunId,
+    });
+  }
+
+  if (task.summary) {
+    rows.push({
+      id: `task-summary-${task.id}-${task.summary.generatedAtMs}`,
+      timestampMs: task.summary.generatedAtMs,
+      stage: "completed",
+      kind: "delivery summary",
+      summary: `${task.summary.changedFiles.length} changed file(s), ${task.summary.validationEvidence.length} validation record(s)`,
+      detail: task.summary.markdownPath,
+      evidenceRef: task.summary.markdownPath,
+    });
+  }
+
   for (const entry of task.loopTrace ?? []) {
     rows.push({
       id: `loop-trace-${entry.id}`,

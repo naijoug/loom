@@ -1,8 +1,11 @@
-import React from "react";
+import React, { lazy, Suspense } from "react";
 import ReactDOM from "react-dom/client";
 import "./styles/theme.css";
-import App from "./App";
-import { PlanningPreviewApp } from "./preview/PlanningPreviewApp";
+
+const App = lazy(() => import("./App"));
+const PlanningPreviewApp = lazy(() =>
+  import("./preview/PlanningPreviewApp").then((module) => ({ default: module.PlanningPreviewApp })),
+);
 
 const previewMode = window.location.pathname.startsWith("/preview/planning");
 
@@ -17,6 +20,8 @@ const RootApp = previewMode
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
-    <RootApp />
+    <Suspense fallback={<div className="app-bootstrap-loading" role="status">正在启动 Loom…</div>}>
+      <RootApp />
+    </Suspense>
   </React.StrictMode>,
 );

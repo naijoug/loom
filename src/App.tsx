@@ -1,15 +1,24 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { AppStateProvider } from "./state/AppStateContext";
 import { AppLayout } from "./layouts/AppLayout";
 import { Sidebar } from "./components/Sidebar";
 import { Header } from "./components/Header";
-import { Board, NewTaskModalHost } from "./components/Board";
-import { WorkspaceSplit } from "./components/Workspace";
-import { SettingsPage } from "./components/Settings";
 import { useAppState } from "./state/AppStateContext";
 import { useTaskBridge } from "./hooks/useTaskBridge";
 import "./App.css";
+
+const Board = lazy(() => import("./components/Board").then((module) => ({ default: module.Board })));
+const WorkspaceSplit = lazy(() =>
+  import("./components/Workspace").then((module) => ({ default: module.WorkspaceSplit })),
+);
+const SettingsPage = lazy(() =>
+  import("./components/Settings").then((module) => ({ default: module.SettingsPage })),
+);
+
+function ViewFallback() {
+  return <div className="app-view-loading" role="status">正在加载工作区…</div>;
+}
 
 function AppContent() {
   const { state, dispatch } = useAppState();
@@ -39,11 +48,7 @@ function AppContent() {
   }, [state.app.currentView, dispatch]);
 
   if (state.app.currentView === "settings") {
-    return (
-      <SettingsPage
-        onBack={() => dispatch({ type: "app/viewSelected", view: "board" })}
-      />
-    );
+    return <Suspense fallback={<ViewFallback />}><SettingsPage onBack={() => dispatch({ type: "app/viewSelected", view: "board" })} /></Suspense>;
   }
 
   const content = state.app.currentView === "board" ? <Board /> : <WorkspaceSplit />;
@@ -55,8 +60,7 @@ function AppContent() {
       sidebarCollapsed={sidebarCollapsed}
       onToggleSidebar={() => setSidebarCollapsed((value) => !value)}
     >
-      {content}
-      <NewTaskModalHost />
+      <Suspense fallback={<ViewFallback />}>{content}</Suspense>
     </AppLayout>
   );
 }

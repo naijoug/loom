@@ -70,6 +70,60 @@
   overflow: hidden;
 }
 
+.header-lifecycle-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  -webkit-app-region: no-drag;
+}
+
+.header-lifecycle-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  border: 1px solid var(--loom-border);
+  border-radius: var(--loom-r-chip);
+  background: var(--loom-surface);
+  color: var(--loom-text-2);
+  padding: 0 8px;
+  font: inherit;
+  font-size: var(--loom-fs-label);
+  cursor: pointer;
+}
+
+.header-lifecycle-actions button:hover:not(:disabled) {
+  background: var(--loom-hover);
+  color: var(--loom-text);
+}
+
+.header-lifecycle-actions button.danger:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--loom-red) 45%, var(--loom-border));
+  color: var(--loom-red);
+}
+
+.header-lifecycle-actions button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+@media (max-width: 1120px) {
+  .header-lifecycle-actions button {
+    width: 28px;
+    padding: 0;
+    justify-content: center;
+    overflow: hidden;
+    color: transparent;
+    gap: 0;
+  }
+
+  .header-lifecycle-actions button svg {
+    color: var(--loom-text-2);
+    flex: none;
+  }
+}
+
 .task-flow-container {
   display: flex;
   align-items: center;

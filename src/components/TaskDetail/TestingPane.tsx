@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { open } from "@tauri-apps/plugin-dialog";
 import {
   AlertTriangle,
   Bot,
@@ -7,6 +8,7 @@ import {
   Clock3,
   PanelRightClose,
   PanelRightOpen,
+  Paperclip,
   Quote,
   RefreshCw,
   RotateCcw,
@@ -16,21 +18,21 @@ import {
   User,
   X,
 } from "lucide-react";
-import { DEFAULT_APP_SETTINGS, type CommandRun, type ProjectSummary, type Task, type TerminalSlot } from "../../domain";
+import type { CommandRun, ProjectSummary, Task, TerminalSlot } from "../../domain";
 import { useAgentBridge } from "../../hooks/useAgentBridge";
 import { useCommandBridge } from "../../hooks/useCommandBridge";
 import { usePtyBridge } from "../../hooks/usePtyBridge";
-import { useSettingsBridge } from "../../hooks/useSettingsBridge";
+import { useProjectPreferencesBridge } from "../../hooks/useProjectPreferencesBridge";
 import { useTaskBridge } from "../../hooks/useTaskBridge";
 import { useTerminalBridge } from "../../hooks/useTerminalBridge";
 import { useAppState } from "../../state/AppStateContext";
+import { hasTauriRuntime } from "../../hooks/runtime";
 import {
-  buildAgentCommandArgs,
   buildRepairPrompt,
   formatQuotedFeedback,
   hasImplementationCapability,
 } from "../../utils/agentRun";
-import { detectDangerousCommand, parseCommandLine } from "../../utils/commandLine";
+import { parseCommandLine } from "../../utils/commandLine";
 import {
   isFailedValidationRun,
   isSuccessfulValidationRun,
@@ -83,14 +85,28 @@ interface AutoTestingLoop {
   status: "repairing" | "validating" | "passed" | "escalated";
 }
 
+function feedbackConversationContent(feedback: Task["feedback"][number]) {
+  return [
+    feedback.content,
+    feedback.reproductionSteps ? `复现步骤:\n${feedback.reproductionSteps}` : "",
+    feedback.expectedBehavior ? `期望行为:\n${feedback.expectedBehavior}` : "",
+    feedback.quotedLog ? `引用日志:\n${feedback.quotedLog}` : "",
+    feedback.attachments?.length
+      ? `附件:\n${feedback.attachments.map((attachment) => `- ${attachment.name}`).join("\n")}`
+      : "",
+  ].filter(Boolean).join("\n\n");
+}
+
 interface TestingPaneProps {
   project: ProjectSummary;
   task: Task;
   readOnly?: boolean;
 }
 
-function slotEndpoint(slot: TerminalSlot) {
-  return slot.kind === "preview" ? "localhost:1420" : "exit code required";
+function slotEndpoint(slot: TerminalSlot, run?: CommandRun) {
+  return run?.errorSummary?.urls?.[0]
+    ?? run?.errorSummary?.ports?.[0]?.toString()
+    ?? (slot.kind === "preview" ? "localhost:1420" : "exit code required");
 }
 
 function slotEmptyMessage(slot: TerminalSlot) {
@@ -217,18 +233,20 @@ function gateStatus({
 
 export function TestingPane({ project, task, readOnly = false }: TestingPaneProps) {
   const { state } = useAppState();
-  const { loadAgents } = useAgentBridge();
-  const { startCommandRun, stopCommandRun } = useCommandBridge();
+  const { loadAgents, prepareAgentInvocation } = useAgentBridge();
+  const { startCommandRun, stopCommandRun, loadCommandRunLogs } = useCommandBridge();
   const { startPtyRun, stopPtyRun } = usePtyBridge();
-  const { loadSettings } = useSettingsBridge();
+  const { loadProjectAgentPreferences } = useProjectPreferencesBridge();
   const { listTerminalSlots, saveTerminalSlots, suggestTerminalSlots } = useTerminalBridge();
   const { appendFeedback, completeTask, generateRepairContext } = useTaskBridge();
 
   const [slots, setSlots] = useState<TerminalSlot[]>([]);
   const [runIds, setRunIds] = useState<Record<string, string>>({});
   const [draft, setDraft] = useState<TerminalSlotDraft | null>(null);
-  const [settings, setSettings] = useState(DEFAULT_APP_SETTINGS);
   const [note, setNote] = useState("");
+  const [reproductionSteps, setReproductionSteps] = useState("");
+  const [expectedBehavior, setExpectedBehavior] = useState("");
+  const [attachmentPaths, setAttachmentPaths] = useState<string[]>([]);
   const [quote, setQuote] = useState<QuoteDraft | null>(null);
   const [autoMode, setAutoMode] = useState(false);
   const [autoLoop, setAutoLoop] = useState<AutoTestingLoop | null>(null);
@@ -257,15 +275,18 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
 
   useEffect(() => {
     let cancelled = false;
-    void loadSettings().then((loaded) => {
-      if (!cancelled) {
-        setSettings(loaded);
-      }
-    });
+    void loadProjectAgentPreferences(project.path)
+      .then((preferences) => {
+        const preferredAgentId = preferences.debuggingAgentId ?? preferences.testingAgentId;
+        if (!cancelled && preferredAgentId) {
+          setSelectedAgentId(preferredAgentId);
+        }
+      })
+      .catch(() => undefined);
     return () => {
       cancelled = true;
     };
-  }, [loadSettings]);
+  }, [loadProjectAgentPreferences, project.path]);
 
   useEffect(() => {
     if (!selectedAgentId && selectedAgent) {
@@ -318,6 +339,38 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
   const taskRuns = state.commandRuns
     .filter((run) => run.taskId === task.id)
     .sort((left, right) => left.startedAtMs - right.startedAtMs);
+  const visibleLogRunIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const slot of slots) {
+      const trackedId = runIds[slot.id];
+      const run =
+        (trackedId && state.commandRuns.find((candidate) => candidate.id === trackedId)) ||
+        latestRunForCommand(state.commandRuns, task.id, slot.command);
+      if (run) {
+        ids.add(run.id);
+      }
+    }
+    if (expandedCycle) {
+      ids.add(expandedCycle);
+    }
+    return [...ids];
+  }, [expandedCycle, runIds, slots, state.commandRuns, task.id]);
+
+  useEffect(() => {
+    if (!hasTauriRuntime()) {
+      return;
+    }
+    for (const runId of visibleLogRunIds) {
+      const run = state.commandRuns.find((candidate) => candidate.id === runId);
+      if (
+        run &&
+        state.commandLogs[runId] === undefined &&
+        (run.stdoutLogRef || run.stderrLogRef)
+      ) {
+        void loadCommandRunLogs(project.path, task.id, runId);
+      }
+    }
+  }, [loadCommandRunLogs, project.path, state.commandLogs, state.commandRuns, task.id, visibleLogRunIds]);
   const failedRun = latestFailedRun(state.commandRuns, task.id, validationCommands);
   const latestTaskRun = latestRun(state.commandRuns, task.id);
   const successfulValidationRun = latestSuccessfulValidationRun(
@@ -368,19 +421,6 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
     return resolveTerminalSlotCwd(project.path, slot);
   }
 
-  function confirmDangerousCommand(command: string) {
-    if (!settings.confirmBeforeCommands) {
-      return true;
-    }
-    const finding = detectDangerousCommand(command);
-    if (!finding) {
-      return true;
-    }
-    return window.confirm(
-      `Run potentially risky command?\n\n${command}\n\n${finding.detail}`,
-    );
-  }
-
   function validationSlotForRun(run: CommandRun) {
     return (
       validationSlots.find((slot) => slot.command === run.command) ??
@@ -390,14 +430,6 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
   }
 
   async function startAutoValidationRun(loop: AutoTestingLoop) {
-    if (!confirmDangerousCommand(loop.validationCommand)) {
-      setAutoLoop((current) =>
-        current?.loopId === loop.loopId ? { ...current, status: "escalated" } : current,
-      );
-      setAutoNotice("Auto validation stopped because the command was not confirmed.");
-      return null;
-    }
-
     try {
       const parsed = parseCommandLine(loop.validationCommand);
       if (!parsed.program) {
@@ -412,6 +444,7 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
         program: parsed.program,
         args: parsed.args,
         cwd: loop.validationCwd,
+        projectPath: project.path,
         taskId: task.id,
         intent: "validation",
         loopId: loop.loopId,
@@ -447,10 +480,6 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
       setDraft(draftFromTerminalSlot(slot));
       return;
     }
-    if (!confirmDangerousCommand(slot.command)) {
-      setCommandError("Command was not run because it was not confirmed.");
-      return;
-    }
     try {
       const parsed = parseCommandLine(slot.command);
       const cwd = slotCwd(slot);
@@ -463,6 +492,7 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
               program: parsed.program,
               args: parsed.args,
               cwd,
+              projectPath: project.path,
               taskId: task.id,
               rows: 24,
               cols: 80,
@@ -471,6 +501,7 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
               program: parsed.program,
               args: parsed.args,
               cwd,
+              projectPath: project.path,
               taskId: task.id,
               intent: "validation",
             });
@@ -545,9 +576,7 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
     setCommandError(null);
     // Refresh the repair context (packages logs / todo / feedback) so the
     // prompt carries the latest evidence, then hand off to the agent.
-    const sourceFailure = auto?.failedRun ?? latestBlockingFailure;
-    const refreshed =
-      (sourceFailure ? await generateRepairContext(project.path, task.id) : null) ?? task;
+    const refreshed = (await generateRepairContext(project.path, task.id)) ?? task;
     const prompt = buildRepairPrompt(refreshed, quoteDraft?.text ?? "", noteText);
     if (auto) {
       setAutoLoop((current) =>
@@ -556,11 +585,24 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
           : current,
       );
     }
-    const run = await startCommandRun({
-      program: selectedAgent.command,
-      args: buildAgentCommandArgs(selectedAgent, project.path, prompt),
-      cwd: project.path,
+    const invocation = await prepareAgentInvocation({
+      projectPath: project.path,
       taskId: task.id,
+      agentId: selectedAgent.id,
+      stage: "debugging",
+      prompt,
+    });
+    if (!invocation) {
+      setCommandError("The backend rejected the selected Agent invocation.");
+      return;
+    }
+    const run = await startCommandRun({
+      program: invocation.program,
+      args: invocation.args,
+      cwd: invocation.cwd,
+      projectPath: project.path,
+      taskId: task.id,
+      agentId: selectedAgent.id,
       intent: "agent_action",
       loopId: auto?.loop.loopId,
       iteration: auto?.attempt,
@@ -580,14 +622,61 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
   }
 
   async function handleAskAgent() {
-    if (!note.trim() && !quote?.text.trim()) {
+    if (
+      !note.trim() &&
+      !reproductionSteps.trim() &&
+      !expectedBehavior.trim() &&
+      !quote?.text.trim() &&
+      attachmentPaths.length === 0
+    ) {
       return;
     }
-    const content = formatQuotedFeedback(note, quote?.text ?? "", quote?.command ?? "");
-    await appendFeedback(project.path, task.id, quote?.failedRunId ?? latestBlockingFailure?.id, content);
-    await startFixRun(note, quote);
+    const quotedLog = quote?.text.trim()
+      ? formatQuotedFeedback("", quote.text, quote.command)
+      : undefined;
+    const persistedFeedback = await appendFeedback(
+      project.path,
+      task.id,
+      quote?.failedRunId ?? latestBlockingFailure?.id,
+      {
+        content: note.trim(),
+        reproductionSteps: reproductionSteps.trim() || undefined,
+        expectedBehavior: expectedBehavior.trim() || undefined,
+        quotedLog,
+        attachmentPaths,
+      },
+    );
+    if (!persistedFeedback) {
+      setCommandError("Feedback or attachment validation failed; no repair Agent was started.");
+      return;
+    }
+    const structuredNote = [
+      note.trim(),
+      reproductionSteps.trim() ? `Reproduction steps:\n${reproductionSteps.trim()}` : "",
+      expectedBehavior.trim() ? `Expected behavior:\n${expectedBehavior.trim()}` : "",
+    ].filter(Boolean).join("\n\n");
+    await startFixRun(structuredNote, quote);
     setNote("");
+    setReproductionSteps("");
+    setExpectedBehavior("");
+    setAttachmentPaths([]);
     setQuote(null);
+  }
+
+  async function selectFeedbackAttachments() {
+    if (!hasTauriRuntime()) {
+      return;
+    }
+    const selected = await open({
+      multiple: true,
+      directory: false,
+      filters: [{
+        name: "Debug evidence",
+        extensions: ["png", "jpg", "jpeg", "webp", "gif", "txt", "log", "md", "json", "pdf"],
+      }],
+    });
+    const paths = Array.isArray(selected) ? selected : selected ? [selected] : [];
+    setAttachmentPaths((current) => [...new Set([...current, ...paths])].slice(0, 8));
   }
 
   async function startAutoLoopFromFailure(failureRun: CommandRun) {
@@ -771,7 +860,7 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
       id: entry.id,
       role: "human",
       timestampMs: entry.timestampMs,
-      content: entry.content,
+      content: feedbackConversationContent(entry),
     }));
     const agentTurns: ConversationTurn[] = fixRunIds
       .map((id) => state.commandRuns.find((run) => run.id === id))
@@ -839,7 +928,7 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
                 key={slot.id}
                 title={slot.name}
                 command={slot.command}
-                endpoint={slotEndpoint(slot)}
+                endpoint={slotEndpoint(slot, run)}
                 tone={slot.kind === "preview" ? "frontend" : "validation"}
                 mode={slot.kind === "preview" ? "pty" : "logs"}
                 emptyMessage={slotEmptyMessage(slot)}
@@ -1109,11 +1198,45 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
                     onChange={(event) => setNote(event.target.value)}
                     placeholder="告诉 Agent 哪里不对，也可以从终端引用日志定位问题…"
                   />
+                  <textarea
+                    className="testing-chat-structured-field"
+                    value={reproductionSteps}
+                    onChange={(event) => setReproductionSteps(event.target.value)}
+                    placeholder="复现步骤（可选）"
+                  />
+                  <textarea
+                    className="testing-chat-structured-field"
+                    value={expectedBehavior}
+                    onChange={(event) => setExpectedBehavior(event.target.value)}
+                    placeholder="期望行为（可选）"
+                  />
+                  <div className="testing-chat-attachments">
+                    <button type="button" onClick={() => void selectFeedbackAttachments()}>
+                      <Paperclip size={13} /> 添加截图或文件
+                    </button>
+                    {attachmentPaths.map((path) => (
+                      <span key={path} title={path}>
+                        {path.split(/[\\/]/).pop()}
+                        <button
+                          type="button"
+                          aria-label="Remove attachment"
+                          onClick={() => setAttachmentPaths((current) => current.filter((candidate) => candidate !== path))}
+                        ><X size={10} /></button>
+                      </span>
+                    ))}
+                  </div>
                   <Button
                     type="button"
                     variant="primary"
                     iconRight={<Send size={14} />}
-                    disabled={(!note.trim() && !quote?.text.trim()) || !selectedAgent}
+                    disabled={
+                      (!note.trim() &&
+                        !reproductionSteps.trim() &&
+                        !expectedBehavior.trim() &&
+                        !quote?.text.trim() &&
+                        attachmentPaths.length === 0) ||
+                      !selectedAgent
+                    }
                     onClick={handleAskAgent}
                   >
                     打回修复

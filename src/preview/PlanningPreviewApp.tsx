@@ -75,6 +75,9 @@ const previewTask: Task = {
   selectedPlanningAgentIds: ["agent-codex", "agent-claude", "agent-hermes"],
   primaryAgentId: undefined,
   reviewAgentIds: [],
+  implementationReviewRuns: [],
+  implementationReviews: [],
+  implementationReviewDecisions: [],
   finalPlan:
     "# Multi-Agent Consensus Planning UI Refactor — Final Plan\n\n## Consensus\n\n- Split planning into requirement intake, proposal drafting, cross-review, human decisions, and the consensus plan.\n- Support one or more agents.\n- Save cross-review records when two or more agents participate.\n\n## Human Decisions\n\n- **Planning scope**: Focus on the multi-agent planning loop first.\n",
   finalPlanPath: "/Users/guojian/Workspace/naijoug/loom/docs/plans/preview-final-plan.md",
@@ -232,6 +235,21 @@ const previewTask: Task = {
   updatedAtMs: now - 50000,
 };
 
+const planningRunningTask: Task = {
+  ...previewTask,
+  status: "planning",
+  selectedPlanningAgentIds: ["agent-codex", "agent-claude"],
+  finalPlan: undefined,
+  finalPlanPath: undefined,
+  finalPlanHtmlPath: undefined,
+  discussionSummary: undefined,
+  planningRuns: [],
+  agentInvocations: [],
+  planReviews: [],
+  planningDecisions: [],
+  updatedAtMs: now - 12000,
+};
+
 const implementationTask: Task = {
   ...previewTask,
   id: "task-preview-implementing",
@@ -354,6 +372,43 @@ const doneTask: Task = {
       outputSummary: "Accepted after two repair cycles and passing checks.",
     },
   ],
+  gitBaseline: {
+    capturedAtMs: now - 180000,
+    available: true,
+    head: "c0ffee1234567890",
+    files: [{ path: "src/components/Search.tsx", status: " M" }],
+  },
+  summary: {
+    taskId: "task-preview-done",
+    title: "Scaffold search component",
+    requirement: "Build and validate a reusable search component.",
+    completedTodos: ["Read current filter flow", "Move filter into worker", "Fix empty-state guard"],
+    changedFiles: [
+      { path: "src/components/Search.tsx", status: "M ", additions: 84, deletions: 12, attribution: "pre_existing" },
+      { path: "src/utils/searchFilter.ts", status: "A ", additions: 61, deletions: 0, attribution: "task_introduced" },
+      { path: "tests/unit/searchFilter.test.cjs", status: "A ", additions: 73, deletions: 0, attribution: "task_introduced" },
+    ],
+    totalAdditions: 218,
+    totalDeletions: 12,
+    decisions: [{ kind: "planning", title: "Worker boundary", detail: "Keep regex evaluation outside the render path." }],
+    reviews: [{ reviewer: "Codex", status: "succeeded", summary: "No blockers; validation covers stale results.", findingCount: 1 }],
+    validationEvidence: [
+      {
+        runId: "run-backend-preview",
+        command: "cargo test --manifest-path src-tauri/Cargo.toml",
+        status: "succeeded",
+        exitCode: 0,
+        stdoutLogRef: "/Users/guojian/Workspace/naijoug/loom/.loom/logs/task-preview-done/run-backend-preview.stdout.log",
+        startedAtMs: now - 42000,
+        endedAtMs: now - 32000,
+      },
+    ],
+    remainingRisks: ["Search.tsx contained pre-existing edits and remains labeled pre_existing."],
+    recommendations: ["Keep worker cancellation covered when adding fuzzy search."],
+    generatedAtMs: now - 8000,
+    jsonPath: "/Users/guojian/Workspace/naijoug/loom/.loom/tasks/task-preview-done/summary.json",
+    markdownPath: "/Users/guojian/Workspace/naijoug/loom/.loom/tasks/task-preview-done/summary.md",
+  },
 };
 
 const todoDebounceTask: Task = {
@@ -630,6 +685,7 @@ const previewState: AppState = {
 type PreviewScreen = "planning" | "board" | "board-speaker" | "new-task" | "add-project" | "session" | "testing" | "done" | "settings";
 type PreviewSettingsTab = "general" | "appearance" | "agents" | "safety" | "about";
 type PreviewTheme = "dark" | "light";
+type PreviewPlanningStep = "empty" | "running" | "review";
 
 function previewScreen(value: string | null): PreviewScreen {
   if (
@@ -648,9 +704,19 @@ function previewScreen(value: string | null): PreviewScreen {
   return "planning";
 }
 
-function previewStateForScreen(screen: PreviewScreen): AppState {
+function previewPlanningStep(value: string | null): PreviewPlanningStep {
+  if (value === "empty" || value === "running") {
+    return value;
+  }
+  return "review";
+}
+
+function previewStateForScreen(
+  screen: PreviewScreen,
+  planningStep: PreviewPlanningStep,
+): AppState {
   const selectedTaskId = {
-    planning: previewTask.id,
+    planning: planningStep === "empty" ? null : previewTask.id,
     board: previewTask.id,
     "board-speaker": speakerTasks[0].id,
     "new-task": previewTask.id,
@@ -667,6 +733,61 @@ function previewStateForScreen(screen: PreviewScreen): AppState {
         ? "settings"
         : "task-detail";
 
+  const planningTasks =
+    planningStep === "running"
+      ? previewState.tasks.map((task) =>
+          task.id === previewTask.id ? planningRunningTask : task,
+        )
+      : previewState.tasks;
+  const planningProgress =
+    screen === "planning" && planningStep === "running"
+      ? {
+          "planning-live-preview:planning:agent-codex": {
+            taskId: planningRunningTask.id,
+            planningRunId: "planning-live-preview",
+            agentId: "agent-codex",
+            agentName: "Codex",
+            phase: "planning" as const,
+            status: "running" as const,
+            attempt: 1,
+            startedAtMs: now - 12000,
+            elapsedMs: 12000,
+          },
+          "planning-live-preview:planning:agent-claude": {
+            taskId: planningRunningTask.id,
+            planningRunId: "planning-live-preview",
+            agentId: "agent-claude",
+            agentName: "Claude Code",
+            phase: "planning" as const,
+            status: "pending" as const,
+            attempt: 1,
+            startedAtMs: now - 12000,
+          },
+        }
+      : previewState.planningProgress;
+  const planningLogs =
+    screen === "planning" && planningStep === "running"
+      ? {
+          "planning-live-preview:planning:agent-codex": [
+            {
+              taskId: planningRunningTask.id,
+              planningRunId: "planning-live-preview",
+              agentId: "agent-codex",
+              agentName: "Codex",
+              phase: "planning" as const,
+              attempt: 1,
+              stream: "stdout" as const,
+              lines: [
+                "Session started: codex-live-preview",
+                "Reading src/components/Planning and docs/requirements.md",
+                "Drafting milestones and verification strategy",
+              ],
+              timestampMs: now - 3000,
+            },
+          ],
+        }
+      : previewState.planningLogs;
+
   return {
     ...previewState,
     app: {
@@ -680,7 +801,14 @@ function previewStateForScreen(screen: PreviewScreen): AppState {
       ...previewState.projects,
       current: screen === "board-speaker" ? speakerProject : previewState.projects.current,
     },
-    tasks: screen === "board-speaker" ? speakerTasks : previewState.tasks,
+    tasks:
+      screen === "board-speaker"
+        ? speakerTasks
+        : screen === "planning"
+          ? planningTasks
+          : previewState.tasks,
+    planningProgress,
+    planningLogs,
   };
 }
 
@@ -737,10 +865,11 @@ export function PlanningPreviewApp() {
   const screen = previewScreen(params.get("screen"));
   const settingsTab = previewSettingsTab(params.get("tab"));
   const theme = previewTheme(params.get("theme"));
+  const planningStep = previewPlanningStep(params.get("step"));
 
   return (
     <ThemeProvider forcedTheme={theme}>
-      <AppStateProvider initialStateOverride={previewStateForScreen(screen)}>
+      <AppStateProvider initialStateOverride={previewStateForScreen(screen, planningStep)}>
         <PreviewRoute screen={screen} settingsTab={settingsTab} />
       </AppStateProvider>
     </ThemeProvider>

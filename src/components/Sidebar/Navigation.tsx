@@ -66,13 +66,15 @@ function contextMenuPosition(event: MouseEvent) {
 
 export function Navigation() {
   const { state, dispatch } = useAppState();
-  const { loadRecentProjects } = useProjectBridge();
+  const { loadRecentProjects, removeRecentProject } = useProjectBridge();
   const { deleteTask } = useTaskBridge();
   const [addProjectOpen, setAddProjectOpen] = useState(false);
   const [taskMenu, setTaskMenu] = useState<TaskMenuState | null>(null);
   const [projectMenu, setProjectMenu] = useState<ProjectMenuState | null>(null);
   const [confirmTaskId, setConfirmTaskId] = useState<string | null>(null);
+  const [confirmProjectId, setConfirmProjectId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [removingProject, setRemovingProject] = useState(false);
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
 
   function toggleCollapsed(projectId: string) {
@@ -137,6 +139,9 @@ export function Navigation() {
     null;
   const menuProject =
     state.projects.recent.find((project) => project.id === projectMenu?.projectId) ?? null;
+  const confirmProject =
+    state.projects.recent.find((project) => project.id === confirmProjectId) ??
+    (state.projects.current?.id === confirmProjectId ? state.projects.current : null);
 
   async function handleDeleteConfirmed() {
     if (!confirmTaskId) {
@@ -149,10 +154,24 @@ export function Navigation() {
     setConfirmTaskId(null);
   }
 
+  async function handleRemoveProjectConfirmed() {
+    if (!confirmProject) {
+      return;
+    }
+
+    setRemovingProject(true);
+    const removed = await removeRecentProject(confirmProject);
+    setRemovingProject(false);
+    if (removed) {
+      setConfirmProjectId(null);
+    }
+  }
+
   async function handleProjectMenuAction(action: ProjectMenuAction, project: ProjectSummary) {
     setProjectMenu(null);
 
-    if (action !== "reveal") {
+    if (action === "remove") {
+      setConfirmProjectId(project.id);
       return;
     }
 
@@ -189,7 +208,12 @@ export function Navigation() {
           {state.projects.recent.map((project) => {
             const active = project.id === state.app.activeProjectId;
             const cachedProjectTasks = state.taskCache[project.path];
-            const projectTasks = cachedProjectTasks ?? (active ? state.tasks : []);
+            // Source tasks are ordered by createdAtMs; the sidebar shows the
+            // most recently touched task first. Copy before sorting so we never
+            // mutate state.
+            const projectTasks = (cachedProjectTasks ?? (active ? state.tasks : []))
+              .slice()
+              .sort((left, right) => right.updatedAtMs - left.updatedAtMs);
             const hasTasks = projectTasks.length > 0;
             const hasLoadedTasks = cachedProjectTasks !== undefined || active;
             const expanded = hasTasks && !collapsedIds.has(project.id);
@@ -348,9 +372,10 @@ export function Navigation() {
             className="context-menu-item danger"
             role="menuitem"
             onClick={() => void handleProjectMenuAction("remove", menuProject)}
+            title="Remove from Loom's sidebar only"
           >
             <X size={13} />
-            Remove
+            Remove from Sidebar
           </button>
         </div>
       )}
@@ -375,6 +400,34 @@ export function Navigation() {
             <Trash2 size={13} />
             Delete task
           </button>
+        </div>
+      )}
+
+      {confirmProject && (
+        <div className="confirm-backdrop" role="presentation">
+          <div className="confirm-modal" role="dialog" aria-modal="true">
+            <h2>Remove project?</h2>
+            <p>
+              “{confirmProject.name}” will be removed from Loom&apos;s sidebar. The local
+              folder and its .loom data will stay on disk.
+            </p>
+            <div className="confirm-modal-actions">
+              <Button
+                variant="ghost"
+                onClick={() => setConfirmProjectId(null)}
+                disabled={removingProject}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => void handleRemoveProjectConfirmed()}
+                disabled={removingProject}
+              >
+                {removingProject ? "Removing…" : "Remove"}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 

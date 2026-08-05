@@ -1,4 +1,4 @@
-import { useEffect, useRef, type MutableRefObject } from "react";
+import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { MessageSquarePlus, Pencil, Square, Terminal as TerminalIcon, X } from "lucide-react";
 import { Terminal } from "@xterm/xterm";
@@ -186,6 +186,33 @@ export function TerminalCard({
 }: TerminalCardProps) {
   const running = run?.status === "running";
   const ptySelectionRef = useRef<(() => string) | null>(null);
+  const [logQuery, setLogQuery] = useState("");
+  const [logFilter, setLogFilter] = useState<"all" | "stdout" | "stderr" | "issues">("all");
+  const [logsCollapsed, setLogsCollapsed] = useState(false);
+  const issueLines = useMemo(() => {
+    const summary = run?.errorSummary;
+    return new Set(
+      [
+        ...(summary?.matchedLines ?? []),
+        ...(summary?.warnings ?? []),
+        ...(summary?.testFailures ?? []),
+        ...(summary?.stackTraceLines ?? []),
+      ].map((line) => line.trim().toLocaleLowerCase()),
+    );
+  }, [run?.errorSummary]);
+  const visibleLogs = useMemo(() => {
+    const normalizedQuery = logQuery.trim().toLocaleLowerCase();
+    return logs.filter((entry) => {
+      const matchesQuery = !normalizedQuery || entry.line.toLocaleLowerCase().includes(normalizedQuery);
+      const matchesFilter =
+        logFilter === "all" ||
+        entry.stream === logFilter ||
+        (logFilter === "issues" &&
+          (entry.stream === "stderr" || issueLines.has(entry.line.trim().toLocaleLowerCase())));
+      return matchesQuery && matchesFilter;
+    });
+  }, [issueLines, logFilter, logQuery, logs]);
+  const summary = run?.errorSummary;
 
   function handleQuote() {
     const text =
@@ -199,56 +226,98 @@ export function TerminalCard({
     <section className="testing-terminal-card">
       <div className="testing-terminal-header">
         <span className={`testing-terminal-dot terminal-dot-${tone}`} />
-        <span className="testing-terminal-title">{title}</span>
-        <span className="testing-terminal-command">{command}</span>
-        <span className="testing-terminal-endpoint">{endpoint}</span>
+        <div className="testing-terminal-heading">
+          <span className="testing-terminal-title">{title}</span>
+          <div className="testing-terminal-meta">
+            <span className="testing-terminal-command" title={command}>{command}</span>
+            <span className="testing-terminal-endpoint" title={endpoint}>{endpoint}</span>
+          </div>
+        </div>
         <span className={`testing-status-pill testing-status-${statusClass(run)}`}>
           <span />
           {statusText(run)}
         </span>
-        <Button
-          type="button"
-          variant="ghost"
-          iconLeft={running ? <Square size={13} /> : <TerminalIcon size={13} />}
-          disabled={disabled}
-          onClick={running ? onStop : onRun}
-        >
-          {running ? "停止" : "运行"}
-        </Button>
-        {onQuote && (
-          <button
+        <div className="testing-terminal-controls">
+          <Button
             type="button"
-            className="testing-terminal-icon-btn"
-            title="Quote selected log lines to the agent"
-            onClick={handleQuote}
+            variant="ghost"
+            iconLeft={running ? <Square size={13} /> : <TerminalIcon size={13} />}
+            disabled={disabled}
+            onClick={running ? onStop : onRun}
           >
-            <MessageSquarePlus size={13} />
-          </button>
-        )}
-        {onEdit && (
-          <button
-            type="button"
-            className="testing-terminal-icon-btn"
-            title="Edit terminal"
-            disabled={disabled || running}
-            onClick={onEdit}
-          >
-            <Pencil size={13} />
-          </button>
-        )}
-        {onRemove && (
-          <button
-            type="button"
-            className="testing-terminal-icon-btn"
-            title="Remove terminal"
-            disabled={disabled || running}
-            onClick={onRemove}
-          >
-            <X size={13} />
-          </button>
-        )}
+            {running ? "停止" : "运行"}
+          </Button>
+          {onQuote && (
+            <button
+              type="button"
+              className="testing-terminal-icon-btn"
+              title="Quote selected log lines to the agent"
+              aria-label="Quote selected log lines to the agent"
+              onClick={handleQuote}
+            >
+              <MessageSquarePlus size={13} />
+            </button>
+          )}
+          {onEdit && (
+            <button
+              type="button"
+              className="testing-terminal-icon-btn"
+              title="Edit terminal"
+              aria-label="Edit terminal"
+              disabled={disabled || running}
+              onClick={onEdit}
+            >
+              <Pencil size={13} />
+            </button>
+          )}
+          {onRemove && (
+            <button
+              type="button"
+              className="testing-terminal-icon-btn"
+              title="Remove terminal"
+              aria-label="Remove terminal"
+              disabled={disabled || running}
+              onClick={onRemove}
+            >
+              <X size={13} />
+            </button>
+          )}
+        </div>
       </div>
-      <div className={`testing-terminal-body${mode === "pty" ? " is-pty" : ""}`}>
+      {mode === "logs" && (
+        <div className="testing-terminal-toolbar">
+          <input
+            type="search"
+            aria-label="Search terminal logs"
+            value={logQuery}
+            placeholder="搜索日志"
+            onChange={(event) => setLogQuery(event.target.value)}
+          />
+          <select
+            aria-label="Filter terminal logs"
+            value={logFilter}
+            onChange={(event) => setLogFilter(event.target.value as typeof logFilter)}
+          >
+            <option value="all">全部</option>
+            <option value="stdout">stdout</option>
+            <option value="stderr">stderr</option>
+            <option value="issues">问题</option>
+          </select>
+          <span>{visibleLogs.length}/{logs.length}</span>
+          <button type="button" onClick={() => setLogsCollapsed((value) => !value)}>
+            {logsCollapsed ? "展开" : "折叠"}
+          </button>
+          {(summary?.urls?.length || summary?.ports?.length || summary?.warnings?.length || summary?.testFailures?.length) ? (
+            <div className="testing-terminal-insights" aria-label="Parsed log insights">
+              {summary.urls?.slice(0, 2).map((url) => <span key={url} title={url}>URL {url}</span>)}
+              {summary.ports?.slice(0, 3).map((port) => <span key={port}>端口 {port}</span>)}
+              {!!summary.warnings?.length && <span>警告 {summary.warnings.length}</span>}
+              {!!summary.testFailures?.length && <span>测试失败 {summary.testFailures.length}</span>}
+            </div>
+          ) : null}
+        </div>
+      )}
+      {!logsCollapsed && <div className={`testing-terminal-body${mode === "pty" ? " is-pty" : ""}`}>
         {mode === "pty" ? (
           <PtyTerminal run={run} selectionRef={ptySelectionRef} />
         ) : (
@@ -262,8 +331,10 @@ export function TerminalCard({
             )}
             {logs.length === 0 ? (
               <div className="testing-terminal-empty">{emptyMessage}</div>
+            ) : visibleLogs.length === 0 ? (
+              <div className="testing-terminal-empty">没有匹配的日志。</div>
             ) : (
-              logs.map((entry, index) => (
+              visibleLogs.map((entry, index) => (
                 <div
                   className={`testing-terminal-line ${streamClass(entry.stream)}`}
                   key={`${entry.runId}-${entry.timestampMs}-${entry.stream}-${index}`}
@@ -275,7 +346,7 @@ export function TerminalCard({
             )}
           </>
         )}
-      </div>
+      </div>}
     </section>
   );
 }

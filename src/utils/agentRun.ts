@@ -5,6 +5,8 @@ export function hasImplementationCapability(agent: AgentConfig) {
   return (
     agent.enabled &&
     agent.available &&
+    agent.canWriteFiles &&
+    agent.canRunCommands &&
     agent.adapterType !== "dummy" &&
     agent.capabilities.includes("implementation")
   );

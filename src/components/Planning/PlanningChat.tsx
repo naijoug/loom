@@ -12,45 +12,20 @@ import { useAgentBridge } from "../../hooks/useAgentBridge";
 import { useTaskBridge } from "../../hooks/useTaskBridge";
 import { useAppState } from "../../state/AppStateContext";
 import { Button } from "../common/Button";
+import {
+  agentIdsForMentions,
+  canonicalMention,
+  defaultPlanningAgentIds,
+  extractMentionNames,
+  mentionAliases,
+  unknownMentionNames,
+} from "./participantSelection";
 import { PlanningTimeline } from "./PlanningTimeline";
 import "./Planning.css";
 
 function taskTitleFromRequirement(requirement: string) {
   const firstLine = requirement.trim().split(/\r?\n/)[0] ?? "Planning task";
   return firstLine.slice(0, 48) || "Planning task";
-}
-
-function extractMentionNames(value: string) {
-  return Array.from(value.matchAll(/@([\w-]+)/g), (match) => match[1].toLowerCase());
-}
-
-function mentionAliases(agent: AgentConfig) {
-  const normalizedName = agent.name.toLowerCase().replace(/\s+/g, "-");
-  const aliases = new Set([
-    agent.id.toLowerCase(),
-    agent.name.toLowerCase(),
-    normalizedName,
-    agent.command.toLowerCase(),
-  ]);
-
-  if (agent.adapterType === "codex_cli") {
-    aliases.add("codex");
-  }
-  if (agent.adapterType === "claude_code_cli") {
-    aliases.add("claude");
-    aliases.add("claude-code");
-  }
-  return aliases;
-}
-
-function canonicalMention(agent: AgentConfig) {
-  if (agent.adapterType === "codex_cli") {
-    return "codex";
-  }
-  if (agent.adapterType === "claude_code_cli") {
-    return "claude";
-  }
-  return agent.name.toLowerCase().replace(/\s+/g, "-");
 }
 
 function agentBadgeClass(agent: AgentConfig) {
@@ -81,6 +56,19 @@ function planningCapable(agent: AgentConfig) {
   return agent.enabled && agent.available && agent.capabilities.includes("planning");
 }
 
+function participantStatusLabel(status: string | undefined, available: boolean) {
+  if (status === "succeeded") {
+    return "已完成";
+  }
+  if (status === "failed") {
+    return "失败";
+  }
+  if (status === "running" || status === "retrying") {
+    return "运行中";
+  }
+  return available ? "已选择" : "当前不可用";
+}
+
 interface PlanningChatProps {
   readOnly?: boolean;
 }
@@ -92,12 +80,21 @@ export function PlanningChat({ readOnly = false }: PlanningChatProps) {
   const project = state.projects.current;
   const task = state.tasks.find((candidate) => candidate.id === state.app.selectedTaskId) ?? null;
   const taskId = task?.id ?? null;
+  const hasActivePlanning = Object.values(state.planningProgress).some(
+    (event) =>
+      event.taskId === taskId &&
+      (event.status === "pending" ||
+        event.status === "running" ||
+        event.status === "retrying"),
+  );
   // Seed the composer from a task's requirement only when it has not been
   // discussed yet; once a discussion exists (or for a brand-new task) start
   // empty. Keyed on the selected task id only, so user edits — including
   // clearing the field — are never overwritten on the next render.
   const [message, setMessage] = useState(
-    task && !task.discussionSummary ? task.rawRequirement ?? "" : "",
+    task && !task.discussionSummary && !hasActivePlanning
+      ? task.rawRequirement ?? ""
+      : "",
   );
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   // When non-null, the `@`-autocomplete menu is open and this holds the partial
@@ -105,10 +102,15 @@ export function PlanningChat({ readOnly = false }: PlanningChatProps) {
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionIndex, setMentionIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [selectedAgentIds, setSelectedAgentIds] = useState<string[]>([]);
   // After a send, creating a task changes `taskId`, which would otherwise make
   // the reseed effect below refill the composer with the requirement we just
   // sent. This flag tells that effect to clear instead, for exactly one change.
   const skipReseedRef = useRef(false);
+  const selectionTouchedRef = useRef(false);
+  const selectedTaskRef = useRef(taskId);
+  const lastMentionKeyRef = useRef("");
+  const timelineScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     void loadAgents();
@@ -126,29 +128,88 @@ export function PlanningChat({ readOnly = false }: PlanningChatProps) {
       setMessage("");
       return;
     }
-    setMessage(task && !task.discussionSummary ? task.rawRequirement ?? "" : "");
+    setMessage(
+      task && !task.discussionSummary && !hasActivePlanning
+        ? task.rawRequirement ?? ""
+        : "",
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [taskId]);
+  }, [hasActivePlanning, taskId]);
 
   const mentionedNames = useMemo(() => extractMentionNames(message), [message]);
+  const configuredPlanningAgents = useMemo(
+    () =>
+      state.agents.filter(
+        (agent) => agent.enabled && agent.capabilities.includes("planning"),
+      ),
+    [state.agents],
+  );
   const availableAgents = useMemo(
     () => state.agents.filter(planningCapable),
     [state.agents],
   );
-  const selectedAgents = useMemo(() => {
-    if (mentionedNames.length === 0) {
-      return availableAgents;
+  const availableAgentKey = availableAgents.map((agent) => agent.id).join("|");
+  const preferredAgentKey = task?.selectedPlanningAgentIds.join("|") ?? "";
+  const selectedAgents = useMemo(
+    () => availableAgents.filter((agent) => selectedAgentIds.includes(agent.id)),
+    [availableAgents, selectedAgentIds],
+  );
+  const unknownMentions = useMemo(
+    () => unknownMentionNames(message, configuredPlanningAgents),
+    [configuredPlanningAgents, message],
+  );
+  const unavailableMentionAgents = useMemo(() => {
+    const mentionedIds = new Set(agentIdsForMentions(message, configuredPlanningAgents));
+    return configuredPlanningAgents.filter(
+      (agent) => mentionedIds.has(agent.id) && !planningCapable(agent),
+    );
+  }, [configuredPlanningAgents, message]);
+  const hasMentionError =
+    unknownMentions.length > 0 || unavailableMentionAgents.length > 0;
+  const summaryAgents = useMemo(() => {
+    if (!task?.planningRuns.length || task.selectedPlanningAgentIds.length === 0) {
+      return selectedAgents;
+    }
+    const byId = new Map(state.agents.map((agent) => [agent.id, agent]));
+    return task.selectedPlanningAgentIds
+      .map((agentId) => byId.get(agentId))
+      .filter((agent): agent is AgentConfig => Boolean(agent));
+  }, [selectedAgents, state.agents, task]);
+  const latestDraftByAgent = useMemo(() => {
+    const result = new Map<string, string>();
+    for (const invocation of task?.agentInvocations ?? []) {
+      if (invocation.promptSummary !== "Synthesize final plan") {
+        result.set(invocation.agentId, invocation.status);
+      }
+    }
+    return result;
+  }, [task?.agentInvocations]);
+
+  useEffect(() => {
+    const taskChanged = selectedTaskRef.current !== taskId;
+    if (taskChanged) {
+      selectedTaskRef.current = taskId;
+      selectionTouchedRef.current = false;
+      lastMentionKeyRef.current = "";
     }
 
-    const matched = availableAgents.filter((agent) => {
-      const aliases = mentionAliases(agent);
-      return mentionedNames.some((name) => aliases.has(name));
+    setSelectedAgentIds((current) => {
+      if (taskChanged || !selectionTouchedRef.current) {
+        return defaultPlanningAgentIds(availableAgents, task?.selectedPlanningAgentIds);
+      }
+      const availableIds = new Set(availableAgents.map((agent) => agent.id));
+      return current.filter((agentId) => availableIds.has(agentId));
     });
+    // Keys make this effect react only to meaningful participant changes rather
+    // than every agents/tasks array identity change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [availableAgentKey, preferredAgentKey, taskId]);
 
-    // A typo'd or unknown @mention should never block the send — fall back to
-    // every available planning Agent rather than an empty selection.
-    return matched.length > 0 ? matched : availableAgents;
-  }, [mentionedNames, availableAgents]);
+  useEffect(() => {
+    if (timelineScrollRef.current) {
+      timelineScrollRef.current.scrollTop = 0;
+    }
+  }, [taskId, task?.planningRuns.length]);
 
   const mentionSuggestions = useMemo(() => {
     if (mentionQuery === null) {
@@ -178,6 +239,19 @@ export function PlanningChat({ readOnly = false }: PlanningChatProps) {
     }
   }
 
+  function syncSelectedAgentsFromMentions(value: string) {
+    const mentionKey = extractMentionNames(value).join("|");
+    if (mentionKey === lastMentionKeyRef.current) {
+      return;
+    }
+    lastMentionKeyRef.current = mentionKey;
+    const ids = agentIdsForMentions(value, availableAgents);
+    if (mentionKey && ids.length > 0) {
+      selectionTouchedRef.current = true;
+      setSelectedAgentIds(ids);
+    }
+  }
+
   function applyMention(agent: AgentConfig) {
     const el = textareaRef.current;
     const cursor = el ? el.selectionStart : message.length;
@@ -187,7 +261,9 @@ export function PlanningChat({ readOnly = false }: PlanningChatProps) {
       /(^|\s)@([\w-]*)$/,
       (_full, prefix: string) => `${prefix}@${canonicalMention(agent)} `,
     );
-    setMessage(replaced + after);
+    const nextMessage = replaced + after;
+    setMessage(nextMessage);
+    syncSelectedAgentsFromMentions(nextMessage);
     setMentionQuery(null);
     requestAnimationFrame(() => {
       const node = textareaRef.current;
@@ -198,21 +274,14 @@ export function PlanningChat({ readOnly = false }: PlanningChatProps) {
     });
   }
 
-  function toggleAgentMention(agent: AgentConfig) {
-    const aliases = mentionAliases(agent);
-    const mentioned = mentionedNames.some((name) => aliases.has(name));
-    if (mentioned) {
-      const next = message
-        .replace(/@([\w-]+)/g, (full, name: string) =>
-          aliases.has(name.toLowerCase()) ? "" : full,
-        )
-        .replace(/[ \t]{2,}/g, " ")
-        .replace(/[ \t]+\n/g, "\n");
-      setMessage(next.trimStart());
-    } else {
-      const needsSpace = message.length > 0 && !/\s$/.test(message);
-      setMessage(`${message}${needsSpace ? " " : ""}@${canonicalMention(agent)} `);
-    }
+  function toggleAgentSelection(agent: AgentConfig) {
+    selectionTouchedRef.current = true;
+    lastMentionKeyRef.current = mentionedNames.join("|");
+    setSelectedAgentIds((current) =>
+      current.includes(agent.id)
+        ? current.filter((agentId) => agentId !== agent.id)
+        : [...current, agent.id],
+    );
     textareaRef.current?.focus();
   }
 
@@ -239,12 +308,18 @@ export function PlanningChat({ readOnly = false }: PlanningChatProps) {
   // Drive the composer's running state from the in-flight send only — not the
   // shared `isLoadingTasks` flag, which also flips during unrelated task-list
   // loads and would otherwise disable Send for no reason.
-  const discussionRunning = submitting;
+  const discussionRunning = submitting || hasActivePlanning;
 
   async function handleDiscuss(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!project || !message.trim() || selectedAgents.length === 0 || submitting) {
+    if (
+      !project ||
+      !message.trim() ||
+      selectedAgents.length === 0 ||
+      hasMentionError ||
+      discussionRunning
+    ) {
       return;
     }
 
@@ -253,6 +328,9 @@ export function PlanningChat({ readOnly = false }: PlanningChatProps) {
     const creatingTask = task === null;
 
     setSubmitting(true);
+    if (timelineScrollRef.current) {
+      timelineScrollRef.current.scrollTop = 0;
+    }
     // Clear the composer as soon as the message is sent. When a new task is
     // created the taskId change would refill it, so suppress that one reseed.
     setMessage("");
@@ -292,8 +370,8 @@ export function PlanningChat({ readOnly = false }: PlanningChatProps) {
   if (!project) {
     return (
       <div className="planning-empty-route">
-        <h2>Select a project</h2>
-        <p>Choose a project before starting a planning discussion.</p>
+        <h2>先选择一个项目</h2>
+        <p>选择项目后即可发起多 Agent 规划讨论。</p>
       </div>
     );
   }
@@ -314,7 +392,7 @@ export function PlanningChat({ readOnly = false }: PlanningChatProps) {
           )}
         </div>
 
-        <div className="planning-timeline-scroll">
+        <div className="planning-timeline-scroll" ref={timelineScrollRef}>
           <PlanningTimeline projectPath={project.path} task={task} readOnly={readOnly} />
         </div>
 
@@ -327,6 +405,7 @@ export function PlanningChat({ readOnly = false }: PlanningChatProps) {
               onChange={(event) => {
                 setMessage(event.target.value);
                 syncMentionMenu(event.target.value, event.target.selectionStart);
+                syncSelectedAgentsFromMentions(event.target.value);
               }}
               onKeyDown={handleComposerKeyDown}
               onClick={(event) =>
@@ -366,11 +445,12 @@ export function PlanningChat({ readOnly = false }: PlanningChatProps) {
                     type="button"
                     key={agent.id}
                     className={`planning-agent-chip${active ? " active" : ""}`}
-                    onClick={() => toggleAgentMention(agent)}
+                    aria-pressed={active}
+                    onClick={() => toggleAgentSelection(agent)}
                     title={
                       active
-                        ? `Remove @${canonicalMention(agent)} from this discussion`
-                        : `Invoke @${canonicalMention(agent)} in this discussion`
+                        ? `不让 ${agent.name} 参与本轮讨论`
+                        : `让 ${agent.name} 参与本轮讨论`
                     }
                   >
                     <span className={`loom-agent-avatar ${agentBadgeClass(agent)}`}>
@@ -381,17 +461,39 @@ export function PlanningChat({ readOnly = false }: PlanningChatProps) {
                 );
               })}
               {availableAgents.length === 0 && (
-                <span className="planning-chip-hint">No planning-capable Agent available.</span>
+                <span className="planning-chip-hint">暂无可用于规划的 Agent。</span>
               )}
             </div>
             <Button
               type="submit"
               variant="primary"
               iconRight={<Send size={14} />}
-              disabled={!message.trim() || selectedAgents.length === 0 || discussionRunning}
+              disabled={
+                !message.trim() ||
+                selectedAgents.length === 0 ||
+                hasMentionError ||
+                discussionRunning
+              }
             >
-              {discussionRunning ? "发送中…" : "发送"}
+              {discussionRunning ? "讨论中…" : "发送"}
             </Button>
+          </div>
+          <div className={`planning-composer-meta${hasMentionError ? " error" : ""}`}>
+            {unknownMentions.length > 0 ? (
+              <span>
+                未找到 {unknownMentions.map((name) => `@${name}`).join("、")}。请从上方 Agent 列表中选择。
+              </span>
+            ) : unavailableMentionAgents.length > 0 ? (
+              <span>
+                {unavailableMentionAgents.map((agent) => agent.name).join("、")} 当前不可用，请先到设置中检查命令。
+              </span>
+            ) : discussionRunning ? (
+              <span>本轮讨论正在进行；你可以先写下一轮补充，待完成后发送。</span>
+            ) : selectedAgents.length > 0 ? (
+              <span>{selectedAgents.length} 个 Agent 将并行起草，并在成功后交叉评审与合成。</span>
+            ) : (
+              <span>至少选择 1 个可用 Agent 才能开始讨论。</span>
+            )}
           </div>
           {state.app.taskError && <div className="planning-error">{state.app.taskError}</div>}
         </form>
@@ -401,15 +503,21 @@ export function PlanningChat({ readOnly = false }: PlanningChatProps) {
         <section className="planning-summary-card">
           <div className="planning-summary-label">参与 Agent</div>
           <div className="planning-summary-agents">
-            {selectedAgents.map((agent) => (
-              <span className="planning-summary-agent" key={agent.id}>
-                <span className={`loom-agent-avatar ${agentBadgeClass(agent)}`}>
-                  {agentInitials(agent)}
+            {summaryAgents.map((agent) => {
+              const status = latestDraftByAgent.get(agent.id);
+              return (
+                <span className="planning-summary-agent" key={agent.id}>
+                  <span className={`loom-agent-avatar ${agentBadgeClass(agent)}`}>
+                    {agentInitials(agent)}
+                  </span>
+                  <span className="planning-summary-agent-name">{agent.name}</span>
+                  <span className={`planning-summary-agent-state status-${status ?? "idle"}`}>
+                    {participantStatusLabel(status, agent.available)}
+                  </span>
                 </span>
-                <span>{agent.name}</span>
-              </span>
-            ))}
-            {selectedAgents.length === 0 && <span className="planning-summary-muted">暂无可用 Agent</span>}
+              );
+            })}
+            {summaryAgents.length === 0 && <span className="planning-summary-muted">暂无可用 Agent</span>}
           </div>
         </section>
 

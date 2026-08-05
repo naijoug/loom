@@ -9,6 +9,7 @@ import type {
   CommandSpec,
 } from "../domain";
 import { useAppState } from "../state/AppStateContext";
+import { authorizeExecution } from "../utils/executionPolicy";
 
 function toErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);
@@ -34,7 +35,10 @@ export function useCommandBridge() {
   const startCommandRun = useCallback(
     async (spec: CommandSpec) => {
       try {
-        const run = await invoke<CommandRun>("start_command_run", { spec });
+        const approvalId = await authorizeExecution(spec);
+        const run = await invoke<CommandRun>("start_command_run", {
+          spec: { ...spec, approvalId },
+        });
         dispatch({ type: "commands/started", run });
         return run;
       } catch (error) {
@@ -73,5 +77,23 @@ export function useCommandBridge() {
     [dispatch],
   );
 
-  return { startCommandRun, stopCommandRun };
+  const loadCommandRunLogs = useCallback(
+    async (projectPath: string, taskId: string, runId: string) => {
+      try {
+        const events = await invoke<CommandLogEvent[]>("read_command_run_logs", {
+          projectPath,
+          taskId,
+          runId,
+        });
+        dispatch({ type: "commands/logHistoryLoaded", runId, events });
+        return events;
+      } catch (error) {
+        dispatch({ type: "commands/failed", error: toErrorMessage(error) });
+        return [];
+      }
+    },
+    [dispatch],
+  );
+
+  return { startCommandRun, stopCommandRun, loadCommandRunLogs };
 }

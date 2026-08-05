@@ -1,10 +1,21 @@
-export type CommandRunStatus = "queued" | "running" | "succeeded" | "failed" | "cancelled";
+export type CommandRunStatus =
+  | "queued"
+  | "running"
+  | "succeeded"
+  | "failed"
+  | "cancelled"
+  | "interrupted";
 export type CommandRunIntent = "agent_action" | "validation" | "preview" | "loop_step" | "legacy";
 
 export interface ErrorSummary {
   exitCode?: number;
   stderrTail: string[];
   matchedLines: string[];
+  urls?: string[];
+  ports?: number[];
+  warnings?: string[];
+  testFailures?: string[];
+  stackTraceLines?: string[];
   failed: boolean;
 }
 
@@ -33,7 +44,10 @@ export interface CommandSpec {
   program: string;
   args: string[];
   cwd: string;
+  projectPath?: string;
   taskId?: string;
+  agentId?: string;
+  approvalId?: string;
   intent?: Exclude<CommandRunIntent, "legacy">;
   loopId?: string;
   iteration?: number;
@@ -45,9 +59,39 @@ export interface PtySpec {
   program: string;
   args: string[];
   cwd: string;
+  projectPath?: string;
   taskId?: string;
+  approvalId?: string;
   rows: number;
   cols: number;
+}
+
+export interface ExecutionRequest {
+  program: string;
+  args: string[];
+  cwd: string;
+  projectPath: string;
+  agentId?: string;
+}
+
+export interface ExecutionAssessment {
+  decision: "allowed" | "approval_required" | "denied";
+  riskLevel: "safe" | "medium" | "high";
+  category:
+    | "none"
+    | "dependency_install"
+    | "destructive_filesystem"
+    | "destructive_git"
+    | "production_external"
+    | "project_boundary";
+  detail: string;
+  normalizedProjectPath?: string;
+  normalizedCwd?: string;
+}
+
+export interface ExecutionApproval {
+  id: string;
+  expiresAtMs: number;
 }
 
 export interface PtyOutputEvent {

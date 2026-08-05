@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useCallback } from "react";
 import type { CommandRun, CommandRunStopResult, PtySpec } from "../domain";
 import { useAppState } from "../state/AppStateContext";
+import { authorizeExecution } from "../utils/executionPolicy";
 
 function toErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);
@@ -20,7 +21,10 @@ export function usePtyBridge() {
   const startPtyRun = useCallback(
     async (spec: PtySpec) => {
       try {
-        const run = await invoke<CommandRun>("start_pty_run", { spec });
+        const approvalId = await authorizeExecution(spec);
+        const run = await invoke<CommandRun>("start_pty_run", {
+          spec: { ...spec, approvalId },
+        });
         dispatch({ type: "commands/started", run });
         return run;
       } catch (error) {
