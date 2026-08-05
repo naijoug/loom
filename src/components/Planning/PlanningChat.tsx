@@ -21,7 +21,7 @@ import {
   unknownMentionNames,
 } from "./participantSelection";
 import { PlanningTimeline } from "./PlanningTimeline";
-import "./Planning.css";
+import "../../features/planning/Planning.css";
 
 function taskTitleFromRequirement(requirement: string) {
   const firstLine = requirement.trim().split(/\r?\n/)[0] ?? "Planning task";

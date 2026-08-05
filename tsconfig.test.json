@@ -16,6 +16,8 @@
     "src/domain/**/*.ts",
     "src/components/Planning/participantSelection.ts",
     "src/components/Planning/roundSummary.ts",
+    "src/features/settings/agentDraft.ts",
+    "src/features/testing/model.ts",
     "src/state/reducer.ts",
     "src/state/selectors.ts",
     "src/utils/agentRun.ts",

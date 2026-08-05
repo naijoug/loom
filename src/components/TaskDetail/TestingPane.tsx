@@ -2,21 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import {
   AlertTriangle,
-  Bot,
-  CheckCircle2,
-  ChevronDown,
-  Clock3,
   PanelRightClose,
   PanelRightOpen,
-  Paperclip,
-  Quote,
   RefreshCw,
-  RotateCcw,
-  Send,
-  ShieldCheck,
-  Plus,
-  User,
-  X,
 } from "lucide-react";
 import type { CommandRun, ProjectSummary, Task, TerminalSlot } from "../../domain";
 import { useAgentBridge } from "../../hooks/useAgentBridge";
@@ -27,17 +15,30 @@ import { useTaskBridge } from "../../hooks/useTaskBridge";
 import { useTerminalBridge } from "../../hooks/useTerminalBridge";
 import { useAppState } from "../../state/AppStateContext";
 import { hasTauriRuntime } from "../../hooks/runtime";
+import { FeedbackComposer } from "../../features/testing/FeedbackComposer";
+import {
+  type AutoTestingLoop,
+  type ConversationTurn,
+  type QuoteDraft,
+  deriveValidationEvidence,
+  errorFinding,
+  feedbackConversationContent,
+  gateStatus,
+  latestRunForCommand,
+  latestTaskRun as findLatestTaskRun,
+  shortTime,
+  statusLabel,
+} from "../../features/testing/model";
+import { RepairCycleHistory } from "../../features/testing/RepairCycleHistory";
+import { TerminalGrid } from "../../features/testing/TerminalGrid";
+import { TerminalSlotEditor } from "../../features/testing/TerminalSlotEditor";
+import { ValidationGate } from "../../features/testing/ValidationGate";
 import {
   buildRepairPrompt,
   formatQuotedFeedback,
   hasImplementationCapability,
 } from "../../utils/agentRun";
 import { parseCommandLine } from "../../utils/commandLine";
-import {
-  isFailedValidationRun,
-  isSuccessfulValidationRun,
-  isValidationRun,
-} from "../../utils/commandRun";
 import {
   DEFAULT_LOOP_BUDGET,
   MAX_AUTO_REPAIR_ATTEMPTS,
@@ -55,180 +56,12 @@ import {
   type TerminalSlotDraft,
 } from "../../utils/terminalSlots";
 import { Button } from "../common/Button";
-import { TerminalCard } from "./TerminalCard";
 import "./TaskDetail.css";
-
-interface QuoteDraft {
-  text: string;
-  command: string;
-  failedRunId?: string;
-}
-
-interface ConversationTurn {
-  id: string;
-  role: "human" | "agent";
-  timestampMs: number;
-  content: string;
-  run?: CommandRun;
-}
-
-interface AutoTestingLoop {
-  loopId: string;
-  sourceFailureRunId: string;
-  validationSlotId?: string;
-  validationCommand: string;
-  validationCwd: string;
-  repairAttempts: number;
-  lastFailureFingerprint?: string;
-  repeatedFailureCount: number;
-  startedAtMs: number;
-  status: "repairing" | "validating" | "passed" | "escalated";
-}
-
-function feedbackConversationContent(feedback: Task["feedback"][number]) {
-  return [
-    feedback.content,
-    feedback.reproductionSteps ? `复现步骤:\n${feedback.reproductionSteps}` : "",
-    feedback.expectedBehavior ? `期望行为:\n${feedback.expectedBehavior}` : "",
-    feedback.quotedLog ? `引用日志:\n${feedback.quotedLog}` : "",
-    feedback.attachments?.length
-      ? `附件:\n${feedback.attachments.map((attachment) => `- ${attachment.name}`).join("\n")}`
-      : "",
-  ].filter(Boolean).join("\n\n");
-}
 
 interface TestingPaneProps {
   project: ProjectSummary;
   task: Task;
   readOnly?: boolean;
-}
-
-function slotEndpoint(slot: TerminalSlot, run?: CommandRun) {
-  return run?.errorSummary?.urls?.[0]
-    ?? run?.errorSummary?.ports?.[0]?.toString()
-    ?? (slot.kind === "preview" ? "localhost:1420" : "exit code required");
-}
-
-function slotEmptyMessage(slot: TerminalSlot) {
-  return slot.kind === "preview"
-    ? "Start the preview command to stream runtime logs and keep a live surface for manual checks."
-    : "Run this check to create acceptance evidence: command, cwd, stdout/stderr logs, and exit status.";
-}
-
-function latestRunForCommand(runs: CommandRun[], taskId: string, command: string) {
-  return runs
-    .filter((run) => run.taskId === taskId && run.command === command)
-    .sort((left, right) => right.startedAtMs - left.startedAtMs)[0];
-}
-
-function latestSuccessfulValidationRun(
-  runs: CommandRun[],
-  taskId: string,
-  validationCommands: Set<string>,
-) {
-  return runs
-    .filter(
-      (run) =>
-        run.taskId === taskId && isSuccessfulValidationRun(run, validationCommands),
-    )
-    .sort((left, right) => right.startedAtMs - left.startedAtMs)[0];
-}
-
-function latestFailedRun(runs: CommandRun[], taskId: string, validationCommands: Set<string>) {
-  return runs
-    .filter((run) => run.taskId === taskId && isFailedValidationRun(run, validationCommands))
-    .sort((left, right) => right.startedAtMs - left.startedAtMs)[0];
-}
-
-function latestRun(runs: CommandRun[], taskId: string) {
-  return runs
-    .filter((run) => run.taskId === taskId)
-    .sort((left, right) => right.startedAtMs - left.startedAtMs)[0];
-}
-
-function cycleLabel(run: CommandRun, index: number) {
-  const started = new Date(run.startedAtMs).toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  return `Cycle ${index + 1} · ${run.status} · ${started}`;
-}
-
-function shortTime(timestampMs?: number) {
-  if (!timestampMs) {
-    return "not captured";
-  }
-  return new Date(timestampMs).toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function statusLabel(run?: CommandRun) {
-  if (!run) {
-    return "Not run";
-  }
-  if (typeof run.exitCode === "number") {
-    return `${run.status} · exit ${run.exitCode}`;
-  }
-  return run.status;
-}
-
-function errorFinding(run?: CommandRun) {
-  if (!run?.errorSummary) {
-    return "No failing command has been captured for this task yet.";
-  }
-  return (
-    run.errorSummary.matchedLines[0] ??
-    run.errorSummary.stderrTail[run.errorSummary.stderrTail.length - 1] ??
-    `Command exited with ${run.errorSummary.exitCode ?? "an error"}`
-  );
-}
-
-function gateStatus({
-  hasPassingEvidence,
-  hasRunningValidationRun,
-  latestBlockingFailure,
-  hasValidationEvidence,
-}: {
-  hasPassingEvidence: boolean;
-  hasRunningValidationRun: boolean;
-  latestBlockingFailure?: CommandRun;
-  hasValidationEvidence: boolean;
-}) {
-  if (latestBlockingFailure) {
-    return {
-      tone: "err",
-      title: "需要修复",
-      copy: "有新的失败验证阻塞验收，需要在其后重新跑通验证命令。",
-    };
-  }
-  if (hasPassingEvidence) {
-    return {
-      tone: "ok",
-      title: "验证已通过",
-      copy: "已有成功验证命令，且没有更新的失败运行阻塞验收。",
-    };
-  }
-  if (hasRunningValidationRun) {
-    return {
-      tone: "running",
-      title: "检查运行中",
-      copy: "等待验证命令结束后再验收任务。",
-    };
-  }
-  if (hasValidationEvidence) {
-    return {
-      tone: "idle",
-      title: "验证未通过",
-      copy: "重新运行验证命令，并捕获成功退出后再验收。",
-    };
-  }
-  return {
-    tone: "idle",
-    title: "暂无验证证据",
-    copy: "运行验证命令以捕获 stdout、stderr、退出码和日志引用。",
-  };
 }
 
 export function TestingPane({ project, task, readOnly = false }: TestingPaneProps) {
@@ -371,25 +204,16 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
       }
     }
   }, [loadCommandRunLogs, project.path, state.commandLogs, state.commandRuns, task.id, visibleLogRunIds]);
-  const failedRun = latestFailedRun(state.commandRuns, task.id, validationCommands);
-  const latestTaskRun = latestRun(state.commandRuns, task.id);
-  const successfulValidationRun = latestSuccessfulValidationRun(
-    state.commandRuns,
-    task.id,
-    validationCommands,
-  );
-  const latestBlockingFailure =
-    failedRun &&
-    (!successfulValidationRun || failedRun.startedAtMs > successfulValidationRun.startedAtMs)
-      ? failedRun
-      : undefined;
-  const hasValidationEvidence = state.commandRuns.some(
-    (run) => run.taskId === task.id && isValidationRun(run, validationCommands),
-  );
+  const validationEvidence = deriveValidationEvidence(state.commandRuns, task.id, slots);
+  const failedRun = validationEvidence.failedRun;
+  const latestTaskRun = findLatestTaskRun(state.commandRuns, task.id);
+  const successfulValidationRun = validationEvidence.successfulRun;
+  const latestBlockingFailure = validationEvidence.blockingFailure;
+  const hasValidationEvidence = validationEvidence.hasEvidence;
   const hasRunningValidationRun = slots
     .filter((slot) => slot.kind === "validation")
     .some((slot) => slotRun(slot)?.status === "running");
-  const hasPassingEvidence = Boolean(successfulValidationRun && !latestBlockingFailure);
+  const hasPassingEvidence = validationEvidence.hasPassingEvidence;
   const gate = gateStatus({
     hasPassingEvidence,
     hasRunningValidationRun,
@@ -920,61 +744,21 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
       </div>
 
       <div className={`testing-grid${cockpitOpen ? "" : " cockpit-collapsed"}`}>
-        <div className="testing-terminals">
-          {slots.map((slot) => {
-            const run = slotRun(slot);
-            return (
-              <TerminalCard
-                key={slot.id}
-                title={slot.name}
-                command={slot.command}
-                endpoint={slotEndpoint(slot, run)}
-                tone={slot.kind === "preview" ? "frontend" : "validation"}
-                mode={slot.kind === "preview" ? "pty" : "logs"}
-                emptyMessage={slotEmptyMessage(slot)}
-                run={run}
-                logs={slot.kind === "validation" && run ? state.commandLogs[run.id] ?? [] : []}
-                onRun={() => runSlot(slot)}
-                onStop={() => stopSlot(slot, run)}
-                      onEdit={
-                  readOnly
-                    ? undefined
-                    : () => setDraft(draftFromTerminalSlot(slot))
-                }
-                onRemove={readOnly ? undefined : () => removeSlot(slot)}
-                onQuote={readOnly ? undefined : handleQuote}
-                disabled={readOnly}
-              />
-            );
-          })}
-
-          {!readOnly && (
-            <div className="testing-terminal-actions">
-              <button
-                type="button"
-                className="testing-add-terminal"
-                onClick={() => setDraft(blankTerminalSlotDraft())}
-              >
-                <Plus size={14} />
-                Add terminal
-              </button>
-              <button
-                type="button"
-                className="testing-add-terminal"
-                title="Re-scan the project and replace terminals with detected commands"
-                onClick={() => void resetToDetected()}
-              >
-                <RotateCcw size={13} />
-                Reset to detected
-              </button>
-            </div>
-          )}
-
-          {(commandError || state.app.commandError) && (
-            <div className="testing-inline-error">{commandError ?? state.app.commandError}</div>
-          )}
-          {autoNotice && <div className="testing-inline-note">{autoNotice}</div>}
-        </div>
+        <TerminalGrid
+          slots={slots}
+          readOnly={readOnly}
+          commandError={commandError ?? state.app.commandError}
+          autoNotice={autoNotice}
+          slotRun={slotRun}
+          logsForRun={(runId) => state.commandLogs[runId] ?? []}
+          onRun={(slot) => void runSlot(slot)}
+          onStop={(slot, run) => void stopSlot(slot, run)}
+          onEdit={(slot) => setDraft(draftFromTerminalSlot(slot))}
+          onRemove={removeSlot}
+          onQuote={handleQuote}
+          onAdd={() => setDraft(blankTerminalSlotDraft())}
+          onReset={() => void resetToDetected()}
+        />
 
         {cockpitOpen && (
         <aside className="debug-agent-panel">
@@ -985,54 +769,16 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
           </div>
 
           <div className="debug-agent-body">
-            <section className={`debug-card testing-gate-card gate-${gate.tone}`}>
-              <div className="debug-card-label">
-                <ShieldCheck size={14} />
-                验收门禁
-              </div>
-              <strong>{gate.title}</strong>
-              <p>{gate.copy}</p>
-              <div className="testing-evidence-grid">
-                <div>
-                  <span>验证命令</span>
-                  <strong>{validationCommandLabel}</strong>
-                </div>
-                <div>
-                  <span>最近验证</span>
-                  <strong>{statusLabel(successfulValidationRun ?? failedRun)}</strong>
-                </div>
-                <div>
-                  <span>通过证据</span>
-                  <strong>
-                    {successfulValidationRun ? shortTime(successfulValidationRun.endedAtMs) : "缺失"}
-                  </strong>
-                </div>
-                <div>
-                  <span>更新失败</span>
-                  <strong>
-                    {latestBlockingFailure ? shortTime(latestBlockingFailure.startedAtMs) : "无"}
-                  </strong>
-                </div>
-              </div>
-              {!readOnly && (
-                <>
-                  <Button
-                    type="button"
-                    variant="primary"
-                    iconLeft={<CheckCircle2 size={14} />}
-                    disabled={!canAccept}
-                    onClick={handleAccept}
-                  >
-                    全部通过
-                  </Button>
-                  {!canAccept && (
-                    <div className="testing-accept-note">
-                      需要验证命令成功，且没有更新失败后才能验收。
-                    </div>
-                  )}
-                </>
-              )}
-            </section>
+            <ValidationGate
+              gate={gate}
+              validationCommandLabel={validationCommandLabel}
+              successfulRun={successfulValidationRun}
+              failedRun={failedRun}
+              blockingFailure={latestBlockingFailure}
+              canAccept={canAccept}
+              readOnly={readOnly}
+              onAccept={() => void handleAccept()}
+            />
 
             <section className={`debug-card ${latestBlockingFailure ? "debug-card-error" : ""}`}>
               <div className="debug-card-label">
@@ -1085,287 +831,55 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
               </div>
             </section>
 
-            <section className="debug-card testing-chat-card">
-              <div className="testing-chat-head">
-                <div className="debug-card-label">
-                  <Bot size={14} />
-                  调试 Agent
-                </div>
-                <div className="testing-chat-controls">
-                  <select
-                    className="testing-agent-select"
-                    value={selectedAgent?.id ?? ""}
-                    disabled={implementationAgents.length === 0 || readOnly}
-                    onChange={(event) => setSelectedAgentId(event.target.value)}
-                  >
-                    {implementationAgents.length === 0 && <option value="">No agent</option>}
-                    {implementationAgents.map((agent) => (
-                      <option value={agent.id} key={agent.id}>
-                        {agent.name}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="testing-mode-toggle" role="group" aria-label="Repair mode">
-                    <button
-                      type="button"
-                      className={autoMode ? "" : "active"}
-                      disabled={readOnly}
-                      onClick={() => {
-                        setAutoMode(false);
-                        setAutoLoop(null);
-                        setAutoNotice(null);
-                      }}
-                    >
-                      手动
-                    </button>
-                    <button
-                      type="button"
-                      className={autoMode ? "active" : ""}
-                      disabled={readOnly}
-                      onClick={() => {
-                        setAutoMode(true);
-                        setAutoNotice(null);
-                      }}
-                    >
-                      自动
-                    </button>
-                  </div>
-                </div>
-              </div>
+            <FeedbackComposer
+              readOnly={readOnly}
+              agents={implementationAgents}
+              selectedAgent={selectedAgent}
+              autoMode={autoMode}
+              conversation={conversation}
+              logs={state.commandLogs}
+              quote={quote}
+              note={note}
+              reproductionSteps={reproductionSteps}
+              expectedBehavior={expectedBehavior}
+              attachmentPaths={attachmentPaths}
+              onAgentChange={setSelectedAgentId}
+              onModeChange={(enabled) => {
+                setAutoMode(enabled);
+                if (!enabled) setAutoLoop(null);
+                setAutoNotice(null);
+              }}
+              onQuoteClear={() => setQuote(null)}
+              onNoteChange={setNote}
+              onReproductionStepsChange={setReproductionSteps}
+              onExpectedBehaviorChange={setExpectedBehavior}
+              onSelectAttachments={() => void selectFeedbackAttachments()}
+              onRemoveAttachment={(path) =>
+                setAttachmentPaths((current) => current.filter((candidate) => candidate !== path))
+              }
+              onSubmit={() => void handleAskAgent()}
+            />
 
-              <div className="testing-chat-stream">
-                {conversation.length === 0 ? (
-                  <p className="testing-chat-empty">
-                    选中终端日志并引用到这里，或直接写反馈给 Agent 修复。
-                  </p>
-                ) : (
-                  conversation.map((turn) => (
-                    <div className={`testing-chat-turn turn-${turn.role}`} key={`${turn.role}-${turn.id}`}>
-                      <div className="testing-chat-avatar">
-                        {turn.role === "human" ? <User size={13} /> : <Bot size={13} />}
-                      </div>
-                      <div className="testing-chat-bubble">
-                        {turn.role === "agent" && turn.run ? (
-                          <>
-                            <div className="testing-chat-runline">
-                              <span className={`testing-status-pill testing-status-${
-                                turn.run.status === "running"
-                                  ? "running"
-                                  : turn.run.status === "succeeded"
-                                    ? "ok"
-                                    : turn.run.status === "failed"
-                                      ? "err"
-                                      : "idle"
-                              }`}>
-                                <span />
-                                {turn.run.status}
-                              </span>
-                              <span className="testing-chat-runcmd">fix run</span>
-                            </div>
-                            <pre className="testing-chat-runlog">
-                              {(state.commandLogs[turn.run.id] ?? [])
-                                .slice(-12)
-                                .map((entry) => entry.line)
-                                .join("\n") || "Agent started. Waiting for output…"}
-                            </pre>
-                          </>
-                        ) : (
-                          <pre className="testing-chat-text">{turn.content}</pre>
-                        )}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              {quote && (
-                <div className="testing-chat-quote">
-                  <Quote size={12} />
-                  <div className="testing-chat-quote-body">
-                    <span className="testing-chat-quote-cmd">{quote.command}</span>
-                    <pre>{quote.text.trim() || "(empty selection)"}</pre>
-                  </div>
-                  <button type="button" title="Remove quote" onClick={() => setQuote(null)}>
-                    <X size={12} />
-                  </button>
-                </div>
-              )}
-
-              {!readOnly && (
-                <div className="testing-chat-composer">
-                  <textarea
-                    value={note}
-                    onChange={(event) => setNote(event.target.value)}
-                    placeholder="告诉 Agent 哪里不对，也可以从终端引用日志定位问题…"
-                  />
-                  <textarea
-                    className="testing-chat-structured-field"
-                    value={reproductionSteps}
-                    onChange={(event) => setReproductionSteps(event.target.value)}
-                    placeholder="复现步骤（可选）"
-                  />
-                  <textarea
-                    className="testing-chat-structured-field"
-                    value={expectedBehavior}
-                    onChange={(event) => setExpectedBehavior(event.target.value)}
-                    placeholder="期望行为（可选）"
-                  />
-                  <div className="testing-chat-attachments">
-                    <button type="button" onClick={() => void selectFeedbackAttachments()}>
-                      <Paperclip size={13} /> 添加截图或文件
-                    </button>
-                    {attachmentPaths.map((path) => (
-                      <span key={path} title={path}>
-                        {path.split(/[\\/]/).pop()}
-                        <button
-                          type="button"
-                          aria-label="Remove attachment"
-                          onClick={() => setAttachmentPaths((current) => current.filter((candidate) => candidate !== path))}
-                        ><X size={10} /></button>
-                      </span>
-                    ))}
-                  </div>
-                  <Button
-                    type="button"
-                    variant="primary"
-                    iconRight={<Send size={14} />}
-                    disabled={
-                      (!note.trim() &&
-                        !reproductionSteps.trim() &&
-                        !expectedBehavior.trim() &&
-                        !quote?.text.trim() &&
-                        attachmentPaths.length === 0) ||
-                      !selectedAgent
-                    }
-                    onClick={handleAskAgent}
-                  >
-                    打回修复
-                  </Button>
-                </div>
-              )}
-            </section>
-
-            <section className="debug-card">
-              <button
-                type="button"
-                className="debug-card-label testing-cycles-toggle"
-                aria-expanded={cyclesOpen}
-                onClick={() => setCyclesOpen((open) => !open)}
-              >
-                <Clock3 size={14} />
-                测试循环
-                <span className="testing-cycles-count">{taskRuns.length}</span>
-                <ChevronDown
-                  size={14}
-                  className={`testing-cycles-chevron${cyclesOpen ? " open" : ""}`}
-                />
-              </button>
-              {cyclesOpen && (
-              <div className="testing-cycle-list">
-                {taskRuns.length === 0 ? (
-                  <span>暂无命令循环。</span>
-                ) : (
-                  taskRuns.map((run, index) => {
-                    const expanded = expandedCycle === run.id;
-                    const cycleLogs = state.commandLogs[run.id] ?? [];
-                    return (
-                      <div className={`testing-cycle cycle-${run.status}`} key={run.id}>
-                        <span />
-                        <div className="testing-cycle-body">
-                          <button
-                            type="button"
-                            className="testing-cycle-toggle"
-                            aria-expanded={expanded}
-                            onClick={() => setExpandedCycle(expanded ? null : run.id)}
-                          >
-                            <strong>{cycleLabel(run, index)}</strong>
-                            <p>{run.errorSummary?.matchedLines[0] ?? run.command}</p>
-                          </button>
-                          {expanded && (
-                            <pre className="testing-cycle-log">
-                              {cycleLogs.length > 0
-                                ? cycleLogs.map((entry) => entry.line).join("\n")
-                                : "No captured log lines (live terminal output streams to the terminal, not the cycle log)."}
-                            </pre>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-              )}
-            </section>
+            <RepairCycleHistory
+              runs={taskRuns}
+              logs={state.commandLogs}
+              open={cyclesOpen}
+              expandedRunId={expandedCycle}
+              onToggleOpen={() => setCyclesOpen((open) => !open)}
+              onToggleRun={(runId) => setExpandedCycle((current) => current === runId ? null : runId)}
+            />
           </div>
         </aside>
         )}
       </div>
 
       {draft && (
-        <div className="confirm-backdrop" role="presentation" onClick={() => setDraft(null)}>
-          <div
-            className="confirm-modal testing-slot-modal"
-            role="dialog"
-            aria-modal="true"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <h2>{draft.id ? "Edit terminal" : "Add terminal"}</h2>
-            <label className="testing-slot-field">
-              <span>Name</span>
-              <input
-                value={draft.name}
-                autoFocus
-                placeholder="Preview"
-                onChange={(event) => setDraft({ ...draft, name: event.target.value })}
-              />
-            </label>
-            <label className="testing-slot-field">
-              <span>Command</span>
-              <input
-                value={draft.command}
-                placeholder="pnpm dev"
-                onChange={(event) => setDraft({ ...draft, command: event.target.value })}
-              />
-            </label>
-            <label className="testing-slot-field">
-              <span>Working directory (optional, relative to project)</span>
-              <input
-                value={draft.cwd}
-                placeholder="(project root) e.g. todo-react"
-                onChange={(event) => setDraft({ ...draft, cwd: event.target.value })}
-              />
-            </label>
-            <label className="testing-slot-field">
-              <span>Kind</span>
-              <select
-                value={draft.kind}
-                onChange={(event) =>
-                  setDraft({ ...draft, kind: event.target.value as TerminalSlot["kind"] })
-                }
-              >
-                <option value="preview">Preview (live dev server)</option>
-                <option value="validation">Validation (one-shot check)</option>
-              </select>
-            </label>
-            <p className="testing-slot-hint">
-              {draft.kind === "preview"
-                ? "Runs in a real terminal (PTY) with colors. Long-running; not used for the acceptance gate."
-                : "Piped one-shot command. Its exit code and logs drive the acceptance gate."}
-            </p>
-            <div className="confirm-modal-actions">
-              <Button variant="ghost" onClick={() => setDraft(null)}>
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                onClick={saveDraft}
-                disabled={!draft.name.trim() || !draft.command.trim()}
-              >
-                Save
-              </Button>
-            </div>
-          </div>
-        </div>
+        <TerminalSlotEditor
+          draft={draft}
+          setDraft={setDraft}
+          onSave={saveDraft}
+          onClose={() => setDraft(null)}
+        />
       )}
     </div>
   );

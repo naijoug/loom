@@ -3,7 +3,7 @@
 - **Date**: 2026-08-05
 - **Author**: Codex
 - **Status**: in-progress
-- **Progress**: M0–M2 已完成；M3 实施中
+- **Progress**: M0–M3 已完成；M4 实施中
 
 ## 目标
 
@@ -40,15 +40,16 @@
 - M0 已将完整版本拆成四个功能提交并建立 `stabilization-baseline-2026-08-05` 标签；release/DMG checksum 见 `docs/dogfood/stabilization-baseline-2026-08-05.md`。
 - M1 已为五类 store 增加版本信封、v0→v1 原子迁移、未来/损坏版本备份；`contracts/tauri-contract.json` 同时约束 56 个 command、5 个 event、状态枚举、schema 版本和关键 wire model sample，前端 Tauri 调用已集中到 `src/api/`。
 - M2 已用 `ProcessSupervisor` 统一 Agent/command/Review/PTY 的 run metadata、进程组终止、timeout/stop reason 与恢复判定；`TaskRepository` 统一任务锁、原子 read-modify-write、append-only evidence merge 和锁回收。`agents.rs`/`tasks.rs` 生产根模块分别降至约 878/946 行，拆出的职责模块均低于 1,000 行。
+- M3 已将单体 reducer 拆为项目、任务、命令、规划等 8 个 domain 模块；Testing 的终端网格、验收门禁、反馈编辑器、修复历史和证据模型已进入 `src/features/testing/`，旧容器由 1,372 行降至 886 行。Planning/Settings 公共入口均降为 1 行，feature 主模块分别为 844/932 行，最终计划视图、Agent draft 与通用控件已独立；Planning/Settings CSS 已随 feature 共置。95 项前端测试、生产构建、interaction smoke 与 30 屏深浅主题 visual smoke 均通过。
 
 ### 主要差距
 
 - **交付基线已固化（M0）**：完整闭环已进入 `codex/project-stabilization` 的可审查提交与稳定化标签；公开分发仍缺 Developer ID 签名、公证和多平台矩阵。
-- **后端模块集中已缓解（M2）**：Agent 与 Task 生产模块已按 config/orchestrator/stream/artifacts、lifecycle/testing/repository 拆分；前端仍有 `TestingPane.tsx`、`PlanningTimeline.tsx`、`SettingsPage.tsx`、`reducer.ts` 四个高变更半径容器，交由 M3。
+- **前后端巨型模块已拆分（M2–M3）**：Agent/Task 生产模块与前端 Testing/Planning/Settings/reducer 均已按职责下沉；公共入口与各核心生产模块均低于 1,000 行，后续继续以 feature 为依赖边界。
 - **进程运行时已统一（M2）**：四类进程共享 supervisor metadata、进程组终止与恢复语义；PTY 只保留 transport 特有句柄和读写线程。
 - **持久化迁移已显式化（M1）**：五类 store 已有独立 schema version 和 v0→v1 入口；下一次字段重命名或语义变化必须新增逐版本迁移函数与 fixture。
 - **前后端契约已有门禁（M1）**：canonical fixture 与 typed client 已覆盖 command/event/schema/status/关键模型；command payload 的进一步细化随 M2 service 拆分继续收紧。
-- **测试金字塔断层**：88 个前端测试主要覆盖纯函数、reducer 和 selector，`tsconfig.test.json` 基本不编译页面组件；现有浏览器 smoke 运行 `/preview/planning` 预览壳，CI 只执行 `pnpm check`，不覆盖真实 Tauri invoke、桌面重启恢复和前端桥接错误。
+- **测试金字塔断层**：95 个前端测试仍以纯函数、reducer 和 selector 为主，尚缺基于 DOM 的 React 交互测试；现有浏览器 smoke 运行 `/preview/planning` 预览壳，CI 仍只执行 `pnpm check`，不覆盖真实 Tauri invoke、桌面重启恢复和前端桥接错误。M4 正在补齐这些层。
 - **视觉回归判定偏弱**：视觉 smoke 只检查 DOM 文案和 PNG 大小，没有基线图差异；布局错位、对比度下降或操作层级变化仍可能通过。
 - **界面信息密度较高**：Planning、Testing、Done 页面已经具备完整证据，但中英文混用、右侧驾驶舱纵向堆叠和同级操作过多，首次使用时需要更明确的“当前阻塞原因 / 下一步动作”。
 

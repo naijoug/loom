@@ -17,9 +17,9 @@ import "../layouts/AppLayout.css";
 import "../components/Sidebar/Sidebar.css";
 import "../components/Workspace/Workspace.css";
 import "../components/Board/Board.css";
-import "../components/Planning/Planning.css";
+import "../features/planning/Planning.css";
 import "../components/TaskDetail/TaskDetail.css";
-import "../components/Settings/SettingsPage.css";
+import "../features/settings/SettingsPage.css";
 
 const now = Date.now();
 
