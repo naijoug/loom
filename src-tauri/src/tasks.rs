@@ -2,22 +2,16 @@ use crate::{
     agents, attachments, command_runner,
     context_builder::{self, ContextBuildOptions, ContextBuildOutput},
     implementation_review,
-    migrations::{self, TASK_SCHEMA_VERSION},
     models::{
         now_ms, CommandRun, CommandRunIntent, CommandRunStatus, CreateTaskInput, ErrorSummary,
         FeedbackInput, IdGenerator, LoopTraceEntry, PlanTodoItem, PlanTodoStatus, PlanningDecision,
         PlanningDecisionInput, Task, TaskEvent, TaskLifecycleInput, TaskStatus, UserFeedback,
     },
-    plan_html, project_git, project_preferences, pty, run_recovery, storage,
+    plan_html, project_git, project_preferences, pty, run_recovery, storage, task_repository,
     task_state::{transition, TaskAction},
     task_summary,
 };
-use std::{
-    collections::HashMap,
-    fs,
-    path::{Path, PathBuf},
-    sync::{Arc, Mutex, OnceLock},
-};
+use std::{fs, path::Path};
 use tauri::{AppHandle, State};
 
 #[tauri::command]
@@ -40,11 +34,19 @@ pub fn list_tasks(
             .map_err(|error| format!("failed to read task entry: {error}"))?
             .path();
         if path.extension().and_then(|value| value.to_str()) == Some("json") {
-            let mut task: Task =
-                migrations::read_versioned_json(&path, "task", TASK_SCHEMA_VERSION)?;
-            if should_reconcile && run_recovery::reconcile_task(&mut task) > 0 {
-                save_task(&task)?;
-            }
+            let task_id = path
+                .file_stem()
+                .and_then(|value| value.to_str())
+                .ok_or_else(|| format!("invalid task filename '{}'", path.display()))?;
+            let task = if should_reconcile {
+                update_task(Path::new(&project_path), task_id, |task| {
+                    run_recovery::reconcile_task(task);
+                    Ok(())
+                })?
+                .0
+            } else {
+                task_repository::load(Path::new(&project_path), task_id)?
+            };
             tasks.push(task);
         }
     }
@@ -124,42 +126,42 @@ pub fn record_planning_decision(
     ids: State<'_, IdGenerator>,
     input: PlanningDecisionInput,
 ) -> Result<Task, String> {
-    let mut task = load_task(Path::new(&input.project_path), &input.task_id)?;
-    ensure_task_active(&task)?;
-    let timestamp_ms = now_ms();
-    let decision = PlanningDecision {
-        id: ids.next("decision"),
-        task_id: task.id.clone(),
-        title: input.title.clone(),
-        content: input.content.clone(),
-        status: "accepted".to_string(),
-        created_at_ms: timestamp_ms,
-    };
+    update_task(Path::new(&input.project_path), &input.task_id, |task| {
+        ensure_task_active(task)?;
+        let timestamp_ms = now_ms();
+        let decision = PlanningDecision {
+            id: ids.next("decision"),
+            task_id: task.id.clone(),
+            title: input.title.clone(),
+            content: input.content.clone(),
+            status: "accepted".to_string(),
+            created_at_ms: timestamp_ms,
+        };
 
-    task.planning_decisions.push(decision);
-    task.final_plan = task
-        .final_plan
-        .clone()
-        .map(|plan| render_plan_with_human_decisions(&plan, &task.planning_decisions));
-    if let (Some(path), Some(plan)) = (&task.final_plan_path, &task.final_plan) {
-        storage::atomic_write_text(Path::new(path), plan)
-            .map_err(|error| format!("failed to write decision to plan: {error}"))?;
-        task.final_plan_html_path = plan_html::write_task_plan_html(&task)?;
-    }
-    task.events.push(TaskEvent {
-        id: ids.next("event"),
-        task_id: task.id.clone(),
-        timestamp_ms,
-        actor: "user".to_string(),
-        status: task.status,
-        input_summary: Some(input.title),
-        output_summary: Some(input.content),
-        evidence_ref: task.final_plan_path.clone(),
-    });
-    task.updated_at_ms = timestamp_ms;
-    save_task(&task)?;
-
-    Ok(task)
+        task.planning_decisions.push(decision);
+        task.final_plan = task
+            .final_plan
+            .clone()
+            .map(|plan| render_plan_with_human_decisions(&plan, &task.planning_decisions));
+        if let (Some(path), Some(plan)) = (&task.final_plan_path, &task.final_plan) {
+            storage::atomic_write_text(Path::new(path), plan)
+                .map_err(|error| format!("failed to write decision to plan: {error}"))?;
+            task.final_plan_html_path = plan_html::write_task_plan_html(task)?;
+        }
+        task.events.push(TaskEvent {
+            id: ids.next("event"),
+            task_id: task.id.clone(),
+            timestamp_ms,
+            actor: "user".to_string(),
+            status: task.status,
+            input_summary: Some(input.title.clone()),
+            output_summary: Some(input.content.clone()),
+            evidence_ref: task.final_plan_path.clone(),
+        });
+        task.updated_at_ms = timestamp_ms;
+        Ok(())
+    })
+    .map(|(task, ())| task)
 }
 
 fn render_plan_with_human_decisions(plan: &str, decisions: &[PlanningDecision]) -> String {
@@ -187,42 +189,44 @@ pub fn confirm_plan(
     project_path: String,
     task_id: String,
 ) -> Result<Task, String> {
-    let mut task = load_task(Path::new(&project_path), &task_id)?;
-    ensure_task_active(&task)?;
-    let final_plan = task
-        .final_plan
-        .clone()
-        .ok_or_else(|| "cannot confirm plan before a final plan exists".to_string())?;
-    let plan_ref = task.final_plan_path.clone().unwrap_or_else(|| {
-        storage::project_plans_dir(Path::new(&project_path))
-            .join(format!("{}-final-plan.md", task.id))
-            .display()
-            .to_string()
-    });
-    let plan_todos = derive_plan_todos(&ids, &task.id, &plan_ref, &final_plan);
+    update_task(Path::new(&project_path), &task_id, |task| {
+        ensure_task_active(task)?;
+        let final_plan = task
+            .final_plan
+            .clone()
+            .ok_or_else(|| "cannot confirm plan before a final plan exists".to_string())?;
+        let plan_ref = task.final_plan_path.clone().unwrap_or_else(|| {
+            storage::project_plans_dir(Path::new(&project_path))
+                .join(format!("{}-final-plan.md", task.id))
+                .display()
+                .to_string()
+        });
+        let plan_todos = derive_plan_todos(&ids, &task.id, &plan_ref, &final_plan);
 
-    if plan_todos.is_empty() {
-        return Err("cannot confirm plan because it has no implementation todo items".to_string());
-    }
+        if plan_todos.is_empty() {
+            return Err(
+                "cannot confirm plan because it has no implementation todo items".to_string(),
+            );
+        }
 
-    task.status = transition(task.status, TaskAction::PlanConfirmed)?;
-    task.plan_todos = plan_todos;
-    task.updated_at_ms = now_ms();
-    task.events.push(TaskEvent {
-        id: ids.next("event"),
-        task_id: task.id.clone(),
-        timestamp_ms: task.updated_at_ms,
-        actor: "user".to_string(),
-        status: task.status,
-        input_summary: Some("Plan confirmed".to_string()),
-        output_summary: Some(
-            "Implementation todo items generated from the final plan.".to_string(),
-        ),
-        evidence_ref: task.final_plan_path.clone(),
-    });
-    save_task(&task)?;
-
-    Ok(task)
+        task.status = transition(task.status, TaskAction::PlanConfirmed)?;
+        task.plan_todos = plan_todos;
+        task.updated_at_ms = now_ms();
+        task.events.push(TaskEvent {
+            id: ids.next("event"),
+            task_id: task.id.clone(),
+            timestamp_ms: task.updated_at_ms,
+            actor: "user".to_string(),
+            status: task.status,
+            input_summary: Some("Plan confirmed".to_string()),
+            output_summary: Some(
+                "Implementation todo items generated from the final plan.".to_string(),
+            ),
+            evidence_ref: task.final_plan_path.clone(),
+        });
+        Ok(())
+    })
+    .map(|(task, ())| task)
 }
 
 #[tauri::command]
@@ -234,21 +238,20 @@ pub fn start_todo(
     primary_agent_id: Option<String>,
     primary_agent_switch_reason: Option<String>,
 ) -> Result<Task, String> {
-    let mut task = load_task(Path::new(&project_path), &task_id)?;
-    ensure_task_active(&task)?;
-    if task.git_baseline.is_none() {
-        task.git_baseline = Some(project_git::capture_git_baseline(Path::new(&project_path)));
-    }
-    apply_start_todo(
-        &mut task,
-        &todo_id,
-        primary_agent_id,
-        primary_agent_switch_reason,
-        ids.next("event"),
-    )?;
-    save_task(&task)?;
-
-    Ok(task)
+    update_task(Path::new(&project_path), &task_id, |task| {
+        ensure_task_active(task)?;
+        if task.git_baseline.is_none() {
+            task.git_baseline = Some(project_git::capture_git_baseline(Path::new(&project_path)));
+        }
+        apply_start_todo(
+            task,
+            &todo_id,
+            primary_agent_id,
+            primary_agent_switch_reason,
+            ids.next("event"),
+        )
+    })
+    .map(|(task, ())| task)
 }
 
 #[tauri::command]
@@ -258,12 +261,11 @@ pub fn complete_todo(
     task_id: String,
     todo_id: String,
 ) -> Result<Task, String> {
-    let mut task = load_task(Path::new(&project_path), &task_id)?;
-    ensure_task_active(&task)?;
-    apply_complete_todo(&mut task, &todo_id, ids.next("event"))?;
-    save_task(&task)?;
-
-    Ok(task)
+    update_task(Path::new(&project_path), &task_id, |task| {
+        ensure_task_active(task)?;
+        apply_complete_todo(task, &todo_id, ids.next("event"))
+    })
+    .map(|(task, ())| task)
 }
 
 #[tauri::command]
@@ -275,41 +277,42 @@ pub fn switch_primary_agent(
     agent_id: String,
     reason: String,
 ) -> Result<Task, String> {
-    let mut task = load_task(Path::new(&project_path), &task_id)?;
-    ensure_task_active(&task)?;
     let reason = reason.trim();
     if reason.len() < 5 {
         return Err("switching the primary Agent requires a specific reason".to_string());
-    }
-    if task.primary_agent_id.as_deref() == Some(agent_id.as_str()) {
-        return Err("the selected Agent is already the primary Agent".to_string());
     }
     let agent = agents::load_agents(&app)?
         .into_iter()
         .find(|agent| agent.id == agent_id)
         .ok_or_else(|| "the selected primary Agent was not found".to_string())?;
     agents::validate_implementation_agent(&app, &agent.id, &agent.command)?;
-    let previous = task
-        .primary_agent_id
-        .replace(agent.id.clone())
-        .unwrap_or_else(|| "none".to_string());
-    let timestamp_ms = now_ms();
-    task.updated_at_ms = timestamp_ms;
-    task.events.push(TaskEvent {
-        id: ids.next("event"),
-        task_id: task.id.clone(),
-        timestamp_ms,
-        actor: "user".to_string(),
-        status: task.status,
-        input_summary: Some(format!(
-            "Switched primary Agent from {previous} to {}",
-            agent.id
-        )),
-        output_summary: Some(reason.to_string()),
-        evidence_ref: None,
-    });
-    save_task(&task)?;
-    Ok(task)
+    update_task(Path::new(&project_path), &task_id, |task| {
+        ensure_task_active(task)?;
+        if task.primary_agent_id.as_deref() == Some(agent.id.as_str()) {
+            return Err("the selected Agent is already the primary Agent".to_string());
+        }
+        let previous = task
+            .primary_agent_id
+            .replace(agent.id.clone())
+            .unwrap_or_else(|| "none".to_string());
+        let timestamp_ms = now_ms();
+        task.updated_at_ms = timestamp_ms;
+        task.events.push(TaskEvent {
+            id: ids.next("event"),
+            task_id: task.id.clone(),
+            timestamp_ms,
+            actor: "user".to_string(),
+            status: task.status,
+            input_summary: Some(format!(
+                "Switched primary Agent from {previous} to {}",
+                agent.id
+            )),
+            output_summary: Some(reason.to_string()),
+            evidence_ref: None,
+        });
+        Ok(())
+    })
+    .map(|(task, ())| task)
 }
 
 #[tauri::command]
@@ -329,12 +332,11 @@ pub fn mark_ready_for_testing(
     project_path: String,
     task_id: String,
 ) -> Result<Task, String> {
-    let mut task = load_task(Path::new(&project_path), &task_id)?;
-    ensure_task_active(&task)?;
-    apply_mark_ready_for_testing(&mut task, ids.next("event"))?;
-    save_task(&task)?;
-
-    Ok(task)
+    update_task(Path::new(&project_path), &task_id, |task| {
+        ensure_task_active(task)?;
+        apply_mark_ready_for_testing(task, ids.next("event"))
+    })
+    .map(|(task, ())| task)
 }
 
 #[tauri::command]
@@ -351,35 +353,30 @@ pub(crate) fn complete_task_inner(
     project_path: String,
     task_id: String,
 ) -> Result<Task, String> {
-    let mut task = load_task(Path::new(&project_path), &task_id)?;
-    ensure_task_active(&task)?;
-    apply_complete_task(&mut task, ids.next("event"))?;
-    let summary = task_summary::generate_and_persist(&task)?;
-    task.events.push(TaskEvent {
-        id: ids.next("event"),
-        task_id: task.id.clone(),
-        timestamp_ms: summary.generated_at_ms,
-        actor: "system".to_string(),
-        status: task.status,
-        input_summary: Some("Generated delivery summary".to_string()),
-        output_summary: Some("JSON and Markdown delivery artifacts persisted".to_string()),
-        evidence_ref: Some(summary.markdown_path.clone()),
-    });
-    task.summary = Some(summary);
-    save_task(&task)?;
-
-    Ok(task)
+    update_task(Path::new(&project_path), &task_id, |task| {
+        ensure_task_active(task)?;
+        apply_complete_task(task, ids.next("event"))?;
+        let summary = task_summary::generate_and_persist(task)?;
+        task.events.push(TaskEvent {
+            id: ids.next("event"),
+            task_id: task.id.clone(),
+            timestamp_ms: summary.generated_at_ms,
+            actor: "system".to_string(),
+            status: task.status,
+            input_summary: Some("Generated delivery summary".to_string()),
+            output_summary: Some("JSON and Markdown delivery artifacts persisted".to_string()),
+            evidence_ref: Some(summary.markdown_path.clone()),
+        });
+        task.summary = Some(summary);
+        Ok(())
+    })
+    .map(|(task, ())| task)
 }
 
 #[tauri::command]
 pub fn delete_task(project_path: String, task_id: String) -> Result<(), String> {
-    validate_task_id(&task_id)?;
     let project = Path::new(&project_path);
-    let path = task_path(project, &task_id);
-
-    if path.exists() {
-        std::fs::remove_file(&path).map_err(|error| format!("failed to delete task: {error}"))?;
-    }
+    task_repository::delete(project, &task_id)?;
 
     // Best-effort cleanup of this task's planning evidence directory.
     let evidence_dir = storage::project_loom_dir(project)
@@ -407,18 +404,18 @@ pub async fn pause_task(
     command_runner::stop_task_runs(commands.inner(), &input.task_id, "task_paused").await?;
     pty::stop_task_runs(ptys.inner(), &input.task_id, "task_paused")?;
 
-    let mut task = load_task(project_path, &input.task_id)?;
-    apply_pause_task(&mut task, ids.next("event"), input.reason)?;
-    save_task(&task)?;
-    Ok(task)
+    update_task(project_path, &input.task_id, |task| {
+        apply_pause_task(task, ids.next("event"), input.reason)
+    })
+    .map(|(task, ())| task)
 }
 
 #[tauri::command]
 pub fn resume_task(ids: State<'_, IdGenerator>, input: TaskLifecycleInput) -> Result<Task, String> {
-    let mut task = load_task(Path::new(&input.project_path), &input.task_id)?;
-    apply_resume_task(&mut task, ids.next("event"), input.reason)?;
-    save_task(&task)?;
-    Ok(task)
+    update_task(Path::new(&input.project_path), &input.task_id, |task| {
+        apply_resume_task(task, ids.next("event"), input.reason)
+    })
+    .map(|(task, ())| task)
 }
 
 #[tauri::command]
@@ -436,10 +433,10 @@ pub async fn block_task(
     command_runner::stop_task_runs(commands.inner(), &input.task_id, "task_blocked").await?;
     pty::stop_task_runs(ptys.inner(), &input.task_id, "task_blocked")?;
 
-    let mut task = load_task(project_path, &input.task_id)?;
-    apply_block_task(&mut task, ids.next("event"), input.reason)?;
-    save_task(&task)?;
-    Ok(task)
+    update_task(project_path, &input.task_id, |task| {
+        apply_block_task(task, ids.next("event"), input.reason)
+    })
+    .map(|(task, ())| task)
 }
 
 #[tauri::command]
@@ -462,10 +459,10 @@ pub async fn cancel_task(
     command_runner::stop_task_runs(commands.inner(), &input.task_id, "task_cancelled").await?;
     pty::stop_task_runs(ptys.inner(), &input.task_id, "task_cancelled")?;
 
-    let mut task = load_task(project_path, &input.task_id)?;
-    apply_cancel_task(&mut task, ids.next("event"), input.reason)?;
-    save_task(&task)?;
-    Ok(task)
+    update_task(project_path, &input.task_id, |task| {
+        apply_cancel_task(task, ids.next("event"), input.reason)
+    })
+    .map(|(task, ())| task)
 }
 
 fn apply_pause_task(
@@ -1016,138 +1013,19 @@ fn compact_summary_line(value: &str, limit: usize) -> String {
 }
 
 pub fn load_task(project_path: &Path, task_id: &str) -> Result<Task, String> {
-    validate_task_id(task_id)?;
-    migrations::read_versioned_json(
-        &task_path(project_path, task_id),
-        "task",
-        TASK_SCHEMA_VERSION,
-    )
+    task_repository::load(project_path, task_id)
 }
 
 pub fn save_task(task: &Task) -> Result<(), String> {
-    validate_task_id(&task.id)?;
-    let lock = task_write_lock(Path::new(&task.project_path), &task.id)?;
-    let _guard = lock
-        .lock()
-        .map_err(|_| "task write lock is unavailable".to_string())?;
-    let mut persisted = task.clone();
-    let path = task_path(Path::new(&task.project_path), &task.id);
-    if let Ok(existing) =
-        migrations::read_versioned_json::<Task>(&path, "task", TASK_SCHEMA_VERSION)
-    {
-        merge_append_only_task_state(&mut persisted, existing);
-    }
-    migrations::write_versioned_json(&path, TASK_SCHEMA_VERSION, &persisted)
+    task_repository::save(task)
 }
 
-fn task_write_locks() -> &'static Mutex<HashMap<String, Arc<Mutex<()>>>> {
-    static LOCKS: OnceLock<Mutex<HashMap<String, Arc<Mutex<()>>>>> = OnceLock::new();
-    LOCKS.get_or_init(|| Mutex::new(HashMap::new()))
-}
-
-fn task_write_lock(project_path: &Path, task_id: &str) -> Result<Arc<Mutex<()>>, String> {
-    let key = format!("{}::{task_id}", project_path.display());
-    let mut locks = task_write_locks()
-        .lock()
-        .map_err(|_| "task lock registry is unavailable".to_string())?;
-    Ok(locks
-        .entry(key)
-        .or_insert_with(|| Arc::new(Mutex::new(())))
-        .clone())
-}
-
-fn push_missing_by_id<T, F>(target: &mut Vec<T>, source: Vec<T>, id: F)
-where
-    F: Fn(&T) -> &str,
-{
-    for item in source {
-        if target.iter().all(|current| id(current) != id(&item)) {
-            target.push(item);
-        }
-    }
-}
-
-fn merge_append_only_task_state(target: &mut Task, existing: Task) {
-    for run in existing.command_runs {
-        if let Some(current) = target
-            .command_runs
-            .iter_mut()
-            .find(|current| current.id == run.id)
-        {
-            if current.status == CommandRunStatus::Running
-                && run.status != CommandRunStatus::Running
-            {
-                *current = run;
-            }
-        } else {
-            target.command_runs.push(run);
-        }
-    }
-    push_missing_by_id(&mut target.events, existing.events, |event| &event.id);
-    push_missing_by_id(&mut target.feedback, existing.feedback, |feedback| {
-        &feedback.id
-    });
-    push_missing_by_id(&mut target.loop_trace, existing.loop_trace, |entry| {
-        &entry.id
-    });
-    push_missing_by_id(
-        &mut target.implementation_review_runs,
-        existing.implementation_review_runs,
-        |run| &run.id,
-    );
-    push_missing_by_id(
-        &mut target.implementation_reviews,
-        existing.implementation_reviews,
-        |review| &review.id,
-    );
-    push_missing_by_id(
-        &mut target.implementation_review_decisions,
-        existing.implementation_review_decisions,
-        |decision| &decision.id,
-    );
-    if target.git_baseline.is_none() {
-        target.git_baseline = existing.git_baseline;
-    }
-    if target.summary.is_none() {
-        target.summary = existing.summary;
-    }
-    if existing.updated_at_ms > target.updated_at_ms
-        && (existing.lifecycle.paused
-            || matches!(existing.status, TaskStatus::Blocked | TaskStatus::Cancelled))
-    {
-        target.status = existing.status;
-        target.lifecycle = existing.lifecycle;
-        target.updated_at_ms = existing.updated_at_ms;
-    }
-}
-
-fn update_task<T>(
+pub(crate) fn update_task<T>(
     project_path: &Path,
     task_id: &str,
     update: impl FnOnce(&mut Task) -> Result<T, String>,
 ) -> Result<(Task, T), String> {
-    validate_task_id(task_id)?;
-    let lock = task_write_lock(project_path, task_id)?;
-    let _guard = lock
-        .lock()
-        .map_err(|_| "task write lock is unavailable".to_string())?;
-    let path = task_path(project_path, task_id);
-    let mut task: Task = migrations::read_versioned_json(&path, "task", TASK_SCHEMA_VERSION)?;
-    let output = update(&mut task)?;
-    migrations::write_versioned_json(&path, TASK_SCHEMA_VERSION, &task)?;
-    Ok((task, output))
-}
-
-fn validate_task_id(task_id: &str) -> Result<(), String> {
-    if task_id.is_empty()
-        || task_id.len() > 160
-        || !task_id
-            .chars()
-            .all(|character| character.is_ascii_alphanumeric() || matches!(character, '-' | '_'))
-    {
-        return Err("invalid task id".to_string());
-    }
-    Ok(())
+    task_repository::update(project_path, task_id, update)
 }
 
 pub fn add_command_run(project_path: &Path, task_id: &str, run: CommandRun) -> Result<(), String> {
@@ -1363,10 +1241,6 @@ fn apply_command_finish_status(
     }
 
     Ok(())
-}
-
-fn task_path(project_path: &Path, task_id: &str) -> PathBuf {
-    storage::project_tasks_dir(project_path).join(format!("{task_id}.json"))
 }
 
 fn format_failed_run_context(run: &CommandRun) -> String {
@@ -2511,14 +2385,17 @@ mod tests {
         let mut task = transition_task_fixture("debugging", &["done"], Vec::new());
         task.id = "task-legacy".to_string();
         task.project_path = root.display().to_string();
-        let path = task_path(&root, &task.id);
+        let path = task_repository::task_path(&root, &task.id);
         storage::atomic_write_json(&path, &task).unwrap();
 
         let loaded = load_task(&root, &task.id).expect("legacy task should migrate");
         let stored: serde_json::Value = storage::read_json_file(&path).unwrap();
 
         assert_eq!(loaded.id, task.id);
-        assert_eq!(stored["schemaVersion"], TASK_SCHEMA_VERSION);
+        assert_eq!(
+            stored["schemaVersion"],
+            crate::migrations::TASK_SCHEMA_VERSION
+        );
         assert_eq!(stored["data"]["id"], "task-legacy");
         std::fs::remove_dir_all(root).ok();
     }
@@ -2593,6 +2470,76 @@ mod tests {
     }
 
     #[test]
+    fn concurrent_lifecycle_and_run_completion_do_not_lose_scalar_or_evidence_updates() {
+        let root = std::env::temp_dir().join(format!("loom-task-lifecycle-race-{}", now_ms()));
+        std::fs::create_dir_all(&root).unwrap();
+        let mut run = transition_command_run(CommandRunIntent::Validation, None);
+        run.id = "run-lifecycle-race".to_string();
+        run.task_id = "task-lifecycle-race".to_string();
+        let mut task = transition_task_fixture("debugging", &["done"], vec![run]);
+        task.id = "task-lifecycle-race".to_string();
+        task.project_path = root.display().to_string();
+        save_task(&task).unwrap();
+
+        let barrier = std::sync::Arc::new(std::sync::Barrier::new(3));
+        let pause_root = root.clone();
+        let pause_barrier = barrier.clone();
+        let pause = std::thread::spawn(move || {
+            pause_barrier.wait();
+            update_task(&pause_root, "task-lifecycle-race", |task| {
+                apply_pause_task(
+                    task,
+                    "event-lifecycle-race-pause".to_string(),
+                    Some("pause during completion".to_string()),
+                )
+            })
+            .unwrap();
+        });
+        let finish_root = root.clone();
+        let finish_barrier = barrier.clone();
+        let finish = std::thread::spawn(move || {
+            finish_barrier.wait();
+            finish_command_run(
+                &finish_root,
+                "task-lifecycle-race",
+                "run-lifecycle-race",
+                CommandRunCompletion {
+                    status: CommandRunStatus::Succeeded,
+                    exit_code: Some(0),
+                    error_summary: None,
+                    session_id: None,
+                    resume_command: None,
+                    termination_reason: None,
+                },
+            )
+            .unwrap();
+        });
+        barrier.wait();
+        pause.join().unwrap();
+        finish.join().unwrap();
+
+        let persisted = load_task(&root, "task-lifecycle-race").unwrap();
+        assert!(persisted.lifecycle.paused);
+        assert_eq!(persisted.status, TaskStatus::Verifying);
+        assert_eq!(
+            persisted.command_runs[0].status,
+            CommandRunStatus::Succeeded
+        );
+        assert!(persisted
+            .events
+            .iter()
+            .any(|event| event.id == "event-lifecycle-race-pause"));
+        assert!(persisted.events.iter().any(|event| {
+            event.evidence_ref.as_deref() == Some("run-lifecycle-race")
+                && event
+                    .output_summary
+                    .as_deref()
+                    .is_some_and(|summary| summary.contains("succeeded"))
+        }));
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
     fn append_only_merge_finishes_only_the_matching_command_run() {
         let mut first = transition_command_run(CommandRunIntent::AgentAction, None);
         first.id = "run-first".to_string();
@@ -2604,7 +2551,7 @@ mod tests {
         persisted.command_runs[1].status = CommandRunStatus::Succeeded;
         persisted.command_runs[1].exit_code = Some(0);
 
-        merge_append_only_task_state(&mut target, persisted);
+        task_repository::merge_append_only_task_state(&mut target, persisted);
 
         assert_eq!(target.command_runs[0].status, CommandRunStatus::Running);
         assert_eq!(target.command_runs[1].status, CommandRunStatus::Succeeded);
@@ -2619,7 +2566,7 @@ mod tests {
         task.id = "task-del".to_string();
         task.project_path = root.display().to_string();
         save_task(&task).unwrap();
-        let path = task_path(&root, &task.id);
+        let path = task_repository::task_path(&root, &task.id);
         assert!(path.exists());
 
         delete_task(root.display().to_string(), task.id.clone()).unwrap();

@@ -6,15 +6,14 @@ use crate::{
         now_ms, IdGenerator, ImplementationReview, ImplementationReviewDecision,
         ImplementationReviewFinding, ImplementationReviewRun, Task, TaskEvent, TaskStatus,
     },
+    process_supervisor::{self, ProcessKind, ProcessMetadata},
     storage, tasks,
 };
 use serde::Deserialize;
 use std::{
-    collections::HashMap,
     fs,
     path::{Path, PathBuf},
     process::{Command, Stdio},
-    sync::{Mutex, OnceLock},
     time::Duration,
 };
 use tauri::{AppHandle, State};
@@ -23,42 +22,14 @@ use tokio::{process::Command as TokioCommand, time::timeout};
 const REVIEW_TIMEOUT_SECONDS: u64 = 300;
 const MAX_CONTEXT_CHARS: usize = 90_000;
 
-#[cfg(unix)]
-unsafe extern "C" {
-    fn kill(pid: i32, sig: i32) -> i32;
-    fn setpgid(pid: i32, pgid: i32) -> i32;
-}
-
-#[cfg(unix)]
-const SIGTERM: i32 = 15;
-
-fn review_processes() -> &'static Mutex<HashMap<u32, String>> {
-    static PROCESSES: OnceLock<Mutex<HashMap<u32, String>>> = OnceLock::new();
-    PROCESSES.get_or_init(|| Mutex::new(HashMap::new()))
-}
-
 pub(crate) fn stop_task_runs(task_id: &str) -> Result<usize, String> {
-    let process_ids = review_processes()
-        .lock()
-        .map_err(|_| "implementation review process registry is unavailable".to_string())?
-        .iter()
-        .filter(|(_, running_task_id)| running_task_id.as_str() == task_id)
-        .map(|(process_id, _)| *process_id)
-        .collect::<Vec<_>>();
-
-    for process_id in &process_ids {
-        #[cfg(unix)]
-        unsafe {
-            kill(-(*process_id as i32), SIGTERM);
-        }
-        #[cfg(windows)]
-        {
-            let _ = Command::new("taskkill")
-                .args(["/PID", &process_id.to_string(), "/T", "/F"])
-                .status();
-        }
-    }
-    Ok(process_ids.len())
+    process_supervisor::supervisor()
+        .stop_task_runs(
+            task_id,
+            &[ProcessKind::ImplementationReview],
+            "task_lifecycle_changed",
+        )
+        .map(|runs| runs.len())
 }
 
 #[derive(Deserialize)]
@@ -257,43 +228,47 @@ async fn run_prepared_review(
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
-    #[cfg(unix)]
-    unsafe {
-        command.pre_exec(|| {
-            if setpgid(0, 0) == 0 {
-                Ok(())
-            } else {
-                Err(std::io::Error::last_os_error())
-            }
-        });
-    }
+    process_supervisor::configure_process_group(&mut command);
     let child = command
         .spawn()
         .map_err(|error| format!("failed to start review Agent: {error}"))?;
     let process_id = child.id();
-    if let Some(process_id) = process_id {
-        review_processes()
-            .lock()
-            .map_err(|_| "implementation review process registry is unavailable".to_string())?
-            .insert(process_id, task_id.to_string());
+    let process_run_id = process_id.map(|process_id| format!("review-{process_id}"));
+    if let (Some(process_id), Some(run_id)) = (process_id, process_run_id.as_deref()) {
+        process_supervisor::supervisor().register(ProcessMetadata::new(
+            run_id,
+            task_id,
+            ProcessKind::ImplementationReview,
+            process_id,
+            Some(REVIEW_TIMEOUT_SECONDS * 1_000),
+        ))?;
     }
     let output_result = timeout(
         Duration::from_secs(REVIEW_TIMEOUT_SECONDS),
         child.wait_with_output(),
     )
     .await;
-    if let Some(process_id) = process_id {
-        if let Ok(mut processes) = review_processes().lock() {
-            processes.remove(&process_id);
-        }
-    }
     let output = match output_result {
-        Ok(Ok(output)) => output,
-        Ok(Err(error)) => return Err(format!("failed to wait for review Agent: {error}")),
+        Ok(Ok(output)) => {
+            if let Some(run_id) = process_run_id.as_deref() {
+                process_supervisor::supervisor().complete(run_id);
+            }
+            output
+        }
+        Ok(Err(error)) => {
+            if let Some(run_id) = process_run_id.as_deref() {
+                process_supervisor::supervisor().complete(run_id);
+            }
+            return Err(format!("failed to wait for review Agent: {error}"));
+        }
         Err(_) => {
+            if let Some(run_id) = process_run_id.as_deref() {
+                let _ = process_supervisor::supervisor().request_stop(run_id, "timeout");
+                process_supervisor::supervisor().complete(run_id);
+            }
             return Err(format!(
                 "review Agent timed out after {REVIEW_TIMEOUT_SECONDS}s"
-            ))
+            ));
         }
     };
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
@@ -392,10 +367,22 @@ pub async fn run_implementation_reviews(
         started_at_ms,
         ended_at_ms: None,
     };
-    task.review_agent_ids = review_run.reviewer_agent_ids.clone();
-    task.implementation_review_runs.push(review_run.clone());
-    task.updated_at_ms = started_at_ms;
-    tasks::save_task(&task)?;
+    task = tasks::update_task(project_path, &input.task_id, |current| {
+        tasks::ensure_task_active(current)?;
+        if current.status != TaskStatus::Reviewing
+            || current.plan_todos.iter().any(|todo| todo.status != "done")
+        {
+            return Err(
+                "task changed before implementation Review could start; reload and retry"
+                    .to_string(),
+            );
+        }
+        current.review_agent_ids = review_run.reviewer_agent_ids.clone();
+        current.implementation_review_runs.push(review_run.clone());
+        current.updated_at_ms = started_at_ms;
+        Ok(())
+    })?
+    .0;
 
     let mut completed_reviews = Vec::new();
     for (reviewer, prepared) in prepared_reviewers {
@@ -519,33 +506,32 @@ pub async fn run_implementation_reviews(
         .any(|review| review.status == "succeeded");
     review_run.status = if succeeded { "succeeded" } else { "failed" }.to_string();
     review_run.ended_at_ms = Some(now_ms());
-    let mut current_task = tasks::load_task(project_path, &input.task_id)?;
-    if let Some(stored_run) = current_task
-        .implementation_review_runs
-        .iter_mut()
-        .find(|stored| stored.id == run_id)
-    {
-        *stored_run = review_run.clone();
-    }
-    current_task
-        .implementation_reviews
-        .extend(completed_reviews);
-    current_task.updated_at_ms = now_ms();
-    current_task.events.push(TaskEvent {
-        id: ids.next("event"),
-        task_id: current_task.id.clone(),
-        timestamp_ms: current_task.updated_at_ms,
-        actor: "agent".to_string(),
-        status: current_task.status,
-        input_summary: Some(format!(
-            "Implementation Review by {}",
-            review_run.reviewer_agent_ids.join(", ")
-        )),
-        output_summary: Some(format!("Implementation Review {}", review_run.status)),
-        evidence_ref: Some(review_run.context_ref.clone()),
-    });
-    tasks::save_task(&current_task)?;
-    Ok(current_task)
+    tasks::update_task(project_path, &input.task_id, move |current| {
+        if let Some(stored_run) = current
+            .implementation_review_runs
+            .iter_mut()
+            .find(|stored| stored.id == run_id)
+        {
+            *stored_run = review_run.clone();
+        }
+        current.implementation_reviews.extend(completed_reviews);
+        current.updated_at_ms = now_ms();
+        current.events.push(TaskEvent {
+            id: ids.next("event"),
+            task_id: current.id.clone(),
+            timestamp_ms: current.updated_at_ms,
+            actor: "agent".to_string(),
+            status: current.status,
+            input_summary: Some(format!(
+                "Implementation Review by {}",
+                review_run.reviewer_agent_ids.join(", ")
+            )),
+            output_summary: Some(format!("Implementation Review {}", review_run.status)),
+            evidence_ref: Some(review_run.context_ref.clone()),
+        });
+        Ok(())
+    })
+    .map(|(task, ())| task)
 }
 
 #[tauri::command]
@@ -553,53 +539,58 @@ pub fn decide_implementation_review_finding(
     ids: State<'_, IdGenerator>,
     input: ImplementationReviewDecisionInput,
 ) -> Result<Task, String> {
-    let mut task = tasks::load_task(Path::new(&input.project_path), &input.task_id)?;
-    tasks::ensure_task_active(&task)?;
-    let reason = input.reason.trim();
+    let reason = input.reason.trim().to_string();
     if reason.len() < 5 {
         return Err("a Review decision requires a specific reason".to_string());
     }
-    let finding = task
-        .implementation_reviews
-        .iter_mut()
-        .flat_map(|review| review.findings.iter_mut())
-        .find(|finding| finding.id == input.finding_id)
-        .ok_or_else(|| "implementation Review finding was not found".to_string())?;
-    let next_status = match input.decision.as_str() {
-        "resolved" => "pending_re_review",
-        "accepted_risk" => "accepted_risk",
-        "dismissed" if finding.severity != "blocker" => "dismissed",
-        "dismissed" => return Err(
-            "a blocker cannot be dismissed; accept the risk explicitly or re-review after a fix"
-                .to_string(),
-        ),
-        _ => return Err("unsupported implementation Review decision".to_string()),
-    };
-    finding.status = next_status.to_string();
-    let finding_title = finding.title.clone();
-    let timestamp_ms = now_ms();
-    task.implementation_review_decisions
-        .push(ImplementationReviewDecision {
-            id: ids.next("implementation-review-decision"),
-            finding_id: input.finding_id,
-            decision: input.decision,
-            reason: reason.to_string(),
-            actor: "user".to_string(),
-            created_at_ms: timestamp_ms,
-        });
-    task.updated_at_ms = timestamp_ms;
-    task.events.push(TaskEvent {
-        id: ids.next("event"),
-        task_id: task.id.clone(),
-        timestamp_ms,
-        actor: "user".to_string(),
-        status: task.status,
-        input_summary: Some(format!("Review decision for {finding_title}")),
-        output_summary: Some(format!("{}: {reason}", next_status)),
-        evidence_ref: None,
-    });
-    tasks::save_task(&task)?;
-    Ok(task)
+    tasks::update_task(
+        Path::new(&input.project_path),
+        &input.task_id,
+        move |task| {
+            tasks::ensure_task_active(task)?;
+            let finding = task
+                .implementation_reviews
+                .iter_mut()
+                .flat_map(|review| review.findings.iter_mut())
+                .find(|finding| finding.id == input.finding_id)
+                .ok_or_else(|| "implementation Review finding was not found".to_string())?;
+            let next_status = match input.decision.as_str() {
+                "resolved" => "pending_re_review",
+                "accepted_risk" => "accepted_risk",
+                "dismissed" if finding.severity != "blocker" => "dismissed",
+                "dismissed" => return Err(
+                    "a blocker cannot be dismissed; accept the risk explicitly or re-review after a fix"
+                        .to_string(),
+                ),
+                _ => return Err("unsupported implementation Review decision".to_string()),
+            };
+            finding.status = next_status.to_string();
+            let finding_title = finding.title.clone();
+            let timestamp_ms = now_ms();
+            task.implementation_review_decisions
+                .push(ImplementationReviewDecision {
+                    id: ids.next("implementation-review-decision"),
+                    finding_id: input.finding_id.clone(),
+                    decision: input.decision.clone(),
+                    reason: reason.clone(),
+                    actor: "user".to_string(),
+                    created_at_ms: timestamp_ms,
+                });
+            task.updated_at_ms = timestamp_ms;
+            task.events.push(TaskEvent {
+                id: ids.next("event"),
+                task_id: task.id.clone(),
+                timestamp_ms,
+                actor: "user".to_string(),
+                status: task.status,
+                input_summary: Some(format!("Review decision for {finding_title}")),
+                output_summary: Some(format!("{}: {reason}", next_status)),
+                evidence_ref: None,
+            });
+            Ok(())
+        },
+    )
+    .map(|(task, ())| task)
 }
 
 pub(crate) fn ensure_review_gate(task: &Task) -> Result<(), String> {

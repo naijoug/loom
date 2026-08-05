@@ -19,6 +19,7 @@ use crate::{
     models::{
         now_ms, CommandFinishedEvent, CommandRun, CommandRunIntent, CommandRunStatus, IdGenerator,
     },
+    process_supervisor::{self, ProcessKind, ProcessMetadata},
     tasks,
 };
 use portable_pty::{native_pty_system, CommandBuilder, MasterPty, PtySize};
@@ -30,14 +31,6 @@ use std::{
     sync::{Arc, Mutex},
 };
 use tauri::{AppHandle, Emitter, Runtime, State};
-
-#[cfg(unix)]
-unsafe extern "C" {
-    fn kill(pid: i32, sig: i32) -> i32;
-}
-
-#[cfg(unix)]
-const SIGTERM: i32 = 15;
 
 fn default_rows() -> u16 {
     24
@@ -180,8 +173,9 @@ fn start_pty_run_inner<E: PtyEventEmitter>(
         .slave
         .spawn_command(builder)
         .map_err(|error| format!("failed to start command: {error}"))?;
+    let process_id = child.process_id();
     #[cfg(unix)]
-    let pid = child.process_id();
+    let pid = process_id;
 
     let reader = pair
         .master
@@ -217,6 +211,15 @@ fn start_pty_run_inner<E: PtyEventEmitter>(
     tasks::add_command_run(&project_path, &task_id, run.clone())?;
 
     let child = Arc::new(Mutex::new(child));
+    if let Some(process_id) = process_id {
+        process_supervisor::supervisor().register(ProcessMetadata::new(
+            &run_id,
+            &task_id,
+            ProcessKind::Pty,
+            process_id,
+            None,
+        ))?;
+    }
     registry.sessions.lock().unwrap().insert(
         run_id.clone(),
         PtySession {
@@ -305,10 +308,12 @@ fn stop_pty_run_inner(
 
     // Kill the whole process group so dev-server grandchildren (e.g. vite →
     // esbuild) don't leak; the child is its own session leader under the pty.
-    #[cfg(unix)]
-    if let Some(pid) = session.pid {
-        unsafe {
-            kill(-(pid as i32), SIGTERM);
+    let stop_reason = termination_reason.as_deref().unwrap_or("cancelled");
+    let supervised = process_supervisor::supervisor().request_stop(&run_id, stop_reason)?;
+    if !supervised {
+        #[cfg(unix)]
+        if let Some(pid) = session.pid {
+            let _ = process_supervisor::terminate_process_group(pid);
         }
     }
 
@@ -317,6 +322,7 @@ fn stop_pty_run_inner(
         let _ = child.kill();
         child.wait().ok().map(|status| status.exit_code() as i32)
     };
+    process_supervisor::supervisor().complete(&run_id);
 
     if let Some(task_id) = session.task_id {
         let _ = tasks::finish_command_run(
@@ -401,6 +407,7 @@ fn spawn_pty_monitor<E: PtyEventEmitter>(
         if sessions.lock().unwrap().remove(&run_id).is_none() {
             return;
         }
+        process_supervisor::supervisor().complete(&run_id);
 
         let (command_status, exit_code) = match status {
             Ok(status) if status.success() => {
@@ -440,6 +447,11 @@ fn spawn_pty_monitor<E: PtyEventEmitter>(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(unix)]
+    unsafe extern "C" {
+        fn kill(pid: i32, sig: i32) -> i32;
+    }
     use crate::models::{PlanTodoItem, PlanTodoStatus, Task, TaskStatus};
     use std::{fs, path::Path, time::Duration};
 

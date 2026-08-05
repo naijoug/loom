@@ -1,4 +1,7 @@
-use crate::models::{now_ms, CommandRunStatus, LoopTraceEntry, Task, TaskEvent};
+use crate::{
+    models::{now_ms, CommandRunStatus, LoopTraceEntry, Task, TaskEvent},
+    process_supervisor::{self, ProcessKind},
+};
 use std::{collections::HashSet, fs, path::Path, sync::Mutex};
 
 #[derive(Default)]
@@ -24,10 +27,29 @@ impl RunRecoveryRegistry {
 
 pub fn reconcile_task(task: &mut Task) -> usize {
     let timestamp_ms = now_ms();
+    let active_processes = process_supervisor::supervisor().task_runs(
+        &task.id,
+        &[
+            ProcessKind::Command,
+            ProcessKind::ImplementationReview,
+            ProcessKind::Pty,
+        ],
+    );
+    let active_command_run_ids = active_processes
+        .iter()
+        .filter(|process| matches!(process.kind, ProcessKind::Command | ProcessKind::Pty))
+        .map(|process| process.run_id.as_str())
+        .collect::<HashSet<_>>();
+    let has_active_review = active_processes
+        .iter()
+        .any(|process| process.kind == ProcessKind::ImplementationReview);
     let interrupted_runs = task
         .command_runs
         .iter_mut()
-        .filter(|run| run.status == CommandRunStatus::Running)
+        .filter(|run| {
+            run.status == CommandRunStatus::Running
+                && !active_command_run_ids.contains(run.id.as_str())
+        })
         .map(|run| {
             run.status = CommandRunStatus::Interrupted;
             run.ended_at_ms = Some(timestamp_ms);
@@ -79,7 +101,7 @@ pub fn reconcile_task(task: &mut Task) -> usize {
     let interrupted_review_run_ids = task
         .implementation_review_runs
         .iter_mut()
-        .filter(|run| run.status == "running")
+        .filter(|run| run.status == "running" && !has_active_review)
         .map(|run| {
             run.status = "interrupted".to_string();
             run.ended_at_ms = Some(timestamp_ms);
@@ -224,6 +246,51 @@ mod tests {
 
         assert_eq!(reconcile_task(&mut task), 0);
         assert_eq!(task.events.len(), 1);
+    }
+
+    #[test]
+    fn leaves_runs_registered_in_the_current_process_untouched() {
+        let mut task = task_fixture();
+        task.id = "task-active-recovery".to_string();
+        task.command_runs[0].task_id = task.id.clone();
+        task.command_runs[1].task_id = task.id.clone();
+        task.implementation_review_runs
+            .push(crate::models::ImplementationReviewRun {
+                id: "review-run-active".to_string(),
+                task_id: task.id.clone(),
+                reviewer_agent_ids: vec!["reviewer".to_string()],
+                status: "running".to_string(),
+                context_ref: "/repo/.loom/review.md".to_string(),
+                review_ids: Vec::new(),
+                started_at_ms: 1,
+                ended_at_ms: None,
+            });
+        let supervisor = process_supervisor::supervisor();
+        supervisor
+            .register(crate::process_supervisor::ProcessMetadata::new(
+                "run-running",
+                &task.id,
+                ProcessKind::Command,
+                u32::MAX - 1,
+                None,
+            ))
+            .unwrap();
+        supervisor
+            .register(crate::process_supervisor::ProcessMetadata::new(
+                "review-active",
+                &task.id,
+                ProcessKind::ImplementationReview,
+                u32::MAX,
+                None,
+            ))
+            .unwrap();
+
+        assert_eq!(reconcile_task(&mut task), 0);
+        assert_eq!(task.command_runs[0].status, CommandRunStatus::Running);
+        assert_eq!(task.implementation_review_runs[0].status, "running");
+
+        supervisor.complete("run-running");
+        supervisor.complete("review-active");
     }
 
     #[test]

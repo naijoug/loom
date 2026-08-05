@@ -10,13 +10,14 @@ use crate::{
         PlanningRun, TaskEvent,
     },
     plan_html,
+    process_supervisor::{self, ProcessKind, ProcessMetadata},
     session_capture::{
         find_session_id, resume_command_for_adapter, ADAPTER_CLAUDE_CODE, ADAPTER_CODEX,
     },
     storage, tasks,
 };
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashSet,
     fs,
     path::{Path, PathBuf},
     process::Command,
@@ -37,25 +38,6 @@ const ADAPTER_CLI: &str = "cli";
 const RETIRED_ADAPTER_AMP: &str = "amp_cli";
 const RETIRED_AGENT_AMP_ID: &str = "agent-amp";
 const ADAPTER_DUMMY: &str = "dummy";
-
-#[cfg(unix)]
-unsafe extern "C" {
-    fn kill(pid: i32, sig: i32) -> i32;
-    fn setpgid(pid: i32, pgid: i32) -> i32;
-}
-
-#[cfg(unix)]
-const SIGTERM: i32 = 15;
-
-#[derive(Clone)]
-struct AgentProcess {
-    task_id: String,
-}
-
-fn agent_processes() -> &'static Mutex<HashMap<u32, AgentProcess>> {
-    static PROCESSES: OnceLock<Mutex<HashMap<u32, AgentProcess>>> = OnceLock::new();
-    PROCESSES.get_or_init(|| Mutex::new(HashMap::new()))
-}
 
 fn stopped_agent_tasks() -> &'static Mutex<HashSet<String>> {
     static TASKS: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
@@ -82,27 +64,9 @@ pub(crate) fn stop_task_runs(task_id: &str) -> Result<usize, String> {
         .lock()
         .map_err(|_| "agent task stop registry is unavailable".to_string())?
         .insert(task_id.to_string());
-    let process_ids = agent_processes()
-        .lock()
-        .map_err(|_| "agent process registry is unavailable".to_string())?
-        .iter()
-        .filter(|(_, process)| process.task_id == task_id)
-        .map(|(process_id, _)| *process_id)
-        .collect::<Vec<_>>();
-
-    for process_id in &process_ids {
-        #[cfg(unix)]
-        unsafe {
-            kill(-(*process_id as i32), SIGTERM);
-        }
-        #[cfg(windows)]
-        {
-            let _ = Command::new("taskkill")
-                .args(["/PID", &process_id.to_string(), "/T", "/F"])
-                .status();
-        }
-    }
-    Ok(process_ids.len())
+    process_supervisor::supervisor()
+        .stop_task_runs(task_id, &[ProcessKind::Agent], "task_lifecycle_changed")
+        .map(|runs| runs.len())
 }
 // Real planning agents (claude/codex) routinely take 1-2 minutes on a real
 // repository; a single observed run took ~72s. Keep a generous per-agent budget
@@ -596,10 +560,7 @@ pub async fn run_planning_discussion(
         }),
         evidence_ref: task.final_plan_path.clone(),
     });
-    merge_concurrent_task_state(&mut task, Path::new(&input.project_path))?;
-    tasks::save_task(&task)?;
-
-    Ok(task)
+    persist_planning_task(task, Path::new(&input.project_path))
 }
 
 #[tauri::command]
@@ -672,10 +633,7 @@ pub async fn run_plan_reviews(
         )),
         evidence_ref: task.final_plan_path.clone(),
     });
-    merge_concurrent_task_state(&mut task, Path::new(&project_path))?;
-    tasks::save_task(&task)?;
-
-    Ok(task)
+    persist_planning_task(task, Path::new(&project_path))
 }
 
 /// Re-run a single failed drafting agent inside the latest planning run, then
@@ -827,17 +785,23 @@ pub async fn retry_planning_agent(
         )),
         evidence_ref: task.final_plan_path.clone(),
     });
-    merge_concurrent_task_state(&mut task, Path::new(&project_path))?;
-    tasks::save_task(&task)?;
-
-    Ok(task)
+    persist_planning_task(task, Path::new(&project_path))
 }
 
-fn merge_concurrent_task_state(
-    task: &mut crate::models::Task,
+fn persist_planning_task(
+    mut candidate: crate::models::Task,
     project_path: &Path,
-) -> Result<(), String> {
-    let latest = tasks::load_task(project_path, &task.id)?;
+) -> Result<crate::models::Task, String> {
+    let task_id = candidate.id.clone();
+    tasks::update_task(project_path, &task_id, move |latest| {
+        merge_concurrent_task_state(&mut candidate, latest);
+        *latest = candidate;
+        Ok(())
+    })
+    .map(|(task, ())| task)
+}
+
+fn merge_concurrent_task_state(task: &mut crate::models::Task, latest: &crate::models::Task) {
     task.lifecycle = latest.lifecycle.clone();
     if latest.lifecycle.paused
         || matches!(
@@ -848,12 +812,12 @@ fn merge_concurrent_task_state(
         task.status = latest.status;
     }
 
-    for event in latest.events {
+    for event in latest.events.iter().cloned() {
         if task.events.iter().all(|current| current.id != event.id) {
             task.events.push(event);
         }
     }
-    for run in latest.command_runs {
+    for run in latest.command_runs.iter().cloned() {
         if let Some(current) = task
             .command_runs
             .iter_mut()
@@ -864,7 +828,7 @@ fn merge_concurrent_task_state(
             task.command_runs.push(run);
         }
     }
-    for feedback in latest.feedback {
+    for feedback in latest.feedback.iter().cloned() {
         if task
             .feedback
             .iter()
@@ -873,7 +837,7 @@ fn merge_concurrent_task_state(
             task.feedback.push(feedback);
         }
     }
-    for decision in latest.planning_decisions {
+    for decision in latest.planning_decisions.iter().cloned() {
         if task
             .planning_decisions
             .iter()
@@ -883,7 +847,6 @@ fn merge_concurrent_task_state(
         }
     }
     task.updated_at_ms = task.updated_at_ms.max(latest.updated_at_ms);
-    Ok(())
 }
 
 /// Classify why an invocation result is unusable. Returns `None` for a usable
@@ -2240,16 +2203,7 @@ async fn run_cli_profile<E: PlanningEventEmitter>(
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped());
 
-    #[cfg(unix)]
-    unsafe {
-        command.pre_exec(|| {
-            if setpgid(0, 0) == 0 {
-                Ok(())
-            } else {
-                Err(std::io::Error::last_os_error())
-            }
-        });
-    }
+    process_supervisor::configure_process_group(&mut command);
 
     let mut child = command
         .spawn()
@@ -2273,18 +2227,21 @@ async fn run_cli_profile<E: PlanningEventEmitter>(
         .stderr
         .take()
         .ok_or_else(|| "failed to capture agent stderr".to_string())?;
-    let registered_process_id = child.id().filter(|_| log_context.is_some());
-    if let (Some(process_id), Some(context)) = (registered_process_id, log_context.as_ref()) {
-        agent_processes()
-            .lock()
-            .map_err(|_| "agent process registry is unavailable".to_string())?
-            .insert(
+    let process_id = child.id();
+    let registered_run_id = match (process_id, log_context.as_ref()) {
+        (Some(process_id), Some(context)) => {
+            let run_id = format!("agent-{process_id}");
+            process_supervisor::supervisor().register(ProcessMetadata::new(
+                &run_id,
+                &context.task_id,
+                ProcessKind::Agent,
                 process_id,
-                AgentProcess {
-                    task_id: context.task_id.clone(),
-                },
-            );
-    }
+                Some(PLANNING_TIMEOUT_MS),
+            ))?;
+            Some(run_id)
+        }
+        _ => None,
+    };
     let stdout_task = tauri::async_runtime::spawn(read_planning_stream(
         emitter.clone(),
         log_context.clone(),
@@ -2309,6 +2266,11 @@ async fn run_cli_profile<E: PlanningEventEmitter>(
                 .map_err(|error| format!("failed to wait for {}: {error}", profile.command))
         }
         _ = &mut timeout => {
+            if let Some(run_id) = registered_run_id.as_deref() {
+                let _ = process_supervisor::supervisor().request_stop(run_id, "timeout");
+            } else if let Some(process_id) = process_id {
+                let _ = process_supervisor::terminate_process_group(process_id);
+            }
             let _ = child.start_kill();
             child
                 .wait()
@@ -2317,10 +2279,8 @@ async fn run_cli_profile<E: PlanningEventEmitter>(
                 .map_err(|error| format!("failed to kill timed out {}: {error}", profile.command))
         }
     };
-    if let Some(process_id) = registered_process_id {
-        if let Ok(mut processes) = agent_processes().lock() {
-            processes.remove(&process_id);
-        }
+    if let Some(run_id) = registered_run_id.as_deref() {
+        process_supervisor::supervisor().complete(run_id);
     }
     let (status, timed_out) = wait_result?;
 

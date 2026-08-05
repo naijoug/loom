@@ -5,6 +5,7 @@ use crate::{
         now_ms, CommandFinishedEvent, CommandLogEvent, CommandRun, CommandRunIntent,
         CommandRunStatus, CommandSpec, ErrorSummary, IdGenerator,
     },
+    process_supervisor::{self, ProcessKind, ProcessMetadata},
     session_capture::{capture_session_from_lines, display_log_lines_for_command},
     settings, storage, tasks,
 };
@@ -23,15 +24,6 @@ use tokio::{
     sync::Mutex,
     time::{sleep, timeout, Duration, Instant},
 };
-
-#[cfg(unix)]
-unsafe extern "C" {
-    fn kill(pid: i32, sig: i32) -> i32;
-    fn setpgid(pid: i32, pgid: i32) -> i32;
-}
-
-#[cfg(unix)]
-const SIGTERM: i32 = 15;
 
 #[derive(Default)]
 pub struct CommandRegistry {
@@ -257,16 +249,7 @@ async fn start_command_run_inner<E: CommandEventEmitter>(
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped());
 
-    #[cfg(unix)]
-    unsafe {
-        command.pre_exec(|| {
-            if setpgid(0, 0) == 0 {
-                Ok(())
-            } else {
-                Err(std::io::Error::last_os_error())
-            }
-        });
-    }
+    process_supervisor::configure_process_group(&mut command);
 
     let mut child = command
         .spawn()
@@ -332,6 +315,15 @@ async fn start_command_run_inner<E: CommandEventEmitter>(
     tasks::add_command_run(&project_path, &task_id, run.clone())?;
 
     let child = Arc::new(Mutex::new(child));
+    if let Some(process_id) = pid {
+        process_supervisor::supervisor().register(ProcessMetadata::new(
+            &run_id,
+            &task_id,
+            ProcessKind::Command,
+            process_id,
+            (timeout_seconds > 0).then_some(timeout_seconds.saturating_mul(1_000)),
+        ))?;
+    }
     registry.runs.lock().await.insert(
         run_id.clone(),
         ManagedCommandRun {
@@ -381,10 +373,11 @@ async fn stop_command_run_inner(
         });
     };
 
-    #[cfg(unix)]
-    if let Some(process_group_id) = managed.process_group_id.filter(|id| *id > 0) {
-        unsafe {
-            kill(-process_group_id, SIGTERM);
+    let stop_reason = termination_reason.as_deref().unwrap_or("cancelled");
+    let supervised = process_supervisor::supervisor().request_stop(&run_id, stop_reason)?;
+    if !supervised {
+        if let Some(process_group_id) = managed.process_group_id.filter(|id| *id > 0) {
+            let _ = process_supervisor::terminate_process_group(process_group_id as u32);
         }
     }
 
@@ -395,6 +388,7 @@ async fn stop_command_run_inner(
         .await
         .map_err(|error| format!("failed to wait for command: {error}"))?;
     let exit_code = status.code();
+    process_supervisor::supervisor().complete(&run_id);
 
     if let Some(task_id) = managed.task_id {
         let _ = tasks::finish_command_run(
@@ -537,10 +531,13 @@ fn spawn_command_monitor<E: CommandEventEmitter>(context: CommandMonitorContext<
                 && started.elapsed() >= Duration::from_secs(timeout_seconds)
             {
                 timed_out = true;
-                #[cfg(unix)]
-                if let Some(process_group_id) = process_group_id.filter(|id| *id > 0) {
-                    unsafe {
-                        kill(-process_group_id, SIGTERM);
+                let supervised = process_supervisor::supervisor()
+                    .request_stop(&run_id, "timeout")
+                    .unwrap_or(false);
+                if !supervised {
+                    if let Some(process_group_id) = process_group_id.filter(|id| *id > 0) {
+                        let _ =
+                            process_supervisor::terminate_process_group(process_group_id as u32);
                     }
                 }
                 let mut child = child.lock().await;
@@ -560,6 +557,7 @@ fn spawn_command_monitor<E: CommandEventEmitter>(context: CommandMonitorContext<
                 if runs.lock().await.remove(&run_id).is_none() {
                     break;
                 }
+                process_supervisor::supervisor().complete(&run_id);
                 for mut task in reader_tasks {
                     if timeout(Duration::from_secs(2), &mut task).await.is_err() {
                         task.abort();

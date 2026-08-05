@@ -264,25 +264,26 @@ pub fn regenerate_task_summary(
     project_path: String,
     task_id: String,
 ) -> Result<Task, String> {
-    let mut task = tasks::load_task(Path::new(&project_path), &task_id)?;
-    if task.status != TaskStatus::Completed {
-        return Err("task summary can only be regenerated for a completed task".to_string());
-    }
-    let summary = generate_and_persist(&task)?;
-    task.updated_at_ms = now_ms();
-    task.events.push(TaskEvent {
-        id: ids.next("event"),
-        task_id: task.id.clone(),
-        timestamp_ms: task.updated_at_ms,
-        actor: "user".to_string(),
-        status: task.status,
-        input_summary: Some("Regenerated delivery summary".to_string()),
-        output_summary: Some("JSON and Markdown delivery artifacts updated".to_string()),
-        evidence_ref: Some(summary.markdown_path.clone()),
-    });
-    task.summary = Some(summary);
-    tasks::save_task(&task)?;
-    Ok(task)
+    tasks::update_task(Path::new(&project_path), &task_id, |task| {
+        if task.status != TaskStatus::Completed {
+            return Err("task summary can only be regenerated for a completed task".to_string());
+        }
+        let summary = generate_and_persist(task)?;
+        task.updated_at_ms = now_ms();
+        task.events.push(TaskEvent {
+            id: ids.next("event"),
+            task_id: task.id.clone(),
+            timestamp_ms: task.updated_at_ms,
+            actor: "user".to_string(),
+            status: task.status,
+            input_summary: Some("Regenerated delivery summary".to_string()),
+            output_summary: Some("JSON and Markdown delivery artifacts updated".to_string()),
+            evidence_ref: Some(summary.markdown_path.clone()),
+        });
+        task.summary = Some(summary);
+        Ok(())
+    })
+    .map(|(task, ())| task)
 }
 
 #[derive(Deserialize)]
