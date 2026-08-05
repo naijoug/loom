@@ -416,4 +416,20 @@ mod tests {
         fs::remove_dir_all(&temp_dir).expect("temp dir should be cleaned up");
         assert_eq!(commands, vec!["yarn build"]);
     }
+
+    #[test]
+    #[ignore = "local performance probe; run through pnpm bench:local"]
+    fn benchmark_project_analysis() {
+        let project_path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .expect("project root");
+        let samples = 10;
+        let started = std::time::Instant::now();
+        for index in 0..samples {
+            analyze_project_path(project_path, format!("bench-{index}"), "loom".to_string())
+                .expect("project analysis");
+        }
+        let mean_ms = started.elapsed().as_secs_f64() * 1000.0 / f64::from(samples);
+        println!("LOOM_PROJECT_SCAN_MS={mean_ms:.3}");
+    }
 }

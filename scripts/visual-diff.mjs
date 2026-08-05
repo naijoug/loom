@@ -1,12 +1,13 @@
 import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
+import { gunzipSync, gzipSync } from "node:zlib";
 import pixelmatch from "pixelmatch";
 import { PNG } from "pngjs";
 
-const GRID_WIDTH = 8;
-const GRID_HEIGHT = 6;
-const MEAN_DIFF_LIMIT = Number(process.env.LOOM_VISUAL_MEAN_DIFF_LIMIT ?? "0.035");
-const CHANGED_CELL_LIMIT = Number(process.env.LOOM_VISUAL_CHANGED_CELL_LIMIT ?? "0.18");
+const GRID_WIDTH = 24;
+const GRID_HEIGHT = 16;
+const MEAN_DIFF_LIMIT = Number(process.env.LOOM_VISUAL_MEAN_DIFF_LIMIT ?? "0.012");
+const CHANGED_CELL_LIMIT = Number(process.env.LOOM_VISUAL_CHANGED_CELL_LIMIT ?? "0.08");
 const root = new URL("..", import.meta.url).pathname;
 const baselinePath = join(root, "tests", "visual", "baselines.json");
 
@@ -44,7 +45,7 @@ function readSamples(directory) {
         return [basename(file, ".png"), {
           width: png.width,
           height: png.height,
-          rgba: sampleImage(png).toString("base64"),
+          rgba: sampleImage(png),
         }];
       }),
   );
@@ -74,27 +75,47 @@ if (!directory) {
 
 const currentSamples = readSamples(directory);
 if (mode === "--emit-baseline") {
-  process.stdout.write(`${JSON.stringify({ version: 1, grid: [GRID_WIDTH, GRID_HEIGHT], samples: currentSamples }, null, 2)}\n`);
+  const labels = Object.keys(currentSamples);
+  const dimensions = [...new Set(Object.values(currentSamples).map((sample) => `${sample.width}x${sample.height}`))];
+  if (dimensions.length !== 1) throw new Error(`screenshots have inconsistent dimensions: ${dimensions.join(", ")}`);
+  const [width, height] = dimensions[0].split("x").map(Number);
+  const rgbaGzip = gzipSync(
+    Buffer.concat(labels.map((label) => currentSamples[label].rgba)),
+    { level: 9 },
+  ).toString("base64");
+  process.stdout.write(`${JSON.stringify({ version: 3, grid: [GRID_WIDTH, GRID_HEIGHT], dimensions: [width, height], labels, rgbaGzip }, null, 2)}\n`);
   process.exit(0);
 }
 
 const baseline = JSON.parse(readFileSync(baselinePath, "utf8"));
 const failures = [];
-if (baseline.version !== 1 || baseline.grid?.[0] !== GRID_WIDTH || baseline.grid?.[1] !== GRID_HEIGHT) {
-  failures.push(`baseline format mismatch: expected version 1 and ${GRID_WIDTH}x${GRID_HEIGHT} grid`);
+const sampleBytes = GRID_WIDTH * GRID_HEIGHT * 4;
+let baselinePixels = Buffer.alloc(0);
+if (baseline.version !== 3 || baseline.grid?.[0] !== GRID_WIDTH || baseline.grid?.[1] !== GRID_HEIGHT) {
+  failures.push(`baseline format mismatch: expected version 3 and ${GRID_WIDTH}x${GRID_HEIGHT} grid`);
+} else {
+  try {
+    baselinePixels = gunzipSync(Buffer.from(baseline.rgbaGzip, "base64"));
+    if (baselinePixels.length !== baseline.labels.length * sampleBytes) {
+      failures.push(`invalid baseline payload length ${baselinePixels.length}`);
+    }
+  } catch (error) {
+    failures.push(`invalid compressed baseline (${error instanceof Error ? error.message : error})`);
+  }
 }
 for (const [label, currentMeta] of Object.entries(currentSamples)) {
-  const baselineMeta = baseline.samples[label];
-  if (!baselineMeta) {
+  const baselineIndex = baseline.labels?.indexOf(label) ?? -1;
+  if (baselineIndex < 0) {
     failures.push(`${label}: baseline missing`);
     continue;
   }
-  if (baselineMeta.width !== currentMeta.width || baselineMeta.height !== currentMeta.height) {
-    failures.push(`${label}: dimensions changed ${baselineMeta.width}x${baselineMeta.height} -> ${currentMeta.width}x${currentMeta.height}`);
+  if (baseline.dimensions?.[0] !== currentMeta.width || baseline.dimensions?.[1] !== currentMeta.height) {
+    failures.push(`${label}: dimensions changed ${baseline.dimensions?.join("x")} -> ${currentMeta.width}x${currentMeta.height}`);
     continue;
   }
-  const expected = Buffer.from(baselineMeta.rgba, "base64");
-  const current = Buffer.from(currentMeta.rgba, "base64");
+  const start = baselineIndex * sampleBytes;
+  const expected = baselinePixels.subarray(start, start + sampleBytes);
+  const current = currentMeta.rgba;
   if (expected.length !== current.length) {
     failures.push(`${label}: invalid baseline sample length ${expected.length}, expected ${current.length}`);
     continue;
@@ -108,7 +129,7 @@ for (const [label, currentMeta] of Object.entries(currentSamples)) {
       Math.abs(expected[offset + 2] - current[offset + 2])
     ) / (3 * 255);
     total += cellDiff;
-    if (cellDiff > 0.06) changedCells += 1;
+    if (cellDiff > 0.04) changedCells += 1;
   }
   const cells = GRID_WIDTH * GRID_HEIGHT;
   const meanDiff = total / cells;
@@ -121,7 +142,7 @@ for (const [label, currentMeta] of Object.entries(currentSamples)) {
   }
 }
 
-for (const label of Object.keys(baseline.samples)) {
+for (const label of baseline.labels ?? []) {
   if (!currentSamples[label]) failures.push(`${label}: screenshot missing`);
 }
 
