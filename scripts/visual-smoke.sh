@@ -85,5 +85,7 @@ capture_theme() {
 capture_theme "dark"
 capture_theme "light"
 
+node "${ROOT_DIR}/scripts/visual-diff.mjs" --check "${OUT_DIR}"
+
 echo "Visual smoke passed"
 echo "Screenshots: ${OUT_DIR}"

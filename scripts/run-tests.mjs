@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { spawnSync } from "node:child_process";
 
 const root = new URL("..", import.meta.url).pathname;
@@ -24,6 +24,23 @@ if (existsSync(outDir)) {
 mkdirSync(outDir, { recursive: true });
 run("pnpm", ["exec", "tsc", "-p", "tsconfig.test.json"]);
 writeFileSync(join(outDir, "package.json"), '{"type":"commonjs"}\n');
+
+// TypeScript preserves CSS imports in emitted CommonJS. Empty style stubs let
+// Node load isolated React components while jsdom owns layout-independent tests.
+function writeStyleStubs(directory) {
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) {
+      writeStyleStubs(path);
+    } else if (entry.name.endsWith(".css")) {
+      const target = join(outDir, relative(root, path));
+      mkdirSync(dirname(target), { recursive: true });
+      writeFileSync(target, "");
+    }
+  }
+}
+
+writeStyleStubs(join(root, "src"));
 
 const testDir = join(root, "tests", "unit");
 const testFiles = readdirSync(testDir)

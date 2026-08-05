@@ -3,7 +3,7 @@
 ## 2026-08-05
 
 - 11:14-project-optimization.md
-  > （实施中，M0–M3 已完成）已完成 release/版本契约/进程仓储底座与前端 reducer、Testing、Planning、Settings 流程边界拆分，95 项前端测试、构建及交互/30 屏视觉 smoke 通过；当前进入组件、桌面、视觉差异和 CI 分层阶段。
+  > （实施中，M0–M4 已完成）已完成 release/版本契约/进程仓储底座、前端流程拆分与测试金字塔：99 项前端测试、Rust 四阶段集成 harness、release 桌面重启 smoke、30 屏视觉差异和三层 CI 已落地；当前进入文案层级、脱敏诊断与性能基线阶段。
 
 ## 2026-07-24
 

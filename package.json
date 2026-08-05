@@ -12,6 +12,7 @@
     "smoke": "./scripts/smoke-flow.sh",
     "smoke:interaction": "./scripts/interaction-smoke.sh",
     "smoke:visual": "./scripts/visual-smoke.sh",
+    "smoke:desktop": "./scripts/desktop-smoke.sh",
     "e2e:complete": "./tests/e2e/complete-version.sh",
     "check": "./scripts/check.sh",
     "build": "tsc && vite build",
@@ -36,6 +37,9 @@
     "@types/react": "^18.3.23",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^4.6.0",
+    "jsdom": "^30.0.1",
+    "pixelmatch": "^7.2.0",
+    "pngjs": "^7.0.0",
     "typescript": "~5.8.3",
     "vite": "^7.0.4"
   }

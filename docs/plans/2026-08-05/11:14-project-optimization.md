@@ -3,7 +3,7 @@
 - **Date**: 2026-08-05
 - **Author**: Codex
 - **Status**: in-progress
-- **Progress**: M0–M3 已完成；M4 实施中
+- **Progress**: M0–M4 已完成；M5 实施中
 
 ## 目标
 
@@ -41,6 +41,7 @@
 - M1 已为五类 store 增加版本信封、v0→v1 原子迁移、未来/损坏版本备份；`contracts/tauri-contract.json` 同时约束 56 个 command、5 个 event、状态枚举、schema 版本和关键 wire model sample，前端 Tauri 调用已集中到 `src/api/`。
 - M2 已用 `ProcessSupervisor` 统一 Agent/command/Review/PTY 的 run metadata、进程组终止、timeout/stop reason 与恢复判定；`TaskRepository` 统一任务锁、原子 read-modify-write、append-only evidence merge 和锁回收。`agents.rs`/`tasks.rs` 生产根模块分别降至约 878/946 行，拆出的职责模块均低于 1,000 行。
 - M3 已将单体 reducer 拆为项目、任务、命令、规划等 8 个 domain 模块；Testing 的终端网格、验收门禁、反馈编辑器、修复历史和证据模型已进入 `src/features/testing/`，旧容器由 1,372 行降至 886 行。Planning/Settings 公共入口均降为 1 行，feature 主模块分别为 844/932 行，最终计划视图、Agent draft 与通用控件已独立；Planning/Settings CSS 已随 feature 共置。95 项前端测试、生产构建、interaction smoke 与 30 屏深浅主题 visual smoke 均通过。
+- M4 已加入 jsdom React 交互层、typed Tauri invoke/listen transport 测试和 Rust command/service 集成 harness；四阶段、blocker、两轮 repair、暂停/仓储重载可 headless 重放。release app 两轮启动/退出 smoke 通过；30 屏视觉 smoke 已升级为固定 8×6 感知采样基线、阈值判定与 diff artifact。CI 已拆为 PR `quality-gate`、主干浏览器回归和定时/手工桌面 release 兼容性三层。当前前端测试为 99 项。
 
 ### 主要差距
 
@@ -49,8 +50,8 @@
 - **进程运行时已统一（M2）**：四类进程共享 supervisor metadata、进程组终止与恢复语义；PTY 只保留 transport 特有句柄和读写线程。
 - **持久化迁移已显式化（M1）**：五类 store 已有独立 schema version 和 v0→v1 入口；下一次字段重命名或语义变化必须新增逐版本迁移函数与 fixture。
 - **前后端契约已有门禁（M1）**：canonical fixture 与 typed client 已覆盖 command/event/schema/status/关键模型；command payload 的进一步细化随 M2 service 拆分继续收紧。
-- **测试金字塔断层**：95 个前端测试仍以纯函数、reducer 和 selector 为主，尚缺基于 DOM 的 React 交互测试；现有浏览器 smoke 运行 `/preview/planning` 预览壳，CI 仍只执行 `pnpm check`，不覆盖真实 Tauri invoke、桌面重启恢复和前端桥接错误。M4 正在补齐这些层。
-- **视觉回归判定偏弱**：视觉 smoke 只检查 DOM 文案和 PNG 大小，没有基线图差异；布局错位、对比度下降或操作层级变化仍可能通过。
+- **测试层已补齐（M4）**：纯逻辑、React DOM 交互、typed invoke/listen、Rust command/service、浏览器和 release 桌面生命周期均有独立证据；真实 Agent 凭据 canary 继续保留为手工路径，不进入确定性 CI。
+- **视觉回归已有门禁（M4）**：30 个深浅主题页面同时执行 DOM、尺寸与感知采样差异检查；失败会保留截图、DOM、Chrome 日志和 diff artifact。基线需在明确接受设计变化时人工更新。
 - **界面信息密度较高**：Planning、Testing、Done 页面已经具备完整证据，但中英文混用、右侧驾驶舱纵向堆叠和同级操作过多，首次使用时需要更明确的“当前阻塞原因 / 下一步动作”。
 
 ### 可复用部分
