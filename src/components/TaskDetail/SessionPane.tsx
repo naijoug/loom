@@ -41,6 +41,7 @@ import {
 import { parseCommandLine } from "../../utils/commandLine";
 import { resolveTerminalSlotCwd } from "../../utils/terminalSlots";
 import { Button } from "../common/Button";
+import { WORKFLOW_COPY } from "../../copy/workflow";
 import { ImplementationReviewPanel } from "./ImplementationReviewPanel";
 import { TaskTimeline } from "./TaskTimeline";
 import "./TaskDetail.css";
@@ -161,6 +162,15 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
   const reviewGate = implementationReviewGate(task);
   const canMarkReadyForTesting =
     !readOnly && task.status === "reviewing" && allTodosDone && reviewGate.ready;
+  const markReadyBlocker = readOnly
+    ? "当前正在回看历史阶段。"
+    : !allTodosDone
+      ? "先完成全部实施子任务。"
+      : task.status !== "reviewing"
+        ? "完成子任务后运行独立实施 Review。"
+        : !reviewGate.ready
+          ? reviewGate.detail
+          : null;
   const preferredValidationSlot = useMemo(
     () => validationSlots.find((slot) => slot.kind === "validation" && slot.command.trim()),
     [validationSlots],
@@ -248,7 +258,7 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
       const parsed = parseCommandLine(loop.validationCommand);
       if (!parsed.program) {
         setAutoLoop((current) => (current?.loopId === loop.loopId ? { ...current, status: "escalated" } : current));
-        setValidationNotice("The configured validation command is empty.");
+        setValidationNotice("已配置的验证命令为空。请先在设置中补充命令。");
         return null;
       }
 
@@ -264,7 +274,7 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
         attempt,
       });
       setValidationNotice(
-        run ? `Auto validation started: ${loop.validationCommand}` : "Auto validation failed to start.",
+        run ? `自动验证已启动：${loop.validationCommand}` : "自动验证启动失败。",
       );
       if (!run) {
         setAutoLoop((current) =>
@@ -274,7 +284,7 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
       return run;
     } catch (error) {
       setAutoLoop((current) => (current?.loopId === loop.loopId ? { ...current, status: "escalated" } : current));
-      setValidationNotice(error instanceof Error ? error.message : "Invalid validation command.");
+      setValidationNotice(error instanceof Error ? error.message : "验证命令无效。请检查配置。");
       return null;
     }
   }
@@ -282,7 +292,7 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
   async function startAutoRepairRun(loop: AutoImplementationLoop, failedRun: CommandRun, attempt: number) {
     if (!selectedAgent) {
       setAutoLoop((current) => (current?.loopId === loop.loopId ? { ...current, status: "escalated" } : current));
-      setValidationNotice("Auto repair stopped because no implementation agent is available.");
+      setValidationNotice("自动修复已停止：没有可用的实施 Agent。");
       return;
     }
 
@@ -292,7 +302,7 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
         : current,
     );
     const refreshed = await generateRepairContext(project.path, task.id);
-    const repairNote = `Auto repair attempt ${attempt}/${MAX_AUTO_REPAIR_ATTEMPTS}: validation failed in \`${failedRun.command}\`.`;
+    const repairNote = `自动修复 ${attempt}/${MAX_AUTO_REPAIR_ATTEMPTS}：验证命令 \`${failedRun.command}\` 失败。`;
     const prompt = latestAgentResumeCommand
       ? buildResumeRepairPrompt(refreshed ?? task, repairNote)
       : buildRepairPrompt(refreshed ?? task, "", repairNote);
@@ -308,7 +318,7 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
       setAutoLoop((current) =>
         current?.loopId === loop.loopId ? { ...current, status: "escalated" } : current,
       );
-      setValidationNotice("Auto repair stopped because the backend rejected the Agent invocation.");
+      setValidationNotice("自动修复已停止：后端拒绝了 Agent 调用。");
       return;
     }
     const run = await startCommandRun({
@@ -326,9 +336,9 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
     setValidationNotice(
       run
         ? invocation.resumed
-          ? `Auto repair attempt ${attempt}/${MAX_AUTO_REPAIR_ATTEMPTS} resumed the previous agent session.`
-          : `Auto repair attempt ${attempt}/${MAX_AUTO_REPAIR_ATTEMPTS} started.`
-        : "Auto repair failed to start.",
+          ? `自动修复 ${attempt}/${MAX_AUTO_REPAIR_ATTEMPTS} 已恢复上一次 Agent 会话。`
+          : `自动修复 ${attempt}/${MAX_AUTO_REPAIR_ATTEMPTS} 已启动。`
+        : "自动修复启动失败。",
     );
     if (!run) {
       setAutoLoop((current) =>
@@ -409,7 +419,7 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
       );
       if (decision.kind === "pass") {
         setAutoLoop({ ...autoLoop, status: "passed" });
-        setValidationNotice("Auto validation passed. This todo has passing evidence.");
+        setValidationNotice("自动验证已通过，当前子任务已有通过证据。");
         return;
       }
       if (decision.kind === "escalate") {
@@ -489,7 +499,7 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
 
   async function handleCompleteTodo(todo: PlanTodoItem) {
     if (autoValidate && commandRunning) {
-      setValidationNotice("Wait for the active command run to finish before auto validation.");
+      setValidationNotice("请等待当前命令结束后再运行自动验证。");
       return;
     }
 
@@ -499,7 +509,7 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
     }
 
     if (!preferredValidationSlot) {
-      setValidationNotice("No validation command is configured for this project.");
+      setValidationNotice("当前项目尚未配置验证命令。");
       return;
     }
 
@@ -552,7 +562,7 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
             {latestRun ? summarizeCommand(latestRun.command) : "等待启动"}
           </span>
         </div>
-        <div className="testing-mode-toggle" role="group" aria-label="Implementation validation mode">
+        <div className="testing-mode-toggle" role="group" aria-label="实施验证模式">
           <button
             type="button"
             className={autoValidate ? "" : "active"}
@@ -582,7 +592,7 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
             <article className="session-turn">
               <div className="session-avatar user">你</div>
               <div className="session-turn-body">
-                <div className="session-name">Task</div>
+                <div className="session-name">任务</div>
                 <p>{task.title}</p>
                 {activeTodo && <p>{activeTodo.description}</p>}
               </div>
@@ -594,35 +604,35 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
               </div>
               <div className="session-turn-body">
                 <div className="session-name">
-                  {selectedAgent?.name ?? "Implementation Agent"}
-                  <span>agent loop</span>
+                  {selectedAgent?.name ?? "实施 Agent"}
+                  <span>Agent 循环</span>
                 </div>
                 <div className="session-thinking think-block">
-                  Reading the confirmed plan and preparing a scoped implementation run for the selected todo.
+                  正在读取已确认计划，并为当前子任务准备限定范围的实施运行。
                 </div>
 
                 <div className="session-tool tool-card">
                   <div className="session-tool-header">
                     <FileText size={14} />
-                    <b>Read</b>
-                    <span>{activeTodo?.planRef ?? task.finalPlanPath ?? "confirmed plan"}</span>
-                    <em>scope</em>
+                    <b>读取</b>
+                    <span>{activeTodo?.planRef ?? task.finalPlanPath ?? "已确认计划"}</span>
+                    <em>范围</em>
                   </div>
-                  <pre>{task.finalPlan ?? "Confirm a plan before implementation."}</pre>
+                  <pre>{task.finalPlan ?? "实施前请先确认计划。"}</pre>
                 </div>
 
                 {latestRun && (
                   <div className="session-tool tool-card">
                     <div className="session-tool-header">
                       <Terminal size={14} />
-                      <b>Run</b>
+                      <b>运行</b>
                       <span>{summarizeCommand(latestRun.command)}</span>
                       <em>{latestRun.status}</em>
                     </div>
                     <pre>
                       {latestRunLogs.length > 0
                         ? latestRunLogs.map((entry) => `${entry.stream.toUpperCase()} ${entry.line}`).join("\n")
-                        : "Agent process started. Waiting for output..."}
+                        : "Agent 进程已启动，正在等待输出…"}
                     </pre>
                   </div>
                 )}
@@ -630,17 +640,17 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
                 <div className="session-tool tool-card">
                   <div className="session-tool-header">
                     <FileText size={14} />
-                    <b>Timeline</b>
-                    <span>{autoLoop?.loopId ?? "task history"}</span>
-                    <em>trace</em>
+                    <b>时间线</b>
+                    <span>{autoLoop?.loopId ?? "任务历史"}</span>
+                    <em>轨迹</em>
                   </div>
                   <TaskTimeline task={task} maxItems={5} />
                 </div>
 
                 <p className="session-agent-copy">
                   {activeTodo
-                    ? `Ready to implement "${activeTodo.title}". Start the todo, capture command evidence, then mark it done after review.`
-                    : "Confirm a plan to generate implementation todos."}
+                    ? `可以实施“${activeTodo.title}”。启动子任务、保留命令证据，并在 Review 后标记完成。`
+                    : "确认计划后会生成实施子任务。"}
                 </p>
                 {validationNotice && <p className="session-agent-copy">{validationNotice}</p>}
               </div>
@@ -651,16 +661,16 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
             <input
               value={guidance}
               onChange={(event) => setGuidance(event.target.value)}
-              placeholder={`Steer ${selectedAgent?.name ?? "the Agent"} - add a constraint, answer, or approve next step...`}
+              placeholder={`给 ${selectedAgent?.name ?? "Agent"} 补充约束、答复或下一步指示…`}
               disabled={!selectedAgent || readOnly}
             />
             <Button
               type="submit"
-              variant="primary"
+              variant="ghost"
               iconRight={<Send size={14} />}
               disabled={!guidance.trim() || readOnly}
             >
-              Send
+              发送
             </Button>
           </form>
         </section>
@@ -764,8 +774,13 @@ export function SessionPane({ project, task, readOnly = false }: SessionPaneProp
               disabled={!canMarkReadyForTesting}
               onClick={handleMarkReadyForTesting}
             >
-              标记为可测试
+              {WORKFLOW_COPY.actions.markReadyForTesting}
             </Button>
+            {markReadyBlocker && (
+              <div className="testing-accept-note">
+                <strong>{WORKFLOW_COPY.blockers.prefix}</strong>{markReadyBlocker}
+              </div>
+            )}
           </div>
         </aside>
       </div>

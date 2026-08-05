@@ -1,7 +1,7 @@
 import { Bot, Paperclip, Quote, Send, User, X } from "lucide-react";
 import type { AgentConfig, CommandLogEvent } from "../../domain";
 import { Button } from "../../components/common/Button";
-import type { ConversationTurn, QuoteDraft } from "./model";
+import { statusLabel, type ConversationTurn, type QuoteDraft } from "./model";
 
 interface FeedbackComposerProps {
   readOnly: boolean;
@@ -66,10 +66,10 @@ export function FeedbackComposer({
             disabled={agents.length === 0 || readOnly}
             onChange={(event) => onAgentChange(event.target.value)}
           >
-            {agents.length === 0 && <option value="">No agent</option>}
+            {agents.length === 0 && <option value="">无可用 Agent</option>}
             {agents.map((agent) => <option value={agent.id} key={agent.id}>{agent.name}</option>)}
           </select>
-          <div className="testing-mode-toggle" role="group" aria-label="Repair mode">
+          <div className="testing-mode-toggle" role="group" aria-label="修复模式">
             <button type="button" className={autoMode ? "" : "active"} disabled={readOnly} onClick={() => onModeChange(false)}>
               手动
             </button>
@@ -99,13 +99,13 @@ export function FeedbackComposer({
                           ? "ok"
                           : turn.run.status === "failed" ? "err" : "idle"
                     }`}>
-                      <span />{turn.run.status}
+                      <span />{statusLabel(turn.run)}
                     </span>
-                    <span className="testing-chat-runcmd">fix run</span>
+                    <span className="testing-chat-runcmd">修复运行</span>
                   </div>
                   <pre className="testing-chat-runlog">
                     {(logs[turn.run.id] ?? []).slice(-12).map((entry) => entry.line).join("\n")
-                      || "Agent started. Waiting for output…"}
+                      || "Agent 已启动，正在等待输出…"}
                   </pre>
                 </>
               ) : <pre className="testing-chat-text">{turn.content}</pre>}
@@ -119,9 +119,9 @@ export function FeedbackComposer({
           <Quote size={12} />
           <div className="testing-chat-quote-body">
             <span className="testing-chat-quote-cmd">{quote.command}</span>
-            <pre>{quote.text.trim() || "(empty selection)"}</pre>
+            <pre>{quote.text.trim() || "（空选区）"}</pre>
           </div>
-          <button type="button" title="Remove quote" onClick={onQuoteClear}><X size={12} /></button>
+          <button type="button" title="移除引用" onClick={onQuoteClear}><X size={12} /></button>
         </div>
       )}
 
@@ -135,13 +135,13 @@ export function FeedbackComposer({
             {attachmentPaths.map((path) => (
               <span key={path} title={path}>
                 {path.split(/[\\/]/).pop()}
-                <button type="button" aria-label="Remove attachment" onClick={() => onRemoveAttachment(path)}><X size={10} /></button>
+                <button type="button" aria-label="移除附件" onClick={() => onRemoveAttachment(path)}><X size={10} /></button>
               </span>
             ))}
           </div>
           <Button
             type="button"
-            variant="primary"
+            variant="ghost"
             iconRight={<Send size={14} />}
             disabled={isEmpty || !selectedAgent}
             onClick={onSubmit}

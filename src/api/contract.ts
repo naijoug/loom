@@ -16,6 +16,7 @@ export const TAURI_COMMANDS = {
   approveExecution: "approve_execution",
   decideImplementationReviewFinding: "decide_implementation_review_finding",
   runImplementationReviews: "run_implementation_reviews",
+  exportDiagnosticBundle: "export_diagnostic_bundle",
   loadAppSettings: "load_app_settings",
   saveAppSettings: "save_app_settings",
   startCommandRun: "start_command_run",

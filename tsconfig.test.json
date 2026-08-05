@@ -16,6 +16,8 @@
     "src/domain/**/*.ts",
     "src/components/Planning/participantSelection.ts",
     "src/components/Planning/roundSummary.ts",
+    "src/components/TaskDetail/TaskTimeline.tsx",
+    "src/copy/workflow.ts",
     "src/features/settings/agentDraft.ts",
     "src/features/settings/controls.tsx",
     "src/features/testing/FeedbackComposer.tsx",

@@ -98,8 +98,8 @@ test("buildTaskTimelineRows merges planning, loop trace, and task events by newe
       "planning-run-plan-1",
     ],
   );
-  assert.equal(rows[0].stage, "testing");
-  assert.equal(rows[0].kind, "command finished");
+  assert.equal(rows[0].stage, "测试验收");
+  assert.equal(rows[0].kind, "命令完成");
   assert.equal(rows[2].summary, "Codex proposed a plan");
 });
 
@@ -209,8 +209,8 @@ test("buildTaskTimelineRows includes implementation review, feedback, and summar
   );
 
   assert.deepEqual(rows.map((row) => row.kind), [
-    "delivery summary",
-    "human feedback",
-    "Claude implementation review",
+    "交付总结",
+    "人工反馈",
+    "Claude 实施 Review",
   ]);
 });

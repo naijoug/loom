@@ -57,7 +57,7 @@ export function RepairCycleHistory({
                       <pre className="testing-cycle-log">
                         {cycleLogs.length > 0
                           ? cycleLogs.map((entry) => entry.line).join("\n")
-                          : "No captured log lines (live terminal output streams to the terminal, not the cycle log)."}
+                          : "没有捕获到循环日志；实时终端输出只显示在终端中。"}
                       </pre>
                     )}
                   </div>

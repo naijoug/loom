@@ -6,10 +6,16 @@ import { stageOf, type WorkflowStageId } from "../../state/selectors";
 import "./Workspace.css";
 
 const STAGE_LABELS: Record<WorkflowStageId, string> = {
-  planning: "Planning",
-  implementing: "Implementing",
-  testing: "Testing",
-  done: "Done",
+  planning: "规划",
+  implementing: "实施",
+  testing: "测试验收",
+  done: "完成",
+};
+
+const TASK_STATUS_LABELS: Record<string, string> = {
+  paused: "已暂停",
+  blocked: "已阻塞",
+  cancelled: "已取消",
 };
 
 export function WorkspaceSplit() {
@@ -21,10 +27,9 @@ export function WorkspaceSplit() {
     return (
       <div className="workspace-empty-state redesigned-empty">
         <Radar size={28} />
-        <div className="workspace-empty-title">Open a project to get started</div>
+        <div className="workspace-empty-title">打开项目以开始使用</div>
         <div className="workspace-empty-copy">
-          Loom will analyze the project, load agents, and keep plans, reviews,
-          human decisions, and final documents in one place.
+          Loom 会分析项目、加载 Agent，并集中保存计划、Review、人工决策与最终文档。
         </div>
       </div>
     );
@@ -72,23 +77,22 @@ export function WorkspaceSplit() {
         <History size={14} />
         {lifecycleReadOnly ? (
           <span>
-            Task is <b>{task?.lifecycle?.paused ? "paused" : task?.status}</b>.{" "}
+            任务当前<b>{TASK_STATUS_LABELS[task?.lifecycle?.paused ? "paused" : task?.status ?? ""] ?? task?.status}</b>。{" "}
             {task?.status === "cancelled"
-              ? "Its history remains available in read-only mode."
-              : "Resume it from the header before changing workflow state."}
+              ? "历史记录仍可只读查看。"
+              : "请先从顶部恢复任务，再更改工作流状态。"}
           </span>
         ) : (
           <>
             <span>
-              Viewing the <b>{STAGE_LABELS[effectiveStage]}</b> stage. The task is currently in{" "}
-              {STAGE_LABELS[currentStage]}.
+              正在回看<b>{STAGE_LABELS[effectiveStage]}</b>阶段；任务当前位于{STAGE_LABELS[currentStage]}阶段。
             </span>
             <button
               type="button"
               className="stage-review-return"
               onClick={() => dispatch({ type: "app/stageViewed", stage: null })}
             >
-              Return to current stage
+              返回当前阶段
             </button>
           </>
         )}

@@ -197,7 +197,7 @@ export function Navigation() {
           type="button"
           className="project-add-button"
           disabled={state.app.isLoadingProjects}
-          title="Add project"
+          title="添加项目"
           onClick={() => setAddProjectOpen(true)}
         >
           <FolderPlus size={15} />
@@ -259,8 +259,8 @@ export function Navigation() {
                   <button
                     type="button"
                     className="project-inline-add"
-                    aria-label={`New task in ${project.name}`}
-                    title={`New task in ${project.name}`}
+                    aria-label={`在 ${project.name} 中新建任务`}
+                    title={`在 ${project.name} 中新建任务`}
                     onClick={(event) => {
                       event.preventDefault();
                       event.stopPropagation();
@@ -353,7 +353,7 @@ export function Navigation() {
           className="context-menu project-context-menu"
           style={{ top: projectMenu.y, left: projectMenu.x }}
           role="menu"
-          aria-label={`${menuProject.name} project actions`}
+          aria-label={`${menuProject.name} 项目操作`}
           onClick={(event) => event.stopPropagation()}
           onContextMenu={(event) => event.preventDefault()}
         >
@@ -364,7 +364,7 @@ export function Navigation() {
             onClick={() => void handleProjectMenuAction("reveal", menuProject)}
           >
             <FolderOpen size={13} />
-            Reveal in Finder
+            在 Finder 中显示
           </button>
           <div className="context-menu-divider" role="separator" />
           <button
@@ -372,10 +372,10 @@ export function Navigation() {
             className="context-menu-item danger"
             role="menuitem"
             onClick={() => void handleProjectMenuAction("remove", menuProject)}
-            title="Remove from Loom's sidebar only"
+            title="仅从 Loom 侧边栏移除"
           >
             <X size={13} />
-            Remove from Sidebar
+            从侧边栏移除
           </button>
         </div>
       )}
@@ -398,7 +398,7 @@ export function Navigation() {
             }}
           >
             <Trash2 size={13} />
-            Delete task
+            删除任务
           </button>
         </div>
       )}
@@ -406,10 +406,9 @@ export function Navigation() {
       {confirmProject && (
         <div className="confirm-backdrop" role="presentation">
           <div className="confirm-modal" role="dialog" aria-modal="true">
-            <h2>Remove project?</h2>
+            <h2>移除项目？</h2>
             <p>
-              “{confirmProject.name}” will be removed from Loom&apos;s sidebar. The local
-              folder and its .loom data will stay on disk.
+              “{confirmProject.name}”会从 Loom 侧边栏移除；本地文件夹及其中的 .loom 数据不会删除。
             </p>
             <div className="confirm-modal-actions">
               <Button
@@ -417,14 +416,14 @@ export function Navigation() {
                 onClick={() => setConfirmProjectId(null)}
                 disabled={removingProject}
               >
-                Cancel
+                取消
               </Button>
               <Button
                 variant="danger"
                 onClick={() => void handleRemoveProjectConfirmed()}
                 disabled={removingProject}
               >
-                {removingProject ? "Removing…" : "Remove"}
+                {removingProject ? "正在移除…" : "移除"}
               </Button>
             </div>
           </div>
@@ -434,17 +433,16 @@ export function Navigation() {
       {confirmTask && (
         <div className="confirm-backdrop" role="presentation">
           <div className="confirm-modal" role="dialog" aria-modal="true">
-            <h2>Delete task?</h2>
+            <h2>删除任务？</h2>
             <p>
-              “{confirmTask.title}” and its planning evidence will be permanently removed. This
-              cannot be undone.
+              “{confirmTask.title}”及其规划证据将被永久删除，且无法撤销。
             </p>
             <div className="confirm-modal-actions">
               <Button variant="ghost" onClick={() => setConfirmTaskId(null)} disabled={deleting}>
-                Cancel
+                取消
               </Button>
               <Button variant="danger" onClick={() => void handleDeleteConfirmed()} disabled={deleting}>
-                {deleting ? "Deleting…" : "Delete"}
+                {deleting ? "正在删除…" : "删除"}
               </Button>
             </div>
           </div>

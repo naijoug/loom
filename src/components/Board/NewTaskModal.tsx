@@ -140,36 +140,36 @@ export function NewTaskModal({ project, onClose, onCreated }: NewTaskModalProps)
       <div className="task-modal" role="dialog" aria-modal="true" aria-labelledby="new-task-title">
         <div className="task-modal-header">
           <div>
-            <h2 id="new-task-title">New task</h2>
-            <p>in {project.name}</p>
+            <h2 id="new-task-title">新建任务</h2>
+            <p>项目：{project.name}</p>
           </div>
-          <button type="button" className="task-modal-close" aria-label="Close" onClick={onClose}>
+          <button type="button" className="task-modal-close" aria-label="关闭" onClick={onClose}>
             <X size={16} />
           </button>
         </div>
 
         <form className="task-modal-form" onSubmit={handleSubmit}>
           <label className="task-field">
-            <span>Title</span>
+            <span>标题</span>
             <input
               value={title}
               onChange={(event) => setTitle(event.target.value)}
-              placeholder="Implement the dashboard filter"
+              placeholder="例如：实现仪表盘筛选功能"
               autoFocus
             />
           </label>
 
           <label className="task-field">
-            <span>Description</span>
+            <span>需求描述</span>
             <textarea
               value={rawRequirement}
               onChange={(event) => setRawRequirement(event.target.value)}
-              placeholder="Describe the requirement, constraints, and expected outcome."
+              placeholder="描述需求、约束与预期结果。"
             />
           </label>
 
           <label className="task-field">
-            <span>Invite agents to discuss</span>
+            <span>邀请 Agent 参与讨论</span>
             <div className="task-agent-chip-row">
               {planningAgents.map((agent) => {
                 const selected = selectedPlanningAgentIds.includes(agent.id);
@@ -188,20 +188,20 @@ export function NewTaskModal({ project, onClose, onCreated }: NewTaskModalProps)
                 );
               })}
               {planningAgents.length === 0 && (
-                <span className="task-agent-empty">No planning agents available</span>
+                <span className="task-agent-empty">没有可用的规划 Agent</span>
               )}
             </div>
           </label>
 
           <label className="task-field">
-            <span>Suggested primary</span>
+            <span>建议主 Agent</span>
             <div className="agent-select-row">
               <Bot size={15} />
               <select
                 value={primaryAgentId}
                 onChange={(event) => setPrimaryAgentId(event.target.value)}
               >
-                <option value="">No primary Agent yet</option>
+                <option value="">暂不指定主 Agent</option>
                 {state.agents.filter(canImplement).map((agent) => (
                   <option key={agent.id} value={agent.id}>
                     {agent.name}
@@ -213,8 +213,8 @@ export function NewTaskModal({ project, onClose, onCreated }: NewTaskModalProps)
 
           {suggested && (
             <div className="suggested-primary-note">
-              Suggested: {suggested.name}
-              {suggested.adapterType === "claude_code_cli" ? " · strongest for Implement" : ""}
+              建议：{suggested.name}
+              {suggested.adapterType === "claude_code_cli" ? " · 更适合实施" : ""}
             </div>
           )}
 
@@ -222,14 +222,14 @@ export function NewTaskModal({ project, onClose, onCreated }: NewTaskModalProps)
 
           <div className="task-modal-actions">
             <Button type="button" variant="ghost" onClick={onClose}>
-              Cancel
+              取消
             </Button>
             <Button
               type="submit"
               variant="primary"
               disabled={!title.trim() || !rawRequirement.trim() || state.app.isLoadingTasks}
             >
-              Start discussion
+              开始讨论
             </Button>
           </div>
         </form>

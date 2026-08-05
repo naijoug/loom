@@ -5,6 +5,7 @@ import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
 import { listenToEvent, TAURI_EVENTS } from "../../api";
 import type { CommandLogEvent, CommandRun, PtyOutputEvent } from "../../domain";
+import { formatRunStatus } from "../../copy/workflow";
 import { usePtyBridge } from "../../hooks/usePtyBridge";
 import { Button } from "../common/Button";
 
@@ -31,14 +32,9 @@ interface TerminalCardProps {
 
 function statusText(run?: CommandRun) {
   if (!run) {
-    return "idle";
+    return "空闲";
   }
-
-  if (typeof run.exitCode === "number") {
-    return `${run.status} ${run.exitCode}`;
-  }
-
-  return run.status;
+  return formatRunStatus(run.status, run.exitCode);
 }
 
 function statusClass(run?: CommandRun) {
@@ -63,10 +59,10 @@ function streamClass(stream: CommandLogEvent["stream"]) {
 
 function formatTime(timestampMs?: number) {
   if (!timestampMs) {
-    return "not finished";
+    return "未结束";
   }
 
-  return new Date(timestampMs).toLocaleTimeString("en-US", {
+  return new Date(timestampMs).toLocaleTimeString("zh-CN", {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
@@ -251,8 +247,8 @@ export function TerminalCard({
             <button
               type="button"
               className="testing-terminal-icon-btn"
-              title="Quote selected log lines to the agent"
-              aria-label="Quote selected log lines to the agent"
+              title="引用选中的日志给 Agent"
+              aria-label="引用选中的日志给 Agent"
               onClick={handleQuote}
             >
               <MessageSquarePlus size={13} />
@@ -262,8 +258,8 @@ export function TerminalCard({
             <button
               type="button"
               className="testing-terminal-icon-btn"
-              title="Edit terminal"
-              aria-label="Edit terminal"
+              title="编辑终端"
+              aria-label="编辑终端"
               disabled={disabled || running}
               onClick={onEdit}
             >
@@ -274,8 +270,8 @@ export function TerminalCard({
             <button
               type="button"
               className="testing-terminal-icon-btn"
-              title="Remove terminal"
-              aria-label="Remove terminal"
+              title="移除终端"
+              aria-label="移除终端"
               disabled={disabled || running}
               onClick={onRemove}
             >
@@ -288,13 +284,13 @@ export function TerminalCard({
         <div className="testing-terminal-toolbar">
           <input
             type="search"
-            aria-label="Search terminal logs"
+            aria-label="搜索终端日志"
             value={logQuery}
             placeholder="搜索日志"
             onChange={(event) => setLogQuery(event.target.value)}
           />
           <select
-            aria-label="Filter terminal logs"
+            aria-label="筛选终端日志"
             value={logFilter}
             onChange={(event) => setLogFilter(event.target.value as typeof logFilter)}
           >
@@ -308,7 +304,7 @@ export function TerminalCard({
             {logsCollapsed ? "展开" : "折叠"}
           </button>
           {(summary?.urls?.length || summary?.ports?.length || summary?.warnings?.length || summary?.testFailures?.length) ? (
-            <div className="testing-terminal-insights" aria-label="Parsed log insights">
+            <div className="testing-terminal-insights" aria-label="解析后的日志洞察">
               {summary.urls?.slice(0, 2).map((url) => <span key={url} title={url}>URL {url}</span>)}
               {summary.ports?.slice(0, 3).map((port) => <span key={port}>端口 {port}</span>)}
               {!!summary.warnings?.length && <span>警告 {summary.warnings.length}</span>}
@@ -325,8 +321,8 @@ export function TerminalCard({
             {run && (
               <div className={`testing-terminal-run-meta meta-${statusClass(run)}`}>
                 <span>{statusText(run)}</span>
-                <span>started {formatTime(run.startedAtMs)}</span>
-                <span>ended {formatTime(run.endedAtMs)}</span>
+                <span>开始 {formatTime(run.startedAtMs)}</span>
+                <span>结束 {formatTime(run.endedAtMs)}</span>
               </div>
             )}
             {logs.length === 0 ? (

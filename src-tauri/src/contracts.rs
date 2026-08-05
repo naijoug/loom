@@ -28,6 +28,7 @@ const COMMANDS: &[&str] = &[
     "approve_execution",
     "decide_implementation_review_finding",
     "run_implementation_reviews",
+    "export_diagnostic_bundle",
     "load_app_settings",
     "save_app_settings",
     "start_command_run",

@@ -271,9 +271,9 @@ async function main() {
       await waitFor(client, textIncludes("Wire stream filter into reducer", "LOOM-12"), "board screen");
 
       await clickRequired(client, ".project-add-button", "add project button");
-      await waitFor(client, textIncludes("Open a local directory", "Detected"), "add project modal");
+      await waitFor(client, textIncludes("打开本地目录", "检测结果"), "add project modal");
       await clickRequired(client, ".project-modal-close", "add project close button");
-      await waitFor(client, `(${textIncludes("Open a local directory")}) === false`, "add project modal close");
+      await waitFor(client, `(${textIncludes("打开本地目录")}) === false`, "add project modal close");
 
       await evaluate(client, `
         (() => {
@@ -286,7 +286,7 @@ async function main() {
           return true;
         })()
       `);
-      await waitFor(client, textIncludes("Invite agents to discuss", "Suggested primary"), "new task modal");
+      await waitFor(client, textIncludes("邀请 Agent 参与讨论", "建议主 Agent"), "new task modal");
       await evaluate(client, `
         const title = document.querySelector('.task-modal input');
         const desc = document.querySelector('.task-modal textarea');
@@ -299,11 +299,11 @@ async function main() {
         true;
       `);
       await waitFor(client, `
-        const submit = [...document.querySelectorAll('button')].find((button) => button.textContent.includes('Start discussion'));
+        const submit = [...document.querySelectorAll('button')].find((button) => button.textContent.includes('开始讨论'));
         submit && !submit.disabled;
       `, "new task submit enabled");
       await clickRequired(client, ".task-modal-close", "new task close button");
-      await waitFor(client, `(${textIncludes("Invite agents to discuss")}) === false`, "new task modal close");
+      await waitFor(client, `(${textIncludes("邀请 Agent 参与讨论")}) === false`, "new task modal close");
       await navigate(client, `${baseUrl}?screen=board`);
       await waitFor(client, textIncludes("Wire stream filter into reducer", "LOOM-12"), "board screen after modal");
 
@@ -311,12 +311,12 @@ async function main() {
       await waitFor(client, textIncludes("speaker", "SPK-4", "Voice preset"), "speaker board");
 
       await clickRequired(client, ".sidebar-settings-entry", "settings button");
-      await waitFor(client, textIncludes("Current project", "Runtime model"), "settings general");
-      await evaluate(client, "[...document.querySelectorAll('.settings-nav-item')].find((item) => item.textContent.includes('Agents'))?.click(); true");
-      await waitFor(client, textIncludes("Installed agents", "Add custom Agent"), "settings agents tab");
+      await waitFor(client, textIncludes("当前项目", "运行模式"), "settings general");
+      await evaluate(client, "[...document.querySelectorAll('.settings-nav-item')].find((item) => item.textContent.includes('Agent'))?.click(); true");
+      await waitFor(client, textIncludes("已安装 Agent", "添加自定义 Agent"), "settings agents tab");
 
       await navigate(client, `${baseUrl}?screen=session`);
-      await waitFor(client, textIncludes("标记为可测试", "子任务"), "session screen");
+      await waitFor(client, textIncludes("进入测试验收", "子任务"), "session screen");
       await navigate(client, `${baseUrl}?screen=testing`);
       await waitFor(client, textIncludes("调试验收", "验收门禁"), "testing screen");
       await waitFor(client, `Boolean(

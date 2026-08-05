@@ -197,8 +197,8 @@ export function Board() {
     return (
       <div className="board-empty">
         <ListTodo size={28} />
-        <h2>Select a project</h2>
-        <p>Open a local project to see its task board.</p>
+        <h2>请选择项目</h2>
+        <p>打开本地项目后可查看任务看板。</p>
       </div>
     );
   }
@@ -214,7 +214,7 @@ export function Board() {
             </div>
           </div>
           <div className="board-toolbar-actions">
-            <div className="board-agent-filter" aria-label="Agent filters">
+            <div className="board-agent-filter" aria-label="Agent 筛选器">
               <span className="loom-agent-avatar codex" title="Codex">Co</span>
               <span className="loom-agent-avatar claude" title="Claude Code">Cl</span>
               <span className="loom-agent-avatar hermes" title="Hermes">He</span>

@@ -7,6 +7,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import type { CommandRun, ProjectSummary, Task, TerminalSlot } from "../../domain";
+import { taskStatusCopy } from "../../copy/workflow";
 import { useAgentBridge } from "../../hooks/useAgentBridge";
 import { useCommandBridge } from "../../hooks/useCommandBridge";
 import { usePtyBridge } from "../../hooks/usePtyBridge";
@@ -223,7 +224,7 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
   const canAccept =
     task.status === "verifying" && hasPassingEvidence && !hasRunningValidationRun && !readOnly;
   const validationCommandLabel =
-    [...validationCommands].join("  ·  ") || "No validation command configured";
+    [...validationCommands].join("  ·  ") || "尚未配置验证命令";
   const validationSlots = useMemo(
     () => slots.filter((slot) => slot.kind === "validation"),
     [slots],
@@ -260,7 +261,7 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
         setAutoLoop((current) =>
           current?.loopId === loop.loopId ? { ...current, status: "escalated" } : current,
         );
-        setAutoNotice("Auto repair stopped because the validation command is empty.");
+        setAutoNotice("自动修复已停止：验证命令为空。");
         return null;
       }
 
@@ -280,8 +281,8 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
       }
       setAutoNotice(
         run
-          ? `Auto validation started: ${loop.validationCommand}`
-          : "Auto validation failed to start.",
+          ? `自动验证已启动：${loop.validationCommand}`
+          : "自动验证启动失败。",
       );
       if (!run) {
         setAutoLoop((current) =>
@@ -293,7 +294,7 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
       setAutoLoop((current) =>
         current?.loopId === loop.loopId ? { ...current, status: "escalated" } : current,
       );
-      setAutoNotice(error instanceof Error ? error.message : "Invalid validation command.");
+      setAutoNotice(error instanceof Error ? error.message : "验证命令无效。请检查配置。");
       return null;
     }
   }
@@ -333,7 +334,7 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
         setRunIds((prev) => ({ ...prev, [slot.id]: run.id }));
       }
     } catch (error) {
-      setCommandError(error instanceof Error ? error.message : "Invalid command");
+      setCommandError(error instanceof Error ? error.message : "命令无效");
     }
   }
 
@@ -388,12 +389,12 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
     auto?: { loop: AutoTestingLoop; failedRun: CommandRun; attempt: number },
   ) {
     if (!selectedAgent) {
-      setCommandError("No implementation agent available to run a fix.");
+      setCommandError("没有可用于修复的实施 Agent。");
       if (auto) {
         setAutoLoop((current) =>
           current?.loopId === auto.loop.loopId ? { ...current, status: "escalated" } : current,
         );
-        setAutoNotice("Auto repair stopped because no implementation agent is available.");
+        setAutoNotice("自动修复已停止：没有可用的实施 Agent。");
       }
       return;
     }
@@ -417,7 +418,7 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
       prompt,
     });
     if (!invocation) {
-      setCommandError("The backend rejected the selected Agent invocation.");
+      setCommandError("后端拒绝了所选 Agent 的调用。");
       return;
     }
     const run = await startCommandRun({
@@ -435,13 +436,13 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
     if (run) {
       setFixRunIds((prev) => [...prev, run.id]);
       if (auto) {
-        setAutoNotice(`Auto repair attempt ${auto.attempt}/${MAX_AUTO_REPAIR_ATTEMPTS} started.`);
+        setAutoNotice(`自动修复 ${auto.attempt}/${MAX_AUTO_REPAIR_ATTEMPTS} 已启动。`);
       }
     } else if (auto) {
       setAutoLoop((current) =>
         current?.loopId === auto.loop.loopId ? { ...current, status: "escalated" } : current,
       );
-      setAutoNotice("Auto repair failed to start.");
+      setAutoNotice("自动修复启动失败。");
     }
   }
 
@@ -471,13 +472,13 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
       },
     );
     if (!persistedFeedback) {
-      setCommandError("Feedback or attachment validation failed; no repair Agent was started.");
+      setCommandError("反馈或附件校验失败，未启动修复 Agent。");
       return;
     }
     const structuredNote = [
       note.trim(),
-      reproductionSteps.trim() ? `Reproduction steps:\n${reproductionSteps.trim()}` : "",
-      expectedBehavior.trim() ? `Expected behavior:\n${expectedBehavior.trim()}` : "",
+      reproductionSteps.trim() ? `复现步骤：\n${reproductionSteps.trim()}` : "",
+      expectedBehavior.trim() ? `期望行为：\n${expectedBehavior.trim()}` : "",
     ].filter(Boolean).join("\n\n");
     await startFixRun(structuredNote, quote);
     setNote("");
@@ -495,7 +496,7 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
       multiple: true,
       directory: false,
       filters: [{
-        name: "Debug evidence",
+        name: "调试证据",
         extensions: ["png", "jpg", "jpeg", "webp", "gif", "txt", "log", "md", "json", "pdf"],
       }],
     });
@@ -506,7 +507,7 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
   async function startAutoLoopFromFailure(failureRun: CommandRun) {
     const validationSlot = validationSlotForRun(failureRun);
     if (!validationSlot) {
-      setAutoNotice("Auto repair stopped because no validation command is configured.");
+      setAutoNotice("自动修复已停止：当前项目没有配置验证命令。");
       return;
     }
 
@@ -532,7 +533,7 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
     handledAutoLoopRunsRef.current = new Set();
     if (decision.kind === "pass") {
       setAutoLoop({ ...loop, status: "passed" });
-      setAutoNotice("Auto validation passed. The task has passing evidence.");
+      setAutoNotice("自动验证已通过，任务已有通过证据。");
       return;
     }
     if (decision.kind === "escalate") {
@@ -555,7 +556,7 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
     };
     setAutoLoop(nextLoop);
     await startFixRun(
-      `Auto repair attempt ${decision.attempt}/${MAX_AUTO_REPAIR_ATTEMPTS}: validation failed in \`${failureRun.command}\`.`,
+      `自动修复 ${decision.attempt}/${MAX_AUTO_REPAIR_ATTEMPTS}：验证命令 \`${failureRun.command}\` 失败。`,
       null,
       { loop: nextLoop, failedRun: failureRun, attempt: decision.attempt },
     );
@@ -632,7 +633,7 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
       );
       if (decision.kind === "pass") {
         setAutoLoop({ ...autoLoop, sourceFailureRunId: latestAutoCompletedRun.id, status: "passed" });
-        setAutoNotice("Auto validation passed. The task has passing evidence.");
+        setAutoNotice("自动验证已通过，任务已有通过证据。");
         return;
       }
       if (decision.kind === "escalate") {
@@ -657,7 +658,7 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
       };
       setAutoLoop(nextLoop);
       void startFixRun(
-        `Auto repair attempt ${decision.attempt}/${MAX_AUTO_REPAIR_ATTEMPTS}: validation failed in \`${latestAutoCompletedRun.command}\`.`,
+        `自动修复 ${decision.attempt}/${MAX_AUTO_REPAIR_ATTEMPTS}：验证命令 \`${latestAutoCompletedRun.command}\` 失败。`,
         null,
         { loop: nextLoop, failedRun: latestAutoCompletedRun, attempt: decision.attempt },
       );
@@ -735,7 +736,7 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
           <button
             type="button"
             className="testing-cockpit-toggle"
-            title={cockpitOpen ? "Hide testing cockpit" : "Show testing cockpit"}
+            title={cockpitOpen ? "收起测试驾驶舱" : "展开测试驾驶舱"}
             onClick={() => setCockpitOpen((open) => !open)}
           >
             {cockpitOpen ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
@@ -765,7 +766,7 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
           <div className="debug-agent-header">
             <div className="debug-agent-avatar">AI</div>
             <span>调试验收 Cockpit</span>
-            <span className="testing-panel-state">{task.status}</span>
+            <span className="testing-panel-state">{taskStatusCopy(task.status)}</span>
           </div>
 
           <div className="debug-agent-body">
@@ -793,11 +794,11 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
               </p>
             </section>
 
-            <section className="debug-card fix-cycle-card">
-              <div className="debug-card-label">
+            <details className="debug-card fix-cycle-card">
+              <summary className="debug-card-label">
                 <RefreshCw size={14} />
-                自动修复循环
-              </div>
+                修复路径与状态
+              </summary>
               <div className="fix-cycle">
                 <div className={`fix-step ${latestBlockingFailure || taskRuns.length > 0 ? "is-done" : ""}`}>
                   <span className="fix-step-no">1</span>
@@ -829,7 +830,7 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
                   </div>
                 </div>
               </div>
-            </section>
+            </details>
 
             <FeedbackComposer
               readOnly={readOnly}

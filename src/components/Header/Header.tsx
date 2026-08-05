@@ -38,14 +38,14 @@ export function Header() {
 
   function handlePause() {
     if (!currentProject || !currentTask) return;
-    const reason = window.prompt("Why are you pausing this task?", "Paused by user");
+    const reason = window.prompt("为什么暂停这个任务？", "用户主动暂停");
     if (reason === null) return;
     void runLifecycleAction(() => pauseTask(currentProject.path, currentTask.id, reason));
   }
 
   function handleBlock() {
     if (!currentProject || !currentTask) return;
-    const reason = window.prompt("What is blocking this task?", "External dependency blocked");
+    const reason = window.prompt("是什么阻塞了这个任务？", "外部依赖阻塞");
     if (reason === null) return;
     void runLifecycleAction(() => blockTask(currentProject.path, currentTask.id, reason));
   }
@@ -57,11 +57,11 @@ export function Header() {
 
   function handleCancel() {
     if (!currentProject || !currentTask) return;
-    if (!window.confirm(`Cancel task “${currentTask.title}”? Running commands will be stopped.`)) {
+    if (!window.confirm(`取消任务“${currentTask.title}”？正在运行的命令会被停止。`)) {
       return;
     }
     void runLifecycleAction(() =>
-      cancelTask(currentProject.path, currentTask.id, "Cancelled by user"),
+      cancelTask(currentProject.path, currentTask.id, "用户主动取消"),
     );
   }
 
@@ -96,23 +96,23 @@ export function Header() {
         !isBoard &&
         currentTask.status !== "completed" &&
         currentTask.status !== "cancelled" && (
-        <div className="header-lifecycle-actions" aria-label="Task lifecycle controls">
+        <div className="header-lifecycle-actions" aria-label="任务生命周期操作">
           {currentTask.lifecycle?.paused || currentTask.status === "blocked" ? (
-            <button type="button" onClick={handleResume} disabled={lifecycleBusy} title="Resume task">
-              <Play size={13} /> Resume
+            <button type="button" onClick={handleResume} disabled={lifecycleBusy} title="恢复任务">
+              <Play size={13} /> 恢复
             </button>
           ) : (
             <>
-              <button type="button" onClick={handlePause} disabled={lifecycleBusy} title="Pause task">
-                <Pause size={13} /> Pause
+              <button type="button" onClick={handlePause} disabled={lifecycleBusy} title="暂停任务">
+                <Pause size={13} /> 暂停
               </button>
-              <button type="button" onClick={handleBlock} disabled={lifecycleBusy} title="Mark blocked">
-                <Ban size={13} /> Block
+              <button type="button" onClick={handleBlock} disabled={lifecycleBusy} title="标记为阻塞">
+                <Ban size={13} /> 阻塞
               </button>
             </>
           )}
-          <button className="danger" type="button" onClick={handleCancel} disabled={lifecycleBusy} title="Cancel task">
-            <CircleStop size={13} /> Cancel
+          <button className="danger" type="button" onClick={handleCancel} disabled={lifecycleBusy} title="取消任务">
+            <CircleStop size={13} /> 取消
           </button>
         </div>
       )}

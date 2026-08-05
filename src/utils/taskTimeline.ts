@@ -1,4 +1,5 @@
 import type { CommandRun, Task } from "../domain";
+import { formatRunStatus } from "../copy/workflow";
 
 export interface TaskTimelineRow {
   id: string;
@@ -11,11 +12,21 @@ export interface TaskTimelineRow {
 }
 
 function stageLabel(value: string) {
-  return value.split("_").join(" ");
+  return ({
+    planning: "规划",
+    reviewing: "实施 Review",
+    implementing: "实施",
+    debugging: "测试验收",
+    testing: "测试验收",
+    fixing: "修复",
+    verifying: "验证",
+    completed: "完成",
+    legacy: "历史",
+  } as Record<string, string>)[value] ?? value.split("_").join(" ");
 }
 
 function statusDetail(status: string, exitCode?: number) {
-  return typeof exitCode === "number" ? `${status} · exit ${exitCode}` : status;
+  return formatRunStatus(status, exitCode);
 }
 
 function commandSummary(run: CommandRun) {
@@ -36,7 +47,7 @@ export function buildTaskTimelineRows(task: Task, maxItems = 12): TaskTimelineRo
       id: `planning-run-${run.id}`,
       timestampMs: run.endedAtMs ?? run.startedAtMs,
       stage: "planning",
-      kind: "planning run",
+      kind: "规划运行",
       summary: run.summary || run.requirement,
       detail: statusDetail(run.status),
       evidenceRef: run.id,
@@ -60,7 +71,7 @@ export function buildTaskTimelineRows(task: Task, maxItems = 12): TaskTimelineRo
       id: `plan-review-${review.id}`,
       timestampMs: review.endedAtMs ?? review.startedAtMs,
       stage: "planning",
-      kind: `${review.reviewerAgentName} review`,
+      kind: `${review.reviewerAgentName} Review`,
       summary: review.finding,
       detail: `${review.status} · ${review.severity}`,
       evidenceRef: review.evidenceRef,
@@ -72,7 +83,7 @@ export function buildTaskTimelineRows(task: Task, maxItems = 12): TaskTimelineRo
       id: `planning-decision-${decision.id}`,
       timestampMs: decision.createdAtMs,
       stage: "planning",
-      kind: "decision",
+      kind: "人工决策",
       summary: decision.title,
       detail: decision.status,
       evidenceRef: decision.id,
@@ -84,9 +95,9 @@ export function buildTaskTimelineRows(task: Task, maxItems = 12): TaskTimelineRo
       id: `implementation-review-${review.id}`,
       timestampMs: review.endedAtMs ?? review.startedAtMs,
       stage: "reviewing",
-      kind: `${review.reviewerAgentName} implementation review`,
-      summary: review.summary || `${review.findings.length} finding(s)`,
-      detail: `${review.status} · ${review.findings.length} finding(s)`,
+      kind: `${review.reviewerAgentName} 实施 Review`,
+      summary: review.summary || `${review.findings.length} 条发现`,
+      detail: `${formatRunStatus(review.status)} · ${review.findings.length} 条发现`,
       evidenceRef: review.evidenceRef,
     });
   }
@@ -96,7 +107,7 @@ export function buildTaskTimelineRows(task: Task, maxItems = 12): TaskTimelineRo
       id: `implementation-review-decision-${decision.id}`,
       timestampMs: decision.createdAtMs,
       stage: "reviewing",
-      kind: "finding decision",
+      kind: "发现项决策",
       summary: decision.reason,
       detail: `${decision.decision} · ${decision.actor}`,
       evidenceRef: decision.findingId,
@@ -108,12 +119,12 @@ export function buildTaskTimelineRows(task: Task, maxItems = 12): TaskTimelineRo
       id: `feedback-${feedback.id}`,
       timestampMs: feedback.timestampMs,
       stage: "debugging",
-      kind: "human feedback",
+      kind: "人工反馈",
       summary:
         feedback.content ||
         feedback.expectedBehavior ||
         feedback.reproductionSteps ||
-        `${feedback.attachments?.length ?? 0} attachment(s)`,
+        `${feedback.attachments?.length ?? 0} 个附件`,
       detail: feedback.commandRunId,
       evidenceRef: feedback.attachments?.[0]?.storedPath ?? feedback.commandRunId,
     });
@@ -124,8 +135,8 @@ export function buildTaskTimelineRows(task: Task, maxItems = 12): TaskTimelineRo
       id: `task-summary-${task.id}-${task.summary.generatedAtMs}`,
       timestampMs: task.summary.generatedAtMs,
       stage: "completed",
-      kind: "delivery summary",
-      summary: `${task.summary.changedFiles.length} changed file(s), ${task.summary.validationEvidence.length} validation record(s)`,
+      kind: "交付总结",
+      summary: `${task.summary.changedFiles.length} 个变更文件，${task.summary.validationEvidence.length} 条验证记录`,
       detail: task.summary.markdownPath,
       evidenceRef: task.summary.markdownPath,
     });
@@ -136,7 +147,7 @@ export function buildTaskTimelineRows(task: Task, maxItems = 12): TaskTimelineRo
       id: `loop-trace-${entry.id}`,
       timestampMs: entry.timestampMs,
       stage: stageLabel(entry.stage),
-      kind: entry.entryType.split("_").join(" "),
+      kind: entry.entryType === "command_finished" ? "命令完成" : entry.entryType.split("_").join(" "),
       summary: entry.verificationSummary,
       detail: [
         entry.loopId,
@@ -164,7 +175,7 @@ export function buildTaskTimelineRows(task: Task, maxItems = 12): TaskTimelineRo
       id: `command-run-${run.id}`,
       timestampMs: run.endedAtMs ?? run.startedAtMs,
       stage: stageLabel(run.intent ?? "legacy"),
-      kind: "command",
+      kind: "命令",
       summary: commandSummary(run),
       detail: statusDetail(run.status, run.exitCode),
       evidenceRef: run.id,

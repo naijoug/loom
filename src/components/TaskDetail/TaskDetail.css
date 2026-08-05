@@ -1980,6 +1980,19 @@
   overflow: hidden;
 }
 
+.fix-cycle-card > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.fix-cycle-card > summary::-webkit-details-marker {
+  display: none;
+}
+
+.fix-cycle-card[open] > summary {
+  margin-bottom: 10px;
+}
+
 .fix-cycle {
   display: flex;
   align-items: stretch;

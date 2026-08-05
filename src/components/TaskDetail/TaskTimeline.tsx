@@ -11,7 +11,7 @@ export function TaskTimeline({ task, maxItems = 8 }: TaskTimelineProps) {
   const rows = buildTaskTimelineRows(task, maxItems);
 
   if (rows.length === 0) {
-    return <p className="task-timeline-empty">No timeline entries were recorded.</p>;
+    return <p className="task-timeline-empty">尚未记录任务时间线。</p>;
   }
 
   return (

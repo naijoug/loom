@@ -1,6 +1,7 @@
 import { CheckCircle2, ShieldCheck } from "lucide-react";
 import type { CommandRun } from "../../domain";
 import { Button } from "../../components/common/Button";
+import { WORKFLOW_COPY } from "../../copy/workflow";
 import { shortTime, statusLabel } from "./model";
 
 interface ValidationGateProps {
@@ -44,9 +45,14 @@ export function ValidationGate({
             disabled={!canAccept}
             onClick={onAccept}
           >
-            全部通过
+            {WORKFLOW_COPY.actions.acceptTask}
           </Button>
-          {!canAccept && <div className="testing-accept-note">需要验证命令成功，且没有更新失败后才能验收。</div>}
+          {!canAccept && (
+            <div className="testing-accept-note">
+              <strong>{WORKFLOW_COPY.blockers.acceptancePrefix}</strong>
+              {gate.copy}
+            </div>
+          )}
         </>
       )}
     </section>

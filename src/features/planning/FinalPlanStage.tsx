@@ -6,6 +6,7 @@ import { useTaskBridge } from "../../hooks/useTaskBridge";
 import { useAppState } from "../../state/AppStateContext";
 import { PLAN_PREVIEW_SANDBOX, wireIframeHashNavigation } from "../../utils/iframeNavigation";
 import { Button } from "../../components/common/Button";
+import { WORKFLOW_COPY } from "../../copy/workflow";
 
 function escapePreviewHtml(value: string) {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -134,7 +135,7 @@ export function FinalPlanStage({ projectPath, task, busy, canRerunReviews, readO
           </div>
           <details className="timeline-final-preview" open>
             <summary>计划预览</summary>
-            <iframe title="Final plan preview" sandbox={PLAN_PREVIEW_SANDBOX} srcDoc={html ?? fallback} onLoad={(event) => wireIframeHashNavigation(event.currentTarget)} />
+            <iframe title="最终计划预览" sandbox={PLAN_PREVIEW_SANDBOX} srcDoc={html ?? fallback} onLoad={(event) => wireIframeHashNavigation(event.currentTarget)} />
           </details>
 
           {task.planningDecisions.length > 0 && (
@@ -157,7 +158,7 @@ export function FinalPlanStage({ projectPath, task, busy, canRerunReviews, readO
             <div className="timeline-final-cta">
               <span>确认后会从最终计划生成可执行任务，并进入实施阶段。</span>
               <Button type="button" variant="primary" disabled={busy} onClick={() => void handleCreateTasks()}>
-                确认计划并生成任务
+                {WORKFLOW_COPY.actions.confirmPlan}
               </Button>
             </div>
           )}

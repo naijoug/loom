@@ -6,6 +6,7 @@ mod command_runner;
 pub mod context_builder;
 #[cfg(test)]
 mod contracts;
+mod diagnostics;
 mod execution_policy;
 mod implementation_review;
 mod migrations;
@@ -85,6 +86,7 @@ pub fn run() {
             execution_policy::approve_execution,
             implementation_review::decide_implementation_review_finding,
             implementation_review::run_implementation_reviews,
+            diagnostics::export_diagnostic_bundle,
             settings::load_app_settings,
             settings::save_app_settings,
             command_runner::start_command_run,

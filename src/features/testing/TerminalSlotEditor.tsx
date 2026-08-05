@@ -19,18 +19,18 @@ export function TerminalSlotEditor({ draft, setDraft, onSave, onClose }: Termina
         aria-modal="true"
         onClick={(event) => event.stopPropagation()}
       >
-        <h2>{draft.id ? "Edit terminal" : "Add terminal"}</h2>
+        <h2>{draft.id ? "编辑终端" : "添加终端"}</h2>
         <label className="testing-slot-field">
-          <span>Name</span>
+          <span>名称</span>
           <input
             value={draft.name}
             autoFocus
-            placeholder="Preview"
+            placeholder="预览"
             onChange={(event) => setDraft({ ...draft, name: event.target.value })}
           />
         </label>
         <label className="testing-slot-field">
-          <span>Command</span>
+          <span>命令</span>
           <input
             value={draft.command}
             placeholder="pnpm dev"
@@ -38,36 +38,36 @@ export function TerminalSlotEditor({ draft, setDraft, onSave, onClose }: Termina
           />
         </label>
         <label className="testing-slot-field">
-          <span>Working directory (optional, relative to project)</span>
+          <span>工作目录（可选，相对于项目）</span>
           <input
             value={draft.cwd}
-            placeholder="(project root) e.g. todo-react"
+            placeholder="项目根目录，例如 todo-react"
             onChange={(event) => setDraft({ ...draft, cwd: event.target.value })}
           />
         </label>
         <label className="testing-slot-field">
-          <span>Kind</span>
+          <span>类型</span>
           <select
             value={draft.kind}
             onChange={(event) => setDraft({ ...draft, kind: event.target.value as TerminalSlot["kind"] })}
           >
-            <option value="preview">Preview (live dev server)</option>
-            <option value="validation">Validation (one-shot check)</option>
+            <option value="preview">预览（实时开发服务）</option>
+            <option value="validation">验证（一次性检查）</option>
           </select>
         </label>
         <p className="testing-slot-hint">
           {draft.kind === "preview"
-            ? "Runs in a real terminal (PTY) with colors. Long-running; not used for the acceptance gate."
-            : "Piped one-shot command. Its exit code and logs drive the acceptance gate."}
+            ? "在支持颜色的真实终端（PTY）中长期运行，不参与验收门禁。"
+            : "一次性管道命令，其退出码和日志会驱动验收门禁。"}
         </p>
         <div className="confirm-modal-actions">
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button variant="ghost" onClick={onClose}>取消</Button>
           <Button
             variant="primary"
             onClick={onSave}
             disabled={!draft.name.trim() || !draft.command.trim()}
           >
-            Save
+            保存
           </Button>
         </div>
       </div>

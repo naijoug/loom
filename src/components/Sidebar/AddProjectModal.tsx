@@ -39,7 +39,7 @@ export function AddProjectModal({ onClose }: AddProjectModalProps) {
     if (!hasTauriRuntime()) {
       dispatch({
         type: "projects/loadFailed",
-        error: "Project selection requires the Tauri desktop runtime.",
+        error: "选择项目需要在 Tauri 桌面应用中进行。",
       });
       return;
     }
@@ -47,7 +47,7 @@ export function AddProjectModal({ onClose }: AddProjectModalProps) {
     const selected = await open({
       directory: true,
       multiple: false,
-      title: "Select a project folder",
+      title: "选择项目文件夹",
     });
 
     if (typeof selected === "string") {
@@ -71,27 +71,27 @@ export function AddProjectModal({ onClose }: AddProjectModalProps) {
     <div className="project-modal-backdrop" role="presentation">
       <div className="project-modal" role="dialog" aria-modal="true" aria-labelledby="add-project-title">
         <div className="project-modal-header">
-          <h2 id="add-project-title">Add project</h2>
-          <button type="button" className="project-modal-close" aria-label="Close" onClick={onClose}>
+          <h2 id="add-project-title">添加项目</h2>
+          <button type="button" className="project-modal-close" aria-label="关闭" onClick={onClose}>
             <X size={16} />
           </button>
         </div>
 
         <div className="project-modal-body">
           <section className="project-modal-section">
-            <div className="project-modal-label">Open a local directory</div>
+            <div className="project-modal-label">打开本地目录</div>
             <div className="project-path-row">
               <div className={`project-path-field ${selectedPath ? "" : "empty"}`}>
                 {selectedPath ? displayPath(selectedPath) : "~/Workspace/naijoug/project"}
               </div>
               <Button type="button" variant="ghost" onClick={handleBrowse}>
-                Browse...
+                浏览…
               </Button>
             </div>
           </section>
 
           <section className="project-modal-section">
-            <div className="project-modal-label">Recent</div>
+            <div className="project-modal-label">最近项目</div>
             <div className="project-recent-list">
               {recentProjects.map((project) => (
                 <button
@@ -105,15 +105,15 @@ export function AddProjectModal({ onClose }: AddProjectModalProps) {
                 </button>
               ))}
               {recentProjects.length === 0 && (
-                <div className="project-recent-empty">No recent projects yet</div>
+                <div className="project-recent-empty">暂无最近项目</div>
               )}
             </div>
           </section>
 
           <section className="project-detected-card">
             <div className="project-detected-head">
-              <span>Detected</span>
-              <span className="project-detected-status">analyzed</span>
+              <span>检测结果</span>
+              <span className="project-detected-status">已分析</span>
             </div>
             <div className="project-stack-row">
               {detectedStacks.slice(0, 4).map((stack) => (
@@ -124,7 +124,7 @@ export function AddProjectModal({ onClose }: AddProjectModalProps) {
             </div>
             <div className="project-meta-line">
               <span>main</span>
-              <span>{detectedProject?.isGitRepository ? "git repository" : "local directory"}</span>
+              <span>{detectedProject?.isGitRepository ? "Git 仓库" : "本地目录"}</span>
               <span>{detectedProject?.suggestedCommands[0] ?? "pnpm dev"}</span>
             </div>
           </section>
@@ -134,7 +134,7 @@ export function AddProjectModal({ onClose }: AddProjectModalProps) {
 
         <div className="project-modal-actions">
           <Button type="button" variant="ghost" onClick={onClose}>
-            Cancel
+            取消
           </Button>
           <Button
             type="button"
@@ -142,7 +142,7 @@ export function AddProjectModal({ onClose }: AddProjectModalProps) {
             disabled={!selectedPath.trim() || state.app.isLoadingProjects}
             onClick={handleAddProject}
           >
-            Add project
+            添加项目
           </Button>
         </div>
       </div>

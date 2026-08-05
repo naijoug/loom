@@ -64,12 +64,12 @@ export function TerminalGrid({
         <div className="testing-terminal-actions">
           <button type="button" className="testing-add-terminal" onClick={onAdd}>
             <Plus size={14} />
-            Add terminal
+            添加终端
           </button>
           <button
             type="button"
             className="testing-add-terminal"
-            title="Re-scan the project and replace terminals with detected commands"
+            title="重新扫描项目，并用检测到的命令替换终端"
             onClick={onReset}
           >
             <RotateCcw size={13} />

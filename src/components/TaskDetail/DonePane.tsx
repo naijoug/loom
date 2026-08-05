@@ -14,6 +14,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import type { ProjectSummary, Task, TaskSummaryValidation } from "../../domain";
+import { formatRunStatus, WORKFLOW_COPY } from "../../copy/workflow";
 import { useTaskBridge } from "../../hooks/useTaskBridge";
 import { NewTaskModal } from "../Board";
 import { Button } from "../common/Button";
@@ -30,7 +31,7 @@ function shortStatus(run?: TaskSummaryValidation) {
   if (!run) {
     return "无验证";
   }
-  return typeof run.exitCode === "number" ? `${run.status} · exit ${run.exitCode}` : run.status;
+  return formatRunStatus(run.status, run.exitCode);
 }
 
 function repairLoops(task: Task) {
@@ -42,10 +43,11 @@ function fileDelta(value?: number) {
 }
 
 export function DonePane({ project, task, readOnly = false }: DonePaneProps) {
-  const { regenerateTaskSummary, exportTaskSummary } = useTaskBridge();
+  const { regenerateTaskSummary, exportTaskSummary, exportDiagnosticBundle } = useTaskBridge();
   const [followUpOpen, setFollowUpOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [includeDiagnosticLogs, setIncludeDiagnosticLogs] = useState(false);
   const summary = task.summary;
   const latestValidation = useMemo(
     () => summary?.validationEvidence[0],
@@ -77,6 +79,24 @@ export function DonePane({ project, task, readOnly = false }: DonePaneProps) {
     setBusy(true);
     const exported = await exportTaskSummary(project.path, task.id, targetPath, format);
     setNotice(exported ? `已导出到 ${exported}` : "导出失败，请查看错误提示。");
+    setBusy(false);
+  }
+
+  async function exportDiagnostics() {
+    const targetPath = await save({
+      defaultPath: `${task.title.replace(/[^\p{L}\p{N}._-]+/gu, "-") || "loom-task"}-diagnostics.json`,
+      filters: [{ name: "JSON", extensions: ["json"] }],
+    });
+    if (!targetPath) return;
+    setBusy(true);
+    setNotice(null);
+    const exported = await exportDiagnosticBundle(
+      project.path,
+      task.id,
+      targetPath,
+      includeDiagnosticLogs,
+    );
+    setNotice(exported ? `脱敏诊断包已导出到 ${exported}` : "诊断包导出失败，请查看错误提示。");
     setBusy(false);
   }
 
@@ -119,7 +139,7 @@ export function DonePane({ project, task, readOnly = false }: DonePaneProps) {
           )}
           {!readOnly && (
             <Button variant="primary" iconLeft={<Plus size={14} />} onClick={() => setFollowUpOpen(true)}>
-              开始后续任务
+              {WORKFLOW_COPY.actions.createFollowUp}
             </Button>
           )}
         </div>
@@ -146,7 +166,7 @@ export function DonePane({ project, task, readOnly = false }: DonePaneProps) {
             </div>
             <div className="metric-card">
               <span className="metric-label">验证</span>
-              <span className="metric-value">{passedRuns}<span className="metric-unit"> passed</span></span>
+              <span className="metric-value">{passedRuns}<span className="metric-unit"> 次通过</span></span>
               <span className="metric-sub">{failedRuns} failed</span>
             </div>
             <div className="metric-card">
@@ -248,6 +268,28 @@ export function DonePane({ project, task, readOnly = false }: DonePaneProps) {
                     <li className="risk-item risk-low" key={`recommendation-${index}`}><span /><p>{item}</p></li>
                   ))}
                 </ul>
+              </section>
+
+              <section className="dl-block">
+                <header className="dl-block-head"><h2>问题诊断</h2><ShieldCheck size={14} /></header>
+                <p>导出版本、系统、任务状态、运行元数据和策略判定；项目路径与敏感字段会自动脱敏。</p>
+                <label className="settings-check">
+                  <input
+                    type="checkbox"
+                    checked={includeDiagnosticLogs}
+                    onChange={(event) => setIncludeDiagnosticLogs(event.target.checked)}
+                  />
+                  <span>包含最近日志尾部（最多 20 份，每份 200 行）</span>
+                </label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  iconLeft={<Download size={14} />}
+                  disabled={busy}
+                  onClick={() => void exportDiagnostics()}
+                >
+                  导出脱敏诊断包
+                </Button>
               </section>
 
               <section className="dl-block">

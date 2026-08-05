@@ -24,8 +24,8 @@ import { PlanningTimeline } from "./PlanningTimeline";
 import "../../features/planning/Planning.css";
 
 function taskTitleFromRequirement(requirement: string) {
-  const firstLine = requirement.trim().split(/\r?\n/)[0] ?? "Planning task";
-  return firstLine.slice(0, 48) || "Planning task";
+  const firstLine = requirement.trim().split(/\r?\n/)[0] ?? "规划任务";
+  return firstLine.slice(0, 48) || "规划任务";
 }
 
 function agentBadgeClass(agent: AgentConfig) {

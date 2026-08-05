@@ -273,6 +273,25 @@ export function useTaskBridge() {
     [dispatch],
   );
 
+  const exportDiagnosticBundle = useCallback(
+    async (
+      projectPath: string,
+      taskId: string | undefined,
+      targetPath: string,
+      includeLogTails: boolean,
+    ) => {
+      try {
+        return await invokeCommand<string>(TAURI_COMMANDS.exportDiagnosticBundle, {
+          input: { projectPath, taskId, targetPath, includeLogTails },
+        });
+      } catch (error) {
+        dispatch({ type: "tasks/loadFailed", error: toErrorMessage(error) });
+        return null;
+      }
+    },
+    [dispatch],
+  );
+
   const deleteTask = useCallback(
     async (projectPath: string | null, taskId: string) => {
       // In the browser preview there is no backend file to remove; just drop it
@@ -423,6 +442,7 @@ export function useTaskBridge() {
     completeTask,
     regenerateTaskSummary,
     exportTaskSummary,
+    exportDiagnosticBundle,
     deleteTask,
     appendFeedback,
     recordPlanningDecision,

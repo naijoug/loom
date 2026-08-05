@@ -156,7 +156,7 @@ export function ImplementationReviewPanel({ project, task, readOnly }: Implement
         </div>
         <span className={`settings-pill ${gate.ready ? "ok" : "err"}`}>
           {gate.ready ? <CheckCircle2 size={13} /> : <ShieldAlert size={13} />}
-          {gate.ready ? "Passed" : "Required"}
+          {gate.ready ? "已通过" : "待处理"}
         </span>
       </div>
 
@@ -198,12 +198,12 @@ export function ImplementationReviewPanel({ project, task, readOnly }: Implement
 
       <Button
         type="button"
-        variant="ghost"
+        variant="primary"
         iconLeft={<RefreshCw size={14} />}
         disabled={running || readOnly || selectedReviewerIds.length === 0 || task.status !== "reviewing"}
         onClick={() => void runReviews()}
       >
-        {running ? "Review 运行中…" : latestRun ? "重新 Review" : "运行 Review"}
+        {running ? "Review 运行中…" : latestRun ? "重新运行 Review" : "运行独立 Review"}
       </Button>
 
       {latestRun && (

@@ -1,4 +1,5 @@
 import type { CommandRun, Task, TerminalSlot } from "../../domain";
+import { formatRunStatus } from "../../copy/workflow";
 import {
   isFailedValidationRun,
   isSuccessfulValidationRun,
@@ -47,13 +48,13 @@ export function feedbackConversationContent(feedback: Task["feedback"][number]) 
 export function slotEndpoint(slot: TerminalSlot, run?: CommandRun) {
   return run?.errorSummary?.urls?.[0]
     ?? run?.errorSummary?.ports?.[0]?.toString()
-    ?? (slot.kind === "preview" ? "localhost:1420" : "exit code required");
+    ?? (slot.kind === "preview" ? "localhost:1420" : "需要退出码");
 }
 
 export function slotEmptyMessage(slot: TerminalSlot) {
   return slot.kind === "preview"
-    ? "Start the preview command to stream runtime logs and keep a live surface for manual checks."
-    : "Run this check to create acceptance evidence: command, cwd, stdout/stderr logs, and exit status.";
+    ? "启动预览命令后可持续查看运行日志，并保留用于人工检查的实时界面。"
+    : "运行此检查以生成验收证据：命令、工作目录、stdout/stderr 日志和退出状态。";
 }
 
 export function latestRunForCommand(runs: CommandRun[], taskId: string, command: string) {
@@ -97,31 +98,31 @@ export function latestTaskRun(runs: CommandRun[], taskId: string) {
 }
 
 export function cycleLabel(run: CommandRun, index: number) {
-  const started = new Date(run.startedAtMs).toLocaleTimeString("en-US", {
+  const started = new Date(run.startedAtMs).toLocaleTimeString("zh-CN", {
     hour: "2-digit",
     minute: "2-digit",
   });
-  return `Cycle ${index + 1} · ${run.status} · ${started}`;
+  return `第 ${index + 1} 轮 · ${formatRunStatus(run.status)} · ${started}`;
 }
 
 export function shortTime(timestampMs?: number) {
-  if (!timestampMs) return "not captured";
-  return new Date(timestampMs).toLocaleTimeString("en-US", {
+  if (!timestampMs) return "未记录";
+  return new Date(timestampMs).toLocaleTimeString("zh-CN", {
     hour: "2-digit",
     minute: "2-digit",
   });
 }
 
 export function statusLabel(run?: CommandRun) {
-  if (!run) return "Not run";
-  return typeof run.exitCode === "number" ? `${run.status} · exit ${run.exitCode}` : run.status;
+  if (!run) return "尚未运行";
+  return formatRunStatus(run.status, run.exitCode);
 }
 
 export function errorFinding(run?: CommandRun) {
-  if (!run?.errorSummary) return "No failing command has been captured for this task yet.";
+  if (!run?.errorSummary) return "当前任务尚未捕获失败命令。";
   return run.errorSummary.matchedLines[0]
     ?? run.errorSummary.stderrTail[run.errorSummary.stderrTail.length - 1]
-    ?? `Command exited with ${run.errorSummary.exitCode ?? "an error"}`;
+    ?? `命令退出：${run.errorSummary.exitCode ?? "未知错误"}`;
 }
 
 export function gateStatus({
