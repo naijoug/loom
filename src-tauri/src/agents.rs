@@ -1,4 +1,8 @@
 use crate::{
+    agent_adapter::{
+        self, AdapterInvocationRequest, PrepareAgentInvocationInput, PreparedAgentInvocation,
+    },
+    execution_policy::{self, ExecutionDecision, ExecutionRequest},
     models::{
         now_ms, AgentConfig, AgentConfigInput, AgentInvocation, IdGenerator, PlanReview,
         PlanningAgentLogEvent, PlanningAgentStatusEvent, PlanningDecision, PlanningDiscussionInput,
@@ -11,9 +15,11 @@ use crate::{
     storage, tasks,
 };
 use std::{
+    collections::{HashMap, HashSet},
     fs,
     path::{Path, PathBuf},
     process::Command,
+    sync::{Mutex, OnceLock},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use tauri::{AppHandle, Emitter, Runtime, State};
@@ -30,6 +36,73 @@ const ADAPTER_CLI: &str = "cli";
 const RETIRED_ADAPTER_AMP: &str = "amp_cli";
 const RETIRED_AGENT_AMP_ID: &str = "agent-amp";
 const ADAPTER_DUMMY: &str = "dummy";
+
+#[cfg(unix)]
+unsafe extern "C" {
+    fn kill(pid: i32, sig: i32) -> i32;
+    fn setpgid(pid: i32, pgid: i32) -> i32;
+}
+
+#[cfg(unix)]
+const SIGTERM: i32 = 15;
+
+#[derive(Clone)]
+struct AgentProcess {
+    task_id: String,
+}
+
+fn agent_processes() -> &'static Mutex<HashMap<u32, AgentProcess>> {
+    static PROCESSES: OnceLock<Mutex<HashMap<u32, AgentProcess>>> = OnceLock::new();
+    PROCESSES.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn stopped_agent_tasks() -> &'static Mutex<HashSet<String>> {
+    static TASKS: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
+    TASKS.get_or_init(|| Mutex::new(HashSet::new()))
+}
+
+fn clear_task_stop(task_id: &str) -> Result<(), String> {
+    stopped_agent_tasks()
+        .lock()
+        .map_err(|_| "agent task stop registry is unavailable".to_string())?
+        .remove(task_id);
+    Ok(())
+}
+
+fn task_stop_requested(task_id: &str) -> bool {
+    stopped_agent_tasks()
+        .lock()
+        .map(|tasks| tasks.contains(task_id))
+        .unwrap_or(true)
+}
+
+pub(crate) fn stop_task_runs(task_id: &str) -> Result<usize, String> {
+    stopped_agent_tasks()
+        .lock()
+        .map_err(|_| "agent task stop registry is unavailable".to_string())?
+        .insert(task_id.to_string());
+    let process_ids = agent_processes()
+        .lock()
+        .map_err(|_| "agent process registry is unavailable".to_string())?
+        .iter()
+        .filter(|(_, process)| process.task_id == task_id)
+        .map(|(process_id, _)| *process_id)
+        .collect::<Vec<_>>();
+
+    for process_id in &process_ids {
+        #[cfg(unix)]
+        unsafe {
+            kill(-(*process_id as i32), SIGTERM);
+        }
+        #[cfg(windows)]
+        {
+            let _ = Command::new("taskkill")
+                .args(["/PID", &process_id.to_string(), "/T", "/F"])
+                .status();
+        }
+    }
+    Ok(process_ids.len())
+}
 // Real planning agents (claude/codex) routinely take 1-2 minutes on a real
 // repository; a single observed run took ~72s. Keep a generous per-agent budget
 // so genuine work is not killed mid-plan. Agents run sequentially, so total wall
@@ -59,6 +132,7 @@ const NOT_RETRYABLE_PATTERNS: &[&str] = &[
     "unauthorized",
     "invalid api key",
     "permission denied",
+    "dedicated executable",
 ];
 
 #[derive(Clone)]
@@ -142,6 +216,91 @@ impl<R: Runtime> PlanningEventEmitter for AppHandle<R> {
 #[tauri::command]
 pub fn list_agents(app: AppHandle) -> Result<Vec<AgentConfig>, String> {
     load_agents(&app)
+}
+
+#[tauri::command]
+pub fn prepare_agent_invocation(
+    app: AppHandle,
+    input: PrepareAgentInvocationInput,
+) -> Result<PreparedAgentInvocation, String> {
+    let task = tasks::load_task(Path::new(&input.project_path), &input.task_id)?;
+    tasks::ensure_task_active(&task)?;
+    let agent = load_agents(&app)?
+        .into_iter()
+        .find(|agent| agent.id == input.agent_id)
+        .ok_or_else(|| format!("agent '{}' was not found", input.agent_id))?;
+    let prepared = agent_adapter::prepare_invocation(
+        &agent,
+        &AdapterInvocationRequest {
+            project_path: Path::new(&input.project_path),
+            prompt: &input.prompt,
+            prompt_file: None,
+            stage: input.stage,
+            resume_command: input.resume_command.as_deref(),
+            embed_prompt: true,
+        },
+    )?;
+    if prepared.stdin_prompt {
+        return Err(format!(
+            "agent '{}' requires stdin prompt transport, which is unavailable for interactive task runs",
+            agent.name
+        ));
+    }
+    Ok(prepared)
+}
+
+pub(crate) fn validate_implementation_agent(
+    app: &AppHandle,
+    agent_id: &str,
+    program: &str,
+) -> Result<AgentConfig, String> {
+    let agent = load_agents(app)?
+        .into_iter()
+        .find(|agent| agent.id == agent_id)
+        .ok_or_else(|| format!("implementation agent '{agent_id}' was not found"))?;
+    validate_implementation_agent_config(&agent, program)?;
+    Ok(agent)
+}
+
+fn validate_implementation_agent_config(agent: &AgentConfig, program: &str) -> Result<(), String> {
+    if !agent.enabled {
+        return Err(format!("implementation agent '{}' is disabled", agent.name));
+    }
+    if !agent.available {
+        return Err(format!(
+            "implementation agent '{}' command is unavailable",
+            agent.name
+        ));
+    }
+    if !agent.can_write_files {
+        return Err(format!(
+            "implementation agent '{}' is not allowed to write files",
+            agent.name
+        ));
+    }
+    if !agent.can_run_commands {
+        return Err(format!(
+            "implementation agent '{}' is not allowed to run commands",
+            agent.name
+        ));
+    }
+    if !agent
+        .capabilities
+        .iter()
+        .any(|capability| capability == "implementation" || capability == "debugging")
+    {
+        return Err(format!(
+            "agent '{}' has no implementation or debugging capability",
+            agent.name
+        ));
+    }
+    if agent.command.trim() != program.trim() {
+        return Err(format!(
+            "command '{}' does not match configured implementation agent '{}'",
+            program, agent.name
+        ));
+    }
+    Ok(())
 }
 
 #[tauri::command]
@@ -263,6 +422,8 @@ pub async fn run_planning_discussion(
 ) -> Result<crate::models::Task, String> {
     let agents = load_agents(&app)?;
     let mut task = tasks::load_task(Path::new(&input.project_path), &input.task_id)?;
+    tasks::ensure_task_active(&task)?;
+    clear_task_stop(&task.id)?;
     let selected_agents = resolve_planning_agents(&agents, &input.agent_ids);
 
     if selected_agents.is_empty() {
@@ -387,7 +548,10 @@ pub async fn run_planning_discussion(
     )?;
 
     let finished_at_ms = now_ms();
-    task.status = "plan_review".to_string();
+    task.status = crate::task_state::transition(
+        crate::task_state::transition(task.status, crate::task_state::TaskAction::PlanningStarted)?,
+        crate::task_state::TaskAction::PlanningCompleted,
+    )?;
     task.raw_requirement = requirement.clone();
     task.final_plan = Some(final_plan);
     task.final_plan_path = Some(plan_path.display().to_string());
@@ -422,7 +586,7 @@ pub async fn run_planning_discussion(
         task_id: task.id.clone(),
         timestamp_ms: finished_at_ms,
         actor: "agent".to_string(),
-        status: task.status.clone(),
+        status: task.status,
         input_summary: Some(prompt_summary),
         output_summary: Some(if planning_successful_invocations > 0 {
             "Planning discussion generated a final plan for review.".to_string()
@@ -431,6 +595,7 @@ pub async fn run_planning_discussion(
         }),
         evidence_ref: task.final_plan_path.clone(),
     });
+    merge_concurrent_task_state(&mut task, Path::new(&input.project_path))?;
     tasks::save_task(&task)?;
 
     Ok(task)
@@ -445,6 +610,8 @@ pub async fn run_plan_reviews(
 ) -> Result<crate::models::Task, String> {
     let agents = load_agents(&app)?;
     let mut task = tasks::load_task(Path::new(&project_path), &task_id)?;
+    tasks::ensure_task_active(&task)?;
+    clear_task_stop(&task.id)?;
     let planning_run = task
         .planning_runs
         .last()
@@ -482,14 +649,17 @@ pub async fn run_plan_reviews(
         fs::write(path, plan).map_err(|error| format!("failed to write reviewed plan: {error}"))?;
         task.final_plan_html_path = plan_html::write_task_plan_html(&task)?;
     }
-    task.status = "plan_review".to_string();
+    task.status = crate::task_state::transition(
+        task.status,
+        crate::task_state::TaskAction::PlanningCompleted,
+    )?;
     task.updated_at_ms = now_ms();
     task.events.push(TaskEvent {
         id: ids.next("event"),
         task_id: task.id.clone(),
         timestamp_ms: task.updated_at_ms,
         actor: "agent".to_string(),
-        status: task.status.clone(),
+        status: task.status,
         input_summary: Some("Ran agent-to-agent plan reviews".to_string()),
         output_summary: Some(format!(
             "{} mutual review records captured.",
@@ -500,6 +670,7 @@ pub async fn run_plan_reviews(
         )),
         evidence_ref: task.final_plan_path.clone(),
     });
+    merge_concurrent_task_state(&mut task, Path::new(&project_path))?;
     tasks::save_task(&task)?;
 
     Ok(task)
@@ -517,6 +688,8 @@ pub async fn retry_planning_agent(
 ) -> Result<crate::models::Task, String> {
     let agents = load_agents(&app)?;
     let mut task = tasks::load_task(Path::new(&project_path), &task_id)?;
+    tasks::ensure_task_active(&task)?;
+    clear_task_stop(&task.id)?;
     let planning_run = task
         .planning_runs
         .last()
@@ -612,7 +785,10 @@ pub async fn retry_planning_agent(
     let drafting_succeeded = drafting
         .iter()
         .any(|invocation| invocation.status == "succeeded");
-    task.status = "plan_review".to_string();
+    task.status = crate::task_state::transition(
+        task.status,
+        crate::task_state::TaskAction::PlanningCompleted,
+    )?;
     task.final_plan = Some(final_plan);
     task.final_plan_path = Some(plan_path.display().to_string());
     task.discussion_summary = Some(discussion_summary.clone());
@@ -636,7 +812,7 @@ pub async fn retry_planning_agent(
         task_id: task.id.clone(),
         timestamp_ms: finished_at_ms,
         actor: "agent".to_string(),
-        status: task.status.clone(),
+        status: task.status,
         input_summary: Some(format!("Retried planning agent {}", agent.name)),
         output_summary: Some(format!(
             "Retry {} the planning round for {}.",
@@ -649,9 +825,63 @@ pub async fn retry_planning_agent(
         )),
         evidence_ref: task.final_plan_path.clone(),
     });
+    merge_concurrent_task_state(&mut task, Path::new(&project_path))?;
     tasks::save_task(&task)?;
 
     Ok(task)
+}
+
+fn merge_concurrent_task_state(
+    task: &mut crate::models::Task,
+    project_path: &Path,
+) -> Result<(), String> {
+    let latest = tasks::load_task(project_path, &task.id)?;
+    task.lifecycle = latest.lifecycle.clone();
+    if latest.lifecycle.paused
+        || matches!(
+            latest.status,
+            crate::models::TaskStatus::Blocked | crate::models::TaskStatus::Cancelled
+        )
+    {
+        task.status = latest.status;
+    }
+
+    for event in latest.events {
+        if task.events.iter().all(|current| current.id != event.id) {
+            task.events.push(event);
+        }
+    }
+    for run in latest.command_runs {
+        if let Some(current) = task
+            .command_runs
+            .iter_mut()
+            .find(|current| current.id == run.id)
+        {
+            *current = run;
+        } else {
+            task.command_runs.push(run);
+        }
+    }
+    for feedback in latest.feedback {
+        if task
+            .feedback
+            .iter()
+            .all(|current| current.id != feedback.id)
+        {
+            task.feedback.push(feedback);
+        }
+    }
+    for decision in latest.planning_decisions {
+        if task
+            .planning_decisions
+            .iter()
+            .all(|current| current.id != decision.id)
+        {
+            task.planning_decisions.push(decision);
+        }
+    }
+    task.updated_at_ms = task.updated_at_ms.max(latest.updated_at_ms);
+    Ok(())
 }
 
 /// Classify why an invocation result is unusable. Returns `None` for a usable
@@ -1271,7 +1501,13 @@ async fn run_plan_review_agent<E: PlanningEventEmitter>(
         });
     }
 
-    let profile = build_cli_profile(reviewer, project_path, &prompt_path, Some(task_title))?;
+    let profile = build_cli_profile(
+        reviewer,
+        project_path,
+        &prompt_path,
+        Some(task_title),
+        agent_adapter::AgentStage::Review,
+    )?;
     let log_context = PlanningLogContext {
         task_id: task_id.to_string(),
         planning_run_id: planning_run_id.to_string(),
@@ -1398,7 +1634,13 @@ async fn run_planning_agent<E: PlanningEventEmitter>(
         });
     }
 
-    let profile = build_cli_profile(agent, project_path, &prompt_path, Some(task_title))?;
+    let profile = build_cli_profile(
+        agent,
+        project_path,
+        &prompt_path,
+        Some(task_title),
+        agent_adapter::AgentStage::Planning,
+    )?;
     let log_context = PlanningLogContext {
         task_id: task_id.to_string(),
         planning_run_id: planning_run_id.to_string(),
@@ -1514,7 +1756,13 @@ async fn run_synthesis_agent<E: PlanningEventEmitter>(
         });
     }
 
-    let profile = build_cli_profile(agent, project_path, &prompt_path, Some(task_title))?;
+    let profile = build_cli_profile(
+        agent,
+        project_path,
+        &prompt_path,
+        Some(task_title),
+        agent_adapter::AgentStage::Planning,
+    )?;
     let log_context = PlanningLogContext {
         task_id: task_id.to_string(),
         planning_run_id: planning_run_id.to_string(),
@@ -1691,6 +1939,16 @@ fn parse_cli_stdout(output_mode: CliOutputMode, stdout: &str) -> ParsedCliStdout
         CliOutputMode::ClaudeStreamJson => parse_claude_stream(stdout),
         CliOutputMode::CodexJson => parse_codex_stream(stdout),
     }
+}
+
+pub(crate) fn normalize_agent_stdout(output_mode: &str, stdout: &str) -> String {
+    let mode = match output_mode {
+        "claude_stream_json" => CliOutputMode::ClaudeStreamJson,
+        "codex_json" => CliOutputMode::CodexJson,
+        _ => CliOutputMode::Plain,
+    };
+    let parsed = parse_cli_stdout(mode, stdout);
+    redact_sensitive_text(parsed.stdout.as_deref().unwrap_or(stdout))
 }
 
 fn parse_claude_stream(stdout: &str) -> ParsedCliStdout {
@@ -1939,11 +2197,34 @@ async fn run_cli_profile<E: PlanningEventEmitter>(
     emitter: E,
     log_context: Option<PlanningLogContext>,
 ) -> Result<PlanningInvocationResult, String> {
+    if log_context
+        .as_ref()
+        .is_some_and(|context| task_stop_requested(&context.task_id))
+    {
+        return Err("agent invocation stopped because the task lifecycle changed".to_string());
+    }
+    let assessment = execution_policy::evaluate_execution(
+        &ExecutionRequest {
+            program: profile.command.clone(),
+            args: profile.args.clone(),
+            cwd: project_path.display().to_string(),
+            project_path: project_path.display().to_string(),
+            agent_id: None,
+        },
+        true,
+    );
+    if assessment.decision != ExecutionDecision::Allowed {
+        return Err(format!(
+            "planning agent execution rejected by policy: {}",
+            assessment.detail
+        ));
+    }
     let started_at_ms = now_ms();
     let mut command = TokioCommand::new(&profile.command);
     command
         .args(&profile.args)
         .current_dir(project_path)
+        .kill_on_drop(true)
         .stdin(if profile.stdin_prompt {
             std::process::Stdio::piped()
         } else {
@@ -1951,6 +2232,17 @@ async fn run_cli_profile<E: PlanningEventEmitter>(
         })
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped());
+
+    #[cfg(unix)]
+    unsafe {
+        command.pre_exec(|| {
+            if setpgid(0, 0) == 0 {
+                Ok(())
+            } else {
+                Err(std::io::Error::last_os_error())
+            }
+        });
+    }
 
     let mut child = command
         .spawn()
@@ -1974,6 +2266,18 @@ async fn run_cli_profile<E: PlanningEventEmitter>(
         .stderr
         .take()
         .ok_or_else(|| "failed to capture agent stderr".to_string())?;
+    let registered_process_id = child.id().filter(|_| log_context.is_some());
+    if let (Some(process_id), Some(context)) = (registered_process_id, log_context.as_ref()) {
+        agent_processes()
+            .lock()
+            .map_err(|_| "agent process registry is unavailable".to_string())?
+            .insert(
+                process_id,
+                AgentProcess {
+                    task_id: context.task_id.clone(),
+                },
+            );
+    }
     let stdout_task = tauri::async_runtime::spawn(read_planning_stream(
         emitter.clone(),
         log_context.clone(),
@@ -1991,19 +2295,27 @@ async fn run_cli_profile<E: PlanningEventEmitter>(
 
     let timeout = sleep(Duration::from_millis(PLANNING_TIMEOUT_MS));
     tokio::pin!(timeout);
-    let (status, timed_out) = tokio::select! {
+    let wait_result = tokio::select! {
         status = child.wait() => {
-            (status.map_err(|error| format!("failed to wait for {}: {error}", profile.command))?, false)
+            status
+                .map(|status| (status, false))
+                .map_err(|error| format!("failed to wait for {}: {error}", profile.command))
         }
         _ = &mut timeout => {
             let _ = child.start_kill();
-            let status = child
+            child
                 .wait()
                 .await
-                .map_err(|error| format!("failed to kill timed out {}: {error}", profile.command))?;
-            (status, true)
+                .map(|status| (status, true))
+                .map_err(|error| format!("failed to kill timed out {}: {error}", profile.command))
         }
     };
+    if let Some(process_id) = registered_process_id {
+        if let Ok(mut processes) = agent_processes().lock() {
+            processes.remove(&process_id);
+        }
+    }
+    let (status, timed_out) = wait_result?;
 
     let raw_stdout = stdout_task
         .await
@@ -2250,18 +2562,23 @@ fn build_cli_profile(
     project_path: &Path,
     prompt_path: &Path,
     session_title: Option<&str>,
+    stage: agent_adapter::AgentStage,
 ) -> Result<CliProfile, String> {
     let adapter_type = effective_adapter_type(agent);
-    let command = agent.command.trim().to_string();
-    if command.is_empty() {
-        return Err(format!("agent '{}' has no command", agent.name));
-    }
-
-    let mut args = if agent.args.is_empty() {
-        default_profile_args(&adapter_type, project_path)
-    } else {
-        agent.args.clone()
-    };
+    let mut normalized_agent = agent.clone();
+    normalized_agent.adapter_type = adapter_type.clone();
+    let prepared = agent_adapter::prepare_invocation(
+        &normalized_agent,
+        &AdapterInvocationRequest {
+            project_path,
+            prompt: "",
+            prompt_file: Some(prompt_path),
+            stage,
+            resume_command: None,
+            embed_prompt: false,
+        },
+    )?;
+    let mut args = prepared.args;
     if adapter_type == ADAPTER_CLAUDE_CODE && !args.iter().any(|arg| arg == "--name" || arg == "-n")
     {
         if let Some(title) = session_title {
@@ -2269,59 +2586,19 @@ fn build_cli_profile(
             args.push(loom_session_name(title));
         }
     }
-    let had_prompt_file = args.iter().any(|arg| arg.contains("{promptFile}"));
-    args = replace_arg_placeholders(args, project_path, prompt_path);
-    let stdin_prompt = !had_prompt_file;
-    let output_mode = cli_output_mode(&adapter_type, &args);
+    let output_mode = match prepared.output_mode.as_str() {
+        "claude_stream_json" => CliOutputMode::ClaudeStreamJson,
+        "codex_json" => CliOutputMode::CodexJson,
+        _ => CliOutputMode::Plain,
+    };
 
     Ok(CliProfile {
         adapter_type,
-        command,
+        command: prepared.program,
         args,
-        stdin_prompt,
+        stdin_prompt: prepared.stdin_prompt,
         output_mode,
     })
-}
-
-fn default_profile_args(adapter_type: &str, project_path: &Path) -> Vec<String> {
-    match adapter_type {
-        ADAPTER_CODEX => vec![
-            "exec".to_string(),
-            "--json".to_string(),
-            "--cd".to_string(),
-            project_path.display().to_string(),
-            "--sandbox".to_string(),
-            "read-only".to_string(),
-            "-".to_string(),
-        ],
-        // Planning is read-only by intent (enforced by the prompt + headless `-p`,
-        // which denies edit tools). We deliberately avoid `--permission-mode plan`:
-        // in plan mode Claude hands the real plan to its ExitPlanMode tool and
-        // `--output-format text` only prints a terse confirmation, so the captured
-        // stdout would be an almost-empty plan document.
-        ADAPTER_CLAUDE_CODE => vec![
-            "-p".to_string(),
-            "--verbose".to_string(),
-            "--output-format".to_string(),
-            "stream-json".to_string(),
-            "--include-partial-messages".to_string(),
-        ],
-        _ => Vec::new(),
-    }
-}
-
-fn cli_output_mode(adapter_type: &str, args: &[String]) -> CliOutputMode {
-    match adapter_type {
-        ADAPTER_CLAUDE_CODE
-            if args
-                .windows(2)
-                .any(|pair| pair[0] == "--output-format" && pair[1] == "stream-json") =>
-        {
-            CliOutputMode::ClaudeStreamJson
-        }
-        ADAPTER_CODEX if args.iter().any(|arg| arg == "--json") => CliOutputMode::CodexJson,
-        _ => CliOutputMode::Plain,
-    }
 }
 
 fn loom_session_name(title: &str) -> String {
@@ -2331,21 +2608,6 @@ fn loom_session_name(title: &str) -> String {
         name.push('…');
     }
     name
-}
-
-fn replace_arg_placeholders(
-    args: Vec<String>,
-    project_path: &Path,
-    prompt_path: &Path,
-) -> Vec<String> {
-    let project_path = project_path.display().to_string();
-    let prompt_path = prompt_path.display().to_string();
-    args.into_iter()
-        .map(|arg| {
-            arg.replace("{projectPath}", &project_path)
-                .replace("{promptFile}", &prompt_path)
-        })
-        .collect()
 }
 
 fn effective_adapter_type(agent: &AgentConfig) -> String {
@@ -3052,7 +3314,7 @@ fn civil_from_days(days_since_epoch: i64) -> (i32, u32, u32) {
     (year as i32, month as u32, day as u32)
 }
 
-fn load_agents(app: &AppHandle) -> Result<Vec<AgentConfig>, String> {
+pub(crate) fn load_agents(app: &AppHandle) -> Result<Vec<AgentConfig>, String> {
     let path = agents_path(app)?;
 
     if !path.exists() {
@@ -3104,6 +3366,9 @@ fn discover_default_agents() -> Vec<AgentConfig> {
                     "planning".to_string(),
                     "implementation".to_string(),
                     "review".to_string(),
+                    "debugging".to_string(),
+                    "testing".to_string(),
+                    "documentation".to_string(),
                 ],
                 adapter_type: adapter_type.to_string(),
                 can_write_files,
@@ -3654,7 +3919,15 @@ mod tests {
     fn claude_planning_profile_avoids_plan_permission_mode() {
         // Plan mode routes the real plan to ExitPlanMode and prints only a terse
         // confirmation, so it must not be used for captured planning output.
-        let args = default_profile_args(ADAPTER_CLAUDE_CODE, Path::new("/tmp/project"));
+        let profile = build_cli_profile(
+            &test_agent("claude", ADAPTER_CLAUDE_CODE, Vec::new()),
+            Path::new("/tmp/project"),
+            Path::new("/tmp/project/prompt.md"),
+            None,
+            agent_adapter::AgentStage::Planning,
+        )
+        .expect("Claude planning profile");
+        let args = profile.args;
 
         assert!(args.contains(&"-p".to_string()));
         assert!(args.contains(&"stream-json".to_string()));
@@ -3673,6 +3946,7 @@ mod tests {
             project_path,
             prompt_path,
             Some("Implement live planning output"),
+            agent_adapter::AgentStage::Planning,
         )
         .expect("codex profile should build");
         assert_eq!(codex.command, "codex");
@@ -3691,6 +3965,7 @@ mod tests {
             project_path,
             prompt_path,
             Some("Implement live planning output"),
+            agent_adapter::AgentStage::Planning,
         )
         .expect("claude profile should build");
         assert_eq!(claude.command, "claude");
@@ -3831,6 +4106,39 @@ mod tests {
             "built-in Agent profiles can only be disabled, not deleted"
         );
         assert!(agents.iter().any(|agent| agent.id == "agent-codex"));
+    }
+
+    #[test]
+    fn implementation_agent_requires_capability_permissions_and_matching_command() {
+        let mut agent = test_agent("codex", ADAPTER_CODEX, Vec::new());
+        agent.capabilities.push("implementation".to_string());
+
+        assert!(validate_implementation_agent_config(&agent, "codex")
+            .unwrap_err()
+            .contains("write files"));
+        agent.can_write_files = true;
+        assert!(validate_implementation_agent_config(&agent, "codex")
+            .unwrap_err()
+            .contains("run commands"));
+        agent.can_run_commands = true;
+        validate_implementation_agent_config(&agent, "codex")
+            .expect("fully permitted implementation agent");
+        assert!(validate_implementation_agent_config(&agent, "claude")
+            .unwrap_err()
+            .contains("does not match"));
+    }
+
+    #[test]
+    fn task_stop_marker_prevents_agent_retries_until_an_explicit_new_run() {
+        let task_id = format!("task-stop-marker-{}", now_ms());
+        clear_task_stop(&task_id).expect("clear initial marker");
+        assert!(!task_stop_requested(&task_id));
+
+        assert_eq!(stop_task_runs(&task_id).expect("mark task stopped"), 0);
+        assert!(task_stop_requested(&task_id));
+
+        clear_task_stop(&task_id).expect("new run clears marker");
+        assert!(!task_stop_requested(&task_id));
     }
 
     #[test]
@@ -4078,8 +4386,14 @@ mod tests {
             ],
         );
 
-        let profile = build_cli_profile(&agent, project_path, prompt_path, None)
-            .expect("custom cli profile should build");
+        let profile = build_cli_profile(
+            &agent,
+            project_path,
+            prompt_path,
+            None,
+            agent_adapter::AgentStage::Planning,
+        )
+        .expect("custom cli profile should build");
 
         assert!(profile.args.contains(&"/tmp/project".to_string()));
         assert!(profile
@@ -4532,11 +4846,7 @@ mod tests {
     async fn planning_wrapper_retries_retryable_failures_once() {
         let root = temp_project("retry");
         // A cli agent whose command always exits non-zero: retryable failure.
-        let agent = test_agent(
-            "sh",
-            ADAPTER_CLI,
-            vec!["-c".to_string(), "exit 9".to_string()],
-        );
+        let agent = test_agent("false", ADAPTER_CLI, Vec::new());
         let emitter = RecordingEmitter::default();
         let prompt = render_planning_prompt("Task", &root.display().to_string(), "Requirement");
 
@@ -4576,11 +4886,11 @@ mod tests {
     async fn planning_wrapper_does_not_retry_config_errors() {
         let root = temp_project("no-retry");
         let agent = test_agent(
-            "sh",
+            "node",
             ADAPTER_CLI,
             vec![
-                "-c".to_string(),
-                "printf 'Error: requires paid credits\\n' >&2; exit 1".to_string(),
+                "-e".to_string(),
+                "console.error('Error: requires paid credits'); process.exit(1)".to_string(),
             ],
         );
         let emitter = RecordingEmitter::default();

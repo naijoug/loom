@@ -1,13 +1,20 @@
 use crate::{
-    agents::redact_sensitive_text,
+    agents::{self, redact_sensitive_text},
+    execution_policy::{self, ExecutionApprovalRegistry, ExecutionRequest},
     models::{
-        now_ms, CommandFinishedEvent, CommandLogEvent, CommandRun, CommandRunIntent, CommandSpec,
-        ErrorSummary, IdGenerator,
+        now_ms, CommandFinishedEvent, CommandLogEvent, CommandRun, CommandRunIntent,
+        CommandRunStatus, CommandSpec, ErrorSummary, IdGenerator,
     },
     session_capture::{capture_session_from_lines, display_log_lines_for_command},
     settings, storage, tasks,
 };
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use std::{
+    collections::HashMap,
+    fs::File,
+    io::{Read, Seek, SeekFrom},
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 use tauri::{AppHandle, Emitter, Runtime, State};
 use tokio::{
     fs::OpenOptions,
@@ -39,6 +46,30 @@ struct ManagedCommandRun {
     process_group_id: Option<i32>,
 }
 
+struct LogReaderContext {
+    task_id: String,
+    run_id: String,
+    stream: &'static str,
+    log_path: PathBuf,
+    command: String,
+    captured_lines: Option<Arc<Mutex<Vec<String>>>>,
+}
+
+struct CommandMonitorContext<E: CommandEventEmitter> {
+    app: E,
+    runs: Arc<Mutex<HashMap<String, ManagedCommandRun>>>,
+    child: Arc<Mutex<Child>>,
+    project_path: PathBuf,
+    task_id: String,
+    run_id: String,
+    command: String,
+    stdout_lines: Arc<Mutex<Vec<String>>>,
+    stderr_lines: Arc<Mutex<Vec<String>>>,
+    reader_tasks: Vec<tauri::async_runtime::JoinHandle<()>>,
+    process_group_id: Option<i32>,
+    timeout_seconds: u64,
+}
+
 trait CommandEventEmitter: Clone + Send + Sync + 'static {
     fn emit_log(&self, event: CommandLogEvent);
     fn emit_finished(&self, event: CommandFinishedEvent);
@@ -59,13 +90,129 @@ pub fn command_runner_ready(_spec: Option<CommandSpec>) -> bool {
     true
 }
 
+const MAX_HISTORY_LOG_BYTES: u64 = 2 * 1024 * 1024;
+const MAX_HISTORY_LOG_LINES: usize = 5_000;
+
+#[tauri::command]
+pub fn read_command_run_logs(
+    project_path: String,
+    task_id: String,
+    run_id: String,
+) -> Result<Vec<CommandLogEvent>, String> {
+    validate_record_id(&task_id, "task")?;
+    validate_record_id(&run_id, "run")?;
+    let project_root = std::fs::canonicalize(&project_path)
+        .map_err(|error| format!("failed to resolve project path: {error}"))?;
+    let task = tasks::load_task(&project_root, &task_id)?;
+    let recorded_root = std::fs::canonicalize(&task.project_path)
+        .map_err(|error| format!("failed to resolve recorded project path: {error}"))?;
+    if project_root != recorded_root {
+        return Err("task does not belong to the requested project".to_string());
+    }
+    let run = task
+        .command_runs
+        .iter()
+        .find(|candidate| candidate.id == run_id)
+        .ok_or_else(|| format!("command run '{run_id}' was not found"))?;
+    let log_root = storage::project_logs_dir(&project_root).join(&task_id);
+    let mut events = Vec::new();
+    for (stream, reference) in [
+        ("stdout", run.stdout_log_ref.as_deref()),
+        ("stderr", run.stderr_log_ref.as_deref()),
+    ] {
+        let Some(reference) = reference else {
+            continue;
+        };
+        let path = PathBuf::from(reference);
+        let canonical_path = std::fs::canonicalize(&path)
+            .map_err(|error| format!("failed to resolve {stream} log: {error}"))?;
+        let canonical_log_root = std::fs::canonicalize(&log_root)
+            .map_err(|error| format!("failed to resolve task log directory: {error}"))?;
+        if !canonical_path.starts_with(&canonical_log_root) {
+            return Err(format!("{stream} log is outside the task log directory"));
+        }
+        for line in read_log_tail(&canonical_path)? {
+            events.push(CommandLogEvent {
+                task_id: Some(task_id.clone()),
+                run_id: run_id.clone(),
+                stream: stream.to_string(),
+                line,
+                timestamp_ms: run.started_at_ms.saturating_add(events.len() as u128),
+            });
+        }
+    }
+    if events.len() > MAX_HISTORY_LOG_LINES {
+        events.drain(..events.len() - MAX_HISTORY_LOG_LINES);
+    }
+    Ok(events)
+}
+
+fn validate_record_id(value: &str, kind: &str) -> Result<(), String> {
+    if value.is_empty()
+        || value.len() > 160
+        || !value
+            .chars()
+            .all(|character| character.is_ascii_alphanumeric() || matches!(character, '-' | '_'))
+    {
+        return Err(format!("invalid {kind} id"));
+    }
+    Ok(())
+}
+
+fn read_log_tail(path: &Path) -> Result<Vec<String>, String> {
+    let mut file = File::open(path)
+        .map_err(|error| format!("failed to open log '{}': {error}", path.display()))?;
+    let length = file
+        .metadata()
+        .map_err(|error| format!("failed to inspect log '{}': {error}", path.display()))?
+        .len();
+    let start = length.saturating_sub(MAX_HISTORY_LOG_BYTES);
+    file.seek(SeekFrom::Start(start))
+        .map_err(|error| format!("failed to seek log '{}': {error}", path.display()))?;
+    let mut bytes = Vec::with_capacity((length - start) as usize);
+    file.read_to_end(&mut bytes)
+        .map_err(|error| format!("failed to read log '{}': {error}", path.display()))?;
+    let content = String::from_utf8_lossy(&bytes);
+    let mut lines = content.lines();
+    if start > 0 {
+        let _ = lines.next();
+    }
+    Ok(lines.map(str::to_string).collect())
+}
+
 #[tauri::command]
 pub async fn start_command_run(
     app: AppHandle,
     registry: State<'_, CommandRegistry>,
+    approvals: State<'_, ExecutionApprovalRegistry>,
     ids: State<'_, IdGenerator>,
-    spec: CommandSpec,
+    mut spec: CommandSpec,
 ) -> Result<CommandRun, String> {
+    if spec.intent == Some(CommandRunIntent::AgentAction) {
+        let agent_id = spec
+            .agent_id
+            .as_deref()
+            .ok_or_else(|| "agentId is required for agent action runs".to_string())?;
+        agents::validate_implementation_agent(&app, agent_id, &spec.program)?;
+    }
+    let project_path = spec
+        .project_path
+        .clone()
+        .unwrap_or_else(|| spec.cwd.clone());
+    let authorization = execution_policy::authorize_execution(
+        &app,
+        approvals.inner(),
+        &ExecutionRequest {
+            program: spec.program.clone(),
+            args: spec.args.clone(),
+            cwd: spec.cwd.clone(),
+            project_path,
+            agent_id: spec.agent_id.clone(),
+        },
+        spec.approval_id.as_deref(),
+    )?;
+    spec.project_path = Some(authorization.project_path.display().to_string());
+    spec.cwd = authorization.cwd.display().to_string();
     let app_settings = settings::load_app_settings_for_app(&app)?;
     start_command_run_inner(
         app,
@@ -92,7 +239,7 @@ async fn start_command_run_inner<E: CommandEventEmitter>(
         .task_id
         .clone()
         .ok_or_else(|| "taskId is required for command runs".to_string())?;
-    let project_path = PathBuf::from(&spec.cwd);
+    let project_path = PathBuf::from(spec.project_path.as_deref().unwrap_or(spec.cwd.as_str()));
     let run_id = ids.next("run");
     let command_text = redact_sensitive_text(&command_text(&spec.program, &spec.args));
     let log_dir = storage::project_logs_dir(&project_path).join(&task_id);
@@ -135,26 +282,30 @@ async fn start_command_run_inner<E: CommandEventEmitter>(
     if let Some(stdout) = stdout {
         reader_tasks.push(spawn_log_reader(
             app.clone(),
-            task_id.clone(),
-            run_id.clone(),
-            "stdout",
             stdout,
-            stdout_log.clone(),
-            spec.program.clone(),
-            Some(stdout_lines.clone()),
+            LogReaderContext {
+                task_id: task_id.clone(),
+                run_id: run_id.clone(),
+                stream: "stdout",
+                log_path: stdout_log.clone(),
+                command: spec.program.clone(),
+                captured_lines: Some(stdout_lines.clone()),
+            },
         ));
     }
 
     if let Some(stderr) = stderr {
         reader_tasks.push(spawn_log_reader(
             app.clone(),
-            task_id.clone(),
-            run_id.clone(),
-            "stderr",
             stderr,
-            stderr_log.clone(),
-            spec.program.clone(),
-            Some(stderr_lines.clone()),
+            LogReaderContext {
+                task_id: task_id.clone(),
+                run_id: run_id.clone(),
+                stream: "stderr",
+                log_path: stderr_log.clone(),
+                command: spec.program.clone(),
+                captured_lines: Some(stderr_lines.clone()),
+            },
         ));
     }
 
@@ -172,7 +323,7 @@ async fn start_command_run_inner<E: CommandEventEmitter>(
         resume_command: None,
         started_at_ms: now_ms(),
         ended_at_ms: None,
-        status: "running".to_string(),
+        status: CommandRunStatus::Running,
         exit_code: None,
         stdout_log_ref: Some(stdout_log.display().to_string()),
         stderr_log_ref: Some(stderr_log.display().to_string()),
@@ -190,20 +341,20 @@ async fn start_command_run_inner<E: CommandEventEmitter>(
             process_group_id,
         },
     );
-    spawn_command_monitor(
+    spawn_command_monitor(CommandMonitorContext {
         app,
-        registry.runs.clone(),
+        runs: registry.runs.clone(),
         child,
         project_path,
-        run.task_id.clone(),
-        run.id.clone(),
-        spec.program.clone(),
+        task_id: run.task_id.clone(),
+        run_id: run.id.clone(),
+        command: spec.program.clone(),
         stdout_lines,
         stderr_lines,
         reader_tasks,
         process_group_id,
         timeout_seconds,
-    );
+    });
 
     Ok(run)
 }
@@ -250,12 +401,14 @@ async fn stop_command_run_inner(
             &managed.project_path,
             &task_id,
             &run_id,
-            "cancelled",
-            exit_code,
-            None,
-            None,
-            None,
-            termination_reason,
+            tasks::CommandRunCompletion {
+                status: CommandRunStatus::Cancelled,
+                exit_code,
+                error_summary: None,
+                session_id: None,
+                resume_command: None,
+                termination_reason,
+            },
         );
     }
 
@@ -264,6 +417,28 @@ async fn stop_command_run_inner(
         stopped: true,
         exit_code,
     })
+}
+
+pub(crate) async fn stop_task_runs(
+    registry: &CommandRegistry,
+    task_id: &str,
+    termination_reason: &str,
+) -> Result<usize, String> {
+    let run_ids = registry
+        .runs
+        .lock()
+        .await
+        .iter()
+        .filter(|(_, run)| run.task_id.as_deref() == Some(task_id))
+        .map(|(run_id, _)| run_id.clone())
+        .collect::<Vec<_>>();
+    let mut stopped = 0;
+    for run_id in run_ids {
+        let result =
+            stop_command_run_inner(registry, run_id, Some(termination_reason.to_string())).await?;
+        stopped += usize::from(result.stopped);
+    }
+    Ok(stopped)
 }
 
 #[derive(serde::Serialize)]
@@ -276,19 +451,22 @@ pub struct CommandRunStopResult {
 
 fn spawn_log_reader<E, Reader>(
     app: E,
-    task_id: String,
-    run_id: String,
-    stream: &'static str,
     reader: Reader,
-    log_path: PathBuf,
-    command: String,
-    captured_lines: Option<Arc<Mutex<Vec<String>>>>,
+    context: LogReaderContext,
 ) -> tauri::async_runtime::JoinHandle<()>
 where
     E: CommandEventEmitter,
     Reader: tokio::io::AsyncRead + Unpin + Send + 'static,
 {
     tauri::async_runtime::spawn(async move {
+        let LogReaderContext {
+            task_id,
+            run_id,
+            stream,
+            log_path,
+            command,
+            captured_lines,
+        } = context;
         let mut lines = BufReader::new(reader).lines();
         let mut log_file = match OpenOptions::new()
             .create(true)
@@ -335,21 +513,22 @@ where
     })
 }
 
-fn spawn_command_monitor<E: CommandEventEmitter>(
-    app: E,
-    runs: Arc<Mutex<HashMap<String, ManagedCommandRun>>>,
-    child: Arc<Mutex<Child>>,
-    project_path: PathBuf,
-    task_id: String,
-    run_id: String,
-    command: String,
-    stdout_lines: Arc<Mutex<Vec<String>>>,
-    stderr_lines: Arc<Mutex<Vec<String>>>,
-    reader_tasks: Vec<tauri::async_runtime::JoinHandle<()>>,
-    process_group_id: Option<i32>,
-    timeout_seconds: u64,
-) {
+fn spawn_command_monitor<E: CommandEventEmitter>(context: CommandMonitorContext<E>) {
     tauri::async_runtime::spawn(async move {
+        let CommandMonitorContext {
+            app,
+            runs,
+            child,
+            project_path,
+            task_id,
+            run_id,
+            command,
+            stdout_lines,
+            stderr_lines,
+            reader_tasks,
+            process_group_id,
+            timeout_seconds,
+        } = context;
         let started = Instant::now();
         let mut timed_out = false;
         loop {
@@ -388,35 +567,35 @@ fn spawn_command_monitor<E: CommandEventEmitter>(
                 }
                 let exit_code = status.code();
                 let command_status = if status.success() {
-                    "succeeded"
+                    CommandRunStatus::Succeeded
                 } else {
-                    "failed"
+                    CommandRunStatus::Failed
                 };
                 let termination_reason = timed_out.then(|| "timeout".to_string());
                 let stdout_lines = stdout_lines.lock().await.clone();
                 let stderr_lines = stderr_lines.lock().await.clone();
-                let error_summary = if status.success() {
-                    None
-                } else {
-                    Some(analyze_error(exit_code, &stderr_lines))
-                };
+                let analysis = analyze_output(exit_code, &stdout_lines, &stderr_lines);
+                let error_summary =
+                    (analysis.failed || analysis_has_findings(&analysis)).then_some(analysis);
                 let captured_session =
                     capture_session_from_lines(&command, &stdout_lines, &stderr_lines);
                 let _ = tasks::finish_command_run(
                     &project_path,
                     &task_id,
                     &run_id,
-                    command_status,
-                    exit_code,
-                    error_summary.clone(),
-                    captured_session.session_id.clone(),
-                    captured_session.resume_command.clone(),
-                    termination_reason.clone(),
+                    tasks::CommandRunCompletion {
+                        status: command_status,
+                        exit_code,
+                        error_summary: error_summary.clone(),
+                        session_id: captured_session.session_id.clone(),
+                        resume_command: captured_session.resume_command.clone(),
+                        termination_reason: termination_reason.clone(),
+                    },
                 );
                 app.emit_finished(CommandFinishedEvent {
                     task_id: task_id.clone(),
                     run_id: run_id.clone(),
-                    status: command_status.to_string(),
+                    status: command_status,
                     exit_code,
                     error_summary,
                     session_id: captured_session.session_id,
@@ -439,7 +618,11 @@ fn command_text(program: &str, args: &[String]) -> String {
         .join(" ")
 }
 
-fn analyze_error(exit_code: Option<i32>, stderr_lines: &[String]) -> ErrorSummary {
+fn analyze_output(
+    exit_code: Option<i32>,
+    stdout_lines: &[String],
+    stderr_lines: &[String],
+) -> ErrorSummary {
     let stderr_tail = stderr_lines
         .iter()
         .rev()
@@ -449,18 +632,176 @@ fn analyze_error(exit_code: Option<i32>, stderr_lines: &[String]) -> ErrorSummar
         .into_iter()
         .rev()
         .collect::<Vec<_>>();
-    let matched_lines = stderr_lines
-        .iter()
+    let all_lines = stdout_lines.iter().chain(stderr_lines.iter());
+    let matched_lines = all_lines
+        .clone()
         .filter(|line| is_error_line(line))
         .cloned()
         .collect::<Vec<_>>();
+    let warnings = unique_lines(
+        all_lines
+            .clone()
+            .filter(|line| is_warning_line(line))
+            .cloned(),
+    );
+    let test_failures = unique_lines(
+        all_lines
+            .clone()
+            .filter(|line| is_test_failure_line(line))
+            .cloned(),
+    );
+    let stack_trace_lines = unique_lines(
+        all_lines
+            .clone()
+            .filter(|line| is_stack_trace_line(line))
+            .cloned(),
+    );
+    let mut urls = Vec::new();
+    let mut ports = Vec::new();
+    for line in all_lines {
+        for url in extract_urls(line) {
+            push_unique(&mut urls, url);
+        }
+        for port in extract_ports(line) {
+            push_unique(&mut ports, port);
+        }
+    }
+    for url in &urls {
+        if let Some(port) = port_from_url(url) {
+            push_unique(&mut ports, port);
+        }
+    }
 
     ErrorSummary {
         exit_code,
         stderr_tail,
         matched_lines,
+        urls,
+        ports,
+        warnings,
+        test_failures,
+        stack_trace_lines,
         failed: exit_code.unwrap_or_default() != 0,
     }
+}
+
+fn analysis_has_findings(summary: &ErrorSummary) -> bool {
+    !summary.matched_lines.is_empty()
+        || !summary.urls.is_empty()
+        || !summary.ports.is_empty()
+        || !summary.warnings.is_empty()
+        || !summary.test_failures.is_empty()
+        || !summary.stack_trace_lines.is_empty()
+}
+
+fn unique_lines(lines: impl Iterator<Item = String>) -> Vec<String> {
+    let mut values = Vec::new();
+    for line in lines.take(200) {
+        push_unique(&mut values, line);
+        if values.len() == 100 {
+            break;
+        }
+    }
+    values
+}
+
+fn push_unique<T: PartialEq>(values: &mut Vec<T>, value: T) {
+    if values.len() < 100 && !values.contains(&value) {
+        values.push(value);
+    }
+}
+
+fn is_warning_line(line: &str) -> bool {
+    let lower = line.trim_start().to_ascii_lowercase();
+    lower.starts_with("warning")
+        || lower.starts_with("[warn]")
+        || lower.starts_with("warn:")
+        || lower.contains(": warning ")
+        || lower.contains(" warning:")
+}
+
+fn is_test_failure_line(line: &str) -> bool {
+    let trimmed = line.trim_start();
+    let lower = trimmed.to_ascii_lowercase();
+    lower.starts_with("fail ")
+        || lower.starts_with("failed ")
+        || lower.starts_with("failed:")
+        || lower.starts_with("--- fail:")
+        || lower.starts_with("test result: failed")
+        || lower.contains(" tests failed")
+        || lower.contains(" test failed")
+        || lower.contains(" failures:")
+        || trimmed.starts_with('✕')
+        || trimmed.starts_with('×')
+}
+
+fn is_stack_trace_line(line: &str) -> bool {
+    let lower = line.trim_start().to_ascii_lowercase();
+    lower.starts_with("at ")
+        || lower.starts_with("stack backtrace:")
+        || lower.starts_with("traceback ")
+        || lower.starts_with("caused by:")
+        || lower.starts_with("goroutine ")
+}
+
+fn extract_urls(line: &str) -> Vec<String> {
+    let mut urls = Vec::new();
+    let mut remaining = line;
+    while let Some(start) = [remaining.find("http://"), remaining.find("https://")]
+        .into_iter()
+        .flatten()
+        .min()
+    {
+        let candidate = &remaining[start..];
+        let end = candidate
+            .find(|character: char| {
+                character.is_whitespace() || matches!(character, '<' | '>' | '"' | '\'')
+            })
+            .unwrap_or(candidate.len());
+        let url = candidate[..end]
+            .trim_end_matches(['.', ',', ';', ':', ')', ']', '}'])
+            .to_string();
+        if !url.is_empty() {
+            push_unique(&mut urls, url);
+        }
+        remaining = &candidate[end..];
+        if end == 0 {
+            break;
+        }
+    }
+    urls
+}
+
+fn port_from_url(url: &str) -> Option<u16> {
+    let authority = url.split_once("://")?.1.split('/').next()?;
+    authority
+        .rsplit_once(':')?
+        .1
+        .trim_end_matches(|character: char| !character.is_ascii_digit())
+        .parse::<u16>()
+        .ok()
+}
+
+fn extract_ports(line: &str) -> Vec<u16> {
+    let lower = line.to_ascii_lowercase();
+    let mut ports = Vec::new();
+    for marker in ["port ", "port: ", "localhost:", "127.0.0.1:", "0.0.0.0:"] {
+        let mut remaining = lower.as_str();
+        while let Some(index) = remaining.find(marker) {
+            let digits = remaining[index + marker.len()..]
+                .trim_start()
+                .chars()
+                .take_while(char::is_ascii_digit)
+                .collect::<String>();
+            if let Ok(port) = digits.parse::<u16>() {
+                if port > 0 {
+                    push_unique(&mut ports, port);
+                }
+            }
+            remaining = &remaining[index + marker.len()..];
+        }
+    }
+    ports
 }
 
 fn is_error_line(line: &str) -> bool {
@@ -491,7 +832,7 @@ fn is_error_line(line: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{PlanTodoItem, Task};
+    use crate::models::{PlanTodoItem, PlanTodoStatus, Task, TaskStatus};
     use std::{fs, path::Path};
 
     #[derive(Clone)]
@@ -523,10 +864,14 @@ mod tests {
             title: "Verify command validation loop".to_string(),
             raw_requirement: "Run failing commands, prepare repairs, rerun, then accept."
                 .to_string(),
-            status: "debugging".to_string(),
+            status: TaskStatus::Debugging,
+            lifecycle: Default::default(),
             selected_planning_agent_ids: Vec::new(),
             primary_agent_id: None,
             review_agent_ids: Vec::new(),
+            implementation_review_runs: Vec::new(),
+            implementation_reviews: Vec::new(),
+            implementation_review_decisions: Vec::new(),
             final_plan: Some("# Plan\n- Validate command loop".to_string()),
             final_plan_path: Some(
                 root.join("docs/plans/command-smoke.md")
@@ -544,7 +889,7 @@ mod tests {
                 task_id: "task-command-smoke".to_string(),
                 title: "Validate command loop".to_string(),
                 description: "Exercise failing and succeeding validation commands.".to_string(),
-                status: "done".to_string(),
+                status: PlanTodoStatus::Done,
                 order: 0,
                 plan_ref: Some("docs/plans/command-smoke.md".to_string()),
             }],
@@ -554,6 +899,8 @@ mod tests {
             feedback: Vec::new(),
             loop_compact_summary: None,
             repair_context_preview: None,
+            git_baseline: None,
+            summary: None,
             created_at_ms: now_ms(),
             updated_at_ms: now_ms(),
         }
@@ -564,7 +911,10 @@ mod tests {
             program: "/bin/sh".to_string(),
             args: vec!["-c".to_string(), script.to_string()],
             cwd: root.display().to_string(),
+            project_path: Some(root.display().to_string()),
             task_id: Some(task_id.to_string()),
+            agent_id: None,
+            approval_id: None,
             intent: Some(CommandRunIntent::Validation),
             loop_id: None,
             iteration: None,
@@ -661,6 +1011,15 @@ mod tests {
                 .matched_lines
                 .iter()
                 .any(|line| line.contains("first smoke failure"))));
+        let historical_logs = read_command_run_logs(
+            root.display().to_string(),
+            task.id.clone(),
+            failed_one.id.clone(),
+        )
+        .expect("persisted command logs should be readable after the live stream ends");
+        assert!(historical_logs
+            .iter()
+            .any(|entry| entry.line.contains("first smoke failure")));
 
         let repair_one =
             tasks::generate_repair_context(root.display().to_string(), task.id.clone())
@@ -721,13 +1080,30 @@ mod tests {
             tasks::complete_task_inner(&ids, root.display().to_string(), task.id.clone())
                 .expect("verifying task should accept completion");
         assert_eq!(completed.status, "completed");
-        assert_eq!(
-            completed
-                .events
-                .last()
-                .and_then(|event| event.evidence_ref.as_deref()),
-            Some(succeeded.id.as_str())
-        );
+        assert!(completed
+            .events
+            .iter()
+            .any(|event| { event.evidence_ref.as_deref() == Some(succeeded.id.as_str()) }));
+        let summary = completed
+            .summary
+            .as_ref()
+            .expect("delivery summary should persist");
+        assert!(Path::new(&summary.json_path).is_file());
+        assert!(Path::new(&summary.markdown_path).is_file());
+        assert!(completed.events.iter().any(|event| {
+            event.evidence_ref.as_deref() == Some(summary.markdown_path.as_str())
+        }));
+        let exported_path = root.join("exported-summary.md");
+        crate::task_summary::export_task_summary(crate::task_summary::ExportTaskSummaryInput {
+            project_path: root.display().to_string(),
+            task_id: task.id.clone(),
+            target_path: exported_path.display().to_string(),
+            format: "markdown".to_string(),
+        })
+        .expect("delivery summary should export");
+        assert!(fs::read_to_string(&exported_path)
+            .expect("exported summary should be readable")
+            .contains("# Verify command validation loop"));
         assert_eq!(completed.command_runs.len(), 4);
 
         fs::remove_dir_all(root).expect("test project should be cleaned up");
@@ -885,7 +1261,7 @@ mod tests {
         let lines = (0..25)
             .map(|index| format!("error: line {index}"))
             .collect::<Vec<_>>();
-        let summary = analyze_error(Some(1), &lines);
+        let summary = analyze_output(Some(1), &[], &lines);
 
         assert_eq!(summary.stderr_tail.len(), 20);
         assert_eq!(
@@ -916,7 +1292,7 @@ mod tests {
             redact_sensitive_text(&format!("password={password_marker}")),
             redact_sensitive_text(&auth_header),
         ];
-        let summary = analyze_error(Some(1), &lines);
+        let summary = analyze_output(Some(1), &[], &lines);
 
         assert!(summary.failed);
         assert!(summary
@@ -931,5 +1307,49 @@ mod tests {
             .iter()
             .any(|line| line.contains(password_marker)));
         assert!(!summary.stderr_tail.iter().any(|line| line.contains(marker)));
+    }
+
+    #[test]
+    fn extracts_cross_stack_log_insights() {
+        let stdout = vec![
+            "VITE ready at http://localhost:1420/".to_string(),
+            "warning: unused import in src/main.rs".to_string(),
+            "--- FAIL: TestCreateUser (0.02s)".to_string(),
+            "FAILED tests/test_api.py::test_create_user".to_string(),
+            "00:03 +2 -1: Some Flutter widget test failed".to_string(),
+        ];
+        let stderr = vec![
+            "test result: FAILED. 8 passed; 1 failed".to_string(),
+            "Traceback (most recent call last):".to_string(),
+            "    at renderApp (/repo/src/app.ts:12:3)".to_string(),
+            "Server listening on port 8080".to_string(),
+        ];
+
+        let summary = analyze_output(Some(1), &stdout, &stderr);
+
+        assert_eq!(summary.urls, vec!["http://localhost:1420/"]);
+        assert!(summary.ports.contains(&1420));
+        assert!(summary.ports.contains(&8080));
+        assert_eq!(summary.warnings.len(), 1);
+        assert!(summary.test_failures.len() >= 4);
+        assert_eq!(summary.stack_trace_lines.len(), 2);
+    }
+
+    #[test]
+    fn records_non_failing_warnings_and_urls_as_findings() {
+        let summary = analyze_output(
+            Some(0),
+            &[
+                "Local: https://127.0.0.1:5173/".to_string(),
+                "WARN: deprecated option".to_string(),
+            ],
+            &[],
+        );
+
+        assert!(!summary.failed);
+        assert!(analysis_has_findings(&summary));
+        assert_eq!(summary.urls, vec!["https://127.0.0.1:5173/"]);
+        assert_eq!(summary.ports, vec![5173]);
+        assert_eq!(summary.warnings.len(), 1);
     }
 }

@@ -15,7 +15,10 @@
 use crate::{
     agents::redact_sensitive_text,
     command_runner::CommandRunStopResult,
-    models::{now_ms, CommandFinishedEvent, CommandRun, CommandRunIntent, IdGenerator},
+    execution_policy::{self, ExecutionApprovalRegistry, ExecutionRequest},
+    models::{
+        now_ms, CommandFinishedEvent, CommandRun, CommandRunIntent, CommandRunStatus, IdGenerator,
+    },
     tasks,
 };
 use portable_pty::{native_pty_system, CommandBuilder, MasterPty, PtySize};
@@ -50,7 +53,11 @@ pub struct PtySpec {
     pub program: String,
     pub args: Vec<String>,
     pub cwd: String,
+    #[serde(default)]
+    pub project_path: Option<String>,
     pub task_id: Option<String>,
+    #[serde(default)]
+    pub approval_id: Option<String>,
     #[serde(default = "default_rows")]
     pub rows: u16,
     #[serde(default = "default_cols")]
@@ -107,9 +114,28 @@ fn command_text(program: &str, args: &[String]) -> String {
 pub async fn start_pty_run(
     app: AppHandle,
     registry: State<'_, PtyRegistry>,
+    approvals: State<'_, ExecutionApprovalRegistry>,
     ids: State<'_, IdGenerator>,
-    spec: PtySpec,
+    mut spec: PtySpec,
 ) -> Result<CommandRun, String> {
+    let project_path = spec
+        .project_path
+        .clone()
+        .unwrap_or_else(|| spec.cwd.clone());
+    let authorization = execution_policy::authorize_execution(
+        &app,
+        approvals.inner(),
+        &ExecutionRequest {
+            program: spec.program.clone(),
+            args: spec.args.clone(),
+            cwd: spec.cwd.clone(),
+            project_path,
+            agent_id: None,
+        },
+        spec.approval_id.as_deref(),
+    )?;
+    spec.project_path = Some(authorization.project_path.display().to_string());
+    spec.cwd = authorization.cwd.display().to_string();
     start_pty_run_inner(app, registry.inner(), ids.inner(), spec)
 }
 
@@ -127,7 +153,7 @@ fn start_pty_run_inner<E: PtyEventEmitter>(
         .task_id
         .clone()
         .ok_or_else(|| "taskId is required for command runs".to_string())?;
-    let project_path = PathBuf::from(&spec.cwd);
+    let project_path = PathBuf::from(spec.project_path.as_deref().unwrap_or(spec.cwd.as_str()));
     let run_id = ids.next("run");
     let command_text = redact_sensitive_text(&command_text(&spec.program, &spec.args));
 
@@ -182,7 +208,7 @@ fn start_pty_run_inner<E: PtyEventEmitter>(
         resume_command: None,
         started_at_ms: now_ms(),
         ended_at_ms: None,
-        status: "running".to_string(),
+        status: CommandRunStatus::Running,
         exit_code: None,
         stdout_log_ref: None,
         stderr_log_ref: None,
@@ -261,12 +287,13 @@ pub async fn stop_pty_run(
     registry: State<'_, PtyRegistry>,
     run_id: String,
 ) -> Result<CommandRunStopResult, String> {
-    stop_pty_run_inner(registry.inner(), run_id)
+    stop_pty_run_inner(registry.inner(), run_id, None)
 }
 
 fn stop_pty_run_inner(
     registry: &PtyRegistry,
     run_id: String,
+    termination_reason: Option<String>,
 ) -> Result<CommandRunStopResult, String> {
     let Some(session) = registry.sessions.lock().unwrap().remove(&run_id) else {
         return Ok(CommandRunStopResult {
@@ -296,12 +323,14 @@ fn stop_pty_run_inner(
             &session.project_path,
             &task_id,
             &run_id,
-            "cancelled",
-            exit_code,
-            None,
-            None,
-            None,
-            None,
+            tasks::CommandRunCompletion {
+                status: CommandRunStatus::Cancelled,
+                exit_code,
+                error_summary: None,
+                session_id: None,
+                resume_command: None,
+                termination_reason,
+            },
         );
     }
 
@@ -310,6 +339,27 @@ fn stop_pty_run_inner(
         stopped: true,
         exit_code,
     })
+}
+
+pub(crate) fn stop_task_runs(
+    registry: &PtyRegistry,
+    task_id: &str,
+    termination_reason: &str,
+) -> Result<usize, String> {
+    let run_ids = registry
+        .sessions
+        .lock()
+        .map_err(|_| "pty registry is unavailable".to_string())?
+        .iter()
+        .filter(|(_, session)| session.task_id.as_deref() == Some(task_id))
+        .map(|(run_id, _)| run_id.clone())
+        .collect::<Vec<_>>();
+    let mut stopped = 0;
+    for run_id in run_ids {
+        let result = stop_pty_run_inner(registry, run_id, Some(termination_reason.to_string()))?;
+        stopped += usize::from(result.stopped);
+    }
+    Ok(stopped)
 }
 
 fn spawn_pty_reader<E: PtyEventEmitter>(
@@ -353,26 +403,30 @@ fn spawn_pty_monitor<E: PtyEventEmitter>(
         }
 
         let (command_status, exit_code) = match status {
-            Ok(status) if status.success() => ("succeeded", Some(status.exit_code() as i32)),
-            Ok(status) => ("failed", Some(status.exit_code() as i32)),
-            Err(_) => ("failed", None),
+            Ok(status) if status.success() => {
+                (CommandRunStatus::Succeeded, Some(status.exit_code() as i32))
+            }
+            Ok(status) => (CommandRunStatus::Failed, Some(status.exit_code() as i32)),
+            Err(_) => (CommandRunStatus::Failed, None),
         };
 
         let _ = tasks::finish_command_run(
             &project_path,
             &task_id,
             &run_id,
-            command_status,
-            exit_code,
-            None,
-            None,
-            None,
-            None,
+            tasks::CommandRunCompletion {
+                status: command_status,
+                exit_code,
+                error_summary: None,
+                session_id: None,
+                resume_command: None,
+                termination_reason: None,
+            },
         );
         app.emit_finished(CommandFinishedEvent {
             task_id,
             run_id,
-            status: command_status.to_string(),
+            status: command_status,
             exit_code,
             error_summary: None,
             session_id: None,
@@ -386,7 +440,7 @@ fn spawn_pty_monitor<E: PtyEventEmitter>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{PlanTodoItem, Task};
+    use crate::models::{PlanTodoItem, PlanTodoStatus, Task, TaskStatus};
     use std::{fs, path::Path, time::Duration};
 
     #[derive(Clone, Default)]
@@ -408,10 +462,14 @@ mod tests {
             project_path: root.display().to_string(),
             title: "PTY smoke".to_string(),
             raw_requirement: "Run a pty command.".to_string(),
-            status: "debugging".to_string(),
+            status: TaskStatus::Debugging,
+            lifecycle: Default::default(),
             selected_planning_agent_ids: Vec::new(),
             primary_agent_id: None,
             review_agent_ids: Vec::new(),
+            implementation_review_runs: Vec::new(),
+            implementation_reviews: Vec::new(),
+            implementation_review_decisions: Vec::new(),
             final_plan: None,
             final_plan_path: None,
             final_plan_html_path: None,
@@ -425,7 +483,7 @@ mod tests {
                 task_id: "task-pty-smoke".to_string(),
                 title: "pty".to_string(),
                 description: "pty".to_string(),
-                status: "done".to_string(),
+                status: PlanTodoStatus::Done,
                 order: 0,
                 plan_ref: None,
             }],
@@ -435,6 +493,8 @@ mod tests {
             feedback: Vec::new(),
             loop_compact_summary: None,
             repair_context_preview: None,
+            git_baseline: None,
+            summary: None,
             created_at_ms: now_ms(),
             updated_at_ms: now_ms(),
         }
@@ -445,7 +505,9 @@ mod tests {
             program: "/bin/sh".to_string(),
             args: vec!["-c".to_string(), script.to_string()],
             cwd: root.display().to_string(),
+            project_path: Some(root.display().to_string()),
             task_id: Some(task_id.to_string()),
+            approval_id: None,
             rows: 24,
             cols: 80,
         }
@@ -455,8 +517,9 @@ mod tests {
         task.command_runs
             .iter()
             .find(|run| run.id == run_id)
-            .map(|run| run.status.clone())
+            .map(|run| run.status)
             .expect("run should be recorded")
+            .to_string()
     }
 
     #[test]
@@ -546,7 +609,8 @@ mod tests {
             "grandchild should be alive"
         );
 
-        let result = stop_pty_run_inner(&registry, run.id.clone()).expect("stop should succeed");
+        let result =
+            stop_pty_run_inner(&registry, run.id.clone(), None).expect("stop should succeed");
         assert!(result.stopped);
 
         // After a process-group kill, the grandchild is gone (kill(pid,0) → ESRCH).

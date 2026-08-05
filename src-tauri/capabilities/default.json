@@ -6,7 +6,9 @@
   "permissions": [
     "core:default",
     "core:window:allow-start-dragging",
-    "dialog:default",
-    "opener:default"
+    "dialog:allow-open",
+    "dialog:allow-save",
+    "opener:allow-open-path",
+    "opener:allow-reveal-item-in-dir"
   ]
 }

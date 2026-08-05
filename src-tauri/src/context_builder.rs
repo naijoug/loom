@@ -203,10 +203,19 @@ fn format_feedback_section(feedback: &[UserFeedback]) -> String {
         .take(FEEDBACK_LIMIT)
         .map(|feedback| {
             format!(
-                "- feedbackId={} run={} content={}",
+                "- feedbackId={} run={} content={} reproduction={} expected={} quotedLog={} attachments={}",
                 feedback.id,
                 feedback.command_run_id.as_deref().unwrap_or("(none)"),
-                feedback.content
+                feedback.content,
+                feedback.reproduction_steps.as_deref().unwrap_or("(none)"),
+                feedback.expected_behavior.as_deref().unwrap_or("(none)"),
+                feedback.quoted_log.as_deref().unwrap_or("(none)"),
+                feedback
+                    .attachments
+                    .iter()
+                    .map(|attachment| attachment.stored_path.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", ")
             )
         })
         .collect::<Vec<_>>()
@@ -293,7 +302,7 @@ fn take_chars(value: &str, max_chars: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{CommandRunIntent, ErrorSummary};
+    use crate::models::{CommandRunIntent, CommandRunStatus, ErrorSummary, PlanTodoStatus};
 
     fn task_fixture(final_plan: String) -> Task {
         Task {
@@ -301,10 +310,14 @@ mod tests {
             project_path: "/repo".to_string(),
             title: "Refactor loop orchestration".to_string(),
             raw_requirement: "Implement loop engine refactor".to_string(),
-            status: "implementing".to_string(),
+            status: crate::models::TaskStatus::Implementing,
+            lifecycle: Default::default(),
             selected_planning_agent_ids: Vec::new(),
             primary_agent_id: None,
             review_agent_ids: Vec::new(),
+            implementation_review_runs: Vec::new(),
+            implementation_reviews: Vec::new(),
+            implementation_review_decisions: Vec::new(),
             final_plan: Some(final_plan),
             final_plan_path: Some("/repo/docs/plans/loop.md".to_string()),
             final_plan_html_path: None,
@@ -319,7 +332,7 @@ mod tests {
                 title: "Split command run intent".to_string(),
                 description: "Add intent metadata and preserve validation gate behavior."
                     .to_string(),
-                status: "implementing".to_string(),
+                status: PlanTodoStatus::Implementing,
                 order: 0,
                 plan_ref: Some("/repo/docs/plans/loop.md".to_string()),
             }],
@@ -339,7 +352,7 @@ mod tests {
                 resume_command: None,
                 started_at_ms: 1,
                 ended_at_ms: Some(2),
-                status: "failed".to_string(),
+                status: CommandRunStatus::Failed,
                 exit_code: Some(1),
                 stdout_log_ref: Some("/repo/.loom/logs/run-1.stdout.log".to_string()),
                 stderr_log_ref: Some("/repo/.loom/logs/run-1.stderr.log".to_string()),
@@ -348,6 +361,7 @@ mod tests {
                     stderr_tail: vec!["error: regression failed".to_string()],
                     matched_lines: vec!["error: regression failed".to_string()],
                     failed: true,
+                    ..Default::default()
                 }),
             }],
             feedback: vec![UserFeedback {
@@ -355,10 +369,16 @@ mod tests {
                 task_id: "task-1".to_string(),
                 command_run_id: Some("run-1".to_string()),
                 content: "The validation command is failing after the intent split.".to_string(),
+                reproduction_steps: None,
+                expected_behavior: None,
+                quoted_log: None,
+                attachments: Vec::new(),
                 timestamp_ms: 3,
             }],
             loop_compact_summary: None,
             repair_context_preview: None,
+            git_baseline: None,
+            summary: None,
             created_at_ms: 1,
             updated_at_ms: 3,
         }

@@ -121,7 +121,13 @@ fn scan_dir(
             .iter()
             .find(|candidate| scripts.iter().any(|name| name == *candidate))
         {
-            previews.push(make_slot(counter, label, script, format!("{pm} {script}"), "preview"));
+            previews.push(make_slot(
+                counter,
+                label,
+                script,
+                format!("{pm} {script}"),
+                "preview",
+            ));
         }
         for script in VALIDATION_SCRIPTS {
             if scripts.iter().any(|name| name == script) {
@@ -138,18 +144,73 @@ fn scan_dir(
 
     if dir.join("Cargo.toml").exists() {
         found = true;
-        validations.push(make_slot(counter, label, "cargo test", "cargo test".to_string(), "validation"));
+        validations.push(make_slot(
+            counter,
+            label,
+            "cargo test",
+            "cargo test".to_string(),
+            "validation",
+        ));
     }
 
     if dir.join("go.mod").exists() {
         found = true;
-        validations.push(make_slot(counter, label, "go test", "go test ./...".to_string(), "validation"));
+        validations.push(make_slot(
+            counter,
+            label,
+            "go test",
+            "go test ./...".to_string(),
+            "validation",
+        ));
     }
 
     if dir.join("pubspec.yaml").exists() {
         found = true;
-        previews.push(make_slot(counter, label, "flutter run", "flutter run".to_string(), "preview"));
-        validations.push(make_slot(counter, label, "flutter test", "flutter test".to_string(), "validation"));
+        previews.push(make_slot(
+            counter,
+            label,
+            "flutter run",
+            "flutter run".to_string(),
+            "preview",
+        ));
+        validations.push(make_slot(
+            counter,
+            label,
+            "flutter test",
+            "flutter test".to_string(),
+            "validation",
+        ));
+    }
+
+    if ["pyproject.toml", "requirements.txt", "setup.py", "Pipfile"]
+        .iter()
+        .any(|file| dir.join(file).exists())
+    {
+        found = true;
+        if dir.join("manage.py").exists() {
+            previews.push(make_slot(
+                counter,
+                label,
+                "Django server",
+                "python manage.py runserver".to_string(),
+                "preview",
+            ));
+            validations.push(make_slot(
+                counter,
+                label,
+                "Django tests",
+                "python manage.py test".to_string(),
+                "validation",
+            ));
+        } else {
+            validations.push(make_slot(
+                counter,
+                label,
+                "pytest",
+                "python -m pytest".to_string(),
+                "validation",
+            ));
+        }
     }
 
     found
@@ -204,10 +265,22 @@ pub fn suggest_terminal_slots(project_path: String) -> Result<Vec<TerminalSlot>,
     validations.truncate(6);
 
     if previews.is_empty() {
-        previews.push(make_slot(&mut counter, None, "Preview", String::new(), "preview"));
+        previews.push(make_slot(
+            &mut counter,
+            None,
+            "Preview",
+            String::new(),
+            "preview",
+        ));
     }
     if validations.is_empty() {
-        validations.push(make_slot(&mut counter, None, "Validation", String::new(), "validation"));
+        validations.push(make_slot(
+            &mut counter,
+            None,
+            "Validation",
+            String::new(),
+            "validation",
+        ));
     }
 
     previews.extend(validations);
@@ -303,8 +376,11 @@ mod tests {
             r#"{"scripts":{"dev":"vite","test":"vitest"}}"#,
         )
         .expect("react package.json");
-        fs::write(root.join("frontend/todo-flutter/pubspec.yaml"), "name: todo\n")
-            .expect("flutter pubspec");
+        fs::write(
+            root.join("frontend/todo-flutter/pubspec.yaml"),
+            "name: todo\n",
+        )
+        .expect("flutter pubspec");
 
         let slots = suggest_terminal_slots(root.display().to_string()).expect("suggest");
 
@@ -314,6 +390,31 @@ mod tests {
             && slot.cwd.as_deref() == Some("frontend/todo-flutter")));
 
         fs::remove_dir_all(root).ok();
+    }
+
+    #[test]
+    fn suggest_detects_python_and_django_commands() {
+        let root = std::env::temp_dir().join(format!("loom-slots-python-{}", now_ms()));
+        fs::create_dir_all(root.join("service")).unwrap();
+        fs::write(
+            root.join("service/pyproject.toml"),
+            "[project]\nname='service'\n",
+        )
+        .unwrap();
+        fs::write(root.join("service/manage.py"), "# django\n").unwrap();
+
+        let slots = suggest_terminal_slots(root.display().to_string()).unwrap();
+        assert!(slots.iter().any(|slot| {
+            slot.command == "python manage.py runserver"
+                && slot.cwd.as_deref() == Some("service")
+                && slot.kind == "preview"
+        }));
+        assert!(slots.iter().any(|slot| {
+            slot.command == "python manage.py test"
+                && slot.cwd.as_deref() == Some("service")
+                && slot.kind == "validation"
+        }));
+        fs::remove_dir_all(root).unwrap();
     }
 
     #[test]

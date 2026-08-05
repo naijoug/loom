@@ -1,26 +1,36 @@
 use crate::{
+    agents, attachments, command_runner,
     context_builder::{self, ContextBuildOptions, ContextBuildOutput},
+    implementation_review,
     models::{
-        now_ms, CommandRun, CommandRunIntent, CreateTaskInput, ErrorSummary, FeedbackInput,
-        IdGenerator, LoopTraceEntry, PlanTodoItem, PlanningDecision, PlanningDecisionInput, Task,
-        TaskEvent, UserFeedback,
+        now_ms, CommandRun, CommandRunIntent, CommandRunStatus, CreateTaskInput, ErrorSummary,
+        FeedbackInput, IdGenerator, LoopTraceEntry, PlanTodoItem, PlanTodoStatus, PlanningDecision,
+        PlanningDecisionInput, Task, TaskEvent, TaskLifecycleInput, TaskStatus, UserFeedback,
     },
-    plan_html, storage,
+    plan_html, project_git, project_preferences, pty, run_recovery, storage,
+    task_state::{transition, TaskAction},
+    task_summary,
 };
 use std::{
+    collections::HashMap,
     fs,
     path::{Path, PathBuf},
+    sync::{Arc, Mutex, OnceLock},
 };
-use tauri::State;
+use tauri::{AppHandle, State};
 
 #[tauri::command]
-pub fn list_tasks(project_path: String) -> Result<Vec<Task>, String> {
+pub fn list_tasks(
+    project_path: String,
+    recovery: State<'_, run_recovery::RunRecoveryRegistry>,
+) -> Result<Vec<Task>, String> {
     let tasks_dir = storage::project_tasks_dir(Path::new(&project_path));
 
     if !tasks_dir.exists() {
         return Ok(Vec::new());
     }
 
+    let should_reconcile = recovery.begin_project(Path::new(&project_path))?;
     let mut tasks = Vec::new();
     for entry in
         fs::read_dir(tasks_dir).map_err(|error| format!("failed to read tasks: {error}"))?
@@ -29,7 +39,11 @@ pub fn list_tasks(project_path: String) -> Result<Vec<Task>, String> {
             .map_err(|error| format!("failed to read task entry: {error}"))?
             .path();
         if path.extension().and_then(|value| value.to_str()) == Some("json") {
-            tasks.push(storage::read_json_file(&path)?);
+            let mut task: Task = storage::read_json_file(&path)?;
+            if should_reconcile && run_recovery::reconcile_task(&mut task) > 0 {
+                save_task(&task)?;
+            }
+            tasks.push(task);
         }
     }
     tasks.sort_by_key(|task: &Task| task.created_at_ms);
@@ -38,19 +52,37 @@ pub fn list_tasks(project_path: String) -> Result<Vec<Task>, String> {
 }
 
 #[tauri::command]
-pub fn create_task(ids: State<'_, IdGenerator>, input: CreateTaskInput) -> Result<Task, String> {
+pub fn create_task(
+    app: AppHandle,
+    ids: State<'_, IdGenerator>,
+    input: CreateTaskInput,
+) -> Result<Task, String> {
     let timestamp_ms = now_ms();
     let task_id = ids.next("task");
     let event_id = ids.next("event");
+    let preferences =
+        project_preferences::load_normalized_for_app(&app, Path::new(&input.project_path))?;
+    let selected_planning_agent_ids = if input.selected_planning_agent_ids.is_empty() {
+        preferences.planning_agent_ids
+    } else {
+        input.selected_planning_agent_ids
+    };
+    let primary_agent_id = input
+        .primary_agent_id
+        .or(preferences.implementation_agent_id);
     let task = Task {
         id: task_id.clone(),
         project_path: input.project_path,
         title: input.title,
         raw_requirement: input.raw_requirement.clone(),
-        status: "drafting_requirements".to_string(),
-        selected_planning_agent_ids: input.selected_planning_agent_ids,
-        primary_agent_id: input.primary_agent_id,
-        review_agent_ids: Vec::new(),
+        status: TaskStatus::DraftingRequirements,
+        lifecycle: Default::default(),
+        selected_planning_agent_ids,
+        primary_agent_id,
+        review_agent_ids: preferences.review_agent_ids,
+        implementation_review_runs: Vec::new(),
+        implementation_reviews: Vec::new(),
+        implementation_review_decisions: Vec::new(),
         final_plan: None,
         final_plan_path: None,
         final_plan_html_path: None,
@@ -66,7 +98,7 @@ pub fn create_task(ids: State<'_, IdGenerator>, input: CreateTaskInput) -> Resul
             task_id: task_id.clone(),
             timestamp_ms,
             actor: "user".to_string(),
-            status: "drafting_requirements".to_string(),
+            status: TaskStatus::DraftingRequirements,
             input_summary: Some(input.raw_requirement),
             output_summary: Some("Task created".to_string()),
             evidence_ref: None,
@@ -75,6 +107,8 @@ pub fn create_task(ids: State<'_, IdGenerator>, input: CreateTaskInput) -> Resul
         feedback: Vec::new(),
         loop_compact_summary: None,
         repair_context_preview: None,
+        git_baseline: None,
+        summary: None,
         created_at_ms: timestamp_ms,
         updated_at_ms: timestamp_ms,
     };
@@ -89,6 +123,7 @@ pub fn record_planning_decision(
     input: PlanningDecisionInput,
 ) -> Result<Task, String> {
     let mut task = load_task(Path::new(&input.project_path), &input.task_id)?;
+    ensure_task_active(&task)?;
     let timestamp_ms = now_ms();
     let decision = PlanningDecision {
         id: ids.next("decision"),
@@ -114,7 +149,7 @@ pub fn record_planning_decision(
         task_id: task.id.clone(),
         timestamp_ms,
         actor: "user".to_string(),
-        status: task.status.clone(),
+        status: task.status,
         input_summary: Some(input.title),
         output_summary: Some(input.content),
         evidence_ref: task.final_plan_path.clone(),
@@ -151,6 +186,7 @@ pub fn confirm_plan(
     task_id: String,
 ) -> Result<Task, String> {
     let mut task = load_task(Path::new(&project_path), &task_id)?;
+    ensure_task_active(&task)?;
     let final_plan = task
         .final_plan
         .clone()
@@ -167,7 +203,7 @@ pub fn confirm_plan(
         return Err("cannot confirm plan because it has no implementation todo items".to_string());
     }
 
-    task.status = "ready_to_implement".to_string();
+    task.status = transition(task.status, TaskAction::PlanConfirmed)?;
     task.plan_todos = plan_todos;
     task.updated_at_ms = now_ms();
     task.events.push(TaskEvent {
@@ -175,7 +211,7 @@ pub fn confirm_plan(
         task_id: task.id.clone(),
         timestamp_ms: task.updated_at_ms,
         actor: "user".to_string(),
-        status: task.status.clone(),
+        status: task.status,
         input_summary: Some("Plan confirmed".to_string()),
         output_summary: Some(
             "Implementation todo items generated from the final plan.".to_string(),
@@ -194,9 +230,20 @@ pub fn start_todo(
     task_id: String,
     todo_id: String,
     primary_agent_id: Option<String>,
+    primary_agent_switch_reason: Option<String>,
 ) -> Result<Task, String> {
     let mut task = load_task(Path::new(&project_path), &task_id)?;
-    apply_start_todo(&mut task, &todo_id, primary_agent_id, ids.next("event"))?;
+    ensure_task_active(&task)?;
+    if task.git_baseline.is_none() {
+        task.git_baseline = Some(project_git::capture_git_baseline(Path::new(&project_path)));
+    }
+    apply_start_todo(
+        &mut task,
+        &todo_id,
+        primary_agent_id,
+        primary_agent_switch_reason,
+        ids.next("event"),
+    )?;
     save_task(&task)?;
 
     Ok(task)
@@ -210,9 +257,56 @@ pub fn complete_todo(
     todo_id: String,
 ) -> Result<Task, String> {
     let mut task = load_task(Path::new(&project_path), &task_id)?;
+    ensure_task_active(&task)?;
     apply_complete_todo(&mut task, &todo_id, ids.next("event"))?;
     save_task(&task)?;
 
+    Ok(task)
+}
+
+#[tauri::command]
+pub fn switch_primary_agent(
+    app: AppHandle,
+    ids: State<'_, IdGenerator>,
+    project_path: String,
+    task_id: String,
+    agent_id: String,
+    reason: String,
+) -> Result<Task, String> {
+    let mut task = load_task(Path::new(&project_path), &task_id)?;
+    ensure_task_active(&task)?;
+    let reason = reason.trim();
+    if reason.len() < 5 {
+        return Err("switching the primary Agent requires a specific reason".to_string());
+    }
+    if task.primary_agent_id.as_deref() == Some(agent_id.as_str()) {
+        return Err("the selected Agent is already the primary Agent".to_string());
+    }
+    let agent = agents::load_agents(&app)?
+        .into_iter()
+        .find(|agent| agent.id == agent_id)
+        .ok_or_else(|| "the selected primary Agent was not found".to_string())?;
+    agents::validate_implementation_agent(&app, &agent.id, &agent.command)?;
+    let previous = task
+        .primary_agent_id
+        .replace(agent.id.clone())
+        .unwrap_or_else(|| "none".to_string());
+    let timestamp_ms = now_ms();
+    task.updated_at_ms = timestamp_ms;
+    task.events.push(TaskEvent {
+        id: ids.next("event"),
+        task_id: task.id.clone(),
+        timestamp_ms,
+        actor: "user".to_string(),
+        status: task.status,
+        input_summary: Some(format!(
+            "Switched primary Agent from {previous} to {}",
+            agent.id
+        )),
+        output_summary: Some(reason.to_string()),
+        evidence_ref: None,
+    });
+    save_task(&task)?;
     Ok(task)
 }
 
@@ -234,6 +328,7 @@ pub fn mark_ready_for_testing(
     task_id: String,
 ) -> Result<Task, String> {
     let mut task = load_task(Path::new(&project_path), &task_id)?;
+    ensure_task_active(&task)?;
     apply_mark_ready_for_testing(&mut task, ids.next("event"))?;
     save_task(&task)?;
 
@@ -255,7 +350,20 @@ pub(crate) fn complete_task_inner(
     task_id: String,
 ) -> Result<Task, String> {
     let mut task = load_task(Path::new(&project_path), &task_id)?;
+    ensure_task_active(&task)?;
     apply_complete_task(&mut task, ids.next("event"))?;
+    let summary = task_summary::generate_and_persist(&task)?;
+    task.events.push(TaskEvent {
+        id: ids.next("event"),
+        task_id: task.id.clone(),
+        timestamp_ms: summary.generated_at_ms,
+        actor: "system".to_string(),
+        status: task.status,
+        input_summary: Some("Generated delivery summary".to_string()),
+        output_summary: Some("JSON and Markdown delivery artifacts persisted".to_string()),
+        evidence_ref: Some(summary.markdown_path.clone()),
+    });
+    task.summary = Some(summary);
     save_task(&task)?;
 
     Ok(task)
@@ -263,6 +371,7 @@ pub(crate) fn complete_task_inner(
 
 #[tauri::command]
 pub fn delete_task(project_path: String, task_id: String) -> Result<(), String> {
+    validate_task_id(&task_id)?;
     let project = Path::new(&project_path);
     let path = task_path(project, &task_id);
 
@@ -281,10 +390,208 @@ pub fn delete_task(project_path: String, task_id: String) -> Result<(), String> 
     Ok(())
 }
 
+#[tauri::command]
+pub async fn pause_task(
+    ids: State<'_, IdGenerator>,
+    commands: State<'_, command_runner::CommandRegistry>,
+    ptys: State<'_, pty::PtyRegistry>,
+    input: TaskLifecycleInput,
+) -> Result<Task, String> {
+    let project_path = Path::new(&input.project_path);
+    let task = load_task(project_path, &input.task_id)?;
+    ensure_task_active(&task)?;
+    agents::stop_task_runs(&input.task_id)?;
+    implementation_review::stop_task_runs(&input.task_id)?;
+    command_runner::stop_task_runs(commands.inner(), &input.task_id, "task_paused").await?;
+    pty::stop_task_runs(ptys.inner(), &input.task_id, "task_paused")?;
+
+    let mut task = load_task(project_path, &input.task_id)?;
+    apply_pause_task(&mut task, ids.next("event"), input.reason)?;
+    save_task(&task)?;
+    Ok(task)
+}
+
+#[tauri::command]
+pub fn resume_task(ids: State<'_, IdGenerator>, input: TaskLifecycleInput) -> Result<Task, String> {
+    let mut task = load_task(Path::new(&input.project_path), &input.task_id)?;
+    apply_resume_task(&mut task, ids.next("event"), input.reason)?;
+    save_task(&task)?;
+    Ok(task)
+}
+
+#[tauri::command]
+pub async fn block_task(
+    ids: State<'_, IdGenerator>,
+    commands: State<'_, command_runner::CommandRegistry>,
+    ptys: State<'_, pty::PtyRegistry>,
+    input: TaskLifecycleInput,
+) -> Result<Task, String> {
+    let project_path = Path::new(&input.project_path);
+    let task = load_task(project_path, &input.task_id)?;
+    ensure_task_active(&task)?;
+    agents::stop_task_runs(&input.task_id)?;
+    implementation_review::stop_task_runs(&input.task_id)?;
+    command_runner::stop_task_runs(commands.inner(), &input.task_id, "task_blocked").await?;
+    pty::stop_task_runs(ptys.inner(), &input.task_id, "task_blocked")?;
+
+    let mut task = load_task(project_path, &input.task_id)?;
+    apply_block_task(&mut task, ids.next("event"), input.reason)?;
+    save_task(&task)?;
+    Ok(task)
+}
+
+#[tauri::command]
+pub async fn cancel_task(
+    ids: State<'_, IdGenerator>,
+    commands: State<'_, command_runner::CommandRegistry>,
+    ptys: State<'_, pty::PtyRegistry>,
+    input: TaskLifecycleInput,
+) -> Result<Task, String> {
+    let project_path = Path::new(&input.project_path);
+    let task = load_task(project_path, &input.task_id)?;
+    if task.status.is_terminal() {
+        return Err(format!(
+            "cannot cancel terminal task status {}",
+            task.status
+        ));
+    }
+    agents::stop_task_runs(&input.task_id)?;
+    implementation_review::stop_task_runs(&input.task_id)?;
+    command_runner::stop_task_runs(commands.inner(), &input.task_id, "task_cancelled").await?;
+    pty::stop_task_runs(ptys.inner(), &input.task_id, "task_cancelled")?;
+
+    let mut task = load_task(project_path, &input.task_id)?;
+    apply_cancel_task(&mut task, ids.next("event"), input.reason)?;
+    save_task(&task)?;
+    Ok(task)
+}
+
+fn apply_pause_task(
+    task: &mut Task,
+    event_id: String,
+    reason: Option<String>,
+) -> Result<(), String> {
+    ensure_task_active(task)?;
+    task.status = transition(task.status, TaskAction::Paused)?;
+    task.lifecycle.paused = true;
+    task.lifecycle.pause_reason = normalized_reason(reason, "Paused by user");
+    let reason = task.lifecycle.pause_reason.clone();
+    push_lifecycle_event(task, event_id, "Task paused", reason);
+    Ok(())
+}
+
+fn apply_resume_task(
+    task: &mut Task,
+    event_id: String,
+    reason: Option<String>,
+) -> Result<(), String> {
+    let resumed_from = if task.lifecycle.paused {
+        task.status = transition(
+            task.status,
+            TaskAction::Resumed {
+                target: task.status,
+            },
+        )?;
+        task.lifecycle.paused = false;
+        task.lifecycle.pause_reason.take()
+    } else if task.status == TaskStatus::Blocked {
+        let target = task.lifecycle.resume_status.ok_or_else(|| {
+            "blocked task has no recorded status to resume; choose a recovery action".to_string()
+        })?;
+        task.status = transition(task.status, TaskAction::Resumed { target })?;
+        task.lifecycle.resume_status = None;
+        task.lifecycle.blocked_reason.take()
+    } else {
+        return Err(format!(
+            "task is neither paused nor blocked (status={})",
+            task.status
+        ));
+    };
+    push_lifecycle_event(
+        task,
+        event_id,
+        "Task resumed",
+        normalized_reason(reason, "Resumed by user").or(resumed_from),
+    );
+    Ok(())
+}
+
+fn apply_block_task(
+    task: &mut Task,
+    event_id: String,
+    reason: Option<String>,
+) -> Result<(), String> {
+    ensure_task_active(task)?;
+    task.lifecycle.resume_status = Some(task.status);
+    task.lifecycle.paused = false;
+    task.lifecycle.pause_reason = None;
+    task.lifecycle.blocked_reason = normalized_reason(reason, "Blocked by user");
+    task.status = transition(task.status, TaskAction::Blocked)?;
+    let reason = task.lifecycle.blocked_reason.clone();
+    push_lifecycle_event(task, event_id, "Task blocked", reason);
+    Ok(())
+}
+
+fn apply_cancel_task(
+    task: &mut Task,
+    event_id: String,
+    reason: Option<String>,
+) -> Result<(), String> {
+    if task.status.is_terminal() {
+        return Err(format!(
+            "cannot cancel terminal task status {}",
+            task.status
+        ));
+    }
+    task.status = transition(task.status, TaskAction::Cancelled)?;
+    task.lifecycle.paused = false;
+    task.lifecycle.resume_status = None;
+    task.lifecycle.cancelled_reason = normalized_reason(reason, "Cancelled by user");
+    let reason = task.lifecycle.cancelled_reason.clone();
+    push_lifecycle_event(task, event_id, "Task cancelled", reason);
+    Ok(())
+}
+
+fn normalized_reason(reason: Option<String>, fallback: &str) -> Option<String> {
+    Some(
+        reason
+            .filter(|value| !value.trim().is_empty())
+            .unwrap_or_else(|| fallback.to_string()),
+    )
+}
+
+fn push_lifecycle_event(task: &mut Task, event_id: String, action: &str, reason: Option<String>) {
+    task.updated_at_ms = now_ms();
+    task.events.push(TaskEvent {
+        id: event_id,
+        task_id: task.id.clone(),
+        timestamp_ms: task.updated_at_ms,
+        actor: "user".to_string(),
+        status: task.status,
+        input_summary: reason,
+        output_summary: Some(action.to_string()),
+        evidence_ref: None,
+    });
+}
+
+pub(crate) fn ensure_task_active(task: &Task) -> Result<(), String> {
+    if task.lifecycle.paused {
+        return Err("task is paused; resume it before continuing".to_string());
+    }
+    if task.status == TaskStatus::Blocked {
+        return Err("task is blocked; resume it before continuing".to_string());
+    }
+    if task.status.is_terminal() {
+        return Err(format!("task status {} cannot be changed", task.status));
+    }
+    Ok(())
+}
+
 fn apply_start_todo(
     task: &mut Task,
     todo_id: &str,
     primary_agent_id: Option<String>,
+    primary_agent_switch_reason: Option<String>,
     event_id: String,
 ) -> Result<(), String> {
     let selected_title = task
@@ -294,9 +601,21 @@ fn apply_start_todo(
         .map(|todo| todo.title.clone())
         .ok_or_else(|| "cannot start todo because it does not exist".to_string())?;
 
-    task.status = "implementing".to_string();
-    if primary_agent_id.is_some() {
-        task.primary_agent_id = primary_agent_id;
+    let previous_agent_id = task.primary_agent_id.clone();
+    let switching_agent = previous_agent_id.is_some()
+        && primary_agent_id.is_some()
+        && previous_agent_id != primary_agent_id;
+    let switch_reason = primary_agent_switch_reason
+        .as_deref()
+        .map(str::trim)
+        .filter(|reason| !reason.is_empty());
+    if switching_agent && switch_reason.is_none_or(|reason| reason.len() < 5) {
+        return Err("switching the primary Agent requires a specific reason".to_string());
+    }
+
+    task.status = transition(task.status, TaskAction::TodoStarted)?;
+    if let Some(primary_agent_id) = primary_agent_id {
+        task.primary_agent_id = Some(primary_agent_id);
     }
     task.plan_todos = task
         .plan_todos
@@ -304,12 +623,12 @@ fn apply_start_todo(
         .map(|todo| {
             if todo.id == todo_id {
                 PlanTodoItem {
-                    status: "implementing".to_string(),
+                    status: PlanTodoStatus::Implementing,
                     ..todo
                 }
             } else if todo.status == "implementing" {
                 PlanTodoItem {
-                    status: "pending".to_string(),
+                    status: PlanTodoStatus::Pending,
                     ..todo
                 }
             } else {
@@ -323,11 +642,18 @@ fn apply_start_todo(
         task_id: task.id.clone(),
         timestamp_ms: task.updated_at_ms,
         actor: "user".to_string(),
-        status: task.status.clone(),
+        status: task.status,
         input_summary: Some(format!("Started implementation todo: {selected_title}")),
-        output_summary: Some(
-            "Implementation scope selected and ready for Agent handoff.".to_string(),
-        ),
+        output_summary: Some(if switching_agent {
+            format!(
+                "Primary Agent switched from {} to {}: {}",
+                previous_agent_id.as_deref().unwrap_or("none"),
+                task.primary_agent_id.as_deref().unwrap_or("none"),
+                switch_reason.unwrap_or("reason missing")
+            )
+        } else {
+            "Implementation scope selected and ready for Agent handoff.".to_string()
+        }),
         evidence_ref: task.final_plan_path.clone(),
     });
 
@@ -354,7 +680,7 @@ fn apply_complete_todo(task: &mut Task, todo_id: &str, event_id: String) -> Resu
         .map(|todo| {
             if todo.id == todo_id {
                 PlanTodoItem {
-                    status: "done".to_string(),
+                    status: PlanTodoStatus::Done,
                     ..todo
                 }
             } else {
@@ -362,18 +688,15 @@ fn apply_complete_todo(task: &mut Task, todo_id: &str, event_id: String) -> Resu
             }
         })
         .collect();
-    task.status = if task.plan_todos.iter().all(|todo| todo.status == "done") {
-        "reviewing".to_string()
-    } else {
-        "implementing".to_string()
-    };
+    let all_done = task.plan_todos.iter().all(|todo| todo.status == "done");
+    task.status = transition(task.status, TaskAction::TodoCompleted { all_done })?;
     task.updated_at_ms = now_ms();
     task.events.push(TaskEvent {
         id: event_id,
         task_id: task.id.clone(),
         timestamp_ms: task.updated_at_ms,
         actor: "user".to_string(),
-        status: task.status.clone(),
+        status: task.status,
         input_summary: Some(format!("Completed implementation todo: {selected_title}")),
         output_summary: Some("Todo marked done and ready for review evidence handoff.".to_string()),
         evidence_ref: task.final_plan_path.clone(),
@@ -394,14 +717,16 @@ fn apply_mark_ready_for_testing(task: &mut Task, event_id: String) -> Result<(),
         return Err("cannot mark task ready for testing before all todos are done".to_string());
     }
 
-    task.status = "debugging".to_string();
+    implementation_review::ensure_review_gate(task)?;
+
+    task.status = transition(task.status, TaskAction::TestingRequested)?;
     task.updated_at_ms = now_ms();
     task.events.push(TaskEvent {
         id: event_id,
         task_id: task.id.clone(),
         timestamp_ms: task.updated_at_ms,
         actor: "user".to_string(),
-        status: task.status.clone(),
+        status: task.status,
         input_summary: Some("Marked task ready for testing".to_string()),
         output_summary: Some(
             "Implementation review completed; task is ready for debug validation.".to_string(),
@@ -420,21 +745,33 @@ fn apply_complete_task(task: &mut Task, event_id: String) -> Result<(), String> 
         ));
     }
 
-    let latest_successful_run_id = task
+    let latest_validation = task
         .command_runs
         .iter()
-        .rev()
-        .find(|run| run.status == "succeeded")
-        .map(|run| run.id.clone());
+        .filter(|run| {
+            matches!(
+                run.intent,
+                CommandRunIntent::Validation | CommandRunIntent::Legacy
+            )
+        })
+        .max_by_key(|run| run.started_at_ms)
+        .ok_or_else(|| "cannot complete task without validation evidence".to_string())?;
+    if latest_validation.status != CommandRunStatus::Succeeded {
+        return Err(format!(
+            "cannot complete task because latest validation '{}' is {}",
+            latest_validation.command, latest_validation.status
+        ));
+    }
+    let latest_successful_run_id = Some(latest_validation.id.clone());
 
-    task.status = "completed".to_string();
+    task.status = transition(task.status, TaskAction::Accepted)?;
     task.updated_at_ms = now_ms();
     task.events.push(TaskEvent {
         id: event_id,
         task_id: task.id.clone(),
         timestamp_ms: task.updated_at_ms,
         actor: "user".to_string(),
-        status: task.status.clone(),
+        status: task.status,
         input_summary: Some("Accepted verification and completed task".to_string()),
         output_summary: Some(
             "Task completed after human acceptance of verification evidence.".to_string(),
@@ -447,94 +784,192 @@ fn apply_complete_task(task: &mut Task, event_id: String) -> Result<(), String> 
 
 #[tauri::command]
 pub fn append_feedback(ids: State<'_, IdGenerator>, input: FeedbackInput) -> Result<Task, String> {
-    let mut task = load_task(Path::new(&input.project_path), &input.task_id)?;
+    let task = load_task(Path::new(&input.project_path), &input.task_id)?;
+    ensure_task_active(&task)?;
+    if input.content.trim().is_empty()
+        && input
+            .reproduction_steps
+            .as_deref()
+            .is_none_or(|value| value.trim().is_empty())
+        && input
+            .expected_behavior
+            .as_deref()
+            .is_none_or(|value| value.trim().is_empty())
+        && input
+            .quoted_log
+            .as_deref()
+            .is_none_or(|value| value.trim().is_empty())
+        && input.attachment_paths.is_empty()
+    {
+        return Err("feedback requires an issue, reproduction steps, expected behavior, log quote, or attachment".to_string());
+    }
+    if input
+        .command_run_id
+        .as_ref()
+        .is_some_and(|run_id| task.command_runs.iter().all(|run| run.id != *run_id))
+    {
+        return Err("feedback commandRunId does not belong to this task".to_string());
+    }
+    let attachments = attachments::copy_feedback_attachments(
+        Path::new(&input.project_path),
+        &task.id,
+        ids.inner(),
+        &input.attachment_paths,
+    )?;
     let feedback = UserFeedback {
         id: ids.next("feedback"),
         task_id: task.id.clone(),
         command_run_id: input.command_run_id.clone(),
-        content: input.content.clone(),
+        content: input.content.trim().to_string(),
+        reproduction_steps: input
+            .reproduction_steps
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty()),
+        expected_behavior: input
+            .expected_behavior
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty()),
+        quoted_log: input
+            .quoted_log
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty()),
+        attachments,
         timestamp_ms: now_ms(),
     };
-    task.feedback.push(feedback);
-    task.events.push(TaskEvent {
-        id: ids.next("event"),
-        task_id: task.id.clone(),
-        timestamp_ms: now_ms(),
-        actor: "user".to_string(),
-        status: task.status.clone(),
-        input_summary: Some(input.content),
-        output_summary: Some("Manual feedback captured".to_string()),
-        evidence_ref: input.command_run_id,
-    });
-    task.updated_at_ms = now_ms();
-    save_task(&task)?;
-
+    let feedback_summary = format_feedback_for_repair(&feedback);
+    let attachment_evidence = feedback
+        .attachments
+        .first()
+        .map(|attachment| attachment.stored_path.clone());
+    let command_run_id = input.command_run_id;
+    let (task, ()) = update_task(
+        Path::new(&input.project_path),
+        &input.task_id,
+        move |task| {
+            ensure_task_active(task)?;
+            if command_run_id
+                .as_ref()
+                .is_some_and(|run_id| task.command_runs.iter().all(|run| run.id != *run_id))
+            {
+                return Err("feedback commandRunId does not belong to this task".to_string());
+            }
+            task.feedback.push(feedback);
+            let timestamp_ms = now_ms();
+            task.events.push(TaskEvent {
+                id: ids.next("event"),
+                task_id: task.id.clone(),
+                timestamp_ms,
+                actor: "user".to_string(),
+                status: task.status,
+                input_summary: Some(compact_summary_line(&feedback_summary, 500)),
+                output_summary: Some("Manual feedback captured".to_string()),
+                evidence_ref: attachment_evidence.or(command_run_id),
+            });
+            task.updated_at_ms = timestamp_ms;
+            Ok(())
+        },
+    )?;
     Ok(task)
 }
 
 #[tauri::command]
 pub fn generate_repair_context(project_path: String, task_id: String) -> Result<Task, String> {
-    let mut task = load_task(Path::new(&project_path), &task_id)?;
-    let latest_failed_run = task
-        .command_runs
-        .iter()
-        .rev()
-        .find(|run| run.status == "failed")
-        .cloned();
-    let latest_feedback = task
-        .feedback
-        .last()
-        .map(|feedback| feedback.content.clone());
-    let current_todo_context = format_current_todo_context(&task.plan_todos);
-    let compact_summary = format_loop_compact_summary(
-        &task,
-        latest_failed_run.as_ref(),
-        latest_feedback.as_deref(),
-        &current_todo_context,
-    );
-    let context = format!(
-        "Task: {}\n\nRequirement:\n{}\n\nFinal plan:\n{}\n\nCurrent implementation scope:\n{}\n\nLatest failure:\n{}\n\nLatest feedback:\n{}\n\nRepair handoff checklist:\n- Reproduce or explain the failure using the command and log references above.\n- Keep the fix scoped to the current implementation todo unless the evidence proves a wider issue.\n- Re-run the most relevant validation command and attach the result.",
-        task.title,
-        task.raw_requirement,
-        task.final_plan.clone().unwrap_or_else(|| "(none)".to_string()),
-        current_todo_context,
-        latest_failed_run
+    let (task, ()) = update_task(Path::new(&project_path), &task_id, |task| {
+        ensure_task_active(task)?;
+        let latest_failed_run = task
+            .command_runs
+            .iter()
+            .rev()
+            .find(|run| run.status == "failed")
+            .cloned();
+        let latest_feedback = task.feedback.last().map(format_feedback_for_repair);
+        let current_todo_context = format_current_todo_context(&task.plan_todos);
+        let compact_summary = format_loop_compact_summary(
+            task,
+            latest_failed_run.as_ref(),
+            latest_feedback.as_deref(),
+            &current_todo_context,
+        );
+        let context = format!(
+            "Task: {}\n\nRequirement:\n{}\n\nFinal plan:\n{}\n\nCurrent implementation scope:\n{}\n\nLatest failure:\n{}\n\nLatest feedback:\n{}\n\nRepair handoff checklist:\n- Reproduce or explain the failure using the command and log references above.\n- Keep the fix scoped to the current implementation todo unless the evidence proves a wider issue.\n- Re-run the most relevant validation command and attach the result.",
+            task.title,
+            task.raw_requirement,
+            task.final_plan.clone().unwrap_or_else(|| "(none)".to_string()),
+            current_todo_context,
+            latest_failed_run
+                .as_ref()
+                .map(format_failed_run_context)
+                .unwrap_or_else(|| "(none)".to_string()),
+            latest_feedback.unwrap_or_else(|| "(none)".to_string())
+        );
+        let evidence_ref = latest_failed_run
             .as_ref()
-            .map(format_failed_run_context)
-            .unwrap_or_else(|| "(none)".to_string()),
-        latest_feedback.unwrap_or_else(|| "(none)".to_string())
-    );
-    let evidence_ref = latest_failed_run
-        .as_ref()
-        .map(|run| run.id.clone())
-        .or_else(|| task.feedback.last().map(|feedback| feedback.id.clone()));
-    let keep_implementation_stage = latest_failed_run.as_ref().is_some_and(|run| {
-        run.intent == CommandRunIntent::Validation
-            && run.loop_id.is_some()
-            && matches!(task.status.as_str(), "implementing" | "reviewing")
-    });
-    task.repair_context_preview = Some(context);
-    task.loop_compact_summary = Some(compact_summary);
-    if !keep_implementation_stage {
-        task.status = "fixing".to_string();
-    }
-    task.updated_at_ms = now_ms();
-    task.events.push(TaskEvent {
-        id: format!("event-{}-repair-context", task.updated_at_ms),
-        task_id: task.id.clone(),
-        timestamp_ms: task.updated_at_ms,
-        actor: "system".to_string(),
-        status: task.status.clone(),
-        input_summary: Some("Generated repair context for Agent handoff".to_string()),
-        output_summary: Some(
-            "Latest failure, user feedback, and current implementation scope were packaged for a scoped fix."
-                .to_string(),
-        ),
-        evidence_ref,
-    });
-    save_task(&task)?;
-
+            .map(|run| run.id.clone())
+            .or_else(|| task.feedback.last().map(|feedback| feedback.id.clone()));
+        let keep_implementation_stage = latest_failed_run.as_ref().is_some_and(|run| {
+            run.intent == CommandRunIntent::Validation
+                && run.loop_id.is_some()
+                && matches!(task.status.as_str(), "implementing" | "reviewing")
+        });
+        task.repair_context_preview = Some(context);
+        task.loop_compact_summary = Some(compact_summary);
+        if !keep_implementation_stage {
+            task.status = transition(task.status, TaskAction::RepairStarted)?;
+        }
+        task.updated_at_ms = now_ms();
+        task.events.push(TaskEvent {
+            id: format!("event-{}-repair-context", task.updated_at_ms),
+            task_id: task.id.clone(),
+            timestamp_ms: task.updated_at_ms,
+            actor: "system".to_string(),
+            status: task.status,
+            input_summary: Some("Generated repair context for Agent handoff".to_string()),
+            output_summary: Some(
+                "Latest failure, user feedback, and current implementation scope were packaged for a scoped fix."
+                    .to_string(),
+            ),
+            evidence_ref,
+        });
+        Ok(())
+    })?;
     Ok(task)
+}
+
+fn format_feedback_for_repair(feedback: &UserFeedback) -> String {
+    let attachments = feedback
+        .attachments
+        .iter()
+        .map(|attachment| {
+            format!(
+                "- {} ({} bytes, {}) => {}",
+                attachment.name,
+                attachment.size_bytes,
+                attachment.mime_type,
+                attachment.stored_path
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    [
+        (!feedback.content.is_empty()).then(|| format!("Issue:\n{}", feedback.content)),
+        feedback
+            .reproduction_steps
+            .as_ref()
+            .map(|value| format!("Reproduction steps:\n{value}")),
+        feedback
+            .expected_behavior
+            .as_ref()
+            .map(|value| format!("Expected behavior:\n{value}")),
+        feedback
+            .quoted_log
+            .as_ref()
+            .map(|value| format!("Quoted log:\n{value}")),
+        (!attachments.is_empty()).then(|| format!("Attachments:\n{attachments}")),
+    ]
+    .into_iter()
+    .flatten()
+    .collect::<Vec<_>>()
+    .join("\n\n")
 }
 
 fn format_loop_compact_summary(
@@ -579,85 +1014,217 @@ fn compact_summary_line(value: &str, limit: usize) -> String {
 }
 
 pub fn load_task(project_path: &Path, task_id: &str) -> Result<Task, String> {
+    validate_task_id(task_id)?;
     storage::read_json_file(&task_path(project_path, task_id))
 }
 
 pub fn save_task(task: &Task) -> Result<(), String> {
+    validate_task_id(&task.id)?;
+    let lock = task_write_lock(Path::new(&task.project_path), &task.id)?;
+    let _guard = lock
+        .lock()
+        .map_err(|_| "task write lock is unavailable".to_string())?;
+    let mut persisted = task.clone();
     let path = task_path(Path::new(&task.project_path), &task.id);
-    storage::atomic_write_json(&path, task)
+    if let Ok(existing) = storage::read_json_file::<Task>(&path) {
+        merge_append_only_task_state(&mut persisted, existing);
+    }
+    storage::atomic_write_json(&path, &persisted)
+}
+
+fn task_write_locks() -> &'static Mutex<HashMap<String, Arc<Mutex<()>>>> {
+    static LOCKS: OnceLock<Mutex<HashMap<String, Arc<Mutex<()>>>>> = OnceLock::new();
+    LOCKS.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn task_write_lock(project_path: &Path, task_id: &str) -> Result<Arc<Mutex<()>>, String> {
+    let key = format!("{}::{task_id}", project_path.display());
+    let mut locks = task_write_locks()
+        .lock()
+        .map_err(|_| "task lock registry is unavailable".to_string())?;
+    Ok(locks
+        .entry(key)
+        .or_insert_with(|| Arc::new(Mutex::new(())))
+        .clone())
+}
+
+fn push_missing_by_id<T, F>(target: &mut Vec<T>, source: Vec<T>, id: F)
+where
+    F: Fn(&T) -> &str,
+{
+    for item in source {
+        if target.iter().all(|current| id(current) != id(&item)) {
+            target.push(item);
+        }
+    }
+}
+
+fn merge_append_only_task_state(target: &mut Task, existing: Task) {
+    for run in existing.command_runs {
+        if let Some(current) = target
+            .command_runs
+            .iter_mut()
+            .find(|current| current.id == run.id)
+        {
+            if current.status == CommandRunStatus::Running
+                && run.status != CommandRunStatus::Running
+            {
+                *current = run;
+            }
+        } else {
+            target.command_runs.push(run);
+        }
+    }
+    push_missing_by_id(&mut target.events, existing.events, |event| &event.id);
+    push_missing_by_id(&mut target.feedback, existing.feedback, |feedback| {
+        &feedback.id
+    });
+    push_missing_by_id(&mut target.loop_trace, existing.loop_trace, |entry| {
+        &entry.id
+    });
+    push_missing_by_id(
+        &mut target.implementation_review_runs,
+        existing.implementation_review_runs,
+        |run| &run.id,
+    );
+    push_missing_by_id(
+        &mut target.implementation_reviews,
+        existing.implementation_reviews,
+        |review| &review.id,
+    );
+    push_missing_by_id(
+        &mut target.implementation_review_decisions,
+        existing.implementation_review_decisions,
+        |decision| &decision.id,
+    );
+    if target.git_baseline.is_none() {
+        target.git_baseline = existing.git_baseline;
+    }
+    if target.summary.is_none() {
+        target.summary = existing.summary;
+    }
+    if existing.updated_at_ms > target.updated_at_ms
+        && (existing.lifecycle.paused
+            || matches!(existing.status, TaskStatus::Blocked | TaskStatus::Cancelled))
+    {
+        target.status = existing.status;
+        target.lifecycle = existing.lifecycle;
+        target.updated_at_ms = existing.updated_at_ms;
+    }
+}
+
+fn update_task<T>(
+    project_path: &Path,
+    task_id: &str,
+    update: impl FnOnce(&mut Task) -> Result<T, String>,
+) -> Result<(Task, T), String> {
+    validate_task_id(task_id)?;
+    let lock = task_write_lock(project_path, task_id)?;
+    let _guard = lock
+        .lock()
+        .map_err(|_| "task write lock is unavailable".to_string())?;
+    let path = task_path(project_path, task_id);
+    let mut task: Task = storage::read_json_file(&path)?;
+    let output = update(&mut task)?;
+    storage::atomic_write_json(&path, &task)?;
+    Ok((task, output))
+}
+
+fn validate_task_id(task_id: &str) -> Result<(), String> {
+    if task_id.is_empty()
+        || task_id.len() > 160
+        || !task_id
+            .chars()
+            .all(|character| character.is_ascii_alphanumeric() || matches!(character, '-' | '_'))
+    {
+        return Err("invalid task id".to_string());
+    }
+    Ok(())
 }
 
 pub fn add_command_run(project_path: &Path, task_id: &str, run: CommandRun) -> Result<(), String> {
-    let mut task = load_task(project_path, task_id)?;
-    apply_command_start_status(&mut task, &run);
-    task.command_runs.push(run.clone());
-    if run.loop_id.is_some() {
-        task.loop_trace
-            .push(command_loop_trace_entry(&task.id, &run, "command_started"));
-    }
-    task.events.push(TaskEvent {
-        id: format!("event-{}-command-start", now_ms()),
-        task_id: task.id.clone(),
-        timestamp_ms: now_ms(),
-        actor: "system".to_string(),
-        status: task.status.clone(),
-        input_summary: Some(run.command),
-        output_summary: Some("Command started".to_string()),
-        evidence_ref: Some(run.id),
-    });
-    task.updated_at_ms = now_ms();
-    save_task(&task)
+    update_task(project_path, task_id, move |task| {
+        ensure_task_active(task)?;
+        apply_command_start_status(task, &run)?;
+        task.command_runs.push(run.clone());
+        if run.loop_id.is_some() {
+            task.loop_trace
+                .push(command_loop_trace_entry(&task.id, &run, "command_started"));
+        }
+        let timestamp_ms = now_ms();
+        task.events.push(TaskEvent {
+            id: format!("event-{timestamp_ms}-command-start-{}", run.id),
+            task_id: task.id.clone(),
+            timestamp_ms,
+            actor: "system".to_string(),
+            status: task.status,
+            input_summary: Some(run.command),
+            output_summary: Some("Command started".to_string()),
+            evidence_ref: Some(run.id),
+        });
+        task.updated_at_ms = timestamp_ms;
+        Ok(())
+    })
+    .map(|_| ())
+}
+
+pub struct CommandRunCompletion {
+    pub status: CommandRunStatus,
+    pub exit_code: Option<i32>,
+    pub error_summary: Option<ErrorSummary>,
+    pub session_id: Option<String>,
+    pub resume_command: Option<String>,
+    pub termination_reason: Option<String>,
 }
 
 pub fn finish_command_run(
     project_path: &Path,
     task_id: &str,
     run_id: &str,
-    status: &str,
-    exit_code: Option<i32>,
-    error_summary: Option<ErrorSummary>,
-    session_id: Option<String>,
-    resume_command: Option<String>,
-    termination_reason: Option<String>,
+    completion: CommandRunCompletion,
 ) -> Result<(), String> {
-    let mut task = load_task(project_path, task_id)?;
-    let mut command_text = None;
-    let mut finished_run = None;
-    if let Some(run) = task.command_runs.iter_mut().find(|run| run.id == run_id) {
-        run.status = status.to_string();
-        run.exit_code = exit_code;
-        run.ended_at_ms = Some(now_ms());
-        run.error_summary = error_summary;
-        run.session_id = session_id;
-        run.resume_command = resume_command;
-        if let Some(reason) = termination_reason {
-            run.termination_reason = Some(reason);
+    let run_id = run_id.to_string();
+    update_task(project_path, task_id, move |task| {
+        let mut command_text = None;
+        let mut finished_run = None;
+        if let Some(run) = task.command_runs.iter_mut().find(|run| run.id == run_id) {
+            run.status = completion.status;
+            run.exit_code = completion.exit_code;
+            run.ended_at_ms = Some(now_ms());
+            run.error_summary = completion.error_summary;
+            run.session_id = completion.session_id;
+            run.resume_command = completion.resume_command;
+            if let Some(reason) = completion.termination_reason {
+                run.termination_reason = Some(reason);
+            }
+            if completion.status == "cancelled" && run.termination_reason.is_none() {
+                run.termination_reason = Some("cancelled".to_string());
+            }
+            command_text = Some(run.command.clone());
+            finished_run = Some(run.clone());
         }
-        if status == "cancelled" && run.termination_reason.is_none() {
-            run.termination_reason = Some("cancelled".to_string());
+        if let Some(run) = finished_run.as_ref() {
+            apply_command_finish_status(task, run, completion.status)?;
         }
-        command_text = Some(run.command.clone());
-        finished_run = Some(run.clone());
-    }
-    if let Some(run) = finished_run.as_ref() {
-        apply_command_finish_status(&mut task, run, status);
-    }
-    if let Some(run) = finished_run.as_ref().filter(|run| run.loop_id.is_some()) {
-        task.loop_trace
-            .push(command_loop_trace_entry(&task.id, run, "command_finished"));
-    }
-    task.events.push(TaskEvent {
-        id: format!("event-{}-command-end", now_ms()),
-        task_id: task.id.clone(),
-        timestamp_ms: now_ms(),
-        actor: "system".to_string(),
-        status: task.status.clone(),
-        input_summary: command_text,
-        output_summary: Some(format!("Command {status}")),
-        evidence_ref: Some(run_id.to_string()),
-    });
-    task.updated_at_ms = now_ms();
-    save_task(&task)
+        if let Some(run) = finished_run.as_ref().filter(|run| run.loop_id.is_some()) {
+            task.loop_trace
+                .push(command_loop_trace_entry(&task.id, run, "command_finished"));
+        }
+        let timestamp_ms = now_ms();
+        task.events.push(TaskEvent {
+            id: format!("event-{timestamp_ms}-command-end-{run_id}"),
+            task_id: task.id.clone(),
+            timestamp_ms,
+            actor: "system".to_string(),
+            status: task.status,
+            input_summary: command_text,
+            output_summary: Some(format!("Command {}", completion.status)),
+            evidence_ref: Some(run_id),
+        });
+        task.updated_at_ms = timestamp_ms;
+        Ok(())
+    })
+    .map(|_| ())
 }
 
 fn command_loop_trace_entry(task_id: &str, run: &CommandRun, entry_type: &str) -> LoopTraceEntry {
@@ -688,7 +1255,7 @@ fn command_loop_trace_entry(task_id: &str, run: &CommandRun, entry_type: &str) -
         termination_reason: run
             .termination_reason
             .clone()
-            .or_else(|| run.ended_at_ms.map(|_| run.status.clone())),
+            .or_else(|| run.ended_at_ms.map(|_| run.status.to_string())),
         token_usage: None,
         timestamp_ms,
     }
@@ -749,25 +1316,31 @@ fn is_implementation_loop_validation(task: &Task, run: &CommandRun) -> bool {
         && matches!(task.status.as_str(), "implementing" | "reviewing")
 }
 
-fn apply_command_start_status(task: &mut Task, run: &CommandRun) {
+fn apply_command_start_status(task: &mut Task, run: &CommandRun) -> Result<(), String> {
     if is_implementation_loop_validation(task, run) {
-        return;
+        return Ok(());
     }
 
     if matches!(
         &run.intent,
         CommandRunIntent::Validation | CommandRunIntent::Legacy
     ) {
-        task.status = "debugging".to_string();
+        task.status = transition(task.status, TaskAction::ValidationStarted)?;
     }
+
+    Ok(())
 }
 
-fn apply_command_finish_status(task: &mut Task, run: &CommandRun, status: &str) {
+fn apply_command_finish_status(
+    task: &mut Task,
+    run: &CommandRun,
+    status: CommandRunStatus,
+) -> Result<(), String> {
     if is_implementation_loop_validation(task, run) {
         if status == "succeeded" {
-            task.status = "verifying".to_string();
+            task.status = transition(task.status, TaskAction::ValidationPassed)?;
         }
-        return;
+        return Ok(());
     }
 
     if matches!(
@@ -775,11 +1348,13 @@ fn apply_command_finish_status(task: &mut Task, run: &CommandRun, status: &str) 
         CommandRunIntent::Validation | CommandRunIntent::Legacy
     ) {
         task.status = if status == "succeeded" {
-            "verifying".to_string()
+            transition(task.status, TaskAction::ValidationPassed)?
         } else {
-            "debugging".to_string()
+            transition(task.status, TaskAction::ValidationFailed)?
         };
     }
+
+    Ok(())
 }
 
 fn task_path(project_path: &Path, task_id: &str) -> PathBuf {
@@ -852,7 +1427,7 @@ fn derive_plan_todos(
             task_id: task_id.to_string(),
             description: format!("From final plan: {title}"),
             title,
-            status: "pending".to_string(),
+            status: PlanTodoStatus::Pending,
             order: index as u32,
             plan_ref: Some(plan_ref.to_string()),
         })
@@ -1209,10 +1784,14 @@ mod tests {
             project_path: "/repo".to_string(),
             title: "Ship scoped implementation".to_string(),
             raw_requirement: "Implement one todo at a time".to_string(),
-            status: "ready_to_implement".to_string(),
+            status: TaskStatus::ReadyToImplement,
+            lifecycle: Default::default(),
             selected_planning_agent_ids: Vec::new(),
             primary_agent_id: None,
             review_agent_ids: Vec::new(),
+            implementation_review_runs: Vec::new(),
+            implementation_reviews: Vec::new(),
+            implementation_review_decisions: Vec::new(),
             final_plan: Some("# Plan".to_string()),
             final_plan_path: Some("/repo/docs/plans/plan.md".to_string()),
             final_plan_html_path: None,
@@ -1227,7 +1806,7 @@ mod tests {
                     task_id: "task-1".to_string(),
                     title: "Old scope".to_string(),
                     description: "Old scope".to_string(),
-                    status: "implementing".to_string(),
+                    status: PlanTodoStatus::Implementing,
                     order: 0,
                     plan_ref: None,
                 },
@@ -1236,7 +1815,7 @@ mod tests {
                     task_id: "task-1".to_string(),
                     title: "New scope".to_string(),
                     description: "New scope".to_string(),
-                    status: "pending".to_string(),
+                    status: PlanTodoStatus::Pending,
                     order: 1,
                     plan_ref: None,
                 },
@@ -1247,6 +1826,8 @@ mod tests {
             feedback: Vec::new(),
             loop_compact_summary: None,
             repair_context_preview: None,
+            git_baseline: None,
+            summary: None,
             created_at_ms: 1,
             updated_at_ms: 1,
         };
@@ -1255,6 +1836,7 @@ mod tests {
             &mut task,
             "todo-2",
             Some("agent-claude".to_string()),
+            None,
             "event-1".to_string(),
         )
         .unwrap();
@@ -1283,10 +1865,14 @@ mod tests {
             project_path: "/repo".to_string(),
             title: "Ship scoped implementation".to_string(),
             raw_requirement: "Implement one todo at a time".to_string(),
-            status: "implementing".to_string(),
+            status: TaskStatus::Implementing,
+            lifecycle: Default::default(),
             selected_planning_agent_ids: Vec::new(),
             primary_agent_id: None,
             review_agent_ids: Vec::new(),
+            implementation_review_runs: Vec::new(),
+            implementation_reviews: Vec::new(),
+            implementation_review_decisions: Vec::new(),
             final_plan: Some("# Plan".to_string()),
             final_plan_path: Some("/repo/docs/plans/plan.md".to_string()),
             final_plan_html_path: None,
@@ -1300,7 +1886,7 @@ mod tests {
                 task_id: "task-1".to_string(),
                 title: "Verified scope".to_string(),
                 description: "Verified scope".to_string(),
-                status: "implementing".to_string(),
+                status: PlanTodoStatus::Implementing,
                 order: 0,
                 plan_ref: None,
             }],
@@ -1310,6 +1896,8 @@ mod tests {
             feedback: Vec::new(),
             loop_compact_summary: None,
             repair_context_preview: None,
+            git_baseline: None,
+            summary: None,
             created_at_ms: 1,
             updated_at_ms: 1,
         };
@@ -1334,10 +1922,14 @@ mod tests {
             project_path: "/repo".to_string(),
             title: "Ship scoped implementation".to_string(),
             raw_requirement: "Implement one todo at a time".to_string(),
-            status: "ready_to_implement".to_string(),
+            status: TaskStatus::ReadyToImplement,
+            lifecycle: Default::default(),
             selected_planning_agent_ids: Vec::new(),
             primary_agent_id: None,
             review_agent_ids: Vec::new(),
+            implementation_review_runs: Vec::new(),
+            implementation_reviews: Vec::new(),
+            implementation_review_decisions: Vec::new(),
             final_plan: Some("# Plan".to_string()),
             final_plan_path: Some("/repo/docs/plans/plan.md".to_string()),
             final_plan_html_path: None,
@@ -1351,7 +1943,7 @@ mod tests {
                 task_id: "task-1".to_string(),
                 title: "Pending scope".to_string(),
                 description: "Pending scope".to_string(),
-                status: "pending".to_string(),
+                status: PlanTodoStatus::Pending,
                 order: 0,
                 plan_ref: None,
             }],
@@ -1361,6 +1953,8 @@ mod tests {
             feedback: Vec::new(),
             loop_compact_summary: None,
             repair_context_preview: None,
+            git_baseline: None,
+            summary: None,
             created_at_ms: 1,
             updated_at_ms: 1,
         };
@@ -1383,10 +1977,14 @@ mod tests {
             project_path: "/repo".to_string(),
             title: "Ship validation loop".to_string(),
             raw_requirement: "Complete implementation and validation".to_string(),
-            status: status.to_string(),
+            status: status.parse().expect("known task status fixture"),
+            lifecycle: Default::default(),
             selected_planning_agent_ids: Vec::new(),
             primary_agent_id: None,
             review_agent_ids: Vec::new(),
+            implementation_review_runs: Vec::new(),
+            implementation_reviews: Vec::new(),
+            implementation_review_decisions: Vec::new(),
             final_plan: Some("# Plan".to_string()),
             final_plan_path: Some("/repo/docs/plans/plan.md".to_string()),
             final_plan_html_path: None,
@@ -1403,7 +2001,7 @@ mod tests {
                     task_id: "task-1".to_string(),
                     title: format!("Todo {index}"),
                     description: format!("Todo {index}"),
-                    status: (*todo_status).to_string(),
+                    status: todo_status.parse().expect("known todo status fixture"),
                     order: index as u32,
                     plan_ref: None,
                 })
@@ -1414,6 +2012,8 @@ mod tests {
             feedback: Vec::new(),
             loop_compact_summary: None,
             repair_context_preview: None,
+            git_baseline: None,
+            summary: None,
             created_at_ms: 1,
             updated_at_ms: 1,
         }
@@ -1434,12 +2034,45 @@ mod tests {
             resume_command: None,
             started_at_ms: 1,
             ended_at_ms: None,
-            status: "running".to_string(),
+            status: CommandRunStatus::Running,
             exit_code: None,
             stdout_log_ref: None,
             stderr_log_ref: None,
             error_summary: None,
         }
+    }
+
+    fn attach_passing_implementation_review(task: &mut Task) {
+        task.primary_agent_id = Some("builder".to_string());
+        task.implementation_review_runs
+            .push(crate::models::ImplementationReviewRun {
+                id: "review-run-1".to_string(),
+                task_id: task.id.clone(),
+                reviewer_agent_ids: vec!["reviewer".to_string()],
+                status: "succeeded".to_string(),
+                context_ref: "/repo/.loom/review-context.md".to_string(),
+                review_ids: vec!["review-1".to_string()],
+                started_at_ms: 1,
+                ended_at_ms: Some(2),
+            });
+        task.implementation_reviews
+            .push(crate::models::ImplementationReview {
+                id: "review-1".to_string(),
+                run_id: "review-run-1".to_string(),
+                task_id: task.id.clone(),
+                reviewer_agent_id: "reviewer".to_string(),
+                reviewer_agent_name: "Reviewer".to_string(),
+                status: "succeeded".to_string(),
+                summary: "Looks good".to_string(),
+                raw_output: "{}".to_string(),
+                evidence_ref: None,
+                stderr_ref: None,
+                exit_code: Some(0),
+                failure_detail: None,
+                findings: Vec::new(),
+                started_at_ms: 1,
+                ended_at_ms: Some(2),
+            });
     }
 
     #[test]
@@ -1467,20 +2100,54 @@ mod tests {
     }
 
     #[test]
+    fn switching_primary_agent_requires_and_records_a_reason() {
+        let mut task = transition_task_fixture("ready_to_implement", &["pending"], Vec::new());
+        task.primary_agent_id = Some("agent-codex".to_string());
+
+        let error = apply_start_todo(
+            &mut task,
+            "todo-0",
+            Some("agent-claude".to_string()),
+            None,
+            "event-1".to_string(),
+        )
+        .unwrap_err();
+        assert!(error.contains("requires a specific reason"));
+
+        apply_start_todo(
+            &mut task,
+            "todo-0",
+            Some("agent-claude".to_string()),
+            Some("Codex is unavailable for this framework".to_string()),
+            "event-2".to_string(),
+        )
+        .expect("switch with reason");
+        assert_eq!(task.primary_agent_id.as_deref(), Some("agent-claude"));
+        assert!(task.events[0]
+            .output_summary
+            .as_deref()
+            .unwrap_or_default()
+            .contains("Codex is unavailable"));
+    }
+
+    #[test]
     fn command_run_intent_policy_keeps_agent_and_preview_from_advancing_task() {
         let mut task = transition_task_fixture("implementing", &["implementing"], Vec::new());
         let agent_run = transition_command_run(CommandRunIntent::AgentAction, None);
 
-        apply_command_start_status(&mut task, &agent_run);
+        apply_command_start_status(&mut task, &agent_run).expect("agent start remains in stage");
         assert_eq!(task.status, "implementing");
-        apply_command_finish_status(&mut task, &agent_run, "succeeded");
+        apply_command_finish_status(&mut task, &agent_run, CommandRunStatus::Succeeded)
+            .expect("agent finish remains in stage");
         assert_eq!(task.status, "implementing");
 
         let mut preview_task = transition_task_fixture("debugging", &["done"], Vec::new());
         let preview_run = transition_command_run(CommandRunIntent::Preview, None);
-        apply_command_start_status(&mut preview_task, &preview_run);
+        apply_command_start_status(&mut preview_task, &preview_run)
+            .expect("preview start remains in stage");
         assert_eq!(preview_task.status, "debugging");
-        apply_command_finish_status(&mut preview_task, &preview_run, "failed");
+        apply_command_finish_status(&mut preview_task, &preview_run, CommandRunStatus::Failed)
+            .expect("preview finish remains in stage");
         assert_eq!(preview_task.status, "debugging");
     }
 
@@ -1489,12 +2156,73 @@ mod tests {
         let mut task = transition_task_fixture("reviewing", &["done"], Vec::new());
         let run = transition_command_run(CommandRunIntent::Validation, None);
 
-        apply_command_start_status(&mut task, &run);
+        apply_command_start_status(&mut task, &run).expect("validation starts");
         assert_eq!(task.status, "debugging");
-        apply_command_finish_status(&mut task, &run, "succeeded");
+        apply_command_finish_status(&mut task, &run, CommandRunStatus::Succeeded)
+            .expect("validation passes");
         assert_eq!(task.status, "verifying");
-        apply_command_finish_status(&mut task, &run, "failed");
+        apply_command_finish_status(&mut task, &run, CommandRunStatus::Failed)
+            .expect("validation fails");
         assert_eq!(task.status, "debugging");
+    }
+
+    #[test]
+    fn pause_and_resume_preserve_the_workflow_stage_and_gate_mutations() {
+        let mut task = transition_task_fixture("implementing", &["implementing"], Vec::new());
+
+        apply_pause_task(
+            &mut task,
+            "event-pause".to_string(),
+            Some("Waiting for product input".to_string()),
+        )
+        .expect("pause task");
+        assert_eq!(task.status, "implementing");
+        assert!(task.lifecycle.paused);
+        assert!(ensure_task_active(&task).unwrap_err().contains("paused"));
+
+        apply_resume_task(&mut task, "event-resume".to_string(), None).expect("resume task");
+        assert_eq!(task.status, "implementing");
+        assert!(!task.lifecycle.paused);
+        ensure_task_active(&task).expect("resumed task is active");
+        assert_eq!(task.events.len(), 2);
+    }
+
+    #[test]
+    fn blocked_task_resumes_to_its_exact_previous_status() {
+        let mut task = transition_task_fixture("fixing", &["done"], Vec::new());
+
+        apply_block_task(
+            &mut task,
+            "event-block".to_string(),
+            Some("External service unavailable".to_string()),
+        )
+        .expect("block task");
+        assert_eq!(task.status, "blocked");
+        assert_eq!(task.lifecycle.resume_status, Some(TaskStatus::Fixing));
+
+        apply_resume_task(&mut task, "event-resume".to_string(), None).expect("resume task");
+        assert_eq!(task.status, "fixing");
+        assert_eq!(task.lifecycle.resume_status, None);
+    }
+
+    #[test]
+    fn cancelling_a_task_is_terminal_and_clears_resume_state() {
+        let mut task = transition_task_fixture("debugging", &["done"], Vec::new());
+        task.lifecycle.paused = true;
+        task.lifecycle.resume_status = Some(TaskStatus::Implementing);
+
+        apply_cancel_task(
+            &mut task,
+            "event-cancel".to_string(),
+            Some("Scope withdrawn".to_string()),
+        )
+        .expect("cancel task");
+        assert_eq!(task.status, "cancelled");
+        assert!(!task.lifecycle.paused);
+        assert_eq!(task.lifecycle.resume_status, None);
+        assert!(ensure_task_active(&task)
+            .unwrap_err()
+            .contains("cannot be changed"));
     }
 
     #[test]
@@ -1505,11 +2233,13 @@ mod tests {
             Some("loop-task-1-todo-1".to_string()),
         );
 
-        apply_command_start_status(&mut task, &run);
+        apply_command_start_status(&mut task, &run).expect("loop validation starts");
         assert_eq!(task.status, "reviewing");
-        apply_command_finish_status(&mut task, &run, "failed");
+        apply_command_finish_status(&mut task, &run, CommandRunStatus::Failed)
+            .expect("loop validation failure keeps implementation stage");
         assert_eq!(task.status, "reviewing");
-        apply_command_finish_status(&mut task, &run, "succeeded");
+        apply_command_finish_status(&mut task, &run, CommandRunStatus::Succeeded)
+            .expect("loop validation success advances to verifying");
         assert_eq!(task.status, "verifying");
     }
 
@@ -1522,13 +2252,14 @@ mod tests {
             Some("loop-task-1-todo-0".to_string()),
         );
         failed_run.id = "run-loop-failed".to_string();
-        failed_run.status = "failed".to_string();
+        failed_run.status = CommandRunStatus::Failed;
         failed_run.exit_code = Some(43);
         failed_run.error_summary = Some(ErrorSummary {
             exit_code: Some(43),
             stderr_tail: vec!["sentinel missing".to_string()],
             matched_lines: vec!["sentinel missing".to_string()],
             failed: true,
+            ..Default::default()
         });
         let mut task = transition_task_fixture("reviewing", &["done"], vec![failed_run]);
         task.project_path = root.display().to_string();
@@ -1570,7 +2301,7 @@ mod tests {
             resume_command: None,
             started_at_ms: 1,
             ended_at_ms: None,
-            status: "running".to_string(),
+            status: CommandRunStatus::Running,
             exit_code: None,
             stdout_log_ref: None,
             stderr_log_ref: None,
@@ -1588,24 +2319,33 @@ mod tests {
             &root,
             &task.id,
             "run-trace",
-            "failed",
-            Some(1),
-            Some(ErrorSummary {
+            CommandRunCompletion {
+                status: CommandRunStatus::Failed,
                 exit_code: Some(1),
-                stderr_tail: vec!["error: failed".to_string()],
-                matched_lines: vec!["error: failed".to_string()],
-                failed: true,
-            }),
-            None,
-            None,
-            None,
+                error_summary: Some(ErrorSummary {
+                    exit_code: Some(1),
+                    stderr_tail: vec!["error: failed".to_string()],
+                    matched_lines: vec!["error: failed".to_string()],
+                    failed: true,
+                    ..Default::default()
+                }),
+                session_id: None,
+                resume_command: None,
+                termination_reason: None,
+            },
         )
         .expect("command run should finish");
         let finished = load_task(&root, &task.id).expect("task should reload");
         assert_eq!(finished.loop_trace.len(), 2);
         assert_eq!(finished.loop_trace[1].entry_type, "command_finished");
-        assert_eq!(finished.loop_trace[1].termination_reason.as_deref(), Some("failed"));
-        assert_eq!(finished.loop_trace[1].fingerprint.as_deref(), Some("error: failed"));
+        assert_eq!(
+            finished.loop_trace[1].termination_reason.as_deref(),
+            Some("failed")
+        );
+        assert_eq!(
+            finished.loop_trace[1].fingerprint.as_deref(),
+            Some("error: failed")
+        );
 
         std::fs::remove_dir_all(root).expect("test project should be cleaned up");
     }
@@ -1613,6 +2353,7 @@ mod tests {
     #[test]
     fn mark_ready_for_testing_moves_reviewing_task_to_debugging() {
         let mut task = transition_task_fixture("reviewing", &["done", "done"], Vec::new());
+        attach_passing_implementation_review(&mut task);
 
         apply_mark_ready_for_testing(&mut task, "event-1".to_string()).unwrap();
 
@@ -1649,6 +2390,41 @@ mod tests {
     }
 
     #[test]
+    fn mark_ready_for_testing_rejects_missing_independent_review() {
+        let mut task = transition_task_fixture("reviewing", &["done"], Vec::new());
+        task.primary_agent_id = Some("builder".to_string());
+
+        let error = apply_mark_ready_for_testing(&mut task, "event-1".to_string()).unwrap_err();
+
+        assert!(error.contains("independent implementation Review"));
+        assert_eq!(task.status, "reviewing");
+    }
+
+    #[test]
+    fn mark_ready_for_testing_rejects_an_open_review_blocker() {
+        let mut task = transition_task_fixture("reviewing", &["done"], Vec::new());
+        attach_passing_implementation_review(&mut task);
+        task.implementation_reviews[0]
+            .findings
+            .push(crate::models::ImplementationReviewFinding {
+                id: "finding-1".to_string(),
+                review_id: "review-1".to_string(),
+                severity: "blocker".to_string(),
+                title: "Broken behavior".to_string(),
+                detail: "The requirement is not implemented.".to_string(),
+                file: Some("src/lib.rs".to_string()),
+                line: Some(10),
+                status: "open".to_string(),
+                created_at_ms: 2,
+            });
+
+        let error = apply_mark_ready_for_testing(&mut task, "event-1".to_string()).unwrap_err();
+
+        assert!(error.contains("Broken behavior"));
+        assert_eq!(task.status, "reviewing");
+    }
+
+    #[test]
     fn complete_task_moves_verifying_task_to_completed_with_evidence() {
         let successful_run = CommandRun {
             id: "run-1".to_string(),
@@ -1664,7 +2440,7 @@ mod tests {
             resume_command: None,
             started_at_ms: 1,
             ended_at_ms: Some(2),
-            status: "succeeded".to_string(),
+            status: CommandRunStatus::Succeeded,
             exit_code: Some(0),
             stdout_log_ref: None,
             stderr_log_ref: None,
@@ -1679,6 +2455,133 @@ mod tests {
         assert_eq!(task.events[0].actor, "user");
         assert_eq!(task.events[0].status, "completed");
         assert_eq!(task.events[0].evidence_ref.as_deref(), Some("run-1"));
+    }
+
+    #[test]
+    fn complete_task_rejects_agent_actions_and_stale_validation_success() {
+        let mut agent_action = transition_command_run(CommandRunIntent::AgentAction, None);
+        agent_action.status = CommandRunStatus::Succeeded;
+        let mut task = transition_task_fixture("verifying", &["done"], vec![agent_action]);
+        assert!(apply_complete_task(&mut task, "event-agent".to_string())
+            .unwrap_err()
+            .contains("validation evidence"));
+
+        let mut passed = transition_command_run(CommandRunIntent::Validation, None);
+        passed.id = "run-pass".to_string();
+        passed.status = CommandRunStatus::Succeeded;
+        passed.started_at_ms = 10;
+        let mut failed = transition_command_run(CommandRunIntent::Validation, None);
+        failed.id = "run-fail".to_string();
+        failed.status = CommandRunStatus::Failed;
+        failed.started_at_ms = 20;
+        let mut task = transition_task_fixture("verifying", &["done"], vec![passed, failed]);
+        let error = apply_complete_task(&mut task, "event-stale".to_string()).unwrap_err();
+        assert!(error.contains("latest validation"));
+        assert_eq!(task.status, "verifying");
+    }
+
+    #[test]
+    fn task_storage_rejects_path_traversal_ids() {
+        let root = std::env::temp_dir().join(format!("loom-task-id-{}", now_ms()));
+        std::fs::create_dir_all(&root).unwrap();
+        assert!(load_task(&root, "../escape")
+            .err()
+            .expect("path traversal should fail")
+            .contains("invalid task id"));
+        assert!(
+            delete_task(root.display().to_string(), "../escape".to_string())
+                .unwrap_err()
+                .contains("invalid task id")
+        );
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn concurrent_command_updates_preserve_every_run_and_event() {
+        let root = std::env::temp_dir().join(format!("loom-task-concurrency-{}", now_ms()));
+        std::fs::create_dir_all(&root).unwrap();
+        let mut task = transition_task_fixture("debugging", &["done"], Vec::new());
+        task.id = "task-concurrent".to_string();
+        task.project_path = root.display().to_string();
+        save_task(&task).unwrap();
+
+        let starts = (0..8)
+            .map(|index| {
+                let root = root.clone();
+                std::thread::spawn(move || {
+                    let mut run = transition_command_run(CommandRunIntent::AgentAction, None);
+                    run.id = format!("run-concurrent-{index}");
+                    run.task_id = "task-concurrent".to_string();
+                    add_command_run(&root, "task-concurrent", run).unwrap();
+                })
+            })
+            .collect::<Vec<_>>();
+        for thread in starts {
+            thread.join().unwrap();
+        }
+
+        let finishes = (0..8)
+            .map(|index| {
+                let root = root.clone();
+                std::thread::spawn(move || {
+                    finish_command_run(
+                        &root,
+                        "task-concurrent",
+                        &format!("run-concurrent-{index}"),
+                        CommandRunCompletion {
+                            status: CommandRunStatus::Succeeded,
+                            exit_code: Some(0),
+                            error_summary: None,
+                            session_id: None,
+                            resume_command: None,
+                            termination_reason: None,
+                        },
+                    )
+                    .unwrap();
+                })
+            })
+            .collect::<Vec<_>>();
+        for thread in finishes {
+            thread.join().unwrap();
+        }
+
+        let persisted = load_task(&root, "task-concurrent").unwrap();
+        assert_eq!(persisted.command_runs.len(), 8);
+        assert!(persisted
+            .command_runs
+            .iter()
+            .all(|run| run.status == CommandRunStatus::Succeeded));
+        assert_eq!(
+            persisted
+                .events
+                .iter()
+                .filter(|event| event
+                    .evidence_ref
+                    .as_deref()
+                    .is_some_and(|value| value.starts_with("run-concurrent-")))
+                .count(),
+            16
+        );
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn append_only_merge_finishes_only_the_matching_command_run() {
+        let mut first = transition_command_run(CommandRunIntent::AgentAction, None);
+        first.id = "run-first".to_string();
+        let mut second = transition_command_run(CommandRunIntent::AgentAction, None);
+        second.id = "run-second".to_string();
+        let mut target =
+            transition_task_fixture("debugging", &["done"], vec![first.clone(), second.clone()]);
+        let mut persisted = target.clone();
+        persisted.command_runs[1].status = CommandRunStatus::Succeeded;
+        persisted.command_runs[1].exit_code = Some(0);
+
+        merge_append_only_task_state(&mut target, persisted);
+
+        assert_eq!(target.command_runs[0].status, CommandRunStatus::Running);
+        assert_eq!(target.command_runs[1].status, CommandRunStatus::Succeeded);
+        assert_eq!(target.command_runs[1].exit_code, Some(0));
     }
 
     #[test]
@@ -1719,10 +2622,14 @@ mod tests {
             project_path: "/repo".to_string(),
             title: "Ship scoped implementation".to_string(),
             raw_requirement: "Implement one todo at a time".to_string(),
-            status: "ready_to_implement".to_string(),
+            status: TaskStatus::ReadyToImplement,
+            lifecycle: Default::default(),
             selected_planning_agent_ids: Vec::new(),
             primary_agent_id: None,
             review_agent_ids: Vec::new(),
+            implementation_review_runs: Vec::new(),
+            implementation_reviews: Vec::new(),
+            implementation_review_decisions: Vec::new(),
             final_plan: None,
             final_plan_path: None,
             final_plan_html_path: None,
@@ -1736,7 +2643,7 @@ mod tests {
                 task_id: "task-1".to_string(),
                 title: "Known scope".to_string(),
                 description: "Known scope".to_string(),
-                status: "pending".to_string(),
+                status: PlanTodoStatus::Pending,
                 order: 0,
                 plan_ref: None,
             }],
@@ -1746,12 +2653,14 @@ mod tests {
             feedback: Vec::new(),
             loop_compact_summary: None,
             repair_context_preview: None,
+            git_baseline: None,
+            summary: None,
             created_at_ms: 1,
             updated_at_ms: 1,
         };
 
         let error =
-            apply_start_todo(&mut task, "missing", None, "event-1".to_string()).unwrap_err();
+            apply_start_todo(&mut task, "missing", None, None, "event-1".to_string()).unwrap_err();
 
         assert!(error.contains("does not exist"));
         assert_eq!(task.status, "ready_to_implement");
@@ -1767,7 +2676,7 @@ mod tests {
                 task_id: "task-1".to_string(),
                 title: "Build unrelated screen".to_string(),
                 description: "Unrelated".to_string(),
-                status: "pending".to_string(),
+                status: PlanTodoStatus::Pending,
                 order: 0,
                 plan_ref: Some("/repo/docs/plans/plan.md".to_string()),
             },
@@ -1776,7 +2685,7 @@ mod tests {
                 task_id: "task-1".to_string(),
                 title: "Fix failing debug validation".to_string(),
                 description: "Scoped fix".to_string(),
-                status: "implementing".to_string(),
+                status: PlanTodoStatus::Implementing,
                 order: 1,
                 plan_ref: Some("/repo/docs/plans/plan.md".to_string()),
             },
@@ -1798,7 +2707,7 @@ mod tests {
             task_id: "task-1".to_string(),
             title: "Start scoped implementation".to_string(),
             description: "Pending scope".to_string(),
-            status: "pending".to_string(),
+            status: PlanTodoStatus::Pending,
             order: 0,
             plan_ref: None,
         }];
@@ -1826,7 +2735,7 @@ mod tests {
             resume_command: None,
             started_at_ms: 1,
             ended_at_ms: Some(2),
-            status: "failed".to_string(),
+            status: CommandRunStatus::Failed,
             exit_code: Some(1),
             stdout_log_ref: Some("/repo/.loom/logs/task-1/run-1.stdout.log".to_string()),
             stderr_log_ref: Some("/repo/.loom/logs/task-1/run-1.stderr.log".to_string()),
@@ -1835,6 +2744,7 @@ mod tests {
                 stderr_tail: vec!["error: build failed".to_string()],
                 matched_lines: vec!["error: build failed".to_string()],
                 failed: true,
+                ..Default::default()
             }),
         });
 

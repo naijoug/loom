@@ -17,6 +17,18 @@ pub fn list_recent_projects(app: AppHandle) -> Result<Vec<ProjectSummary>, Strin
 }
 
 #[tauri::command]
+pub fn remove_recent_project(
+    app: AppHandle,
+    project_id: String,
+) -> Result<Vec<ProjectSummary>, String> {
+    if project_id.trim().is_empty() {
+        return Err("project id is required".to_string());
+    }
+
+    storage::remove_recent_project(&app, project_id.trim())
+}
+
+#[tauri::command]
 pub fn register_project(
     app: AppHandle,
     ids: State<'_, IdGenerator>,
@@ -94,6 +106,14 @@ fn analyze_project_path(
             detected_stacks.insert("Vite".to_string());
         }
 
+        if dependency_exists(package, "typescript") {
+            detected_stacks.insert("TypeScript".to_string());
+        }
+
+        if dependency_exists(package, "electron") {
+            detected_stacks.insert("Electron".to_string());
+        }
+
         collect_package_commands(package, project_path, &mut suggested_commands);
     }
 
@@ -117,6 +137,34 @@ fn analyze_project_path(
             &mut suggested_commands,
             "cargo check --manifest-path src-tauri/Cargo.toml".to_string(),
         );
+    }
+
+    if project_path.join("go.mod").exists() {
+        detected_stacks.insert("Go".to_string());
+        push_unique(&mut suggested_commands, "go test ./...".to_string());
+    }
+
+    if project_path.join("pubspec.yaml").exists() {
+        detected_stacks.insert("Flutter".to_string());
+        push_unique(&mut suggested_commands, "flutter run".to_string());
+        push_unique(&mut suggested_commands, "flutter test".to_string());
+    }
+
+    if ["pyproject.toml", "requirements.txt", "setup.py", "Pipfile"]
+        .iter()
+        .any(|file| project_path.join(file).exists())
+    {
+        detected_stacks.insert("Python".to_string());
+        if project_path.join("manage.py").exists() {
+            detected_stacks.insert("Django".to_string());
+            push_unique(
+                &mut suggested_commands,
+                "python manage.py runserver".to_string(),
+            );
+            push_unique(&mut suggested_commands, "python manage.py test".to_string());
+        } else {
+            push_unique(&mut suggested_commands, "python -m pytest".to_string());
+        }
     }
 
     let git_info = git_info(project_path);
@@ -255,6 +303,8 @@ fn run_git<const N: usize>(project_path: &Path, args: [&str; N]) -> Result<Strin
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::now_ms;
+    use std::fs;
 
     #[test]
     fn analyzes_current_loom_repository() {
@@ -277,6 +327,49 @@ mod tests {
         assert!(summary
             .suggested_commands
             .contains(&"cargo check --manifest-path src-tauri/Cargo.toml".to_string()));
+    }
+
+    #[test]
+    fn analyzes_python_go_flutter_and_electron_projects() {
+        let root = std::env::temp_dir().join(format!("loom-project-stacks-{}", now_ms()));
+        fs::create_dir_all(&root).unwrap();
+        fs::write(root.join("go.mod"), "module example.test/app\n").unwrap();
+        fs::write(root.join("pyproject.toml"), "[project]\nname='app'\n").unwrap();
+        fs::write(root.join("pubspec.yaml"), "name: app\n").unwrap();
+        fs::write(
+            root.join("package.json"),
+            r#"{"devDependencies":{"electron":"1.0.0","typescript":"1.0.0"},"scripts":{"dev":"electron ."}}"#,
+        )
+        .unwrap();
+
+        let summary =
+            analyze_project_path(&root, "project-stacks".to_string(), "stacks".to_string())
+                .unwrap();
+        for stack in [
+            "Node.js",
+            "TypeScript",
+            "Electron",
+            "Python",
+            "Go",
+            "Flutter",
+        ] {
+            assert!(
+                summary.detected_stacks.contains(&stack.to_string()),
+                "missing {stack}"
+            );
+        }
+        for command in [
+            "go test ./...",
+            "python -m pytest",
+            "flutter run",
+            "flutter test",
+        ] {
+            assert!(
+                summary.suggested_commands.contains(&command.to_string()),
+                "missing {command}"
+            );
+        }
+        fs::remove_dir_all(root).unwrap();
     }
 
     #[test]

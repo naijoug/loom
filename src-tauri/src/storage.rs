@@ -127,6 +127,29 @@ pub fn save_recent_project(app: &AppHandle, project: &ProjectSummary) -> Result<
     atomic_write_json(&path, &projects)
 }
 
+pub fn remove_recent_project(
+    app: &AppHandle,
+    project_id: &str,
+) -> Result<Vec<ProjectSummary>, String> {
+    let mut projects = load_recent_projects(app)?;
+
+    if !remove_recent_project_by_id(&mut projects, project_id) {
+        return Ok(projects);
+    }
+
+    let path = recent_projects_path(app)?;
+    ensure_parent_dir(&path)?;
+    atomic_write_json(&path, &projects)?;
+
+    Ok(projects)
+}
+
+fn remove_recent_project_by_id(projects: &mut Vec<ProjectSummary>, project_id: &str) -> bool {
+    let original_len = projects.len();
+    projects.retain(|candidate| candidate.id != project_id);
+    projects.len() != original_len
+}
+
 fn recent_projects_path(app: &AppHandle) -> Result<PathBuf, String> {
     Ok(global_config_dir(app)?.join(RECENT_PROJECTS_FILE))
 }
@@ -206,9 +229,55 @@ where
     Ok(())
 }
 
+pub fn atomic_write_text(path: &Path, content: &str) -> Result<(), String> {
+    ensure_parent_dir(path)?;
+    let file_name = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .ok_or_else(|| format!("invalid target file name: {}", path.display()))?;
+    let sequence = TEMP_FILE_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+    let temp_path = path.with_file_name(format!("{file_name}.tmp-{}-{sequence}", now_ms()));
+    fs::write(&temp_path, content)
+        .map_err(|error| format!("failed to write {}: {error}", temp_path.display()))?;
+    fs::rename(&temp_path, path)
+        .map_err(|error| format!("failed to replace {}: {error}", path.display()))?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn project_summary(id: &str, path: &str) -> ProjectSummary {
+        ProjectSummary {
+            id: id.to_string(),
+            path: path.to_string(),
+            name: id.to_string(),
+            detected_stacks: Vec::new(),
+            suggested_commands: Vec::new(),
+            is_git_repository: false,
+            git_branch: None,
+            has_uncommitted_changes: false,
+            loom_dir_ready: false,
+            schema_version: CURRENT_SCHEMA_VERSION,
+        }
+    }
+
+    #[test]
+    fn remove_recent_project_by_id_removes_only_matching_project() {
+        let mut projects = vec![
+            project_summary("project-1", "/tmp/project-1"),
+            project_summary("project-2", "/tmp/project-2"),
+        ];
+
+        assert!(remove_recent_project_by_id(&mut projects, "project-1"));
+        assert_eq!(projects.len(), 1);
+        assert_eq!(projects[0].id, "project-2");
+
+        assert!(!remove_recent_project_by_id(&mut projects, "missing"));
+        assert_eq!(projects.len(), 1);
+        assert_eq!(projects[0].id, "project-2");
+    }
 
     #[test]
     fn backs_up_incompatible_project_schema() {
