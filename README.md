@@ -29,6 +29,14 @@ Loom 是一个面向软件开发任务的桌面端编程助手工作台。它用
 ## 文档
 
 - [需求文档](docs/requirements.md)
+- [架构](docs/architecture.md)
+- [Agent Adapter](docs/agent-adapter.md)
+- [任务状态机](docs/task-state-machine.md)
+- [安全策略](docs/security-policy.md)
+- [完整版本需求审计](docs/requirements-audit.md)
+- [完整版本验收报告](docs/dogfood/complete-version-2026-07-24.md)
+- [用户测试指南](docs/testing.md)
+- [实施计划索引](docs/PLANS.md)
 
 ## MVP 范围
 
@@ -59,11 +67,12 @@ Loom 是一个面向软件开发任务的桌面端编程助手工作台。它用
 
 ## 当前状态
 
-当前仓库已经进入功能内核阶段，包含 Tauri 前端与 Rust 后端应用代码。已具备本地项目登记、项目分析、Agent 配置、Codex CLI / Claude Code CLI planning adapter、任务记录、命令执行、实时日志、失败摘要、人工反馈和修复上下文预览的最小闭环。dummy Agent 仅保留为测试 fixture 和显式开发自测能力，不作为真实任务处理 Agent 展示。（Amp CLI adapter 已于 2026-06-11 移除：非交互模式需要付费 credits，本地不可用；历史配置会在加载时自动清理。）
+仓库已实现第一版完整本地闭环：多 Agent 规划与互评、主 Agent Todo 实施、独立实施 Review 与 blocker 门禁、受策略保护的命令/PTY、自动与人工调试修复循环、结构化附件证据、重启恢复，以及基于 Git baseline 的 JSON/Markdown 交付总结。dummy Agent 仅用于测试 fixture，不会作为真实任务 Agent 展示。
 
-下一步建议：
+本地完整门禁：
 
-1. 增加 Review Agent 和实施 Agent 的多轮协作。
-2. 强化命令安全策略、日志搜索和长任务管理。
-3. 补充前端交互测试和更完整的端到端验收脚本。
-4. 扩展 Agent 配置管理 UI，支持 profile 编辑、登录状态提示和真实 CLI 长跑验收记录。
+```bash
+pnpm check
+```
+
+启动桌面端与测试步骤见 [用户测试指南](docs/testing.md)。

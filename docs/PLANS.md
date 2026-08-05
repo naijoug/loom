@@ -1,5 +1,15 @@
 # 计划文档索引
 
+## 2026-08-05
+
+- 11:14-project-optimization.md
+  > 评审完整版本后的稳定化与可维护性优化：先固化当前大规模未提交基线，再补任务迁移和前后端契约，统一进程监督与任务仓储，拆分 Rust/React 巨型模块，并完善组件、真实 Tauri、视觉回归和诊断能力。
+
+## 2026-07-24
+
+- 08:55-complete-version.md
+  > （已完成，M0–M6）完整闭环已覆盖权威状态机、安全执行/恢复、统一 Agent adapter、独立实施 Review、结构化反馈附件、日志洞察、Git baseline 归因及可导出 JSON/Markdown 总结；85 项前端测试、166 项 Rust 测试、完整 smoke、严格 dogfood、Tauri release/DMG 和真实桌面验收均通过。
+
 ## 2026-06-26
 
 - 17:38-ui-2026-06-impl.md

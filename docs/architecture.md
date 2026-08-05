@@ -1,0 +1,55 @@
+# Loom 架构
+
+## 目标与边界
+
+Loom 是本地优先的 Tauri 桌面开发工作台。React 负责流程展示和人工交互；Rust 负责所有有副作用的能力，包括文件访问、项目分析、Agent 调用、命令与 PTY 生命周期、安全策略、日志、任务状态和持久化。核心闭环不依赖云服务。
+
+## 模块
+
+| 层 | 主要模块 | 职责 |
+|---|---|---|
+| UI | `src/components`, `src/state`, `src/hooks` | 四阶段导航、表单、实时日志、Review、人工反馈、总结与设置 |
+| Orchestrator | `task_state.rs`, `tasks.rs`, `run_recovery.rs` | 权威状态转换、生命周期门禁、重启对账、任务事件 |
+| Agent Adapter | `agent_adapter.rs`, `agent_diagnostics.rs`, `agents.rs` | Codex、Claude、自定义 CLI 参数映射、能力/权限检查、输出解析和 session |
+| Review Engine | `implementation_review.rs` | 独立 Reviewer 上下文、结构化 finding、决策、blocker gate 与重审 |
+| Execution | `execution_policy.rs`, `command_runner.rs`, `pty.rs` | cwd 边界、危险分类、一次性审批、进程组、超时、实时日志和历史 |
+| Project | `projects.rs`, `terminals.rs`, `project_preferences.rs`, `project_git.rs` | 技术栈/脚本发现、终端槽位、阶段偏好、Git baseline 与归因 |
+| Evidence | `context_builder.rs`, `attachments.rs`, `task_summary.rs` | prompt 预算、附件、repair context、JSON/Markdown 交付总结 |
+| Persistence | `storage.rs`, `.loom/` | 原子 JSON/文本写入、任务、日志、配置、附件和总结 |
+
+## 关键数据流
+
+1. 用户登记项目；Rust 分析栈、Git 和可用命令，并初始化 `.loom/`。
+2. 多个 Planning Agent 并行起草，随后交叉 Review 和合成；计划与原始证据落盘。
+3. 用户确认计划后生成 Todo。第一次开始实施时捕获 Git baseline；主 Agent 的每次执行都经过 adapter 和 execution policy。
+4. Todo 全部完成后，至少一个非主 Agent 基于计划、Git diff、命令证据和决策执行结构化实施 Review。未解决 blocker 阻止进入 Testing。
+5. Testing 运行 PTY 或一次性验证命令。日志异步写文件并发事件到 UI；失败可触发有界修复循环，人工反馈和附件进入同一 repair context。
+6. 最新验证必须成功，后端才允许完成。完成时基于 baseline 生成 `summary.json` 与 `summary.md`，再原子保存 Task 引用。
+
+## 持久化布局
+
+```text
+<project>/.loom/
+  loom.json
+  agent-preferences.json
+  terminals.json
+  tasks/<task-id>.json
+  tasks/<task-id>/attachments/*
+  tasks/<task-id>/summary.json
+  tasks/<task-id>/summary.md
+  logs/<task-id>/*
+  planning/<task-id>/*
+```
+
+计划文档位于项目的 `docs/plans/YYYY-MM-DD/`，并同步维护 `docs/PLANS.md`。
+
+## 并发与恢复
+
+- Planning Agent 可并行运行；命令、PTY 和 Review 进程均按 run id 注册，任务暂停、阻塞或取消会停止关联进程组。
+- Task 与设置使用临时文件加 rename 原子替换，避免半写入 JSON。
+- 桌面端重启后，持久化为 `running` 但没有本进程注册项的 command/review 会改为 `interrupted`，保留日志、退出原因与可用的原生 session resume 信息。
+- UI 状态只是 Task 的投影。所有阶段推进和验收门禁均在 Rust 再校验，不能通过前端直接 invoke 绕过。
+
+## 扩展 Agent
+
+新增 Agent 时实现 adapter 的 prepare 映射，声明 output mode、阶段能力、文件/命令权限和可恢复 session 规则。核心 task、review 和 testing 流程只依赖 `PreparedAgentInvocation`，不依赖具体 CLI。详见 [Agent Adapter](agent-adapter.md)。
