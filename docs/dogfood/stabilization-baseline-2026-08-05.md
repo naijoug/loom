@@ -112,3 +112,25 @@
 4. 文档、计划和设计审计证据。
 
 每个边界提交后都从该 commit 的独立 worktree 运行相应门禁；若中间提交无法独立构建，则合并到最近的依赖提交，不保留破损历史。
+
+## 已固化基线
+
+| Commit | 边界 | 验证 |
+|---|---|---|
+| `f930af0` | Rust/Tauri 完整闭环后端 | Rust fmt、严格 Clippy、166/166 测试通过 |
+| `7300259` | 前端领域、桥接和四阶段 UI | 前端/领域 88/88、生产构建通过 |
+| `56bf401` | 测试、smoke、CI 和工程门禁 | `pnpm check` 全通过 |
+| `b3dd78f` | 文档、计划和设计审计 | 路径、索引、Markdown diff 与 86 项清单通过 |
+
+- **Baseline tag**: `stabilization-baseline-2026-08-05`
+- **Baseline commit**: `b3dd78f`
+- **Working tree after baseline**: clean
+
+## Release 复现证据
+
+- Command: `pnpm tauri build`
+- Result: `Loom.app` 与 `Loom_0.1.0_aarch64.dmg` 构建成功。
+- DMG size: `4,953,539 bytes`
+- DMG SHA-256: `6d50004e0679cf77d9a3fcba11c4683fc2a52f8abfc5d07ab934e0c8a95de931`
+- Binary: Mach-O 64-bit arm64。
+- Signature: ad-hoc/linker-signed，无 TeamIdentifier；仍不属于可公开分发的签名/公证产物。

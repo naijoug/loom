@@ -2,7 +2,8 @@
 
 - **Date**: 2026-08-05
 - **Author**: Codex
-- **Status**: draft
+- **Status**: in-progress
+- **Progress**: M0 已完成；M1 实施中
 
 ## 目标
 
@@ -63,7 +64,7 @@
 
 | # | Task | Files / Symbols | Depends on | Verification |
 |---|---|---|---|---|
-| 0.1 | 按“后端能力、前端接线、测试/文档、设计审计”生成当前 85 个工作区条目的归属清单，标出用户原有改动和完整版本改动 | `git status`, `git diff`, `docs/dogfood/complete-version-2026-07-24.md` | — | 清单覆盖每个 modified/untracked 条目，无未归属文件 |
+| 0.1 | 按“后端能力、前端接线、测试/文档、设计审计”生成当前 86 个工作区条目的归属清单，标出用户原有改动和完整版本改动 | `git status`, `git diff`, `docs/dogfood/complete-version-2026-07-24.md` | — | 清单覆盖每个 modified/untracked 条目，无未归属文件 |
 | 0.2 | 在用户确认提交边界后建立 `codex/` 前缀稳定化分支，将现状拆成可独立回滚的功能提交 | repository history | 0.1 | 每个提交 `pnpm check` 通过；最终 `git status` 仅保留用户明确不提交的内容 |
 | 0.3 | 校准 README、需求审计、计划索引和实际测试计数，记录 commit、构建环境和未覆盖项 | `README.md`, `docs/requirements-audit.md`, `docs/PLANS.md`, `docs/dogfood/` | 0.2 | 文档中的测试数、版本号、commit 与实跑输出一致 |
 | 0.4 | 为稳定基线生成可复现的本地 release 并记录 checksum；公开分发条件继续单列 | `src-tauri/tauri.conf.json`, `docs/dogfood/` | 0.3 | clean checkout 可重建 app/DMG，checksum 和启动健康检查有记录 |
@@ -149,7 +150,7 @@
 
 ## 待确认问题
 
-- [ ] 当前 85 个工作区条目中，哪些是用户希望保留但不纳入 Loom 完整版本基线的改动？
+- [x] 当前 86 个工作区条目已按整文件保留并固化到稳定化分支；混合来源记录在 `docs/dogfood/stabilization-baseline-2026-08-05.md`。
 - [ ] 下一阶段目标是“个人 dogfood 稳定版”还是“可公开分发的 Beta”？后者需要另加签名、公证、升级与多平台矩阵。
 - [ ] 是否承诺读取 2026-07-24 以前的所有 `.loom` 任务；如果只承诺最近一个 schema，迁移范围可明显收窄。
 - [ ] Windows/Linux 是否属于近期支持范围；若否，进程 supervisor 可先以 macOS/Linux 为验收矩阵。
