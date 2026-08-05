@@ -2,8 +2,8 @@
 
 - **Date**: 2026-08-05
 - **Author**: Codex
-- **Status**: in-progress
-- **Progress**: M0–M4 已完成；M5 实施中
+- **Status**: completed
+- **Progress**: M0–M5 已完成
 
 ## 目标
 
@@ -35,13 +35,14 @@
 - `docs/requirements-audit.md` 已把需求逐项映射到实现与测试，四阶段闭环、独立 Review、安全执行、任务恢复、附件证据和交付总结均有真实 Rust/React 实现。
 - `src-tauri/src/task_state.rs` 已提供 Rust 权威状态机，`src-tauri/src/execution_policy.rs` 已集中项目边界、危险命令和审批策略。
 - `src-tauri/src/agent_adapter.rs` 已隔离 Codex、Claude 和 custom CLI 参数映射，核心流程没有直接依赖单一 Agent。
-- `scripts/check.sh` 已统一 TypeScript 构建、Rust fmt、严格 Clippy 和 Rust 测试；M2 后前端/领域测试为 90/90，Rust 为 187 项通过（另 1 项真实凭据测试按设计忽略）。
+- `scripts/check.sh` 已统一 TypeScript 构建、Rust fmt、严格 Clippy 和 Rust 测试；最终前端/领域测试为 100/100，Rust 为 189 项通过（另 2 项真实凭据/性能探针按设计忽略），Rust 工作流集成为 2/2。
 - `pnpm smoke`、`pnpm smoke:interaction`、`pnpm smoke:visual` 本次评审全部通过，30 张 1440×940 深浅主题截图生成成功。
 - M0 已将完整版本拆成四个功能提交并建立 `stabilization-baseline-2026-08-05` 标签；release/DMG checksum 见 `docs/dogfood/stabilization-baseline-2026-08-05.md`。
-- M1 已为五类 store 增加版本信封、v0→v1 原子迁移、未来/损坏版本备份；`contracts/tauri-contract.json` 同时约束 56 个 command、5 个 event、状态枚举、schema 版本和关键 wire model sample，前端 Tauri 调用已集中到 `src/api/`。
+- M1 已为五类 store 增加版本信封、v0→v1 原子迁移、未来/损坏版本备份；`contracts/tauri-contract.json` 同时约束 57 个 command、5 个 event、状态枚举、schema 版本和关键 wire model sample，前端 Tauri 调用已集中到 `src/api/`。
 - M2 已用 `ProcessSupervisor` 统一 Agent/command/Review/PTY 的 run metadata、进程组终止、timeout/stop reason 与恢复判定；`TaskRepository` 统一任务锁、原子 read-modify-write、append-only evidence merge 和锁回收。`agents.rs`/`tasks.rs` 生产根模块分别降至约 878/946 行，拆出的职责模块均低于 1,000 行。
 - M3 已将单体 reducer 拆为项目、任务、命令、规划等 8 个 domain 模块；Testing 的终端网格、验收门禁、反馈编辑器、修复历史和证据模型已进入 `src/features/testing/`，旧容器由 1,372 行降至 886 行。Planning/Settings 公共入口均降为 1 行，feature 主模块分别为 844/932 行，最终计划视图、Agent draft 与通用控件已独立；Planning/Settings CSS 已随 feature 共置。95 项前端测试、生产构建、interaction smoke 与 30 屏深浅主题 visual smoke 均通过。
-- M4 已加入 jsdom React 交互层、typed Tauri invoke/listen transport 测试和 Rust command/service 集成 harness；四阶段、blocker、两轮 repair、暂停/仓储重载可 headless 重放。release app 两轮启动/退出 smoke 通过；30 屏视觉 smoke 已升级为固定 8×6 感知采样基线、阈值判定与 diff artifact。CI 已拆为 PR `quality-gate`、主干浏览器回归和定时/手工桌面 release 兼容性三层。当前前端测试为 99 项。
+- M4 已加入 jsdom React 交互层、typed Tauri invoke/listen transport 测试和 Rust command/service 集成 harness；四阶段、blocker、两轮 repair、暂停/仓储重载可 headless 重放。release app 两轮启动/退出 smoke 通过；30 屏视觉 smoke 已升级为固定 24×16 感知采样、gzip 基线、阈值判定与 diff artifact。CI 已拆为 PR `quality-gate`、主干浏览器回归和定时/手工桌面 release 兼容性三层。
+- M5 已统一中文默认界面并保留 Agent/Review/CLI 等专名；规划确认、进入测试验收、验收完成均收敛为单一主操作，并显式展示 blocker。Testing 的修复路径默认折叠。Settings 与完成页可导出脱敏诊断包，日志默认不包含、用户勾选后也只导出受限尾部；secret/path fixture 均通过。`pnpm bench:local` 已对冷启动、项目扫描、1 万行日志、5 千条时间线和 RSS 建立硬预算，结果见 `docs/dogfood/performance-baseline-2026-08-05.md`。
 
 ### 主要差距
 
@@ -52,7 +53,7 @@
 - **前后端契约已有门禁（M1）**：canonical fixture 与 typed client 已覆盖 command/event/schema/status/关键模型；command payload 的进一步细化随 M2 service 拆分继续收紧。
 - **测试层已补齐（M4）**：纯逻辑、React DOM 交互、typed invoke/listen、Rust command/service、浏览器和 release 桌面生命周期均有独立证据；真实 Agent 凭据 canary 继续保留为手工路径，不进入确定性 CI。
 - **视觉回归已有门禁（M4）**：30 个深浅主题页面同时执行 DOM、尺寸与感知采样差异检查；失败会保留截图、DOM、Chrome 日志和 diff artifact。基线需在明确接受设计变化时人工更新。
-- **界面信息密度较高**：Planning、Testing、Done 页面已经具备完整证据，但中英文混用、右侧驾驶舱纵向堆叠和同级操作过多，首次使用时需要更明确的“当前阻塞原因 / 下一步动作”。
+- **界面认知层已收敛（M5）**：核心流程采用中文默认文案，主操作、阻塞原因、验证证据和修复入口有稳定层级；后续仍需通过真实用户 dogfood 观察术语理解与 960px 窗口体验，不在本轮凭主观继续压缩信息。
 
 ### 可复用部分
 
@@ -83,7 +84,7 @@
 | 1.1 | 为 Task、Agent 配置、Settings、终端槽位和项目偏好定义独立 schema version 与兼容策略 | `src-tauri/src/models.rs`, `storage.rs`, `settings.rs`, `agents.rs`, `terminals.rs`, `project_preferences.rs` | M0 | 新旧 JSON fixture 都能读取；未来版本被明确拒绝并备份 |
 | 1.2 | 新建显式迁移入口，先实现 v0→v1 规范化；读取不再只依赖 `serde(default)` | new `src-tauri/src/migrations.rs`, `tasks::load_task` | 1.1 | 旧任务 fixture 迁移后字段、状态、证据引用无损；迁移幂等 |
 | 1.3 | 用 Rust 序列化生成/校验一组 canonical contract fixtures，并由 TypeScript 测试消费 | `src-tauri/tests/fixtures/`, `tests/contracts/`, `src/domain/*.ts` | 1.1 | 字段名、枚举值、可选性漂移会让 `pnpm check` 失败 |
-| 1.4 | 集中 Tauri command/event 名称与 payload 声明，桥接层只通过 typed client 调用 | new `src/api/`, `src/hooks/use*Bridge.ts`, `src-tauri/src/lib.rs` | 1.3 | 56 个注册 command 与实际调用/允许未调用清单一致；事件名有双端契约测试 |
+| 1.4 | 集中 Tauri command/event 名称与 payload 声明，桥接层只通过 typed client 调用 | new `src/api/`, `src/hooks/use*Bridge.ts`, `src-tauri/src/lib.rs` | 1.3 | 57 个注册 command 与实际调用/允许未调用清单一致；事件名有双端契约测试 |
 | 1.5 | 将计划、评审证据和索引写入切换为原子写，并设计多文件产物失败后的恢复顺序 | `agents.rs` plan/evidence writers, `implementation_review.rs`, `storage.rs` | 1.2 | 注入中途失败后不会出现半份 JSON/Markdown 或索引悬空引用 |
 
 ### M2 — 统一进程监督与任务仓储
@@ -159,7 +160,7 @@
 - [ ] 下一阶段目标是“个人 dogfood 稳定版”还是“可公开分发的 Beta”？后者需要另加签名、公证、升级与多平台矩阵。
 - [ ] 是否承诺读取 2026-07-24 以前的所有 `.loom` 任务；如果只承诺最近一个 schema，迁移范围可明显收窄。
 - [ ] Windows/Linux 是否属于近期支持范围；若否，进程 supervisor 可先以 macOS/Linux 为验收矩阵。
-- [ ] UI 默认语言是中文、英文，还是正式做 i18n；当前建议先统一为一种默认语言，不直接引入完整国际化框架。
+- [x] UI 本轮采用中文默认，不引入完整 i18n 框架；Agent、Review、CLI、stdout/stderr 等稳定技术专名保留。
 - [ ] 真实 Agent canary 可以使用哪些本机 CLI/账号，哪些必须保持手工触发以避免消耗额度？
 
 ## 验证策略
