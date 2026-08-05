@@ -9,10 +9,10 @@ Loom 是本地优先的 Tauri 桌面开发工作台。React 负责流程展示�
 | 层 | 主要模块 | 职责 |
 |---|---|---|
 | UI | `src/components`, `src/state`, `src/hooks` | 四阶段导航、表单、实时日志、Review、人工反馈、总结与设置 |
-| Orchestrator | `task_state.rs`, `tasks.rs`, `run_recovery.rs` | 权威状态转换、生命周期门禁、重启对账、任务事件 |
-| Agent Adapter | `agent_adapter.rs`, `agent_diagnostics.rs`, `agents.rs` | Codex、Claude、自定义 CLI 参数映射、能力/权限检查、输出解析和 session |
+| Orchestrator | `task_state.rs`, `task_repository.rs`, `tasks/{lifecycle,testing}.rs`, `run_recovery.rs` | 权威状态转换、事务化任务 mutation、生命周期门禁、重启对账、任务事件 |
+| Agent Adapter | `agent_adapter.rs`, `agent_diagnostics.rs`, `agents/{config,orchestrator,prompts,stream,artifacts}.rs` | Codex、Claude、自定义 CLI 参数映射、能力/权限检查、输出解析、规划编排和 session |
 | Review Engine | `implementation_review.rs` | 独立 Reviewer 上下文、结构化 finding、决策、blocker gate 与重审 |
-| Execution | `execution_policy.rs`, `command_runner.rs`, `pty.rs` | cwd 边界、危险分类、一次性审批、进程组、超时、实时日志和历史 |
+| Execution | `execution_policy.rs`, `process_supervisor.rs`, `command_runner.rs`, `pty.rs` | cwd 边界、危险分类、一次性审批、统一进程组/停止原因、超时、实时日志和历史 |
 | Project | `projects.rs`, `terminals.rs`, `project_preferences.rs`, `project_git.rs` | 技术栈/脚本发现、终端槽位、阶段偏好、Git baseline 与归因 |
 | Evidence | `context_builder.rs`, `attachments.rs`, `task_summary.rs` | prompt 预算、附件、repair context、JSON/Markdown 交付总结 |
 | Persistence | `migrations.rs`, `storage.rs`, `.loom/` | 版本化 JSON 迁移、原子 JSON/文本写入、任务、日志、配置、附件和总结 |
@@ -50,9 +50,10 @@ Task、Agent 配置、App Settings、终端槽位和项目 Agent 偏好均使用
 
 ## 并发与恢复
 
-- Planning Agent 可并行运行；命令、PTY 和 Review 进程均按 run id 注册，任务暂停、阻塞或取消会停止关联进程组。
+- Planning Agent 可并行运行；Agent、命令、PTY 和 Review 共享 `ProcessSupervisor` 的 run metadata、进程组终止和 stop reason，任务暂停、阻塞或取消会停止关联进程组。
 - 所有版本化 store 与结构化产物使用临时文件加 rename 原子替换，避免半写入或悬空索引。
-- 桌面端重启后，持久化为 `running` 但没有本进程注册项的 command/review 会改为 `interrupted`，保留日志、退出原因与可用的原生 session resume 信息。
+- 所有 Task mutation 通过 `TaskRepository` 的任务级 read-modify-write 锁执行；锁在成功、失败和删除后回收，长任务提交结果前会与最新 lifecycle、run、feedback 和 decision 合并。
+- 桌面端重启后，持久化为 `running` 且不在本进程 supervisor 中的 command/PTY/review 会改为 `interrupted`，保留日志、退出原因与可用的原生 session resume 信息。
 - UI 状态只是 Task 的投影。所有阶段推进和验收门禁均在 Rust 再校验，不能通过前端直接 invoke 绕过。
 
 ## 扩展 Agent
