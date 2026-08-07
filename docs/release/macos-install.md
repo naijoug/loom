@@ -16,6 +16,7 @@
 2. 确认本机已有至少一个可测试的安全命令，例如 `git status`、`npm test`、`pnpm test` 或一个只输出文本的脚本。
 3. 如果要配置真实 Agent CLI，先确认对应账号、额度和数据发送边界；无凭据 smoke 请优先使用 `docs/release/beta-smoke.md`。
 4. 下载或接收产物后，记录提供方给出的版本、commit 和 checksum；如果没有这些信息，不要继续扩大试用范围。
+5. 当前 `docs/release/artifact-integrity-check.md` 记录的候选 DMG 处于 signing / Gatekeeper hold；在 `docs/release/signing-gate-decision.md` 所列 gate 解决或被明确接受前，不应把该 DMG 当作普通邀请制试用包安装。
 
 ## 安装方式 A：DMG
 
@@ -45,6 +46,7 @@
 ## Gatekeeper 处理原则
 
 - 邀请制 Beta 可以接受一次性手工允许打开，但必须记录操作步骤和系统提示。
+- 如果当前候选产物仍是 invalid-signature 状态，不要求试用者绕过 Gatekeeper；先停止分发并修复签名 gate。
 - 不建议试用者执行来源不明的 `xattr -dr com.apple.quarantine ...` 命令。
 - 如果提供方要求使用 `xattr`，必须同时给出完整产物来源、checksum、版本和 commit；试用者仍应优先选择不含机密的低风险项目。
 - 两名以上目标试用者遇到不可恢复的安装或启动失败时，应停止继续分发，先修复安装路径或补齐签名/公证。
