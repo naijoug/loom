@@ -14,15 +14,21 @@
 - [本地数据与卸载清理说明](local-data-and-uninstall.md)：列出项目内 `.loom/`、全局 app data、诊断包和完全清理步骤。
 - [Beta 首次启动 Smoke](beta-smoke.md)：提供一个不依赖真实 Agent 凭据的 15 分钟临时项目验证流程。
 
+## M3 隐私与账号边界
+
+- [Beta 隐私说明](privacy-note.md)：说明默认本地数据、可能离开本机的路径、诊断包脱敏边界和隐私停止线。
+- [Agent / CLI 账号边界](agent-account-boundary.md)：说明 dummy、Codex、Claude Code、OpenClaw、Hermes 和自定义 CLI 的账号、费用、数据发送责任。
+
 ## 使用顺序
 
 1. 先读 `beta-scope.md`，确认自己是否属于本轮目标试用者。
 2. 再读 `beta-safety-notes.md`，确认不会把 Loom 用在生产关键仓库或含机密材料的任务中。
-3. 按 `macos-install.md` 完成安装，并记录 Gatekeeper 或权限提示。
-4. 按 `beta-smoke.md` 在临时项目里完成首次启动 smoke。
-5. 如需卸载或清理，按 `local-data-and-uninstall.md` 处理项目内和全局数据。
-6. 完成试用后按 `beta-feedback-template.md` 回传反馈。
+3. 继续读 `privacy-note.md` 和 `agent-account-boundary.md`，确认隐私、诊断包和真实 Agent 账号责任边界。
+4. 按 `macos-install.md` 完成安装，并记录 Gatekeeper 或权限提示。
+5. 按 `beta-smoke.md` 在临时项目里完成首次启动 smoke；首次 smoke 默认使用 dummy / fixture，不要求真实付费 Agent。
+6. 如需卸载或清理，按 `local-data-and-uninstall.md` 处理项目内和全局数据。
+7. 完成试用后按 `beta-feedback-template.md` 回传反馈。
 
 ## 发布门禁
 
-这些文档覆盖邀请制 Beta 的 M0 边界与 M2 安装/卸载/smoke 路径。公开下载、签名/公证、隐私说明、Agent 账号边界和诊断包脱敏复核仍需后续里程碑补齐；在这些材料完成前，不应把 DMG 作为公开稳定版分发。
+这些文档覆盖邀请制 Beta 的 M0 边界、M2 安装/卸载/smoke 路径，以及 M3 隐私和 Agent 账号责任边界。公开下载、签名/公证、可复现 release build 和正式诊断包脱敏复核仍需后续里程碑补齐；在这些材料完成前，不应把 DMG 作为公开稳定版分发。
