@@ -19,12 +19,13 @@
 - [Beta 隐私说明](privacy-note.md)：说明默认本地数据、可能离开本机的路径、诊断包脱敏边界和隐私停止线。
 - [Agent / CLI 账号边界](agent-account-boundary.md)：说明 dummy、Codex、Claude Code、OpenClaw、Hermes 和自定义 CLI 的账号、费用、数据发送责任。
 - [诊断包安全复核](diagnostic-bundle-review.md)：说明诊断包内容、已有脱敏证据、导出前自查、接收方处理规则和 Beta 发布门禁。
+- [诊断包 UI Smoke](diagnostic-bundle-smoke.md)：覆盖默认不导出日志和主动选择日志尾部两条手工验证路径。
 
 ## 使用顺序
 
 1. 先读 `beta-scope.md`，确认自己是否属于本轮目标试用者。
 2. 再读 `beta-safety-notes.md`，确认不会把 Loom 用在生产关键仓库或含机密材料的任务中。
-3. 继续读 `privacy-note.md`、`agent-account-boundary.md` 和 `diagnostic-bundle-review.md`，确认隐私、诊断包和真实 Agent 账号责任边界。
+3. 继续读 `privacy-note.md`、`agent-account-boundary.md` 和 `diagnostic-bundle-review.md`，确认隐私、诊断包和真实 Agent 账号责任边界；维护者在发布前按 `diagnostic-bundle-smoke.md` 填写至少一条 UI smoke record。
 4. 按 `macos-install.md` 完成安装，并记录 Gatekeeper 或权限提示。
 5. 按 `beta-smoke.md` 在临时项目里完成首次启动 smoke；首次 smoke 默认使用 dummy / fixture，不要求真实付费 Agent。
 6. 如需卸载或清理，按 `local-data-and-uninstall.md` 处理项目内和全局数据。
@@ -32,4 +33,4 @@
 
 ## 发布门禁
 
-这些文档覆盖邀请制 Beta 的 M0 边界、M2 安装/卸载/smoke 路径，以及 M3 隐私、Agent 账号责任和诊断包安全复核边界。公开下载、签名/公证、可复现 release build 和正式 UI 导出诊断包 smoke 仍需后续里程碑补齐；在这些材料完成前，不应把 DMG 作为公开稳定版分发。
+这些文档覆盖邀请制 Beta 的 M0 边界、M2 安装/卸载/smoke 路径，以及 M3 隐私、Agent 账号责任、诊断包安全复核和 UI smoke 门禁。公开下载、签名/公证、可复现 release build 和正式 UI 诊断包 smoke 记录仍需后续里程碑实际填写；在这些材料完成前，不应把 DMG 作为公开稳定版分发。
