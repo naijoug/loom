@@ -36,6 +36,7 @@ Loom 是一个面向软件开发任务的桌面端编程助手工作台。它用
 - [完整版本需求审计](docs/requirements-audit.md)
 - [完整版本验收报告](docs/dogfood/complete-version-2026-07-24.md)
 - [用户测试指南](docs/testing.md)
+- [Beta 发布资料](docs/release/README.md)
 - [实施计划索引](docs/PLANS.md)
 
 ## MVP 范围
