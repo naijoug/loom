@@ -8,6 +8,10 @@
 - [Beta 安全说明](beta-safety-notes.md)：说明试用者需要承担的本机项目、命令执行、真实 Agent 账号和机密信息边界。
 - [Beta 反馈模板](beta-feedback-template.md)：把反馈统一归类为 blocker / bug / confusion / request / security，并要求携带可复核证据。
 
+## M1 可复现构建
+
+- [Release Build Record](release-build-record.md)：记录 Loom 0.1.0 邀请制 Beta 候选构建的 commit、工具链版本、构建命令、DMG 路径、checksum 和剩余发布门禁。
+
 ## M2 安装与首次启动
 
 - [macOS Beta 安装说明](macos-install.md)：说明 DMG / App bundle 安装、Gatekeeper 处理原则和首次启动检查。
@@ -26,11 +30,12 @@
 1. 先读 `beta-scope.md`，确认自己是否属于本轮目标试用者。
 2. 再读 `beta-safety-notes.md`，确认不会把 Loom 用在生产关键仓库或含机密材料的任务中。
 3. 继续读 `privacy-note.md`、`agent-account-boundary.md` 和 `diagnostic-bundle-review.md`，确认隐私、诊断包和真实 Agent 账号责任边界；维护者在发布前按 `diagnostic-bundle-smoke.md` 填写至少一条 UI smoke record。
-4. 按 `macos-install.md` 完成安装，并记录 Gatekeeper 或权限提示。
-5. 按 `beta-smoke.md` 在临时项目里完成首次启动 smoke；首次 smoke 默认使用 dummy / fixture，不要求真实付费 Agent。
-6. 如需卸载或清理，按 `local-data-and-uninstall.md` 处理项目内和全局数据。
-7. 完成试用后按 `beta-feedback-template.md` 回传反馈。
+4. 维护者用 `release-build-record.md` 对齐候选构建的 commit、工具链、checksum 和剩余门禁。
+5. 按 `macos-install.md` 完成安装，并记录 Gatekeeper 或权限提示。
+6. 按 `beta-smoke.md` 在临时项目里完成首次启动 smoke；首次 smoke 默认使用 dummy / fixture，不要求真实付费 Agent。
+7. 如需卸载或清理，按 `local-data-and-uninstall.md` 处理项目内和全局数据。
+8. 完成试用后按 `beta-feedback-template.md` 回传反馈。
 
 ## 发布门禁
 
-这些文档覆盖邀请制 Beta 的 M0 边界、M2 安装/卸载/smoke 路径，以及 M3 隐私、Agent 账号责任、诊断包安全复核和 UI smoke 门禁。公开下载、签名/公证、可复现 release build 和正式 UI 诊断包 smoke 记录仍需后续里程碑实际填写；在这些材料完成前，不应把 DMG 作为公开稳定版分发。
+这些文档覆盖邀请制 Beta 的 M0 边界、M1 可复现构建记录、M2 安装/卸载/smoke 路径，以及 M3 隐私、Agent 账号责任、诊断包安全复核和 UI smoke 门禁。公开下载、签名/公证、正式 UI 诊断包 smoke 记录和针对候选 DMG 的首次启动 smoke 结果仍需后续里程碑实际填写；在这些材料完成前，不应把 DMG 作为公开稳定版分发。
