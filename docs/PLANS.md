@@ -1,5 +1,10 @@
 # 计划文档索引
 
+## 2026-08-07
+
+- 10:00-beta-release-readiness.md
+  > 规划 Loom 从个人 dogfood 稳定版走向邀请制公开 Beta 的发布准备边界：先补 Beta scope、安全说明、反馈模板，再处理 macOS 可复现产物、安装/卸载、隐私披露、诊断包复核和小范围试用回收机制。
+
 ## 2026-08-05
 
 - 11:14-project-optimization.md
