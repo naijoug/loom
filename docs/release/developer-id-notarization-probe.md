@@ -89,10 +89,11 @@ source=Unnotarized Developer ID
    - Apple ID path: `APPLE_ID` + app-specific `APPLE_PASSWORD` + `APPLE_TEAM_ID`
    - App Store Connect API key path: `APPLE_API_KEY` + `APPLE_API_ISSUER` + `APPLE_API_KEY_PATH`
 2. 不把凭据写入仓库；只通过本机 shell、CI secret 或临时 keychain 配置注入。
-3. 凭据可用后重跑完整 DMG 构建：
+3. 先按 `docs/release/notarization-credential-preflight.md` 做 keychain profile / `notarytool` 预检；credential 缺失时继续保持 release hold。
+4. 凭据可用后重跑完整 DMG 构建：
    - `pnpm tauri build --bundles dmg --config '{"bundle":{"macOS":{"signingIdentity":"Developer ID Application: Honoululu Inc. (N7VU72TZB8)"}}}'`
-4. 对新 DMG 重新记录 checksum、size 和完整 gate：
+5. 对新 DMG 重新记录 checksum、size 和完整 gate：
    - `hdiutil verify src-tauri/target/release/bundle/dmg/Loom_0.1.0_aarch64.dmg`
    - `codesign --verify --deep --strict --verbose=2 <mounted Loom.app>`
    - `spctl --assess --type execute --verbose=4 <mounted Loom.app>`
-5. 只有 notarization / Gatekeeper pass 后，才推进 `docs/release/beta-smoke.md` 与 `docs/release/diagnostic-bundle-smoke.md` 的真实试用前记录。
+6. 只有 notarization / Gatekeeper pass 后，才推进 `docs/release/beta-smoke.md` 与 `docs/release/diagnostic-bundle-smoke.md` 的真实试用前记录。

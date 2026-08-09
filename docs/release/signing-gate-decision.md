@@ -38,6 +38,7 @@
 | `spctl --assess --type execute --verbose=4` | hold | 必须修复并重新评估 |
 | Developer ID identity availability | pass | 本机 keychain 可见 `Developer ID Application` 身份，且 Tauri overlay 可用该身份完成 app bundle 签名 |
 | Notarization credential | missing | 已检查常见 Apple notarization 环境变量，均未配置；`spctl` 当前拒绝原因为 `Unnotarized Developer ID` |
+| Notarization keychain profile | missing | `xcrun notarytool` 可用，但 `loom-beta-notary` profile 不存在；见 `docs/release/notarization-credential-preflight.md` |
 
 ## 下一步修复路径
 
@@ -45,19 +46,20 @@
 
 1. 检查 `src-tauri/tauri.conf.json` 与 Tauri v2 macOS signing / notarization 配置。
 2. 使用 `docs/release/developer-id-notarization-probe.md` 里已验证的 Developer ID Application identity 重新构建或重签 app bundle。
-3. 配置 notarization credential，并重新生成 DMG，而不是只修改已记录 checksum 的旧 artifact。
-4. 重新记录：
+3. 按 `docs/release/notarization-credential-preflight.md` 配置 notarization credential；优先使用仓库外 keychain profile 或 CI secret。
+4. 重新生成 DMG，而不是只修改已记录 checksum 的旧 artifact。
+5. 重新记录：
    - commit
    - build command
    - signing identity label
    - notarization setting / result
    - DMG SHA-256
    - file size
-5. 重跑：
+6. 重跑：
    - `hdiutil verify src-tauri/target/release/bundle/dmg/Loom_0.1.0_aarch64.dmg`
    - `codesign --verify --deep --strict --verbose=2 <mounted Loom.app>`
    - `spctl --assess --type execute --verbose=4 <mounted Loom.app>`
-6. 只有上述 gate 通过后，才执行 `docs/release/beta-smoke.md` 和 `docs/release/diagnostic-bundle-smoke.md`。
+7. 只有上述 gate 通过后，才执行 `docs/release/beta-smoke.md` 和 `docs/release/diagnostic-bundle-smoke.md`。
 
 ### Path B：只做维护者本机验证（当前可接受）
 
@@ -86,3 +88,4 @@
 - 下一次如果签名修复成功，应新增新的 artifact integrity record 或在现有文档中明确追加新的时间段记录，不要删除当前 hold 证据。
 - 探针类结果应写入 `docs/release/signing-repair-probe.md` 或后续同类记录，区分 `codesign` 本机 pass 与 Gatekeeper / notarization 分发 pass。
 - Developer ID signing 探针结果记录在 `docs/release/developer-id-notarization-probe.md`；后续只有 notarization / staple 通过后，才能把 `Unnotarized Developer ID` 从发布 blocker 中移除。
+- Notarization credential 预检记录在 `docs/release/notarization-credential-preflight.md`；该文档只记录 credential 是否可用，不记录任何敏感凭据值。

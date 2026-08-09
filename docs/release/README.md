@@ -15,6 +15,7 @@
 - [Signing Gate Decision](signing-gate-decision.md)：记录当前候选 DMG 因 invalid-signature / Gatekeeper hold 不进入公开或默认邀请制分发，并给出下一步签名修复路径。
 - [Signing Repair Probe](signing-repair-probe.md)：记录 ad-hoc signing 探针，确认重新签名可修复严格 `codesign` 错误，但仍不能通过 Gatekeeper 分发门禁。
 - [Developer ID / Notarization Probe](developer-id-notarization-probe.md)：记录 Developer ID signing 探针，确认本机可完成 Developer ID 签名，但因缺少 notarization credential 仍被 Gatekeeper 判定为 `Unnotarized Developer ID`。
+- [Notarization Credential Preflight](notarization-credential-preflight.md)：记录 `notarytool` 与 keychain profile 预检，确认本机有 notarization CLI，但尚未配置 `loom-beta-notary` credential profile。
 
 ## M2 安装与首次启动
 
@@ -38,11 +39,12 @@
 5. 如果签名 / Gatekeeper 状态不是 pass，先读 `signing-gate-decision.md`；当前候选 DMG 只能保留为本机验证 artifact，不进入公开或默认邀请制分发。
 6. 如需修复签名，先读 `signing-repair-probe.md`：ad-hoc signing 已证明严格 `codesign` 错误可修复，但 Gatekeeper 分发仍需要 Developer ID / notarization 或明确接受未公证边界。
 7. 再读 `developer-id-notarization-probe.md`：Developer ID signing 已可用，当前剩余 blocker 是 notarization credential 未配置导致 `Unnotarized Developer ID`。
-8. 只有签名 gate 通过或被明确接受后，才按 `macos-install.md` 完成安装，并记录 Gatekeeper 或权限提示。
-9. 按 `beta-smoke.md` 在临时项目里完成首次启动 smoke；首次 smoke 默认使用 dummy / fixture，不要求真实付费 Agent。
-10. 如需卸载或清理，按 `local-data-and-uninstall.md` 处理项目内和全局数据。
-11. 完成试用后按 `beta-feedback-template.md` 回传反馈。
+8. 如果准备解除 hold，先按 `notarization-credential-preflight.md` 检查 `notarytool` 和 keychain profile；credential 缺失时不要重打普通 Beta DMG。
+9. 只有签名 gate 通过或被明确接受后，才按 `macos-install.md` 完成安装，并记录 Gatekeeper 或权限提示。
+10. 按 `beta-smoke.md` 在临时项目里完成首次启动 smoke；首次 smoke 默认使用 dummy / fixture，不要求真实付费 Agent。
+11. 如需卸载或清理，按 `local-data-and-uninstall.md` 处理项目内和全局数据。
+12. 完成试用后按 `beta-feedback-template.md` 回传反馈。
 
 ## 发布门禁
 
-这些文档覆盖邀请制 Beta 的 M0 边界、M1 可复现构建记录、产物完整性复核、签名 gate 决策、ad-hoc 修复探针、Developer ID / notarization 探针、M2 安装/卸载/smoke 路径，以及 M3 隐私、Agent 账号责任、诊断包安全复核和 UI smoke 门禁。公开下载、notarization / staple、正式 UI 诊断包 smoke 记录和针对候选 DMG 的首次启动 smoke 结果仍需后续里程碑实际填写；当前 `artifact-integrity-check.md` 已确认 DMG 可校验和挂载，但签名 / Gatekeeper assessment 处于 hold，`signing-gate-decision.md` 已明确不接受当前 invalid-signature DMG 作为公开或默认邀请制分发物，`signing-repair-probe.md` 确认 ad-hoc signing 可以修复严格 `codesign` 错误但不能解除 Gatekeeper 分发门禁，`developer-id-notarization-probe.md` 进一步确认 Developer ID signing 可用但缺少 notarization credential。
+这些文档覆盖邀请制 Beta 的 M0 边界、M1 可复现构建记录、产物完整性复核、签名 gate 决策、ad-hoc 修复探针、Developer ID / notarization 探针、notarization credential 预检、M2 安装/卸载/smoke 路径，以及 M3 隐私、Agent 账号责任、诊断包安全复核和 UI smoke 门禁。公开下载、notarization / staple、正式 UI 诊断包 smoke 记录和针对候选 DMG 的首次启动 smoke 结果仍需后续里程碑实际填写；当前 `artifact-integrity-check.md` 已确认 DMG 可校验和挂载，但签名 / Gatekeeper assessment 处于 hold，`signing-gate-decision.md` 已明确不接受当前 invalid-signature DMG 作为公开或默认邀请制分发物，`signing-repair-probe.md` 确认 ad-hoc signing 可以修复严格 `codesign` 错误但不能解除 Gatekeeper 分发门禁，`developer-id-notarization-probe.md` 进一步确认 Developer ID signing 可用但缺少 notarization credential，`notarization-credential-preflight.md` 确认本机有 `notarytool` 但缺少 `loom-beta-notary` keychain profile。
