@@ -84,3 +84,4 @@
 - `docs/release/README.md` 必须把签名 gate 放在首次启动 smoke 之前。
 - `docs/release/macos-install.md` 必须提示当前候选 DMG 处于 signing hold，不应作为普通试用包安装。
 - 下一次如果签名修复成功，应新增新的 artifact integrity record 或在现有文档中明确追加新的时间段记录，不要删除当前 hold 证据。
+- 探针类结果应写入 `docs/release/signing-repair-probe.md` 或后续同类记录，区分 `codesign` 本机 pass 与 Gatekeeper / notarization 分发 pass。
