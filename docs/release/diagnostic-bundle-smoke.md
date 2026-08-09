@@ -96,4 +96,4 @@
 
 ## 与工程测试的关系
 
-`src-tauri/src/diagnostics.rs` 已有单元测试覆盖 `build_bundle` 的脱敏、路径替换、日志默认不导出和日志尾部路径。UI smoke 只补工程测试没有覆盖的部分：用户是否能找到入口、开关状态是否符合文档、保存后的 JSON 是否能由人类按清单复核。
+`src-tauri/src/diagnostics.rs` 已有单元测试覆盖 `build_bundle` 的脱敏、路径替换、日志默认不导出和日志尾部路径；2026-08-09 的复跑记录见 `docs/release/diagnostic-bundle-engineering-proof.md`。UI smoke 只补工程测试没有覆盖的部分：用户是否能找到入口、开关状态是否符合文档、保存后的 JSON 是否能由人类按清单复核。

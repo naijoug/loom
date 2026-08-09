@@ -34,6 +34,7 @@
 - 命令、阻塞原因、日志尾部等文本会走统一敏感信息脱敏，常见 Authorization/Bearer、password、token、secret 和环境变量赋值替换为 `[REDACTED]`。
 - 日志默认不导出；用户主动选择后只读取项目内 `.loom/logs/` 下的最近日志尾部。
 - secret fixture 已验证命令、日志、阻塞原因中的 token 不出现在诊断 JSON。
+- 2026-08-09 复跑 `cargo test diagnostic_bundle --lib` 通过，记录见 `docs/release/diagnostic-bundle-engineering-proof.md`；该记录证明后端 fixture 仍有效，但不替代 UI 手工 smoke。
 - 真实付费 Agent canary 尚未执行；该路径仍是显式手工触发，不属于当前自动诊断证据。
 
 ## 导出前自查清单
