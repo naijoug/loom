@@ -68,6 +68,7 @@
 如果暂时不处理签名，则只能继续做不扩大分发的本机验证：
 
 - 继续验证 release 文档链接、安装说明、反馈模板和诊断包 smoke 模板。
+- 可运行 `pnpm smoke:desktop` 这类维护者本机 release app 启动检查，并把结果记录为本机 smoke；2026-08-09 的两轮启动 / 重启记录见 `docs/release/local-desktop-smoke-record.md`。
 - 不把 DMG 发给新试用者。
 - 不要求试用者运行 `xattr` 或绕过 Gatekeeper。
 - 下一次构建前保留当前 `docs/release/artifact-integrity-check.md` 作为失败证据，而不是覆盖它。
