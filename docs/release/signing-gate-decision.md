@@ -36,16 +36,16 @@
 | Bundle identifier / version | pass | 与 `docs/release/release-build-record.md` 对齐 |
 | `codesign --verify --deep --strict --verbose=2` | hold | 必须修复或重签 |
 | `spctl --assess --type execute --verbose=4` | hold | 必须修复并重新评估 |
-| Developer ID identity availability | observed | 本机 keychain 可见 `Developer ID Application` 身份，但尚未验证 Tauri 签名与公证流程 |
-| Notarization credential | unknown | 不假设可用；需要单独验证 |
+| Developer ID identity availability | pass | 本机 keychain 可见 `Developer ID Application` 身份，且 Tauri overlay 可用该身份完成 app bundle 签名 |
+| Notarization credential | missing | 已检查常见 Apple notarization 环境变量，均未配置；`spctl` 当前拒绝原因为 `Unnotarized Developer ID` |
 
 ## 下一步修复路径
 
 ### Path A：修复签名并重新打包（优先）
 
 1. 检查 `src-tauri/tauri.conf.json` 与 Tauri v2 macOS signing / notarization 配置。
-2. 用明确的 Developer ID Application identity 重新构建或重签 app bundle。
-3. 重新生成 DMG，而不是只修改已记录 checksum 的旧 artifact。
+2. 使用 `docs/release/developer-id-notarization-probe.md` 里已验证的 Developer ID Application identity 重新构建或重签 app bundle。
+3. 配置 notarization credential，并重新生成 DMG，而不是只修改已记录 checksum 的旧 artifact。
 4. 重新记录：
    - commit
    - build command
@@ -85,3 +85,4 @@
 - `docs/release/macos-install.md` 必须提示当前候选 DMG 处于 signing hold，不应作为普通试用包安装。
 - 下一次如果签名修复成功，应新增新的 artifact integrity record 或在现有文档中明确追加新的时间段记录，不要删除当前 hold 证据。
 - 探针类结果应写入 `docs/release/signing-repair-probe.md` 或后续同类记录，区分 `codesign` 本机 pass 与 Gatekeeper / notarization 分发 pass。
+- Developer ID signing 探针结果记录在 `docs/release/developer-id-notarization-probe.md`；后续只有 notarization / staple 通过后，才能把 `Unnotarized Developer ID` 从发布 blocker 中移除。
