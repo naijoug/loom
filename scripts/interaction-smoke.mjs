@@ -314,6 +314,18 @@ async function main() {
       await waitFor(client, textIncludes("当前项目", "运行模式"), "settings general");
       await evaluate(client, "[...document.querySelectorAll('.settings-nav-item')].find((item) => item.textContent.includes('Agent'))?.click(); true");
       await waitFor(client, textIncludes("已安装 Agent", "添加自定义 Agent"), "settings agents tab");
+      await evaluate(client, "[...document.querySelectorAll('.settings-nav-item')].find((item) => item.textContent.includes('关于'))?.click(); true");
+      await waitFor(client, textIncludes("诊断与支持", "脱敏诊断包", "日志范围"), "settings diagnostic support");
+      const settingsDiagnostics = await evaluate(client, `({
+        exportButtonDisabled: [...document.querySelectorAll('button')]
+          .find((button) => button.textContent.includes('导出诊断包'))?.disabled ?? null,
+        hasLogToggle: Boolean([...document.querySelectorAll('.settings-field-row')]
+          .find((field) => field.textContent.includes('日志范围'))
+          ?.querySelector('button, input[type="checkbox"]')),
+      })`);
+      if (settingsDiagnostics.exportButtonDisabled !== true || !settingsDiagnostics.hasLogToggle) {
+        throw new Error(`Settings diagnostics controls changed unexpectedly: ${JSON.stringify(settingsDiagnostics)}`);
+      }
 
       await navigate(client, `${baseUrl}?screen=session`);
       await waitFor(client, textIncludes("进入测试验收", "子任务"), "session screen");
@@ -336,6 +348,25 @@ async function main() {
 
       await navigate(client, `${baseUrl}?screen=done`);
       await waitFor(client, textIncludes("交付总结", "真实 Git", "+218 / -12", "导出 MD", "pre_existing"), "done summary screen");
+      await waitFor(client, textIncludes("问题诊断", "导出脱敏诊断包", "包含最近日志尾部"), "done diagnostics controls");
+      const doneDiagnostics = await evaluate(client, `(() => {
+        const section = [...document.querySelectorAll('.dl-block')]
+          .find((element) => element.textContent.includes('问题诊断'));
+        const checkbox = section?.querySelector('input[type="checkbox"]');
+        const button = [...(section?.querySelectorAll('button') ?? [])]
+          .find((element) => element.textContent.includes('导出脱敏诊断包'));
+        const before = Boolean(checkbox?.checked);
+        checkbox?.click();
+        return {
+          hasSection: Boolean(section),
+          hasCheckbox: Boolean(checkbox),
+          toggled: Boolean(checkbox?.checked) !== before,
+          buttonDisabled: button?.disabled ?? null,
+        };
+      })()`);
+      if (!doneDiagnostics.hasSection || !doneDiagnostics.hasCheckbox || !doneDiagnostics.toggled || doneDiagnostics.buttonDisabled !== false) {
+        throw new Error(`Done diagnostics controls changed unexpectedly: ${JSON.stringify(doneDiagnostics)}`);
+      }
 
       await client.send("Emulation.setDeviceMetricsOverride", {
         width: 960,
