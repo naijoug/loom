@@ -6,10 +6,10 @@
 
 ## 结论
 
-2026-08-09 21:00 复跑诊断包相关 Rust 单元测试，结果通过：
+2026-08-09 23:00 复跑并扩展诊断包相关 Rust 单元测试，结果通过：
 
 - 默认不勾选日志尾部时，诊断包 `logs` 为空，`omittedLogCount` 为 `0`。
-- 勾选日志尾部时，只读取项目内 `.loom/logs/` 引用；项目根路径替换为 `[PROJECT_ROOT]`。
+- 勾选日志尾部时，只读取项目内 `.loom/logs/` 引用；项目根路径替换为 `[PROJECT_ROOT]`；指向项目外目录的日志引用不会进入导出 JSON。
 - 命令、阻塞原因和日志尾部中的 token / secret / Authorization / Bearer 类文本会被替换为 `[REDACTED]`。
 - 测试 JSON 中不包含临时项目真实路径，也不包含 fake secret 原文。
 
@@ -25,11 +25,12 @@ cargo test diagnostic_bundle --lib
 ## 输出摘要
 
 ```text
-running 2 tests
+running 3 tests
+test diagnostics::tests::diagnostic_bundle_ignores_logs_outside_project_log_dir ... ok
 test diagnostics::tests::diagnostic_bundle_omits_logs_unless_user_selects_them ... ok
 test diagnostics::tests::diagnostic_bundle_redacts_secrets_paths_and_log_tails ... ok
 
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 189 filtered out; finished in 0.01s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 189 filtered out; finished in 0.01s
 ```
 
 ## 覆盖点
@@ -39,7 +40,7 @@ test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 189 filtered out; fi
 | 默认不导出日志 | `diagnostic_bundle_omits_logs_unless_user_selects_them` | 用户未主动选择时不把 stdout/stderr 尾部写入诊断包 |
 | 路径脱敏 | `diagnostic_bundle_redacts_secrets_paths_and_log_tails` | 项目根路径以 `[PROJECT_ROOT]` 出现，不暴露真实目录 |
 | secret 脱敏 | `diagnostic_bundle_redacts_secrets_paths_and_log_tails` | fake token / Authorization / secret 样例不以原文出现在 JSON |
-| 日志来源边界 | 测试 fixture 使用项目内 `.loom/logs/` 引用 | UI smoke 仍需确认开关文案和保存文件符合试用者预期 |
+| 日志来源边界 | `diagnostic_bundle_redacts_secrets_paths_and_log_tails` 使用项目内 `.loom/logs/` 引用；`diagnostic_bundle_ignores_logs_outside_project_log_dir` 证明项目外日志引用被忽略 | UI smoke 仍需确认开关文案和保存文件符合试用者预期 |
 
 ## 当前仍不能解除的门禁
 

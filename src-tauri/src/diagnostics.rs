@@ -438,4 +438,40 @@ mod tests {
         assert_eq!(bundle.omitted_log_count, 0);
         fs::remove_dir_all(root).ok();
     }
+
+    #[test]
+    fn diagnostic_bundle_ignores_logs_outside_project_log_dir() {
+        let root = std::env::temp_dir().join(format!("loom-diagnostic-log-boundary-{}", now_ms()));
+        let outside_root =
+            std::env::temp_dir().join(format!("loom-diagnostic-outside-{}", now_ms()));
+        fs::create_dir_all(root.join(".loom/logs")).expect("logs dir");
+        fs::create_dir_all(&outside_root).expect("outside dir");
+        let inside_log = root.join(".loom/logs/run.stderr.log");
+        let outside_log = outside_root.join("outside.stdout.log");
+        fs::write(
+            &inside_log,
+            "inside log with Authorization: Bearer secret...en\n",
+        )
+        .expect("inside log fixture");
+        fs::write(&outside_log, "outside log must not be exported\n").expect("outside log fixture");
+
+        let mut task = task_fixture(&root);
+        let run = task.command_runs.last_mut().expect("fixture run");
+        run.stdout_log_ref = Some(outside_log.display().to_string());
+        run.stderr_log_ref = Some(inside_log.display().to_string());
+
+        let bundle = build_bundle(&root, Some(&task), true, true);
+        let json = serde_json::to_string_pretty(&bundle).expect("diagnostic json");
+
+        assert_eq!(bundle.logs.len(), 1);
+        assert_eq!(bundle.logs[0].source, "run.stderr.log");
+        assert!(json.contains("inside log"));
+        assert!(json.contains("[REDACTED]"));
+        assert!(!json.contains("Authorization: Bearer secret...en"));
+        assert!(!json.contains("outside log must not be exported"));
+        assert!(!json.contains(&outside_root.display().to_string()));
+
+        fs::remove_dir_all(root).ok();
+        fs::remove_dir_all(outside_root).ok();
+    }
 }
