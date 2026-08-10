@@ -2,7 +2,7 @@
 
 - **状态**: review checklist ready; distribution gate still hold
 - **适用阶段**: credential 缺失或 credential 刚注入后的 release review，不替代 notarized DMG gate
-- **关联记录**: `docs/release/README.md`、`docs/release/notarization-credential-preflight.md`、`docs/release/notarized-dmg-gate.md`、`docs/release/local-desktop-smoke-record.md`
+- **关联记录**: `docs/release/README.md`、`docs/release/notarization-credential-preflight.md`、`docs/release/notarized-dmg-gate.md`、`docs/release/local-desktop-smoke-record.md`、`docs/release/beta-first-run-smoke-record.md`
 
 ## 目标
 
@@ -27,7 +27,7 @@
 | Developer ID identity | `security find-identity -v -p codesigning` 可见 `Developer ID Application: Honoululu Inc. (N7VU72TZB8)` | Review | identity 不可见时停止 |
 | Notarized DMG gate | `hdiutil verify`、严格 `codesign`、`spctl`、staple validate 证据齐全 | Wait | 任一 gate fail 时不进入普通试用者分发 |
 | Maintainer local smoke | `pnpm smoke:desktop` 或等价维护者本机 smoke 已记录 | Pass | 只能证明本机可启动，不能替代 notarization / Gatekeeper pass |
-| First-run beta smoke | 针对同一候选 artifact 完成 `docs/release/beta-smoke.md` | Wait | 未对同一 artifact smoke 时不扩大试用范围 |
+| First-run beta smoke | 针对同一候选 artifact 完成 `docs/release/beta-smoke.md`，并填写 `docs/release/beta-first-run-smoke-record.md` | Wait | 未对同一 artifact smoke，或只复用维护者本机 smoke / 旧 artifact 记录时不扩大试用范围 |
 | Diagnostic bundle smoke | `docs/release/diagnostic-bundle-smoke.md` 至少一条 UI 导出记录 | Wait | 诊断包导出、脱敏或日志开关未人工复核时停止 |
 | Install / uninstall docs | `docs/release/macos-install.md`、`docs/release/local-data-and-uninstall.md` 与真实签名状态一致 | Review | 文档仍提示旧 invalid-signature / unnotarized 状态但 artifact 已变更时停止 |
 | Privacy / account boundary | `docs/release/privacy-note.md`、`docs/release/agent-account-boundary.md` 已复核 | Review | 真实 Agent 账号、费用、外发数据责任不清时停止 |
@@ -36,6 +36,7 @@
 
 - `docs/release/notarization-credential-preflight.md` 记录：Developer ID signing identity 可见，但 `loom-beta-notary` credential profile 仍缺失。
 - `docs/release/local-desktop-smoke-record.md` 记录：维护者本机 release app 两轮启动 / 退出 smoke 通过。
+- `docs/release/beta-first-run-smoke-record.md` 当前只是模板，没有针对已公证候选 DMG 的首次启动 pass 记录。
 - 这些证据只支持继续本机验证和文档复核，不支持公开下载或默认邀请制分发。
 
 **Distribution decision: Hold**
