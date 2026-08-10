@@ -195,19 +195,23 @@ function resolveMarkdownTarget(filePath, target) {
   return path.resolve(path.dirname(filePath), cleanTarget);
 }
 
-for (const fileName of requiredFiles) {
-  const filePath = path.join(releaseDir, fileName);
-  if (!fileExists(filePath)) {
-    failures.push(`docs/release/${fileName}: required release doc is missing`);
+function listMarkdownFiles() {
+  return fs
+    .readdirSync(releaseDir)
+    .filter((entry) => entry.endsWith(".md"))
+    .map((entry) => path.join(releaseDir, entry));
+}
+
+function checkRequiredFiles() {
+  for (const fileName of requiredFiles) {
+    const filePath = path.join(releaseDir, fileName);
+    if (!fileExists(filePath)) {
+      failures.push(`docs/release/${fileName}: required release doc is missing`);
+    }
   }
 }
 
-const markdownFiles = fs
-  .readdirSync(releaseDir)
-  .filter((entry) => entry.endsWith(".md"))
-  .map((entry) => path.join(releaseDir, entry));
-
-for (const filePath of markdownFiles) {
+function checkMarkdownFile(filePath) {
   const text = fs.readFileSync(filePath, "utf8");
 
   for (const pattern of forbiddenLocalPathPatterns) {
@@ -234,9 +238,13 @@ for (const filePath of markdownFiles) {
   }
 }
 
-const checklistPath = path.join(releaseDir, "beta-release-review-checklist.md");
-if (fileExists(checklistPath)) {
-  const checklist = fs.readFileSync(checklistPath, "utf8");
+function checkMarkdownFiles(markdownFiles) {
+  for (const filePath of markdownFiles) {
+    checkMarkdownFile(filePath);
+  }
+}
+
+function checkRequiredChecklistPhrases(checklistPath, checklist) {
   for (const phrase of [
     "Distribution decision: Hold",
     "Credential preflight",
@@ -249,62 +257,82 @@ if (fileExists(checklistPath)) {
       fail(checklistPath, `missing release gate phrase ${JSON.stringify(phrase)}`);
     }
   }
+}
+
+function checkChecklistRow(checklistPath, checklistRows, requiredRow) {
+  const row = checklistRows.get(requiredRow.gate);
+  if (!row) {
+    fail(checklistPath, `missing review table gate ${JSON.stringify(requiredRow.gate)}`);
+    return;
+  }
+  if (row.status !== requiredRow.status) {
+    fail(
+      checklistPath,
+      `review table gate ${JSON.stringify(requiredRow.gate)} has status ${JSON.stringify(
+        row.status,
+      )}, expected ${JSON.stringify(requiredRow.status)}`,
+    );
+  }
+  for (const evidence of requiredRow.evidence) {
+    if (!row.evidence.includes(evidence)) {
+      fail(
+        checklistPath,
+        `review table gate ${JSON.stringify(requiredRow.gate)} missing evidence ${JSON.stringify(
+          evidence,
+        )}`,
+      );
+    }
+  }
+  if (row.stopRule.length < 8) {
+    fail(checklistPath, `review table gate ${JSON.stringify(requiredRow.gate)} has empty stop rule`);
+  }
+  for (const stopRuleEvidence of requiredRow.stopRuleEvidence) {
+    if (!row.stopRule.includes(stopRuleEvidence)) {
+      fail(
+        checklistPath,
+        `review table gate ${JSON.stringify(requiredRow.gate)} missing stop rule evidence ${JSON.stringify(
+          stopRuleEvidence,
+        )}`,
+      );
+    }
+  }
+}
+
+function checkChecklist() {
+  const checklistPath = path.join(releaseDir, "beta-release-review-checklist.md");
+  if (!fileExists(checklistPath)) {
+    return;
+  }
+
+  const checklist = fs.readFileSync(checklistPath, "utf8");
+  checkRequiredChecklistPhrases(checklistPath, checklist);
 
   const checklistRows = parseMarkdownTableRows(checklist);
   for (const requiredRow of requiredChecklistRows) {
-    const row = checklistRows.get(requiredRow.gate);
-    if (!row) {
-      fail(checklistPath, `missing review table gate ${JSON.stringify(requiredRow.gate)}`);
+    checkChecklistRow(checklistPath, checklistRows, requiredRow);
+  }
+}
+
+function checkRecordGatePhrases() {
+  for (const recordGate of requiredRecordGatePhrases) {
+    const recordPath = path.join(releaseDir, recordGate.file);
+    if (!fileExists(recordPath)) {
       continue;
     }
-    if (row.status !== requiredRow.status) {
-      fail(
-        checklistPath,
-        `review table gate ${JSON.stringify(requiredRow.gate)} has status ${JSON.stringify(
-          row.status,
-        )}, expected ${JSON.stringify(requiredRow.status)}`,
-      );
-    }
-    for (const evidence of requiredRow.evidence) {
-      if (!row.evidence.includes(evidence)) {
-        fail(
-          checklistPath,
-          `review table gate ${JSON.stringify(requiredRow.gate)} missing evidence ${JSON.stringify(
-            evidence,
-          )}`,
-        );
-      }
-    }
-    if (row.stopRule.length < 8) {
-      fail(checklistPath, `review table gate ${JSON.stringify(requiredRow.gate)} has empty stop rule`);
-    }
-    for (const stopRuleEvidence of requiredRow.stopRuleEvidence) {
-      if (!row.stopRule.includes(stopRuleEvidence)) {
-        fail(
-          checklistPath,
-          `review table gate ${JSON.stringify(requiredRow.gate)} missing stop rule evidence ${JSON.stringify(
-            stopRuleEvidence,
-          )}`,
-        );
+    const text = fs.readFileSync(recordPath, "utf8");
+    for (const phrase of recordGate.phrases) {
+      if (!text.includes(phrase)) {
+        fail(recordPath, `missing record gate phrase ${JSON.stringify(phrase)}`);
       }
     }
   }
 }
 
-for (const recordGate of requiredRecordGatePhrases) {
-  const recordPath = path.join(releaseDir, recordGate.file);
-  if (!fileExists(recordPath)) {
-    continue;
+function reportFailures() {
+  if (failures.length === 0) {
+    return;
   }
-  const text = fs.readFileSync(recordPath, "utf8");
-  for (const phrase of recordGate.phrases) {
-    if (!text.includes(phrase)) {
-      fail(recordPath, `missing record gate phrase ${JSON.stringify(phrase)}`);
-    }
-  }
-}
 
-if (failures.length > 0) {
   console.error("Release docs check failed:");
   for (const failure of failures) {
     console.error(`- ${failure}`);
@@ -312,4 +340,14 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log(`Release docs check passed (${markdownFiles.length} markdown files).`);
+function main() {
+  checkRequiredFiles();
+  const markdownFiles = listMarkdownFiles();
+  checkMarkdownFiles(markdownFiles);
+  checkChecklist();
+  checkRecordGatePhrases();
+  reportFailures();
+  console.log(`Release docs check passed (${markdownFiles.length} markdown files).`);
+}
+
+main();
