@@ -89,7 +89,7 @@ pnpm docs:release:check
 pnpm check
 ```
 
-该命令依次执行前端单元测试与生产构建，以及 Rust 格式检查、严格 Clippy 和测试套件。GitHub Actions 使用同一脚本，避免本地与 CI 规则漂移。
+该命令先执行 `pnpm docs:release:check`，再依次执行前端单元测试与生产构建，以及 Rust 格式检查、严格 Clippy 和测试套件。GitHub Actions 使用同一脚本，避免本地与 CI 规则漂移。
 
 完整 UI 回归入口：
 
