@@ -342,6 +342,11 @@ fn build_bundle(
     }
 }
 
+fn write_bundle(target_path: &Path, bundle: &DiagnosticBundle) -> Result<String, String> {
+    storage::atomic_write_json(target_path, bundle)?;
+    Ok(target_path.display().to_string())
+}
+
 #[tauri::command]
 pub fn export_diagnostic_bundle(
     app: AppHandle,
@@ -364,9 +369,7 @@ pub fn export_diagnostic_bundle(
         input.include_log_tails,
         settings.confirm_before_commands,
     );
-    let target_path = PathBuf::from(&input.target_path);
-    storage::atomic_write_json(&target_path, &bundle)?;
-    Ok(target_path.display().to_string())
+    write_bundle(Path::new(&input.target_path), &bundle)
 }
 
 #[cfg(test)]
@@ -432,6 +435,28 @@ mod tests {
 
         assert!(bundle.logs.is_empty());
         assert_eq!(bundle.omitted_log_count, 0);
+        fs::remove_dir_all(root).ok();
+    }
+
+    #[test]
+    fn diagnostic_bundle_file_harness_writes_minimal_no_task_json() {
+        let root = std::env::temp_dir().join(format!("loom-diagnostic-file-minimal-{}", now_ms()));
+        fs::create_dir_all(&root).expect("test root");
+        let target = root.join("minimal-diagnostic.json");
+
+        let bundle = build_bundle(&root, None, false, true);
+        let written = write_bundle(&target, &bundle).expect("write diagnostic bundle");
+        let json = fs::read_to_string(&target).expect("read diagnostic bundle");
+        let value: Value = serde_json::from_str(&json).expect("diagnostic json");
+
+        assert_eq!(written, target.display().to_string());
+        assert!(target.exists());
+        assert!(json.contains("[PROJECT_ROOT]"));
+        assert!(!json.contains(&root.display().to_string()));
+        assert!(value["task"].is_null());
+        assert!(value["logs"].as_array().expect("logs array").is_empty());
+        assert_eq!(value["omittedLogCount"], 0);
+
         fs::remove_dir_all(root).ok();
     }
 
@@ -512,5 +537,40 @@ mod tests {
 
         fs::remove_dir_all(root).ok();
         fs::remove_dir_all(outside_root).ok();
+    }
+
+    #[test]
+    fn diagnostic_bundle_file_harness_writes_redacted_fake_log_tail_json() {
+        let root = std::env::temp_dir().join(format!("loom-diagnostic-file-fake-log-{}", now_ms()));
+        fs::create_dir_all(root.join(".loom/logs")).expect("logs dir");
+        let log_path = root.join(".loom/logs/fake.stdout.log");
+        fs::write(
+            &log_path,
+            format!(
+                "project={}\nOPENAI_API_KEY=sk-fake-diagnostic-token\nAuthorization: Bearer fake-diagnostic-token\n",
+                root.display()
+            ),
+        )
+        .expect("fake log fixture");
+
+        let mut task = task_fixture(&root);
+        let run = task.command_runs.last_mut().expect("fixture run");
+        run.stdout_log_ref = Some(log_path.display().to_string());
+        run.stderr_log_ref = None;
+        let target = root.join("fake-log-diagnostic.json");
+
+        let bundle = build_bundle(&root, Some(&task), true, true);
+        write_bundle(&target, &bundle).expect("write diagnostic bundle");
+        let json = fs::read_to_string(&target).expect("read diagnostic bundle");
+        let value: Value = serde_json::from_str(&json).expect("diagnostic json");
+
+        assert_eq!(value["logs"].as_array().expect("logs array").len(), 1);
+        assert!(json.contains("[PROJECT_ROOT]"));
+        assert!(json.contains("[REDACTED]"));
+        assert!(!json.contains(&root.display().to_string()));
+        assert!(!json.contains("sk-fake-diagnostic-token"));
+        assert!(!json.contains("Bearer fake-diagnostic-token"));
+
+        fs::remove_dir_all(root).ok();
     }
 }

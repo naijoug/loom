@@ -34,7 +34,7 @@
 - 命令、阻塞原因、日志尾部等文本会走统一敏感信息脱敏，常见 Authorization/Bearer、password、token、secret 和环境变量赋值替换为 `[REDACTED]`。
 - 日志默认不导出；用户主动选择后只读取项目内 `.loom/logs/` 下的最近日志尾部。
 - secret fixture 已验证命令、日志、阻塞原因中的 token 不出现在诊断 JSON。
-- 2026-08-10 复跑 `cargo test diagnostic_bundle --lib` 通过，记录见 `docs/release/diagnostic-bundle-engineering-proof.md`；该记录证明后端 fixture 仍有效，并补充验证项目外 / 不可读日志引用不会挤占可导出日志限额，但不替代 UI 手工 smoke。
+- 2026-08-10 复跑 `cargo test diagnostic_bundle --lib` 通过，记录见 `docs/release/diagnostic-bundle-engineering-proof.md`；该记录证明后端 fixture 仍有效，并补充验证项目外 / 不可读日志引用不会挤占可导出日志限额，以及 headless 文件 harness 可实际写出 / 读回无任务最小 JSON 与 fake-only 日志尾部 JSON，但不替代 UI 手工 smoke。
 - 真实付费 Agent canary 尚未执行；该路径仍是显式手工触发，不属于当前自动诊断证据。
 
 ## 导出前自查清单
@@ -91,3 +91,4 @@
 - 在 JSON 顶层增加 `reviewRequired: true` 或同等字段，提醒它不是自动可外发材料。
 - 为诊断包增加 schema 文档和样例 fixture，便于试用者知道哪些字段会出现。
 - 增加单独命令或 UI 按钮，生成“无日志、无任务详情”的最小支持包。
+- 将 headless 文件 harness 扩展成可由 release runbook 直接调用的 smoke 命令，减少 cron / CI 对 macOS 保存对话框的依赖。
