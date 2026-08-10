@@ -147,6 +147,20 @@ try {
     'review table gate "Feedback path" has empty stop rule',
   );
 
+  expectFail(
+    "missing-record-hold-gate",
+    (fixtureReleaseDir) => {
+      const recordPath = path.join(fixtureReleaseDir, "diagnostic-bundle-smoke-record.md");
+      fs.writeFileSync(
+        recordPath,
+        fs
+          .readFileSync(recordPath, "utf8")
+          .replace("Diagnostic bundle beta gate: Hold", "Diagnostic bundle beta gate: Pass"),
+      );
+    },
+    'missing record gate phrase "Diagnostic bundle beta gate: Hold"',
+  );
+
   console.log("Release docs checker fixture tests passed.");
 } finally {
   fs.rmSync(tempRoot, { recursive: true, force: true });

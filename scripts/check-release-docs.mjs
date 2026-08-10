@@ -99,6 +99,33 @@ const requiredChecklistRows = [
   },
 ];
 
+const requiredRecordGatePhrases = [
+  {
+    file: "beta-first-run-smoke-record.md",
+    phrases: [
+      "Beta gate: hold",
+      "不能替代本记录",
+      "邀请制 Beta 分发结论继续保持 hold",
+    ],
+  },
+  {
+    file: "diagnostic-bundle-smoke-record.md",
+    phrases: [
+      "Diagnostic bundle beta gate: Hold",
+      "不能把诊断包 UI smoke 视为已满足邀请制 Beta 分发门禁",
+      "这条门禁不能解除 `loom-beta-notary` credential",
+    ],
+  },
+  {
+    file: "install-uninstall-smoke-record.md",
+    phrases: [
+      "Install / uninstall beta gate: Hold",
+      "不要求试用者绕过 Gatekeeper",
+      "这份记录不能单独解锁邀请制 Beta 或公开分发",
+    ],
+  },
+];
+
 const failures = [];
 
 function rel(filePath) {
@@ -239,6 +266,19 @@ if (fileExists(checklistPath)) {
     }
     if (row.stopRule.length < 8) {
       fail(checklistPath, `review table gate ${JSON.stringify(requiredRow.gate)} has empty stop rule`);
+    }
+  }
+}
+
+for (const recordGate of requiredRecordGatePhrases) {
+  const recordPath = path.join(releaseDir, recordGate.file);
+  if (!fileExists(recordPath)) {
+    continue;
+  }
+  const text = fs.readFileSync(recordPath, "utf8");
+  for (const phrase of recordGate.phrases) {
+    if (!text.includes(phrase)) {
+      fail(recordPath, `missing record gate phrase ${JSON.stringify(phrase)}`);
     }
   }
 }

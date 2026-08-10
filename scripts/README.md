@@ -82,7 +82,7 @@ pnpm docs:release:check
 pnpm docs:release:test
 ```
 
-`docs:release:check` 检查 `docs/release/` 中的必备发布资料、相对 Markdown 链接、反引号中的 release 文档引用、本机绝对路径泄漏，以及 `beta-release-review-checklist.md` 是否仍保留关键分发 gate 语句与完整 review 表字段（Gate / Required evidence / Current status / Stop rule）。`docs:release:test` 会在临时 fixture 中验证 checker 的负向分支，确保缺必备 release 文档、缺 evidence、错误 status、过短 stop rule、本机绝对路径、Markdown 断链和反引号 release 文档断链都会失败。新增或改动 Beta release 文档时先跑这两个命令，再根据改动范围决定是否继续运行 `pnpm check`。
+`docs:release:check` 检查 `docs/release/` 中的必备发布资料、相对 Markdown 链接、反引号中的 release 文档引用、本机绝对路径泄漏，以及 `beta-release-review-checklist.md` 是否仍保留关键分发 gate 语句与完整 review 表字段（Gate / Required evidence / Current status / Stop rule）；它也固定安装 / 卸载、首次启动和诊断包 smoke 记录模板中的 hold gate 语句，避免模板被误改成分发 pass。`docs:release:test` 会在临时 fixture 中验证 checker 的负向分支，确保缺必备 release 文档、缺 evidence、错误 status、过短 stop rule、记录模板 hold gate 被误删、本机绝对路径、Markdown 断链和反引号 release 文档断链都会失败。新增或改动 Beta release 文档时先跑这两个命令，再根据改动范围决定是否继续运行 `pnpm check`。
 
 提交前运行统一检查：
 
