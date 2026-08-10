@@ -4,7 +4,10 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
-const projectRoot = path.resolve(new URL("..", import.meta.url).pathname);
+const defaultProjectRoot = path.resolve(new URL("..", import.meta.url).pathname);
+const projectRoot = process.env.LOOM_RELEASE_DOCS_PROJECT_ROOT
+  ? path.resolve(process.env.LOOM_RELEASE_DOCS_PROJECT_ROOT)
+  : defaultProjectRoot;
 const releaseDir = path.join(projectRoot, "docs", "release");
 
 const requiredFiles = [

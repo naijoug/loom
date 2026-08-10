@@ -79,9 +79,10 @@ Release 文档门禁入口：
 
 ```bash
 pnpm docs:release:check
+pnpm docs:release:test
 ```
 
-该命令检查 `docs/release/` 中的必备发布资料、相对 Markdown 链接、反引号中的 release 文档引用、本机绝对路径泄漏，以及 `beta-release-review-checklist.md` 是否仍保留关键分发 gate 语句与完整 review 表字段（Gate / Required evidence / Current status / Stop rule）。新增或改动 Beta release 文档时先跑它，再根据改动范围决定是否继续运行 `pnpm check`。
+`docs:release:check` 检查 `docs/release/` 中的必备发布资料、相对 Markdown 链接、反引号中的 release 文档引用、本机绝对路径泄漏，以及 `beta-release-review-checklist.md` 是否仍保留关键分发 gate 语句与完整 review 表字段（Gate / Required evidence / Current status / Stop rule）。`docs:release:test` 会在临时 fixture 中验证 checker 的负向分支，确保缺 evidence、错误 status、本机绝对路径和断链都会失败。新增或改动 Beta release 文档时先跑这两个命令，再根据改动范围决定是否继续运行 `pnpm check`。
 
 提交前运行统一检查：
 
@@ -89,7 +90,7 @@ pnpm docs:release:check
 pnpm check
 ```
 
-该命令先执行 `pnpm docs:release:check`，再依次执行前端单元测试与生产构建，以及 Rust 格式检查、严格 Clippy 和测试套件。GitHub Actions 使用同一脚本，避免本地与 CI 规则漂移。
+该命令先执行 `pnpm docs:release:check` 与 `pnpm docs:release:test`，再依次执行前端单元测试与生产构建，以及 Rust 格式检查、严格 Clippy 和测试套件。GitHub Actions 使用同一脚本，避免本地与 CI 规则漂移。
 
 完整 UI 回归入口：
 

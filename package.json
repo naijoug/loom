@@ -10,6 +10,7 @@
     "test:watch": "node --watch scripts/run-tests.mjs",
     "dogfood:verify": "node scripts/verify-dogfood.mjs",
     "docs:release:check": "node scripts/check-release-docs.mjs",
+    "docs:release:test": "node scripts/test-release-docs-checker.mjs",
     "bench:local": "node scripts/bench-local.mjs",
     "smoke": "./scripts/smoke-flow.sh",
     "smoke:interaction": "./scripts/interaction-smoke.sh",

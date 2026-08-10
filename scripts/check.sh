@@ -8,6 +8,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$PROJECT_ROOT"
 
 pnpm docs:release:check
+pnpm docs:release:test
 pnpm test
 pnpm build
 cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
