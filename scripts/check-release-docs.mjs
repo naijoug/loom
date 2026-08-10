@@ -155,6 +155,14 @@ function fileExists(filePath) {
   }
 }
 
+function directoryExists(dirPath) {
+  try {
+    return fs.statSync(dirPath).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
 function parseMarkdownTableRows(markdown) {
   const rows = new Map();
   for (const line of markdown.split("\n")) {
@@ -209,6 +217,14 @@ function checkRequiredFiles() {
       failures.push(`docs/release/${fileName}: required release doc is missing`);
     }
   }
+}
+
+function checkReleaseDirectory() {
+  if (directoryExists(releaseDir)) {
+    return true;
+  }
+  failures.push("docs/release: release docs directory is missing");
+  return false;
 }
 
 function checkMarkdownFile(filePath) {
@@ -341,6 +357,11 @@ function reportFailures() {
 }
 
 function main() {
+  if (!checkReleaseDirectory()) {
+    reportFailures();
+    return;
+  }
+
   checkRequiredFiles();
   const markdownFiles = listMarkdownFiles();
   checkMarkdownFiles(markdownFiles);

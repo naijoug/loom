@@ -123,6 +123,14 @@ try {
   );
 
   expectFail(
+    "missing-release-directory",
+    (fixtureReleaseDir) => {
+      fs.rmSync(fixtureReleaseDir, { recursive: true, force: true });
+    },
+    "docs/release: release docs directory is missing",
+  );
+
+  expectFail(
     "broken-backtick-reference",
     (fixtureReleaseDir) => {
       fs.appendFileSync(
