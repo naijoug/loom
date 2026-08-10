@@ -16,7 +16,7 @@ src-tauri/target/release/bundle/macos/Loom.app
 src-tauri/target/release/bundle/dmg/Loom_0.1.0_aarch64.dmg
 ```
 
-当前产物没有 Apple Developer ID 签名与公证，适合本机开发验收，不应作为已公证的公开下载包分发。
+当前产物没有 Apple Developer ID 签名与公证，适合本机开发验收，不应作为已公证的公开下载包分发；如要推进邀请制 Beta，先阅读 `docs/release/README.md`、`docs/release/beta-scope.md`、`docs/release/beta-safety-notes.md` 和 `docs/release/beta-feedback-template.md`。
 
 ## 建议验收路径
 

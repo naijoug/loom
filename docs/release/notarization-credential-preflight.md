@@ -72,6 +72,26 @@ pnpm tauri build --bundles dmg --config '{"bundle":{"macOS":{"signingIdentity":"
 4. `spctl --assess --type execute --verbose=4 <mounted Loom.app>` 不再返回 `Unnotarized Developer ID`。
 5. 如有 staple 步骤，记录 `xcrun stapler validate <mounted Loom.app>` 或等价检查。
 
+## 2026-08-11 复检
+
+本轮只做低风险凭据状态复检，不读取或写入 Apple ID、app-specific password、API key、issuer、private key，也不提交任何真实凭据。
+
+| Check | Result | Meaning |
+| --- | --- | --- |
+| `security find-identity -v -p codesigning` | pass: 6 valid identities | 本机 code signing identity 可枚举，其中包含 `Developer ID Application: Honoululu Inc. (N7VU72TZB8)` |
+| `xcrun notarytool history --keychain-profile loom-beta-notary` | missing credential | `loom-beta-notary` 仍未写入 keychain；不能进入 notarized DMG gate |
+| Next release gate | hold | 继续等待维护者注入 notary credential 后再重打候选 DMG |
+
+Observed output 摘要：
+
+```text
+6 valid identities found
+Error: No Keychain password item found for profile: loom-beta-notary
+Run 'notarytool store-credentials' to create another credential profile.
+```
+
+复检结论：Developer ID signing identity 可见，但 notary credential 仍缺失；不要把当前 DMG 重新标记为可公开或默认邀请制分发物。
+
 ## 结论
 
 当前机器有 notarization CLI，也有可用 Developer ID signing identity，但缺少 notarization credential profile。因此 release gate 仍保持 hold；下一次优先动作是由维护者在本机 keychain 或 CI secrets 中注入 credential，然后重打 DMG 并追加完整 artifact integrity 记录。
