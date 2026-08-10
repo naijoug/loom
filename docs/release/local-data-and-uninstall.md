@@ -63,6 +63,10 @@ macOS 上 Tauri 会为 `com.naijoug.loom` 分配应用数据目录。Loom 当前
 - 发送给维护者前，必须人工检查并移除 token、密钥、客户名称、私有路径、`.env` 内容和商业代码片段。
 - 如果发现诊断包默认包含未脱敏敏感信息，应按 `docs/release/beta-feedback-template.md` 归类为 `security`，并停止继续外发该诊断包。
 
+## 候选 artifact 清理记录
+
+邀请制 Beta 发布复核时，卸载和清理必须绑定同一候选 artifact 记录到 `docs/release/install-uninstall-smoke-record.md`。记录里至少写清：安装来源、Gatekeeper 状态、`.loom/` 保留或删除策略、全局 app data 是否清理、`git status --short` 是否干净，以及是否仍有需要脱敏后保留的反馈证据。
+
 ## 完全清理完成标准
 
 - `Loom.app` 已删除。

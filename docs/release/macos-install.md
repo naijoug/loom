@@ -42,6 +42,7 @@
 3. 打开 Settings → Agents，仅配置你愿意用于本轮试用的命令。
 4. 如果只做无凭据 smoke，可以暂时不配置真实 Agent，按 `docs/release/beta-smoke.md` 走确定性路径。
 5. 完成试用后按 `docs/release/beta-feedback-template.md` 反馈版本、系统、安装方式、阻塞点和证据。
+6. 如果这是邀请制 Beta 候选 artifact 的发布复核，把安装路径、Gatekeeper 提示、本地数据识别和后续清理结果写入 `docs/release/install-uninstall-smoke-record.md`；不要只用口头结论替代记录。
 
 ## Gatekeeper 处理原则
 
