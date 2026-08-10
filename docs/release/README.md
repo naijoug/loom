@@ -30,7 +30,7 @@
 - [Beta 隐私说明](privacy-note.md)：说明默认本地数据、可能离开本机的路径、诊断包脱敏边界和隐私停止线。
 - [Agent / CLI 账号边界](agent-account-boundary.md)：说明 dummy、Codex、Claude Code、OpenClaw、Hermes 和自定义 CLI 的账号、费用、数据发送责任。
 - [诊断包安全复核](diagnostic-bundle-review.md)：说明诊断包内容、已有脱敏证据、导出前自查、接收方处理规则和 Beta 发布门禁。
-- [诊断包工程脱敏证据](diagnostic-bundle-engineering-proof.md)：记录后端诊断包单元测试复跑结果，确认默认无日志、路径替换、fake secret 脱敏和项目外日志引用过滤仍通过。
+- [诊断包工程脱敏证据](diagnostic-bundle-engineering-proof.md)：记录后端诊断包单元测试复跑结果，确认默认无日志、路径替换、fake secret 脱敏、项目外日志引用过滤和无效引用不挤占日志限额仍通过。
 - [诊断包 UI Smoke](diagnostic-bundle-smoke.md)：覆盖默认不导出日志和主动选择日志尾部两条手工验证路径；`pnpm smoke:interaction` 已覆盖 Settings / Done pane 的诊断入口与日志开关存在性，但真实导出 JSON 仍需桌面手工记录。
 
 ## 使用顺序

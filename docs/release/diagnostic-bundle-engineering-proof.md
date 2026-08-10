@@ -6,10 +6,10 @@
 
 ## 结论
 
-2026-08-09 23:00 复跑并扩展诊断包相关 Rust 单元测试，结果通过：
+2026-08-10 08:46 复跑并扩展诊断包相关 Rust 单元测试，结果通过：
 
 - 默认不勾选日志尾部时，诊断包 `logs` 为空，`omittedLogCount` 为 `0`。
-- 勾选日志尾部时，只读取项目内 `.loom/logs/` 引用；项目根路径替换为 `[PROJECT_ROOT]`；指向项目外目录的日志引用不会进入导出 JSON。
+- 勾选日志尾部时，只读取项目内 `.loom/logs/` 引用；项目根路径替换为 `[PROJECT_ROOT]`；指向项目外目录的日志引用不会进入导出 JSON，也不会因为最近若干条无效引用占满 20 条限额而挤掉更早的有效项目内日志。
 - 命令、阻塞原因和日志尾部中的 token / secret / Authorization / Bearer 类文本会被替换为 `[REDACTED]`。
 - 测试 JSON 中不包含临时项目真实路径，也不包含 fake secret 原文。
 
@@ -25,12 +25,13 @@ cargo test diagnostic_bundle --lib
 ## 输出摘要
 
 ```text
-running 3 tests
+running 4 tests
 test diagnostics::tests::diagnostic_bundle_ignores_logs_outside_project_log_dir ... ok
+test diagnostics::tests::diagnostic_bundle_invalid_recent_log_refs_do_not_starve_valid_logs ... ok
 test diagnostics::tests::diagnostic_bundle_omits_logs_unless_user_selects_them ... ok
 test diagnostics::tests::diagnostic_bundle_redacts_secrets_paths_and_log_tails ... ok
 
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 189 filtered out; finished in 0.01s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 189 filtered out; finished in 0.02s
 ```
 
 ## 覆盖点
@@ -41,6 +42,7 @@ test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 189 filtered out; fi
 | 路径脱敏 | `diagnostic_bundle_redacts_secrets_paths_and_log_tails` | 项目根路径以 `[PROJECT_ROOT]` 出现，不暴露真实目录 |
 | secret 脱敏 | `diagnostic_bundle_redacts_secrets_paths_and_log_tails` | fake token / Authorization / secret 样例不以原文出现在 JSON |
 | 日志来源边界 | `diagnostic_bundle_redacts_secrets_paths_and_log_tails` 使用项目内 `.loom/logs/` 引用；`diagnostic_bundle_ignores_logs_outside_project_log_dir` 证明项目外日志引用被忽略 | UI smoke 仍需确认开关文案和保存文件符合试用者预期 |
+| 日志限额语义 | `diagnostic_bundle_invalid_recent_log_refs_do_not_starve_valid_logs` 证明项目外 / 不可读引用先被过滤，20 条限额只作用在可导出的项目内日志上 | 最近的无效日志引用不会把有效诊断证据挤出 JSON；`omittedLogCount` 只说明可导出日志超过限额后的省略数量 |
 
 ## 当前仍不能解除的门禁
 

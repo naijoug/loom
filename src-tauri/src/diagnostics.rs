@@ -235,7 +235,7 @@ fn read_log_tail(path: &Path, project_path: &Path) -> Option<Vec<String>> {
 }
 
 fn collect_logs(task: &Task, project_path: &Path) -> (Vec<DiagnosticLogTail>, usize) {
-    let candidates = task
+    let readable_logs = task
         .command_runs
         .iter()
         .rev()
@@ -245,14 +245,8 @@ fn collect_logs(task: &Task, project_path: &Path) -> (Vec<DiagnosticLogTail>, us
                 (run, "stderr", run.stderr_log_ref.as_deref()),
             ]
         })
-        .filter_map(|(run, stream, log_ref)| log_ref.map(|log_ref| (run, stream, log_ref)))
-        .collect::<Vec<_>>();
-    let omitted = candidates.len().saturating_sub(MAX_LOGS);
-    let logs = candidates
-        .into_iter()
-        .take(MAX_LOGS)
         .filter_map(|(run, stream, log_ref)| {
-            let path = resolve_log_path(project_path, log_ref)?;
+            let path = resolve_log_path(project_path, log_ref?)?;
             Some(DiagnosticLogTail {
                 run_id: run.id.clone(),
                 stream: stream.to_string(),
@@ -260,7 +254,9 @@ fn collect_logs(task: &Task, project_path: &Path) -> (Vec<DiagnosticLogTail>, us
                 lines: read_log_tail(&path, project_path)?,
             })
         })
-        .collect();
+        .collect::<Vec<_>>();
+    let omitted = readable_logs.len().saturating_sub(MAX_LOGS);
+    let logs = readable_logs.into_iter().take(MAX_LOGS).collect();
     (logs, omitted)
 }
 
@@ -448,11 +444,8 @@ mod tests {
         fs::create_dir_all(&outside_root).expect("outside dir");
         let inside_log = root.join(".loom/logs/run.stderr.log");
         let outside_log = outside_root.join("outside.stdout.log");
-        fs::write(
-            &inside_log,
-            "inside log with Authorization: Bearer secret...en\n",
-        )
-        .expect("inside log fixture");
+        fs::write(&inside_log, "inside log with Authorization: Bearer ***")
+            .expect("inside log fixture");
         fs::write(&outside_log, "outside log must not be exported\n").expect("outside log fixture");
 
         let mut task = task_fixture(&root);
@@ -467,8 +460,54 @@ mod tests {
         assert_eq!(bundle.logs[0].source, "run.stderr.log");
         assert!(json.contains("inside log"));
         assert!(json.contains("[REDACTED]"));
-        assert!(!json.contains("Authorization: Bearer secret...en"));
+        assert!(!json.contains("Authorization: Bearer ***"));
         assert!(!json.contains("outside log must not be exported"));
+        assert!(!json.contains(&outside_root.display().to_string()));
+
+        fs::remove_dir_all(root).ok();
+        fs::remove_dir_all(outside_root).ok();
+    }
+
+    #[test]
+    fn diagnostic_bundle_invalid_recent_log_refs_do_not_starve_valid_logs() {
+        let root = std::env::temp_dir().join(format!("loom-diagnostic-log-starve-{}", now_ms()));
+        let outside_root =
+            std::env::temp_dir().join(format!("loom-diagnostic-invalid-{}", now_ms()));
+        fs::create_dir_all(root.join(".loom/logs")).expect("logs dir");
+        fs::create_dir_all(&outside_root).expect("outside dir");
+
+        let mut task = task_fixture(&root);
+        let template_run = task.command_runs.pop().expect("fixture run");
+        task.command_runs.clear();
+
+        for index in 0..2 {
+            let log_path = root.join(format!(".loom/logs/valid-{index}.stdout.log"));
+            fs::write(&log_path, format!("valid log {index}\n")).expect("valid log fixture");
+            let mut run = template_run.clone();
+            run.id = format!("valid-run-{index}");
+            run.stdout_log_ref = Some(log_path.display().to_string());
+            run.stderr_log_ref = None;
+            task.command_runs.push(run);
+        }
+
+        for index in 0..MAX_LOGS {
+            let outside_log = outside_root.join(format!("invalid-{index}.stdout.log"));
+            fs::write(&outside_log, format!("invalid log {index}\n")).expect("invalid log fixture");
+            let mut run = template_run.clone();
+            run.id = format!("invalid-run-{index}");
+            run.stdout_log_ref = Some(outside_log.display().to_string());
+            run.stderr_log_ref = None;
+            task.command_runs.push(run);
+        }
+
+        let bundle = build_bundle(&root, Some(&task), true, true);
+        let json = serde_json::to_string_pretty(&bundle).expect("diagnostic json");
+
+        assert_eq!(bundle.logs.len(), 2);
+        assert_eq!(bundle.omitted_log_count, 0);
+        assert!(json.contains("valid log 0"));
+        assert!(json.contains("valid log 1"));
+        assert!(!json.contains("invalid log"));
         assert!(!json.contains(&outside_root.display().to_string()));
 
         fs::remove_dir_all(root).ok();
