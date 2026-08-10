@@ -18,6 +18,7 @@
 - [Notarization Credential Preflight](notarization-credential-preflight.md)：记录 `notarytool` 与 keychain profile 预检，确认本机有 notarization CLI，但尚未配置 `loom-beta-notary` credential profile。
 - [Notarized DMG Gate](notarized-dmg-gate.md)：把 credential 可用后的重打 DMG、checksum、`hdiutil`、严格 `codesign`、`spctl` 和 staple validate 拆成下一轮可执行命令梯。
 - [Local Desktop Smoke Record](local-desktop-smoke-record.md)：记录 signing hold 期间不扩大分发的维护者本机 release app 启动 / 重启 smoke，作为本机验证证据而不是分发 pass。
+- [Beta Release Review Checklist](beta-release-review-checklist.md)：把 scope、安全、artifact、credential、notarized DMG、smoke、诊断包、安装文档和隐私边界汇总成分发前复核表；当前结论仍为 `Distribution decision: Hold`。
 
 ## M2 安装与首次启动
 
@@ -45,11 +46,12 @@
 8. 如果准备解除 hold，先按 `notarization-credential-preflight.md` 检查 `notarytool` 和 keychain profile；credential 缺失时不要重打普通 Beta DMG。
 9. Credential 可用后按 `notarized-dmg-gate.md` 重打新候选 DMG，并把 pass / fail 证据写回 release record；不要覆盖旧 hold 证据。
 10. Credential 缺失但需要继续本机验证时，只能参考 `local-desktop-smoke-record.md` 这类维护者本机 smoke；它不能替代普通试用者分发 gate。
-11. 只有签名 gate 通过或被明确接受后，才按 `macos-install.md` 完成安装，并记录 Gatekeeper 或权限提示。
-12. 按 `beta-smoke.md` 在临时项目里完成首次启动 smoke；首次 smoke 默认使用 dummy / fixture，不要求真实付费 Agent。
-13. 如需卸载或清理，按 `local-data-and-uninstall.md` 处理项目内和全局数据。
-14. 完成试用后按 `beta-feedback-template.md` 回传反馈。
+11. 每次准备解除 hold 或扩大邀请制 Beta 前，先填写 `beta-release-review-checklist.md`；credential 缺失或 notarized DMG gate 未通过时，结论必须保持 `Distribution decision: Hold`。
+12. 只有签名 gate 通过或被明确接受后，才按 `macos-install.md` 完成安装，并记录 Gatekeeper 或权限提示。
+13. 按 `beta-smoke.md` 在临时项目里完成首次启动 smoke；首次 smoke 默认使用 dummy / fixture，不要求真实付费 Agent。
+14. 如需卸载或清理，按 `local-data-and-uninstall.md` 处理项目内和全局数据。
+15. 完成试用后按 `beta-feedback-template.md` 回传反馈。
 
 ## 发布门禁
 
-这些文档覆盖邀请制 Beta 的 M0 边界、M1 可复现构建记录、产物完整性复核、签名 gate 决策、ad-hoc 修复探针、Developer ID / notarization 探针、notarization credential 预检、credential 可用后的 notarized DMG gate 命令梯、signing hold 期间的维护者本机桌面 smoke、M2 安装/卸载/smoke 路径，以及 M3 隐私、Agent 账号责任、诊断包安全复核、工程脱敏证据和 UI smoke 门禁。公开下载、notarization / staple、正式 UI 诊断包导出记录和针对候选 DMG 的首次启动 smoke 结果仍需后续里程碑实际填写；当前 `artifact-integrity-check.md` 已确认 DMG 可校验和挂载，但签名 / Gatekeeper assessment 处于 hold，`signing-gate-decision.md` 已明确不接受当前 invalid-signature DMG 作为公开或默认邀请制分发物，`signing-repair-probe.md` 确认 ad-hoc signing 可以修复严格 `codesign` 错误但不能解除 Gatekeeper 分发门禁，`developer-id-notarization-probe.md` 进一步确认 Developer ID signing 可用但缺少 notarization credential，`notarization-credential-preflight.md` 确认本机有 `notarytool` 但缺少 `loom-beta-notary` keychain profile；`notarized-dmg-gate.md` 已把下一次 pass 所需命令和证据字段拆好，`local-desktop-smoke-record.md` 仅证明当前 release app 可在维护者本机启动 / 重启两轮，`diagnostic-bundle-engineering-proof.md` 证明后端脱敏 fixture 与 headless 文件写入 / 读回 harness 通过，`pnpm smoke:interaction` 现在覆盖诊断 UI 入口 / 日志开关存在性，但仍不能替代分发 gate 或真实桌面导出 JSON 复核。
+这些文档覆盖邀请制 Beta 的 M0 边界、M1 可复现构建记录、产物完整性复核、签名 gate 决策、ad-hoc 修复探针、Developer ID / notarization 探针、notarization credential 预检、credential 可用后的 notarized DMG gate 命令梯、signing hold 期间的维护者本机桌面 smoke、分发前 release review checklist、M2 安装/卸载/smoke 路径，以及 M3 隐私、Agent 账号责任、诊断包安全复核、工程脱敏证据和 UI smoke 门禁。公开下载、notarization / staple、正式 UI 诊断包导出记录和针对候选 DMG 的首次启动 smoke 结果仍需后续里程碑实际填写；当前 `artifact-integrity-check.md` 已确认 DMG 可校验和挂载，但签名 / Gatekeeper assessment 处于 hold，`signing-gate-decision.md` 已明确不接受当前 invalid-signature DMG 作为公开或默认邀请制分发物，`signing-repair-probe.md` 确认 ad-hoc signing 可以修复严格 `codesign` 错误但不能解除 Gatekeeper 分发门禁，`developer-id-notarization-probe.md` 进一步确认 Developer ID signing 可用但缺少 notarization credential，`notarization-credential-preflight.md` 确认本机有 `notarytool` 但缺少 `loom-beta-notary` keychain profile；`notarized-dmg-gate.md` 已把下一次 pass 所需命令和证据字段拆好，`local-desktop-smoke-record.md` 仅证明当前 release app 可在维护者本机启动 / 重启两轮，`beta-release-review-checklist.md` 将当前分发结论固定为 `Distribution decision: Hold`，`diagnostic-bundle-engineering-proof.md` 证明后端脱敏 fixture 与 headless 文件写入 / 读回 harness 通过，`pnpm smoke:interaction` 现在覆盖诊断 UI 入口 / 日志开关存在性，但仍不能替代分发 gate 或真实桌面导出 JSON 复核。
