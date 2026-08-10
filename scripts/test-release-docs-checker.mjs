@@ -114,6 +114,39 @@ try {
     "broken markdown link target missing-release-doc.md",
   );
 
+  expectFail(
+    "missing-required-release-doc",
+    (fixtureReleaseDir) => {
+      fs.rmSync(path.join(fixtureReleaseDir, "notarized-dmg-gate.md"));
+    },
+    "docs/release/notarized-dmg-gate.md: required release doc is missing",
+  );
+
+  expectFail(
+    "broken-backtick-reference",
+    (fixtureReleaseDir) => {
+      fs.appendFileSync(
+        path.join(fixtureReleaseDir, "README.md"),
+        "\nBroken backtick release doc: `docs/release/missing-release-doc.md`\n",
+      );
+    },
+    "broken backtick release doc reference docs/release/missing-release-doc.md",
+  );
+
+  expectFail(
+    "short-checklist-stop-rule",
+    (fixtureReleaseDir) => {
+      writeChecklist(
+        fixtureReleaseDir,
+        readChecklist(fixtureReleaseDir).replace(
+          "| Feedback path | `docs/release/beta-feedback-template.md` 可直接复制给试用者 | Review | 反馈分类或必要证据字段缺失时停止 |",
+          "| Feedback path | `docs/release/beta-feedback-template.md` 可直接复制给试用者 | Review | 停 |",
+        ),
+      );
+    },
+    'review table gate "Feedback path" has empty stop rule',
+  );
+
   console.log("Release docs checker fixture tests passed.");
 } finally {
   fs.rmSync(tempRoot, { recursive: true, force: true });
