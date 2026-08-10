@@ -34,6 +34,68 @@ const forbiddenLocalPathPatterns = [
   /\/private\/var\/folders\//,
 ];
 
+const requiredChecklistRows = [
+  {
+    gate: "Scope / safety",
+    status: "Review",
+    evidence: ["docs/release/beta-scope.md", "docs/release/beta-safety-notes.md"],
+  },
+  {
+    gate: "Feedback path",
+    status: "Review",
+    evidence: ["docs/release/beta-feedback-template.md"],
+  },
+  {
+    gate: "Artifact identity",
+    status: "Wait",
+    evidence: ["commit", "SHA-256", "size", "build command"],
+  },
+  {
+    gate: "Credential preflight",
+    status: "Hold",
+    evidence: ["xcrun notarytool history --keychain-profile loom-beta-notary"],
+  },
+  {
+    gate: "Developer ID identity",
+    status: "Review",
+    evidence: ["security find-identity -v -p codesigning"],
+  },
+  {
+    gate: "Notarized DMG gate",
+    status: "Wait",
+    evidence: ["hdiutil verify", "codesign", "spctl", "staple validate"],
+  },
+  {
+    gate: "Maintainer local smoke",
+    status: "Pass",
+    evidence: ["pnpm smoke:desktop"],
+  },
+  {
+    gate: "First-run beta smoke",
+    status: "Wait",
+    evidence: ["docs/release/beta-smoke.md", "docs/release/beta-first-run-smoke-record.md"],
+  },
+  {
+    gate: "Diagnostic bundle smoke",
+    status: "Wait",
+    evidence: ["docs/release/diagnostic-bundle-smoke.md", "docs/release/diagnostic-bundle-smoke-record.md"],
+  },
+  {
+    gate: "Install / uninstall smoke",
+    status: "Wait",
+    evidence: [
+      "docs/release/macos-install.md",
+      "docs/release/local-data-and-uninstall.md",
+      "docs/release/install-uninstall-smoke-record.md",
+    ],
+  },
+  {
+    gate: "Privacy / account boundary",
+    status: "Review",
+    evidence: ["docs/release/privacy-note.md", "docs/release/agent-account-boundary.md"],
+  },
+];
+
 const failures = [];
 
 function rel(filePath) {
@@ -50,6 +112,29 @@ function fileExists(filePath) {
   } catch {
     return false;
   }
+}
+
+function parseMarkdownTableRows(markdown) {
+  const rows = new Map();
+  for (const line of markdown.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("|")) {
+      continue;
+    }
+    const cells = trimmed
+      .split("|")
+      .slice(1, -1)
+      .map((cell) => cell.trim());
+    if (cells.length < 4 || cells[0] === "Gate" || /^-+$/.test(cells[0])) {
+      continue;
+    }
+    rows.set(cells[0], {
+      evidence: cells[1],
+      status: cells[2],
+      stopRule: cells[3],
+    });
+  }
+  return rows;
 }
 
 function resolveMarkdownTarget(filePath, target) {
@@ -121,6 +206,36 @@ if (fileExists(checklistPath)) {
   ]) {
     if (!checklist.includes(phrase)) {
       fail(checklistPath, `missing release gate phrase ${JSON.stringify(phrase)}`);
+    }
+  }
+
+  const checklistRows = parseMarkdownTableRows(checklist);
+  for (const requiredRow of requiredChecklistRows) {
+    const row = checklistRows.get(requiredRow.gate);
+    if (!row) {
+      fail(checklistPath, `missing review table gate ${JSON.stringify(requiredRow.gate)}`);
+      continue;
+    }
+    if (row.status !== requiredRow.status) {
+      fail(
+        checklistPath,
+        `review table gate ${JSON.stringify(requiredRow.gate)} has status ${JSON.stringify(
+          row.status,
+        )}, expected ${JSON.stringify(requiredRow.status)}`,
+      );
+    }
+    for (const evidence of requiredRow.evidence) {
+      if (!row.evidence.includes(evidence)) {
+        fail(
+          checklistPath,
+          `review table gate ${JSON.stringify(requiredRow.gate)} missing evidence ${JSON.stringify(
+            evidence,
+          )}`,
+        );
+      }
+    }
+    if (row.stopRule.length < 8) {
+      fail(checklistPath, `review table gate ${JSON.stringify(requiredRow.gate)} has empty stop rule`);
     }
   }
 }
