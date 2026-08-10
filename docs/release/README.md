@@ -34,12 +34,13 @@
 - [诊断包安全复核](diagnostic-bundle-review.md)：说明诊断包内容、已有脱敏证据、导出前自查、接收方处理规则和 Beta 发布门禁。
 - [诊断包工程脱敏证据](diagnostic-bundle-engineering-proof.md)：记录后端诊断包单元测试复跑结果，确认默认无日志、路径替换、fake secret 脱敏、项目外日志引用过滤、无效引用不挤占日志限额，以及 headless 文件写入 / 读回 harness 仍通过。
 - [诊断包 UI Smoke](diagnostic-bundle-smoke.md)：覆盖默认不导出日志和主动选择日志尾部两条手工验证路径；`pnpm smoke:interaction` 已覆盖 Settings / Done pane 的诊断入口与日志开关存在性，但真实导出 JSON 仍需桌面手工记录。
+- [诊断包 UI Smoke Record](diagnostic-bundle-smoke-record.md)：把真实桌面导出的诊断包 JSON 复核沉淀为可填写记录；当前尚无同一候选 artifact 的 pass 记录。
 
 ## 使用顺序
 
 1. 先读 `beta-scope.md`，确认自己是否属于本轮目标试用者。
 2. 再读 `beta-safety-notes.md`，确认不会把 Loom 用在生产关键仓库或含机密材料的任务中。
-3. 继续读 `privacy-note.md`、`agent-account-boundary.md`、`diagnostic-bundle-review.md` 和 `diagnostic-bundle-engineering-proof.md`，确认隐私、诊断包、后端脱敏 fixture 和真实 Agent 账号责任边界；维护者在发布前按 `diagnostic-bundle-smoke.md` 填写至少一条 UI smoke record。
+3. 继续读 `privacy-note.md`、`agent-account-boundary.md`、`diagnostic-bundle-review.md` 和 `diagnostic-bundle-engineering-proof.md`，确认隐私、诊断包、后端脱敏 fixture 和真实 Agent 账号责任边界；维护者在发布前按 `diagnostic-bundle-smoke.md` 执行，并把至少一条真实桌面导出复核结果写入 `diagnostic-bundle-smoke-record.md`。
 4. 维护者用 `release-build-record.md` 对齐候选构建的 commit、工具链、checksum 和剩余门禁，再用 `artifact-integrity-check.md` 判断 DMG 完整性、bundle 元数据和签名 / Gatekeeper 状态。
 5. 如果签名 / Gatekeeper 状态不是 pass，先读 `signing-gate-decision.md`；当前候选 DMG 只能保留为本机验证 artifact，不进入公开或默认邀请制分发。
 6. 如需修复签名，先读 `signing-repair-probe.md`：ad-hoc signing 已证明严格 `codesign` 错误可修复，但 Gatekeeper 分发仍需要 Developer ID / notarization 或明确接受未公证边界。
@@ -55,4 +56,4 @@
 
 ## 发布门禁
 
-这些文档覆盖邀请制 Beta 的 M0 边界、M1 可复现构建记录、产物完整性复核、签名 gate 决策、ad-hoc 修复探针、Developer ID / notarization 探针、notarization credential 预检、credential 可用后的 notarized DMG gate 命令梯、signing hold 期间的维护者本机桌面 smoke、分发前 release review checklist、M2 安装/卸载/smoke 路径和同一候选 artifact 的首次启动 smoke record，以及 M3 隐私、Agent 账号责任、诊断包安全复核、工程脱敏证据和 UI smoke 门禁。公开下载、notarization / staple、正式 UI 诊断包导出记录和针对已公证候选 DMG 的首次启动 smoke 结果仍需后续里程碑实际填写；当前 `artifact-integrity-check.md` 已确认 DMG 可校验和挂载，但签名 / Gatekeeper assessment 处于 hold，`signing-gate-decision.md` 已明确不接受当前 invalid-signature DMG 作为公开或默认邀请制分发物，`signing-repair-probe.md` 确认 ad-hoc signing 可以修复严格 `codesign` 错误但不能解除 Gatekeeper 分发门禁，`developer-id-notarization-probe.md` 进一步确认 Developer ID signing 可用但缺少 notarization credential，`notarization-credential-preflight.md` 确认本机有 `notarytool` 但缺少 `loom-beta-notary` keychain profile；`notarized-dmg-gate.md` 已把下一次 pass 所需命令和证据字段拆好，`local-desktop-smoke-record.md` 仅证明当前 release app 可在维护者本机启动 / 重启两轮，`beta-first-run-smoke-record.md` 当前仍无已公证候选 DMG 的 pass 记录，`beta-release-review-checklist.md` 将当前分发结论固定为 `Distribution decision: Hold`，`diagnostic-bundle-engineering-proof.md` 证明后端脱敏 fixture 与 headless 文件写入 / 读回 harness 通过，`pnpm smoke:interaction` 现在覆盖诊断 UI 入口 / 日志开关存在性，但仍不能替代分发 gate 或真实桌面导出 JSON 复核。
+这些文档覆盖邀请制 Beta 的 M0 边界、M1 可复现构建记录、产物完整性复核、签名 gate 决策、ad-hoc 修复探针、Developer ID / notarization 探针、notarization credential 预检、credential 可用后的 notarized DMG gate 命令梯、signing hold 期间的维护者本机桌面 smoke、分发前 release review checklist、M2 安装/卸载/smoke 路径和同一候选 artifact 的首次启动 smoke record，以及 M3 隐私、Agent 账号责任、诊断包安全复核、工程脱敏证据、UI smoke 流程和真实桌面导出记录。公开下载、notarization / staple、正式 UI 诊断包导出 pass 记录和针对已公证候选 DMG 的首次启动 smoke 结果仍需后续里程碑实际填写；当前 `artifact-integrity-check.md` 已确认 DMG 可校验和挂载，但签名 / Gatekeeper assessment 处于 hold，`signing-gate-decision.md` 已明确不接受当前 invalid-signature DMG 作为公开或默认邀请制分发物，`signing-repair-probe.md` 确认 ad-hoc signing 可以修复严格 `codesign` 错误但不能解除 Gatekeeper 分发门禁，`developer-id-notarization-probe.md` 进一步确认 Developer ID signing 可用但缺少 notarization credential，`notarization-credential-preflight.md` 确认本机有 `notarytool` 但缺少 `loom-beta-notary` keychain profile；`notarized-dmg-gate.md` 已把下一次 pass 所需命令和证据字段拆好，`local-desktop-smoke-record.md` 仅证明当前 release app 可在维护者本机启动 / 重启两轮，`beta-first-run-smoke-record.md` 当前仍无已公证候选 DMG 的 pass 记录，`beta-release-review-checklist.md` 将当前分发结论固定为 `Distribution decision: Hold`，`diagnostic-bundle-engineering-proof.md` 证明后端脱敏 fixture 与 headless 文件写入 / 读回 harness 通过，`pnpm smoke:interaction` 现在覆盖诊断 UI 入口 / 日志开关存在性，但 `diagnostic-bundle-smoke-record.md` 当前仍没有同一候选 artifact 的真实桌面导出 pass 记录。

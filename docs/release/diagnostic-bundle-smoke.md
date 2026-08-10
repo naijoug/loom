@@ -2,7 +2,7 @@
 
 - **状态**: UI control smoke partially automated; export-file manual record still required
 - **适用阶段**: M3 诊断包导出验证
-- **关联文档**: `docs/release/diagnostic-bundle-review.md`、`docs/release/privacy-note.md`、`docs/release/beta-feedback-template.md`
+- **关联文档**: `docs/release/diagnostic-bundle-review.md`、`docs/release/privacy-note.md`、`docs/release/beta-feedback-template.md`、`docs/release/diagnostic-bundle-smoke-record.md`
 
 ## 目标
 
@@ -50,6 +50,10 @@
    - 不包含 `.loom/` 目录以外的任意文件内容。
    - 如日志过多，`omittedLogCount` 能解释省略数量。
 6. 若任一检查失败：删除 JSON，把反馈分类为 `security`，严重度至少标记 `S0 停止分发`。
+
+## 记录位置
+
+真实桌面导出的复核结果统一写入 `docs/release/diagnostic-bundle-smoke-record.md`。本文件保留操作流程和最低门禁；记录文件只写 pass / fail、搜索词、是否删除临时 JSON 和 follow-up，不粘贴诊断包原文。
 
 ## 记录模板
 
