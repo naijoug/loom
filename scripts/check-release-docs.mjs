@@ -42,46 +42,55 @@ const requiredChecklistRows = [
     gate: "Scope / safety",
     status: "Review",
     evidence: ["docs/release/beta-scope.md", "docs/release/beta-safety-notes.md"],
+    stopRuleEvidence: ["安全边界"],
   },
   {
     gate: "Feedback path",
     status: "Review",
     evidence: ["docs/release/beta-feedback-template.md"],
+    stopRuleEvidence: ["反馈", "证据"],
   },
   {
     gate: "Artifact identity",
     status: "Wait",
     evidence: ["commit", "SHA-256", "size", "build command"],
+    stopRuleEvidence: ["checksum", "新候选"],
   },
   {
     gate: "Credential preflight",
     status: "Hold",
     evidence: ["xcrun notarytool history --keychain-profile loom-beta-notary"],
+    stopRuleEvidence: ["No Keychain password item found"],
   },
   {
     gate: "Developer ID identity",
     status: "Review",
     evidence: ["security find-identity -v -p codesigning"],
+    stopRuleEvidence: ["identity"],
   },
   {
     gate: "Notarized DMG gate",
     status: "Wait",
     evidence: ["hdiutil verify", "codesign", "spctl", "staple validate"],
+    stopRuleEvidence: ["gate fail", "分发"],
   },
   {
     gate: "Maintainer local smoke",
     status: "Pass",
     evidence: ["pnpm smoke:desktop"],
+    stopRuleEvidence: ["不能替代 notarization", "Gatekeeper"],
   },
   {
     gate: "First-run beta smoke",
     status: "Wait",
     evidence: ["docs/release/beta-smoke.md", "docs/release/beta-first-run-smoke-record.md"],
+    stopRuleEvidence: ["同一 artifact", "旧 artifact"],
   },
   {
     gate: "Diagnostic bundle smoke",
     status: "Wait",
     evidence: ["docs/release/diagnostic-bundle-smoke.md", "docs/release/diagnostic-bundle-smoke-record.md"],
+    stopRuleEvidence: ["诊断包", "人工复核"],
   },
   {
     gate: "Install / uninstall smoke",
@@ -91,11 +100,13 @@ const requiredChecklistRows = [
       "docs/release/local-data-and-uninstall.md",
       "docs/release/install-uninstall-smoke-record.md",
     ],
+    stopRuleEvidence: ["同一 artifact", "安装 / 卸载"],
   },
   {
     gate: "Privacy / account boundary",
     status: "Review",
     evidence: ["docs/release/privacy-note.md", "docs/release/agent-account-boundary.md"],
+    stopRuleEvidence: ["真实 Agent 账号", "外发数据"],
   },
 ];
 
@@ -266,6 +277,16 @@ if (fileExists(checklistPath)) {
     }
     if (row.stopRule.length < 8) {
       fail(checklistPath, `review table gate ${JSON.stringify(requiredRow.gate)} has empty stop rule`);
+    }
+    for (const stopRuleEvidence of requiredRow.stopRuleEvidence) {
+      if (!row.stopRule.includes(stopRuleEvidence)) {
+        fail(
+          checklistPath,
+          `review table gate ${JSON.stringify(requiredRow.gate)} missing stop rule evidence ${JSON.stringify(
+            stopRuleEvidence,
+          )}`,
+        );
+      }
     }
   }
 }

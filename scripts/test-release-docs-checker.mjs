@@ -148,6 +148,20 @@ try {
   );
 
   expectFail(
+    "generic-checklist-stop-rule",
+    (fixtureReleaseDir) => {
+      writeChecklist(
+        fixtureReleaseDir,
+        readChecklist(fixtureReleaseDir).replace(
+          "| Credential preflight | `xcrun notarytool history --keychain-profile loom-beta-notary` 可读取 profile | Hold | 返回 `No Keychain password item found` 时停止 |",
+          "| Credential preflight | `xcrun notarytool history --keychain-profile loom-beta-notary` 可读取 profile | Hold | credential 状态不清时继续等待维护者确认 |",
+        ),
+      );
+    },
+    'review table gate "Credential preflight" missing stop rule evidence "No Keychain password item found"',
+  );
+
+  expectFail(
     "missing-record-hold-gate",
     (fixtureReleaseDir) => {
       const recordPath = path.join(fixtureReleaseDir, "diagnostic-bundle-smoke-record.md");
