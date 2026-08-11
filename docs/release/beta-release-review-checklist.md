@@ -20,8 +20,8 @@
 
 | Gate | Required evidence | Current status | Stop rule |
 | --- | --- | --- | --- |
-| Scope / safety | `docs/release/beta-scope.md`、`docs/release/beta-safety-notes.md` 已确认仍适用 | Review | 目标试用者、生产仓库限制或安全边界不清时停止 |
-| Feedback path | `docs/release/beta-feedback-template.md` 可直接复制给试用者 | Review | 反馈分类或必要证据字段缺失时停止 |
+| Scope / safety | `docs/release/beta-scope.md`、`docs/release/beta-safety-notes.md` 已确认仍适用 | Pass | 目标试用者、生产仓库限制或安全边界不清时停止 |
+| Feedback path | `docs/release/beta-feedback-template.md` 可直接复制给试用者 | Pass | 反馈分类或必要证据字段缺失时停止 |
 | Artifact identity | 新候选 DMG 的 commit、SHA-256、size、build command 已记录 | Wait | 不能复用旧 hold checksum 冒充新候选 |
 | Credential preflight | `xcrun notarytool history --keychain-profile loom-beta-notary` 可读取 profile | Hold | 返回 `No Keychain password item found` 时停止 |
 | Developer ID identity | `security find-identity -v -p codesigning` 可见 `Developer ID Application: Honoululu Inc. (N7VU72TZB8)` | Review | identity 不可见时停止 |
@@ -30,10 +30,11 @@
 | First-run beta smoke | 针对同一候选 artifact 完成 `docs/release/beta-smoke.md`，并填写 `docs/release/beta-first-run-smoke-record.md` | Wait | 未对同一 artifact smoke，或只复用维护者本机 smoke / 旧 artifact 记录时不扩大试用范围 |
 | Diagnostic bundle smoke | `docs/release/diagnostic-bundle-smoke.md` 已执行，且 `docs/release/diagnostic-bundle-smoke-record.md` 至少一条真实桌面导出记录为 pass | Wait | 诊断包导出、脱敏、日志开关或导出 JSON 删除记录未人工复核时停止 |
 | Install / uninstall smoke | `docs/release/macos-install.md`、`docs/release/local-data-and-uninstall.md` 与真实签名状态一致，且 `docs/release/install-uninstall-smoke-record.md` 针对同一候选 artifact 记录安装 / 清理 pass | Wait | 文档仍提示旧 invalid-signature / unnotarized 状态但 artifact 已变更，或未记录同一 artifact 的安装 / 卸载结果时停止 |
-| Privacy / account boundary | `docs/release/privacy-note.md`、`docs/release/agent-account-boundary.md` 已复核 | Review | 真实 Agent 账号、费用、外发数据责任不清时停止 |
+| Privacy / account boundary | `docs/release/privacy-note.md`、`docs/release/agent-account-boundary.md` 已复核 | Pass | 真实 Agent 账号、费用、外发数据责任不清时停止 |
 
 ## 当前 2026-08-11 结论
 
+- 2026-08-11 10:02 文档复核：`beta-scope.md`、`beta-safety-notes.md`、`beta-feedback-template.md`、`privacy-note.md`、`agent-account-boundary.md` 五份文档结构完整、交叉引用一致、覆盖 checklist 对应 gate 的 stop rule 条件；Scope / safety、Feedback path、Privacy / account boundary 三项从 Review 更新为 Pass。
 - `docs/release/notarization-credential-preflight.md` 记录：Developer ID signing identity 可见，但 `loom-beta-notary` credential profile 仍缺失。
 - `docs/release/local-desktop-smoke-record.md` 记录：维护者本机 release app 两轮启动 / 退出 smoke 通过。
 - `docs/release/install-uninstall-smoke-record.md` 当前只是模板，没有针对已公证候选 DMG 的安装 / 卸载 pass 记录。
