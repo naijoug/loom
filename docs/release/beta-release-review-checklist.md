@@ -24,7 +24,7 @@
 | Feedback path | `docs/release/beta-feedback-template.md` 可直接复制给试用者 | Pass | 反馈分类或必要证据字段缺失时停止 |
 | Artifact identity | 新候选 DMG 的 commit、SHA-256、size、build command 已记录 | Wait | 不能复用旧 hold checksum 冒充新候选 |
 | Credential preflight | `xcrun notarytool history --keychain-profile loom-beta-notary` 可读取 profile | Hold | 返回 `No Keychain password item found` 时停止 |
-| Developer ID identity | `security find-identity -v -p codesigning` 可见 `Developer ID Application: Honoululu Inc. (N7VU72TZB8)` | Review | identity 不可见时停止 |
+| Developer ID identity | `security find-identity -v -p codesigning` 可见 `Developer ID Application: Honoululu Inc. (N7VU72TZB8)` | Pass | identity 不可见时停止 |
 | Notarized DMG gate | `hdiutil verify`、严格 `codesign`、`spctl`、staple validate 证据齐全 | Wait | 任一 gate fail 时不进入普通试用者分发 |
 | Maintainer local smoke | `pnpm smoke:desktop` 或等价维护者本机 smoke 已记录 | Pass | 只能证明本机可启动，不能替代 notarization / Gatekeeper pass |
 | First-run beta smoke | 针对同一候选 artifact 完成 `docs/release/beta-smoke.md`，并填写 `docs/release/beta-first-run-smoke-record.md` | Wait | 未对同一 artifact smoke，或只复用维护者本机 smoke / 旧 artifact 记录时不扩大试用范围 |
@@ -34,6 +34,7 @@
 
 ## 当前 2026-08-11 结论
 
+- 2026-08-11 11:00 Developer ID identity 复核：`security find-identity -v -p codesigning` 输出 6 个 valid identities，包含 `Developer ID Application: Honoululu Inc. (N7VU72TZB8)`；Developer ID identity gate 从 Review 更新为 Pass。同期 `xcrun notarytool history --keychain-profile loom-beta-notary` 仍返回 `No Keychain password item found`，所以 Credential preflight 保持 Hold。
 - 2026-08-11 10:02 文档复核：`beta-scope.md`、`beta-safety-notes.md`、`beta-feedback-template.md`、`privacy-note.md`、`agent-account-boundary.md` 五份文档结构完整、交叉引用一致、覆盖 checklist 对应 gate 的 stop rule 条件；Scope / safety、Feedback path、Privacy / account boundary 三项从 Review 更新为 Pass。
 - `docs/release/notarization-credential-preflight.md` 记录：Developer ID signing identity 可见，但 `loom-beta-notary` credential profile 仍缺失。
 - `docs/release/local-desktop-smoke-record.md` 记录：维护者本机 release app 两轮启动 / 退出 smoke 通过。
