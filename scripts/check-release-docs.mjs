@@ -40,13 +40,13 @@ const forbiddenLocalPathPatterns = [
 const requiredChecklistRows = [
   {
     gate: "Scope / safety",
-    status: "Review",
+    status: "Pass",
     evidence: ["docs/release/beta-scope.md", "docs/release/beta-safety-notes.md"],
     stopRuleEvidence: ["安全边界"],
   },
   {
     gate: "Feedback path",
-    status: "Review",
+    status: "Pass",
     evidence: ["docs/release/beta-feedback-template.md"],
     stopRuleEvidence: ["反馈", "证据"],
   },
@@ -64,7 +64,7 @@ const requiredChecklistRows = [
   },
   {
     gate: "Developer ID identity",
-    status: "Review",
+    status: "Pass",
     evidence: ["security find-identity -v -p codesigning"],
     stopRuleEvidence: ["identity"],
   },
@@ -104,7 +104,7 @@ const requiredChecklistRows = [
   },
   {
     gate: "Privacy / account boundary",
-    status: "Review",
+    status: "Pass",
     evidence: ["docs/release/privacy-note.md", "docs/release/agent-account-boundary.md"],
     stopRuleEvidence: ["真实 Agent 账号", "外发数据"],
   },

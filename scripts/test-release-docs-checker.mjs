@@ -147,8 +147,8 @@ try {
       writeChecklist(
         fixtureReleaseDir,
         readChecklist(fixtureReleaseDir).replace(
-          "| Feedback path | `docs/release/beta-feedback-template.md` 可直接复制给试用者 | Review | 反馈分类或必要证据字段缺失时停止 |",
-          "| Feedback path | `docs/release/beta-feedback-template.md` 可直接复制给试用者 | Review | 停 |",
+          "| Feedback path | `docs/release/beta-feedback-template.md` 可直接复制给试用者 | Pass | 反馈分类或必要证据字段缺失时停止 |",
+          "| Feedback path | `docs/release/beta-feedback-template.md` 可直接复制给试用者 | Pass | 停 |",
         ),
       );
     },
