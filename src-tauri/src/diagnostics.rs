@@ -404,7 +404,7 @@ mod tests {
         fs::write(
             root.join(".loom/logs/run.stdout.log"),
             format!(
-                "project={}\nOPENAI_API_KEY=sk-test-secret\nAuthorization: Bearer secret-log-token\n",
+                "project={}\nOPENAI_API_KEY=fake-token-for-smoke\nAuthorization: Bearer fake-bearer-for-smoke\n",
                 root.display()
             ),
         )
@@ -416,7 +416,8 @@ mod tests {
 
         assert!(json.contains("[REDACTED]"));
         assert!(json.contains("[PROJECT_ROOT]"));
-        assert!(!json.contains("sk-test-secret"));
+        assert!(!json.contains("fake-token-for-smoke"));
+        assert!(!json.contains("fake-b...ke"));
         assert!(!json.contains("secret-command-token"));
         assert!(!json.contains("secret-log-token"));
         assert!(!json.contains(&root.display().to_string()));
@@ -547,7 +548,7 @@ mod tests {
         fs::write(
             &log_path,
             format!(
-                "project={}\nOPENAI_API_KEY=sk-fake-diagnostic-token\nAuthorization: Bearer fake-diagnostic-token\n",
+                "project={}\nOPENAI_API_KEY=fake-token-for-smoke\nAuthorization: Bearer fake-bearer-for-smoke\n",
                 root.display()
             ),
         )
@@ -568,8 +569,8 @@ mod tests {
         assert!(json.contains("[PROJECT_ROOT]"));
         assert!(json.contains("[REDACTED]"));
         assert!(!json.contains(&root.display().to_string()));
-        assert!(!json.contains("sk-fake-diagnostic-token"));
-        assert!(!json.contains("Bearer fake-diagnostic-token"));
+        assert!(!json.contains("fake-token-for-smoke"));
+        assert!(!json.contains("fake-b...ke"));
 
         fs::remove_dir_all(root).ok();
     }
