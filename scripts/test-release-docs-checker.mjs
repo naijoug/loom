@@ -222,6 +222,36 @@ try {
   );
 
   expectFail(
+    "missing-first-run-hold-boundary",
+    (fixtureReleaseDir) => {
+      const recordPath = path.join(fixtureReleaseDir, "beta-first-run-smoke-record.md");
+      fs.writeFileSync(
+        recordPath,
+        fs
+          .readFileSync(recordPath, "utf8")
+          .replace("不能替代本记录", "不能替代其他记录")
+          .replace("邀请制 Beta 分发结论继续保持 hold", "邀请制 Beta 分发结论后续再定"),
+      );
+    },
+    'missing record gate phrase "不能替代本记录"',
+  );
+
+  expectFail(
+    "missing-install-uninstall-hold-boundary",
+    (fixtureReleaseDir) => {
+      const recordPath = path.join(fixtureReleaseDir, "install-uninstall-smoke-record.md");
+      fs.writeFileSync(
+        recordPath,
+        fs
+          .readFileSync(recordPath, "utf8")
+          .replace("Install / uninstall beta gate: Hold", "Install / uninstall beta gate: Pass")
+          .replace("这份记录不能单独解锁邀请制 Beta 或公开分发", "这份记录可以作为安装复核证据"),
+      );
+    },
+    'missing record gate phrase "这份记录不能单独解锁邀请制 Beta 或公开分发"',
+  );
+
+  expectFail(
     "missing-diagnostic-real-export-boundary",
     (fixtureReleaseDir) => {
       const recordPath = path.join(fixtureReleaseDir, "diagnostic-bundle-smoke-record.md");
