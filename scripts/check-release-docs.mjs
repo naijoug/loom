@@ -126,7 +126,10 @@ const requiredRecordGatePhrases = [
   {
     file: "diagnostic-bundle-smoke-record.md",
     phrases: [
+      "record template ready; no real desktop export pass yet",
       "Diagnostic bundle beta gate: Hold",
+      "尚未针对同一 Beta 候选 artifact 完成真实桌面",
+      "在本记录出现至少一条 `Beta gate: pass` 前",
       "不能把诊断包 UI smoke 视为已满足邀请制 Beta 分发门禁",
       "这条门禁不能解除 `loom-beta-notary` credential",
     ],

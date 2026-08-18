@@ -221,6 +221,22 @@ try {
     'missing record gate phrase "Diagnostic bundle beta gate: Hold"',
   );
 
+  expectFail(
+    "missing-diagnostic-real-export-boundary",
+    (fixtureReleaseDir) => {
+      const recordPath = path.join(fixtureReleaseDir, "diagnostic-bundle-smoke-record.md");
+      fs.writeFileSync(
+        recordPath,
+        fs
+          .readFileSync(recordPath, "utf8")
+          .replace("record template ready; no real desktop export pass yet", "record template ready")
+          .replace("尚未针对同一 Beta 候选 artifact 完成真实桌面", "尚未完成")
+          .replace("在本记录出现至少一条 `Beta gate: pass` 前", "在后续通过前"),
+      );
+    },
+    'missing record gate phrase "record template ready; no real desktop export pass yet"',
+  );
+
   console.log("Release docs checker fixture tests passed.");
 } finally {
   fs.rmSync(tempRoot, { recursive: true, force: true });
