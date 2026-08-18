@@ -56,6 +56,32 @@ function expectFail(name, mutate, expectedMessage) {
   assertIncludes(`${result.stdout}\n${result.stderr}`, expectedMessage, name);
 }
 
+function assertDiagnosticSmokeScriptContract() {
+  const packageJsonPath = path.join(projectRoot, "package.json");
+  const diagnosticScriptPath = path.join(projectRoot, "scripts", "diagnostic-bundle-smoke.sh");
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+  const smokeCommand = packageJson.scripts?.["smoke:diagnostics"];
+
+  if (smokeCommand !== "./scripts/diagnostic-bundle-smoke.sh") {
+    throw new Error(
+      `package.json: expected smoke:diagnostics to run ./scripts/diagnostic-bundle-smoke.sh, got ${JSON.stringify(smokeCommand)}`,
+    );
+  }
+
+  const diagnosticScript = fs.readFileSync(diagnosticScriptPath, "utf8");
+  assertIncludes(diagnosticScript, "set -euo pipefail", "diagnostic smoke script strict mode");
+  assertIncludes(
+    diagnosticScript,
+    "cargo test --manifest-path src-tauri/Cargo.toml diagnostic_bundle --lib",
+    "diagnostic smoke script cargo harness",
+  );
+
+  const mode = fs.statSync(diagnosticScriptPath).mode;
+  if ((mode & 0o111) === 0) {
+    throw new Error("scripts/diagnostic-bundle-smoke.sh: expected script to be executable");
+  }
+}
+
 function readChecklist(fixtureReleaseDir) {
   return fs.readFileSync(path.join(fixtureReleaseDir, "beta-release-review-checklist.md"), "utf8");
 }
@@ -65,6 +91,7 @@ function writeChecklist(fixtureReleaseDir, text) {
 }
 
 try {
+  assertDiagnosticSmokeScriptContract();
   expectPass("baseline");
 
   expectFail(
