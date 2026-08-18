@@ -26,7 +26,7 @@
 
 ## 已有工程证据
 
-来自 `docs/dogfood/project-optimization-2026-08-05.md` 和 `docs/security-policy.md` 的可复核证据：
+来自 `docs/dogfood/project-optimization-2026-08-05.md`、`docs/security-policy.md`、`docs/release/diagnostic-bundle-engineering-proof.md` 和 `docs/release/diagnostic-bundle-smoke-record.md` 的可复核证据：
 
 - `export_diagnostic_bundle` 已纳入 Tauri command contract。
 - 诊断包导出版本、系统、任务/run 元数据和策略判定。
@@ -34,7 +34,8 @@
 - 命令、阻塞原因、日志尾部等文本会走统一敏感信息脱敏，常见 Authorization/Bearer、password、token、secret 和环境变量赋值替换为 `[REDACTED]`。
 - 日志默认不导出；用户主动选择后只读取项目内 `.loom/logs/` 下的最近日志尾部。
 - secret fixture 已验证命令、日志、阻塞原因中的 token 不出现在诊断 JSON。
-- 2026-08-10 复跑 `cargo test diagnostic_bundle --lib` 通过，记录见 `docs/release/diagnostic-bundle-engineering-proof.md`；该记录证明后端 fixture 仍有效，并补充验证项目外 / 不可读日志引用不会挤占可导出日志限额，以及 headless 文件 harness 可实际写出 / 读回无任务最小 JSON 与 fake-only 日志尾部 JSON，但不替代 UI 手工 smoke。
+- 2026-08-18 复跑 `cargo test diagnostic_bundle --lib` 通过，记录见 `docs/release/diagnostic-bundle-engineering-proof.md` 和 `docs/release/diagnostic-bundle-smoke-record.md`；该记录证明后端 fixture 仍有效，并补充验证项目外 / 不可读日志引用不会挤占可导出日志限额，以及 headless 文件 harness 可实际写出 / 读回无任务最小 JSON 与 fake-only 日志尾部 JSON，但不替代 UI 手工 smoke。
+- 2026-08-18 复跑 `pnpm smoke:interaction` 通过，证明 Settings / Done pane 的诊断入口、日志开关和 Web preview 降级状态仍可定位；该证据只覆盖入口与控件，不覆盖系统保存对话框或人工 JSON 搜索。
 - 真实付费 Agent canary 尚未执行；该路径仍是显式手工触发，不属于当前自动诊断证据。
 
 ## 导出前自查清单
@@ -81,7 +82,7 @@
 进入更大范围 Beta 前至少补齐：
 
 - 一次从 UI 导出诊断包的手工 smoke 记录，覆盖“默认不导出日志”和“选择日志尾部”两条路径。
-- 一条故意包含 fake token / fake path 的 fixture 记录，证明 JSON 中只出现 `[REDACTED]` 与 `[PROJECT_ROOT]`。
+- 一条故意包含 fake token / fake path 的 fixture 记录，证明 JSON 中只出现 `[REDACTED]` 与 `[PROJECT_ROOT]`；后端与 headless 文件 harness 已在 `docs/release/diagnostic-bundle-engineering-proof.md` 覆盖，仍需真实桌面导出记录确认 UI 保存链路。
 - 一条真实反馈处理演练：用 `security` 模板记录“因疑似敏感信息不附诊断包”的流程。
 - 如要公开下载，再把诊断包说明合并进 release notes 或下载页，不只放在仓库文档里。
 
@@ -91,4 +92,4 @@
 - 在 JSON 顶层增加 `reviewRequired: true` 或同等字段，提醒它不是自动可外发材料。
 - 为诊断包增加 schema 文档和样例 fixture，便于试用者知道哪些字段会出现。
 - 增加单独命令或 UI 按钮，生成“无日志、无任务详情”的最小支持包。
-- 将 headless 文件 harness 扩展成可由 release runbook 直接调用的 smoke 命令，减少 cron / CI 对 macOS 保存对话框的依赖。
+- 将 headless 文件 harness 扩展成可由 release runbook 直接调用的 smoke 命令，减少 cron / CI 对 macOS 保存对话框的依赖；命令通过后仍只能降低回归风险，不能替代 Beta 前的人工 JSON 复核。

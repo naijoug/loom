@@ -100,13 +100,13 @@
 
 ## 与工程测试的关系
 
-`src-tauri/src/diagnostics.rs` 已有单元测试覆盖 `build_bundle` 的脱敏、路径替换、日志默认不导出和日志尾部路径；2026-08-09 的复跑记录见 `docs/release/diagnostic-bundle-engineering-proof.md`。UI smoke 只补工程测试没有覆盖的部分：用户是否能找到入口、开关状态是否符合文档、保存后的 JSON 是否能由人类按清单复核。
+`src-tauri/src/diagnostics.rs` 已有单元测试覆盖 `build_bundle` 的脱敏、路径替换、日志默认不导出和日志尾部路径；2026-08-18 的复跑记录见 `docs/release/diagnostic-bundle-engineering-proof.md` 和 `docs/release/diagnostic-bundle-smoke-record.md`。UI smoke 只补工程测试没有覆盖的部分：用户是否能找到入口、开关状态是否符合文档、保存后的 JSON 是否能由人类按清单复核。
 
 ## 自动化覆盖进展
 
-2026-08-09 已把两处 UI 入口纳入 `pnpm smoke:interaction`：
+2026-08-18 已复跑两处 UI 入口的 `pnpm smoke:interaction`：
 
 - Settings / About 的“诊断与支持”卡片必须出现“脱敏诊断包”和“日志范围”；在 Web preview 环境中，导出按钮必须因没有 Tauri runtime 而保持 disabled，日志范围 toggle 必须可定位。
 - Done pane 的“问题诊断”卡片必须出现“包含最近日志尾部”和“导出脱敏诊断包”；日志 checkbox 必须可切换，导出按钮在 Done pane 中必须保持可点击。
 
-本自动化只证明 UI 入口和开关不会在 preview / 布局 smoke 中漂移；它不弹出系统保存对话框，也不读取真实导出的 JSON。因此发布门禁仍需要按上方“记录模板”补一条真实桌面导出记录，至少覆盖无日志和含 fake-only 日志尾部两条路径。
+本自动化只证明 UI 入口和开关不会在 preview / 布局 smoke 中漂移；它不弹出系统保存对话框，也不读取真实导出的 JSON。`diagnostic_bundle_file_harness_*` 单测能在 headless 环境写出 / 读回无任务最小 JSON 与 fake-only 日志尾部 JSON，但同样不证明桌面保存链路。因此发布门禁仍需要按上方“记录模板”补一条真实桌面导出记录，至少覆盖无日志和含 fake-only 日志尾部两条路径。
