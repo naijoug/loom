@@ -93,6 +93,17 @@ try {
   );
 
   expectFail(
+    "missing-diagnostic-smoke-command-evidence",
+    (fixtureReleaseDir) => {
+      writeChecklist(
+        fixtureReleaseDir,
+        readChecklist(fixtureReleaseDir).replace("`pnpm smoke:diagnostics` 已通过，", ""),
+      );
+    },
+    'review table gate "Diagnostic bundle smoke" missing evidence "pnpm smoke:diagnostics"',
+  );
+
+  expectFail(
     "local-absolute-path",
     (fixtureReleaseDir) => {
       fs.appendFileSync(

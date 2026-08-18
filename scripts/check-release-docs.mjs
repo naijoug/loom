@@ -89,7 +89,11 @@ const requiredChecklistRows = [
   {
     gate: "Diagnostic bundle smoke",
     status: "Wait",
-    evidence: ["docs/release/diagnostic-bundle-smoke.md", "docs/release/diagnostic-bundle-smoke-record.md"],
+    evidence: [
+      "pnpm smoke:diagnostics",
+      "docs/release/diagnostic-bundle-smoke.md",
+      "docs/release/diagnostic-bundle-smoke-record.md",
+    ],
     stopRuleEvidence: ["诊断包", "人工复核"],
   },
   {
