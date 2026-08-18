@@ -161,6 +161,14 @@ try {
   );
 
   expectFail(
+    "missing-required-build-record",
+    (fixtureReleaseDir) => {
+      fs.rmSync(path.join(fixtureReleaseDir, "release-build-record.md"));
+    },
+    "docs/release/release-build-record.md: required release doc is missing",
+  );
+
+  expectFail(
     "missing-release-directory",
     (fixtureReleaseDir) => {
       fs.rmSync(fixtureReleaseDir, { recursive: true, force: true });
@@ -219,6 +227,22 @@ try {
       );
     },
     'missing record gate phrase "Diagnostic bundle beta gate: Hold"',
+  );
+
+  expectFail(
+    "missing-signing-gate-boundary",
+    (fixtureReleaseDir) => {
+      const recordPath = path.join(fixtureReleaseDir, "signing-gate-decision.md");
+      fs.writeFileSync(
+        recordPath,
+        fs
+          .readFileSync(recordPath, "utf8")
+          .replace("Gatekeeper hold", "Gatekeeper review")
+          .replace("不要求试用者绕过 Gatekeeper", "如有需要再说明 Gatekeeper 处理方式")
+          .replace("下一份候选产物必须先解决签名 gate", "下一份候选产物继续复核签名 gate"),
+      );
+    },
+    'missing record gate phrase "Gatekeeper hold"',
   );
 
   expectFail(

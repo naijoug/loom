@@ -15,12 +15,18 @@ const requiredFiles = [
   "beta-scope.md",
   "beta-safety-notes.md",
   "beta-feedback-template.md",
+  "release-build-record.md",
+  "artifact-integrity-check.md",
+  "signing-gate-decision.md",
+  "signing-repair-probe.md",
+  "developer-id-notarization-probe.md",
   "notarization-credential-preflight.md",
   "notarized-dmg-gate.md",
   "beta-release-review-checklist.md",
   "local-desktop-smoke-record.md",
   "install-uninstall-smoke-record.md",
   "beta-first-run-smoke-record.md",
+  "beta-smoke.md",
   "diagnostic-bundle-smoke.md",
   "diagnostic-bundle-smoke-record.md",
   "macos-install.md",
@@ -115,6 +121,21 @@ const requiredChecklistRows = [
 ];
 
 const requiredRecordGatePhrases = [
+  {
+    file: "release-build-record.md",
+    phrases: [
+      "Remaining release gates",
+      "If the DMG is rebuilt, update the commit, environment snapshot, checksum and size in this file",
+    ],
+  },
+  {
+    file: "signing-gate-decision.md",
+    phrases: [
+      "Gatekeeper hold",
+      "不要求试用者绕过 Gatekeeper",
+      "下一份候选产物必须先解决签名 gate",
+    ],
+  },
   {
     file: "beta-first-run-smoke-record.md",
     phrases: [
