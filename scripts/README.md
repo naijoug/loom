@@ -73,6 +73,32 @@ PORT=11421 HOST=127.0.0.1 ./scripts/debug.sh
 
 常规本地启动不要优先使用 `debug.sh`；只有在需要隔离调试端口或临时覆盖 Tauri dev URL 时使用它。
 
+## Release smoke 入口
+
+无需启动桌面保存对话框的发布 smoke：
+
+```bash
+pnpm smoke:diagnostics
+```
+
+`smoke:diagnostics` 执行 `scripts/diagnostic-bundle-smoke.sh`，底层运行 `cargo test --manifest-path src-tauri/Cargo.toml diagnostic_bundle --lib`。它覆盖诊断包默认无日志、路径替换、fake secret 脱敏、项目外 / 不可读日志引用过滤、无效引用不挤占日志限额，以及 headless 文件写入 / 读回 harness。该命令只提供工程回归证据，不能替代 `docs/release/diagnostic-bundle-smoke.md` 要求的真实桌面导出、人工搜索和临时 JSON 删除记录。
+
+需要验证 UI 入口但不操作真实保存对话框时运行：
+
+```bash
+pnpm smoke:interaction
+```
+
+`smoke:interaction` 会启动固定端口的 Web preview 并检查 Settings / Done pane 的关键交互和诊断入口。验证结束后脚本会清理预览进程；如中途被打断，手工运行 `./scripts/preview.sh stop`。
+
+维护者本机 release app 启动 / 重启 smoke 使用：
+
+```bash
+pnpm smoke:desktop
+```
+
+`smoke:desktop` 只能证明当前机器上的 release app 可启动，不能替代 Developer ID notarization、Gatekeeper、安装 / 卸载或普通试用者分发 gate。
+
 ## 完整质量门禁
 
 Release 文档门禁入口：
