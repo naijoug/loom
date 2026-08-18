@@ -137,6 +137,23 @@ const requiredRecordGatePhrases = [
     ],
   },
   {
+    file: "artifact-integrity-check.md",
+    phrases: [
+      "Signing / Gatekeeper assessment: **hold**",
+      "should **not** be promoted as a public Beta download",
+      "Run `docs/release/beta-smoke.md` against the exact artifact",
+    ],
+  },
+  {
+    file: "notarized-dmg-gate.md",
+    phrases: [
+      "blocked until notarization credential is available",
+      "不要扩大 Beta 分发",
+      "严格 `codesign`、Gatekeeper assessment 和 staple validate 都通过",
+      "当前候选 DMG 仍保持 Gatekeeper hold",
+    ],
+  },
+  {
     file: "beta-first-run-smoke-record.md",
     phrases: [
       "Beta gate: hold",

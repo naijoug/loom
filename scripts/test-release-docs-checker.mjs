@@ -246,6 +246,48 @@ try {
   );
 
   expectFail(
+    "missing-artifact-integrity-hold-boundary",
+    (fixtureReleaseDir) => {
+      const recordPath = path.join(fixtureReleaseDir, "artifact-integrity-check.md");
+      fs.writeFileSync(
+        recordPath,
+        fs
+          .readFileSync(recordPath, "utf8")
+          .replace("Signing / Gatekeeper assessment: **hold**", "Signing / Gatekeeper assessment: **review**")
+          .replace(
+            "should **not** be promoted as a public Beta download",
+            "should be reviewed before wider promotion",
+          )
+          .replace(
+            "Run `docs/release/beta-smoke.md` against the exact artifact",
+            "Run `docs/release/beta-smoke.md` after artifact review",
+          ),
+      );
+    },
+    'missing record gate phrase "Signing / Gatekeeper assessment: **hold**"',
+  );
+
+  expectFail(
+    "missing-notarized-dmg-gate-boundary",
+    (fixtureReleaseDir) => {
+      const recordPath = path.join(fixtureReleaseDir, "notarized-dmg-gate.md");
+      fs.writeFileSync(
+        recordPath,
+        fs
+          .readFileSync(recordPath, "utf8")
+          .replace("blocked until notarization credential is available", "ready for notarization review")
+          .replace("不要扩大 Beta 分发", "谨慎推进 Beta 分发")
+          .replace(
+            "严格 `codesign`、Gatekeeper assessment 和 staple validate 都通过",
+            "codesign、Gatekeeper assessment 和 staple validate 已复核",
+          )
+          .replace("当前候选 DMG 仍保持 Gatekeeper hold", "当前候选 DMG 等待 Gatekeeper review"),
+      );
+    },
+    'missing record gate phrase "blocked until notarization credential is available"',
+  );
+
+  expectFail(
     "missing-first-run-hold-boundary",
     (fixtureReleaseDir) => {
       const recordPath = path.join(fixtureReleaseDir, "beta-first-run-smoke-record.md");
