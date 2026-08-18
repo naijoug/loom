@@ -109,4 +109,10 @@
 - Settings / About 的“诊断与支持”卡片必须出现“脱敏诊断包”和“日志范围”；在 Web preview 环境中，导出按钮必须因没有 Tauri runtime 而保持 disabled，日志范围 toggle 必须可定位。
 - Done pane 的“问题诊断”卡片必须出现“包含最近日志尾部”和“导出脱敏诊断包”；日志 checkbox 必须可切换，导出按钮在 Done pane 中必须保持可点击。
 
-本自动化只证明 UI 入口和开关不会在 preview / 布局 smoke 中漂移；它不弹出系统保存对话框，也不读取真实导出的 JSON。`diagnostic_bundle_file_harness_*` 单测能在 headless 环境写出 / 读回无任务最小 JSON 与 fake-only 日志尾部 JSON，但同样不证明桌面保存链路。因此发布门禁仍需要按上方“记录模板”补一条真实桌面导出记录，至少覆盖无日志和含 fake-only 日志尾部两条路径。
+2026-08-18 17:00 新增 `pnpm smoke:diagnostics`，把诊断包后端脱敏与 headless 文件写入 / 读回 harness 包成 release smoke 可直接调用的命令。它当前执行：
+
+```bash
+cargo test --manifest-path src-tauri/Cargo.toml diagnostic_bundle --lib
+```
+
+本自动化只证明 UI 入口和开关不会在 preview / 布局 smoke 中漂移，并证明诊断包后端 fixture、无日志最小 JSON、fake-only 日志尾部 JSON 仍可在 headless 环境复核；它不弹出系统保存对话框，也不证明桌面保存链路。因此发布门禁仍需要按上方“记录模板”补一条真实桌面导出记录，至少覆盖无日志和含 fake-only 日志尾部两条路径。

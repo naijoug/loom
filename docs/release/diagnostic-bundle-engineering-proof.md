@@ -19,9 +19,10 @@
 ## 执行命令
 
 ```bash
-cd src-tauri
-cargo test diagnostic_bundle --lib
+pnpm smoke:diagnostics
 ```
+
+`pnpm smoke:diagnostics` 是 2026-08-18 17:00 新增的 release smoke 包装命令；底层执行 `cargo test --manifest-path src-tauri/Cargo.toml diagnostic_bundle --lib`，便于 cron / CI / release runbook 复用同一诊断包工程证据。
 
 ## 输出摘要
 
@@ -57,6 +58,6 @@ test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 189 filtered out; fi
 
 ## 下一步
 
-1. 保留本文件作为工程 fixture 证据。
+1. 保留本文件作为工程 fixture 证据，并优先用 `pnpm smoke:diagnostics` 复跑，而不是手写底层 cargo 命令。
 2. 下一轮若不具备 notarization credential，优先执行 `docs/release/diagnostic-bundle-smoke.md` 的 UI 手工 smoke：从 Settings 或 Done pane 导出无日志 / 含日志尾部两份 JSON；若系统保存对话框仍无法自动化，就把本文件的 headless harness 作为工程证据，并单独记录 UI blocker。
 3. UI smoke 记录通过后，再更新 `docs/release/diagnostic-bundle-review.md` 的 Beta 发布门禁状态。

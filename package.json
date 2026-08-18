@@ -14,6 +14,7 @@
     "bench:local": "node scripts/bench-local.mjs",
     "smoke": "./scripts/smoke-flow.sh",
     "smoke:interaction": "./scripts/interaction-smoke.sh",
+    "smoke:diagnostics": "./scripts/diagnostic-bundle-smoke.sh",
     "smoke:visual": "./scripts/visual-smoke.sh",
     "smoke:desktop": "./scripts/desktop-smoke.sh",
     "e2e:complete": "./tests/e2e/complete-version.sh",

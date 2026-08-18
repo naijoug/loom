@@ -12,7 +12,7 @@
 
 ## 当前 2026-08-18 状态
 
-- 已有工程证据：`docs/release/diagnostic-bundle-engineering-proof.md` 记录后端脱敏 fixture 与 headless 文件写入 / 读回 harness 通过；2026-08-18 15:00 复跑 `cargo test diagnostic_bundle --lib`，6 个 diagnostic bundle 测试通过。
+- 已有工程证据：`docs/release/diagnostic-bundle-engineering-proof.md` 记录后端脱敏 fixture 与 headless 文件写入 / 读回 harness 通过；2026-08-18 17:00 已新增并复跑 `pnpm smoke:diagnostics`，6 个 diagnostic bundle 测试通过。
 - 已有 UI 入口证据：2026-08-18 15:00 复跑 `pnpm smoke:interaction`，Settings / Done pane 的诊断入口、日志开关和 Web preview 约束通过。
 - 仍缺门禁证据：尚未针对同一 Beta 候选 artifact 完成真实桌面“保存诊断包 JSON → 人工搜索 → 删除临时文件”的记录；headless 文件 harness 与 interaction smoke 不能替代系统保存对话框后的人工 JSON 复核。
 
