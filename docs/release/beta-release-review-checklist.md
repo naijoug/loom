@@ -32,8 +32,9 @@
 | Install / uninstall smoke | `docs/release/macos-install.md`、`docs/release/local-data-and-uninstall.md` 与真实签名状态一致，且 `docs/release/install-uninstall-smoke-record.md` 针对同一候选 artifact 记录安装 / 清理 pass | Wait | 文档仍提示旧 invalid-signature / unnotarized 状态但 artifact 已变更，或未记录同一 artifact 的安装 / 卸载结果时停止 |
 | Privacy / account boundary | `docs/release/privacy-note.md`、`docs/release/agent-account-boundary.md` 已复核 | Pass | 真实 Agent 账号、费用、外发数据责任不清时停止 |
 
-## 当前 2026-08-11 结论
+## 当前 2026-08-18 结论
 
+- 2026-08-18 12:00 credential 复检：`xcrun notarytool --version` 仍为 `1.1.2 (41)`，`security find-identity -v -p codesigning` 仍输出 6 个 valid identities 且包含 `Developer ID Application: Honoululu Inc. (N7VU72TZB8)`；`xcrun notarytool history --keychain-profile loom-beta-notary` 仍返回 `No Keychain password item found`，所以 Credential preflight 继续保持 Hold，不能进入 `docs/release/notarized-dmg-gate.md`。
 - 2026-08-11 11:00 Developer ID identity 复核：`security find-identity -v -p codesigning` 输出 6 个 valid identities，包含 `Developer ID Application: Honoululu Inc. (N7VU72TZB8)`；Developer ID identity gate 从 Review 更新为 Pass。同期 `xcrun notarytool history --keychain-profile loom-beta-notary` 仍返回 `No Keychain password item found`，所以 Credential preflight 保持 Hold。
 - 2026-08-11 10:02 文档复核：`beta-scope.md`、`beta-safety-notes.md`、`beta-feedback-template.md`、`privacy-note.md`、`agent-account-boundary.md` 五份文档结构完整、交叉引用一致、覆盖 checklist 对应 gate 的 stop rule 条件；Scope / safety、Feedback path、Privacy / account boundary 三项从 Review 更新为 Pass。
 - `docs/release/notarization-credential-preflight.md` 记录：Developer ID signing identity 可见，但 `loom-beta-notary` credential profile 仍缺失。

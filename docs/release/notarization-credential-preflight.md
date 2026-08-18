@@ -92,6 +92,28 @@ Run 'notarytool store-credentials' to create another credential profile.
 
 复检结论：Developer ID signing identity 可见，但 notary credential 仍缺失；不要把当前 DMG 重新标记为可公开或默认邀请制分发物。
 
+## 2026-08-18 复检
+
+本轮继续只做低风险凭据状态复检：不读取、不写入、不提交 Apple ID、app-specific password、API key、issuer、private key 或任何真实凭据；只确认当前机器是否已经从 `Hold` 进入可执行 `notarized-dmg-gate.md` 的状态。
+
+| Check | Result | Meaning |
+| --- | --- | --- |
+| `xcrun notarytool --version` | pass: `1.1.2 (41)` | Xcode notarization CLI 仍可用 |
+| `security find-identity -v -p codesigning` | pass: 6 valid identities | 本机 code signing identity 可枚举，其中包含 `Developer ID Application: Honoululu Inc. (N7VU72TZB8)` |
+| `xcrun notarytool history --keychain-profile loom-beta-notary` | missing credential | `loom-beta-notary` 仍未写入 keychain；不能进入 notarized DMG gate |
+| Next release gate | hold | 继续等待维护者注入 notary credential 后再重打候选 DMG |
+
+Observed output 摘要：
+
+```text
+1.1.2 (41)
+6 valid identities found
+Error: No Keychain password item found for profile: loom-beta-notary
+Run 'notarytool store-credentials' to create another credential profile.
+```
+
+复检结论：Developer ID signing identity 仍可见，但 notary credential 仍缺失；不要重打普通 Beta DMG，不要要求试用者绕过 Gatekeeper，也不要把维护者本机 smoke pass 写成邀请制分发 pass。
+
 ## 结论
 
-当前机器有 notarization CLI，也有可用 Developer ID signing identity，但缺少 notarization credential profile。因此 release gate 仍保持 hold；下一次优先动作是由维护者在本机 keychain 或 CI secrets 中注入 credential，然后重打 DMG 并追加完整 artifact integrity 记录。
+当前机器有 notarization CLI，也有可用 Developer ID signing identity，但截至 2026-08-18 12:00 仍缺少 notarization credential profile。因此 release gate 仍保持 hold；下一次优先动作是由维护者在本机 keychain 或 CI secrets 中注入 credential，然后重打 DMG 并追加完整 artifact integrity 记录。
