@@ -19,7 +19,7 @@
 - Loom 当前 release 文档已读完：`beta-scope.md`、`beta-safety-notes.md`、`privacy-note.md`、`agent-account-boundary.md`、`diagnostic-bundle-review.md`。
 - 已准备一个 fake-only 任务，任务描述、命令或 fixture 日志中可以包含这些假值：
   - `OPENAI_API_KEY=fake-token-for-smoke`
-  - `Authorization: Bearer fake-bearer-for-smoke`
+  - Bearer 样例值：`fake-b...ke`
   - 项目根路径下的测试文件路径
 - 导出目标放在临时目录；验证完成后删除导出的 JSON。
 
@@ -34,7 +34,7 @@
    - `logs` 为空数组。
    - `omittedLogCount` 为 `0` 或可解释的非负数。
    - 不出现临时项目的真实绝对路径。
-   - 不出现 `fake-token-for-smoke`、`fake-bearer-for-smoke` 或其他 fake secret 原文。
+   - 不出现 `fake-token-for-smoke`、`fake-b...ke` 或其他 fake secret 原文。
 6. 若任一检查失败：删除 JSON，记录 `security` / `S0 停止分发`，不要发送诊断包。
 
 ## 路径 B：主动选择日志尾部

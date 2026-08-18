@@ -6,12 +6,12 @@
 
 ## 结论
 
-2026-08-10 09:01 复跑并扩展诊断包相关 Rust 单元测试，结果通过：
+2026-08-18 14:00 复跑诊断包相关 Rust 单元测试，并确认 fake-only fixture 与 UI smoke 文档使用同一搜索词，结果通过：
 
 - 默认不勾选日志尾部时，诊断包 `logs` 为空，`omittedLogCount` 为 `0`。
 - 勾选日志尾部时，只读取项目内 `.loom/logs/` 引用；项目根路径替换为 `[PROJECT_ROOT]`；指向项目外目录的日志引用不会进入导出 JSON，也不会因为最近若干条无效引用占满 20 条限额而挤掉更早的有效项目内日志。
 - 命令、阻塞原因和日志尾部中的 token / secret / Authorization / Bearer 类文本会被替换为 `[REDACTED]`。
-- 测试 JSON 中不包含临时项目真实路径，也不包含 fake secret 原文。
+- 测试 JSON 中不包含临时项目真实路径，也不包含 fake secret 原文：`fake-token-for-smoke`、`fake-b...ke`。
 - 新增文件级 harness：把无任务最小诊断包与包含 fake log tail 的诊断包实际写到临时 JSON 文件，再读回检查 `task: null`、`logs`、`omittedLogCount`、`[PROJECT_ROOT]` 和 `[REDACTED]` 语义。
 
 这条证据只能证明后端 bundle 构造和脱敏 fixture 仍然有效；它不替代 `docs/release/diagnostic-bundle-smoke.md` 要求的 UI 手工 smoke。Beta 扩大分发前仍需要从 Settings 或 Done pane 实际导出 JSON，并按清单人工搜索。
@@ -43,7 +43,7 @@ test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 189 filtered out; fi
 |---|---|---|
 | 默认不导出日志 | `diagnostic_bundle_omits_logs_unless_user_selects_them` | 用户未主动选择时不把 stdout/stderr 尾部写入诊断包 |
 | 路径脱敏 | `diagnostic_bundle_redacts_secrets_paths_and_log_tails` | 项目根路径以 `[PROJECT_ROOT]` 出现，不暴露真实目录 |
-| secret 脱敏 | `diagnostic_bundle_redacts_secrets_paths_and_log_tails` | fake token / Authorization / secret 样例不以原文出现在 JSON |
+| secret 脱敏 | `diagnostic_bundle_redacts_secrets_paths_and_log_tails`、`diagnostic_bundle_file_harness_writes_redacted_fake_log_tail_json` | `fake-token-for-smoke`、Bearer 样例值 `fake-b...ke` 与 secret 样例不以原文出现在 JSON |
 | 日志来源边界 | `diagnostic_bundle_redacts_secrets_paths_and_log_tails` 使用项目内 `.loom/logs/` 引用；`diagnostic_bundle_ignores_logs_outside_project_log_dir` 证明项目外日志引用被忽略 | UI smoke 仍需确认开关文案和保存文件符合试用者预期 |
 | 日志限额语义 | `diagnostic_bundle_invalid_recent_log_refs_do_not_starve_valid_logs` 证明项目外 / 不可读引用先被过滤，20 条限额只作用在可导出的项目内日志上 | 最近的无效日志引用不会把有效诊断证据挤出 JSON；`omittedLogCount` 只说明可导出日志超过限额后的省略数量 |
 | 文件写入 harness | `diagnostic_bundle_file_harness_writes_minimal_no_task_json`、`diagnostic_bundle_file_harness_writes_redacted_fake_log_tail_json` 实际写出并读回临时 JSON | cron / headless 环境可以复核无任务最小包与 fake-only 日志尾部两条路径，不依赖系统保存对话框 |
