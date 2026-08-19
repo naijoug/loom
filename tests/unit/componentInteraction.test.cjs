@@ -9,6 +9,10 @@ const { JSDOM } = require("jsdom");
 const { ToggleControl } = require("../../.tmp/test-build/src/features/settings/controls.js");
 const { ValidationGate } = require("../../.tmp/test-build/src/features/testing/ValidationGate.js");
 const { FeedbackComposer } = require("../../.tmp/test-build/src/features/testing/FeedbackComposer.js");
+const {
+  deriveValidationEvidence,
+  gateStatus,
+} = require("../../.tmp/test-build/src/features/testing/model.js");
 
 global.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -35,6 +39,42 @@ async function render(element) {
       await act(async () => root.unmount());
       dom.window.close();
     },
+  };
+}
+
+function validationRun(overrides = {}) {
+  return {
+    id: overrides.id ?? "run-1",
+    taskId: overrides.taskId ?? "task-1",
+    command: overrides.command ?? "pnpm test",
+    cwd: overrides.cwd ?? "/repo",
+    intent: overrides.intent ?? "validation",
+    status: overrides.status ?? "succeeded",
+    startedAtMs: overrides.startedAtMs ?? 1,
+    endedAtMs: overrides.endedAtMs ?? overrides.startedAtMs ?? 1,
+    exitCode: overrides.exitCode ?? 0,
+  };
+}
+
+const validationSlots = [{ id: "validation", name: "Tests", command: "pnpm test", cwd: "", kind: "validation" }];
+
+function gatePropsForRuns(runs, taskId = "task-1") {
+  const evidence = deriveValidationEvidence(runs, taskId, validationSlots);
+  const hasRunningValidationRun = runs.some((run) => run.taskId === taskId && run.intent === "validation" && run.status === "running");
+  const gate = gateStatus({
+    hasPassingEvidence: evidence.hasPassingEvidence,
+    hasRunningValidationRun,
+    latestBlockingFailure: evidence.blockingFailure,
+    hasValidationEvidence: evidence.hasEvidence,
+  });
+  return {
+    gate,
+    validationCommandLabel: "pnpm test",
+    successfulRun: evidence.successfulRun,
+    failedRun: evidence.failedRun,
+    blockingFailure: evidence.blockingFailure,
+    canAccept: evidence.hasPassingEvidence,
+    readOnly: false,
   };
 }
 
@@ -84,6 +124,51 @@ test("Testing acceptance gate exposes the blocking reason and only fires when en
   await act(async () => ready.container.querySelector("button").click());
   assert.equal(accepts, 1);
   await ready.close();
+});
+
+test("Testing acceptance gate keeps preview and unrelated task runs blocked", async () => {
+  let accepts = 0;
+  const props = gatePropsForRuns([
+    validationRun({ id: "preview", command: "pnpm dev", intent: "preview", startedAtMs: 10 }),
+    validationRun({ id: "other-task-validation", taskId: "task-2", startedAtMs: 11 }),
+  ]);
+
+  const view = await render(React.createElement(ValidationGate, {
+    ...props,
+    onAccept: () => { accepts += 1; },
+  }));
+  assert.match(view.container.textContent, /暂无验证证据/);
+  assert.match(view.container.textContent, /尚未运行/);
+  const button = view.container.querySelector("button");
+  assert.equal(button.disabled, true);
+  button.click();
+  assert.equal(accepts, 0);
+  await view.close();
+});
+
+test("Testing acceptance gate accepts explicit validation intent without configured command match", async () => {
+  let accepts = 0;
+  const props = gatePropsForRuns([
+    validationRun({
+      id: "custom-validation",
+      command: "npm run verify:release",
+      intent: "validation",
+      startedAtMs: 12,
+      endedAtMs: 13,
+    }),
+  ]);
+
+  const view = await render(React.createElement(ValidationGate, {
+    ...props,
+    onAccept: () => { accepts += 1; },
+  }));
+  assert.match(view.container.textContent, /验证已通过/);
+  assert.match(view.container.textContent, /成功/);
+  const button = view.container.querySelector("button");
+  assert.equal(button.disabled, false);
+  await act(async () => button.click());
+  assert.equal(accepts, 1);
+  await view.close();
 });
 
 test("Testing feedback composer disables empty repair requests and submits actionable feedback", async () => {
