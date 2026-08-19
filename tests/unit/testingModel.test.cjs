@@ -38,6 +38,36 @@ test("validation evidence requires a passing run newer than the latest failure",
   assert.equal(recovered.blockingFailure, undefined);
 });
 
+test("validation evidence ignores preview and unrelated task runs", () => {
+  const previewRun = run("preview", "succeeded", 4);
+  previewRun.intent = "preview";
+
+  const otherTaskValidation = run("other-task-validation", "succeeded", 5);
+  otherTaskValidation.taskId = "task-2";
+
+  const evidence = deriveValidationEvidence(
+    [previewRun, otherTaskValidation, run("legacy-pass", "succeeded", 3)],
+    "task-1",
+    slots,
+  );
+
+  assert.equal(evidence.hasEvidence, true);
+  assert.equal(evidence.hasPassingEvidence, true);
+  assert.equal(evidence.successfulRun.id, "legacy-pass");
+});
+
+test("explicit validation intent counts even when command text is not configured", () => {
+  const customValidation = run("custom-validation", "succeeded", 6);
+  customValidation.command = "npm run verify:release";
+  customValidation.intent = "validation";
+
+  const evidence = deriveValidationEvidence([customValidation], "task-1", slots);
+
+  assert.equal(evidence.hasEvidence, true);
+  assert.equal(evidence.hasPassingEvidence, true);
+  assert.equal(evidence.successfulRun.id, "custom-validation");
+});
+
 test("gate status explains running and blocking conditions", () => {
   assert.equal(gateStatus({ hasPassingEvidence: false, hasRunningValidationRun: true, hasValidationEvidence: true }).title, "检查运行中");
   assert.equal(gateStatus({ hasPassingEvidence: false, hasRunningValidationRun: false, hasValidationEvidence: true, latestBlockingFailure: run("fail", "failed", 2) }).title, "需要修复");
