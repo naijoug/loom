@@ -1,5 +1,10 @@
 # 计划文档索引
 
+## 2026-08-20
+
+- 01:45-testing-pane-state-coverage.md
+  > 规划把 validation evidence 的 intent / task scope 边界提升到 Testing Pane 组件级覆盖，补验证运行中、失败、通过待人工接收和 preview / unrelated task 不应解锁的 UI 断言，并以 `pnpm test` / `pnpm check` 收口。
+
 ## 2026-08-07
 
 - 10:00-beta-release-readiness.md
