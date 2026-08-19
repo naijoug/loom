@@ -313,6 +313,11 @@ function checkRequiredChecklistPhrases(checklistPath, checklist) {
     "Install / uninstall smoke",
     "First-run beta smoke",
     "Diagnostic bundle smoke",
+    "credential 缺失期间不要重打普通 Beta DMG",
+    "不要要求试用者绕过 Gatekeeper",
+    "不要把本机 smoke pass 改写为分发 pass",
+    "只有 `Credential preflight`、`DMG checksum / size`、`hdiutil verify`、`Strict codesign`、`spctl assessment`、`stapler validate`、`Install / uninstall smoke`、`First-run beta smoke` 和 `Diagnostic bundle smoke` 都有针对同一候选物的 pass 证据时",
+    "才允许把 `Distribution decision` 从 `Hold` 改为 `Invite-only`",
   ]) {
     if (!checklist.includes(phrase)) {
       fail(checklistPath, `missing release gate phrase ${JSON.stringify(phrase)}`);

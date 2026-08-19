@@ -333,6 +333,28 @@ try {
     'missing record gate phrase "record template ready; no real desktop export pass yet"',
   );
 
+  expectFail(
+    "missing-distribution-decision-boundary",
+    (fixtureReleaseDir) => {
+      writeChecklist(
+        fixtureReleaseDir,
+        readChecklist(fixtureReleaseDir)
+          .replace("credential 缺失期间不要重打普通 Beta DMG", "credential 缺失期间继续等待")
+          .replace("不要要求试用者绕过 Gatekeeper", "按需说明 Gatekeeper 处理方式")
+          .replace("不要把本机 smoke pass 改写为分发 pass", "本机 smoke pass 仅供复核")
+          .replace(
+            "只有 `Credential preflight`、`DMG checksum / size`、`hdiutil verify`、`Strict codesign`、`spctl assessment`、`stapler validate`、`Install / uninstall smoke`、`First-run beta smoke` 和 `Diagnostic bundle smoke` 都有针对同一候选物的 pass 证据时",
+            "当主要 gate 都有 pass 证据时",
+          )
+          .replace(
+            "才允许把 `Distribution decision` 从 `Hold` 改为 `Invite-only`",
+            "再复核是否把 `Distribution decision` 从 `Hold` 改为 `Invite-only`",
+          ),
+      );
+    },
+    'missing release gate phrase "credential 缺失期间不要重打普通 Beta DMG"',
+  );
+
   console.log("Release docs checker fixture tests passed.");
 } finally {
   fs.rmSync(tempRoot, { recursive: true, force: true });
