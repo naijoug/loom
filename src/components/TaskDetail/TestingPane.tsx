@@ -211,9 +211,7 @@ export function TestingPane({ project, task, readOnly = false }: TestingPaneProp
   const successfulValidationRun = validationEvidence.successfulRun;
   const latestBlockingFailure = validationEvidence.blockingFailure;
   const hasValidationEvidence = validationEvidence.hasEvidence;
-  const hasRunningValidationRun = slots
-    .filter((slot) => slot.kind === "validation")
-    .some((slot) => slotRun(slot)?.status === "running");
+  const hasRunningValidationRun = validationEvidence.hasRunningEvidence;
   const hasPassingEvidence = validationEvidence.hasPassingEvidence;
   const gate = gateStatus({
     hasPassingEvidence,

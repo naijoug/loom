@@ -68,6 +68,23 @@ test("explicit validation intent counts even when command text is not configured
   assert.equal(evidence.successfulRun.id, "custom-validation");
 });
 
+test("running validation evidence includes explicit custom commands", () => {
+  const legacyPreview = run("legacy-preview", "running", 7);
+  legacyPreview.command = "pnpm dev";
+  legacyPreview.intent = "preview";
+
+  const customValidation = run("custom-validation", "running", 8);
+  customValidation.command = "npm run verify:release";
+  customValidation.intent = "validation";
+
+  const evidence = deriveValidationEvidence([legacyPreview, customValidation], "task-1", slots);
+
+  assert.equal(evidence.hasEvidence, true);
+  assert.equal(evidence.hasRunningEvidence, true);
+  assert.equal(evidence.runningRun.id, "custom-validation");
+  assert.equal(evidence.hasPassingEvidence, false);
+});
+
 test("gate status explains running and blocking conditions", () => {
   assert.equal(gateStatus({ hasPassingEvidence: false, hasRunningValidationRun: true, hasValidationEvidence: true }).title, "检查运行中");
   assert.equal(gateStatus({ hasPassingEvidence: false, hasRunningValidationRun: false, hasValidationEvidence: true, latestBlockingFailure: run("fail", "failed", 2) }).title, "需要修复");

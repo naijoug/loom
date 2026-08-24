@@ -77,6 +77,9 @@ export function deriveValidationEvidence(
   const failedRun = runs
     .filter((run) => run.taskId === taskId && isFailedValidationRun(run, validationCommands))
     .sort((left, right) => right.startedAtMs - left.startedAtMs)[0];
+  const runningRun = runs
+    .filter((run) => run.taskId === taskId && isValidationRun(run, validationCommands) && run.status === "running")
+    .sort((left, right) => right.startedAtMs - left.startedAtMs)[0];
   const blockingFailure =
     failedRun && (!successfulRun || failedRun.startedAtMs > successfulRun.startedAtMs)
       ? failedRun
@@ -85,9 +88,11 @@ export function deriveValidationEvidence(
     validationCommands,
     successfulRun,
     failedRun,
+    runningRun,
     blockingFailure,
     hasEvidence: runs.some((run) => run.taskId === taskId && isValidationRun(run, validationCommands)),
-    hasPassingEvidence: Boolean(successfulRun && !blockingFailure),
+    hasRunningEvidence: Boolean(runningRun),
+    hasPassingEvidence: Boolean(successfulRun && !blockingFailure && !runningRun),
   };
 }
 

@@ -60,10 +60,9 @@ const validationSlots = [{ id: "validation", name: "Tests", command: "pnpm test"
 
 function gatePropsForRuns(runs, taskId = "task-1") {
   const evidence = deriveValidationEvidence(runs, taskId, validationSlots);
-  const hasRunningValidationRun = runs.some((run) => run.taskId === taskId && run.intent === "validation" && run.status === "running");
   const gate = gateStatus({
     hasPassingEvidence: evidence.hasPassingEvidence,
-    hasRunningValidationRun,
+    hasRunningValidationRun: evidence.hasRunningEvidence,
     latestBlockingFailure: evidence.blockingFailure,
     hasValidationEvidence: evidence.hasEvidence,
   });
@@ -72,8 +71,9 @@ function gatePropsForRuns(runs, taskId = "task-1") {
     validationCommandLabel: "pnpm test",
     successfulRun: evidence.successfulRun,
     failedRun: evidence.failedRun,
+    runningRun: evidence.runningRun,
     blockingFailure: evidence.blockingFailure,
-    canAccept: evidence.hasPassingEvidence,
+    canAccept: evidence.hasPassingEvidence && !evidence.hasRunningEvidence,
     readOnly: false,
   };
 }
@@ -168,6 +168,33 @@ test("Testing acceptance gate accepts explicit validation intent without configu
   assert.equal(button.disabled, false);
   await act(async () => button.click());
   assert.equal(accepts, 1);
+  await view.close();
+});
+
+test("Testing acceptance gate waits for explicit custom validation runs after a prior pass", async () => {
+  let accepts = 0;
+  const props = gatePropsForRuns([
+    validationRun({ id: "previous-pass", startedAtMs: 10, endedAtMs: 11 }),
+    validationRun({
+      id: "custom-running-validation",
+      command: "npm run verify:release",
+      intent: "validation",
+      status: "running",
+      startedAtMs: 12,
+      endedAtMs: undefined,
+      exitCode: undefined,
+    }),
+  ]);
+
+  const view = await render(React.createElement(ValidationGate, {
+    ...props,
+    onAccept: () => { accepts += 1; },
+  }));
+  assert.match(view.container.textContent, /检查运行中/);
+  const button = view.container.querySelector("button");
+  assert.equal(button.disabled, true);
+  button.click();
+  assert.equal(accepts, 0);
   await view.close();
 });
 
