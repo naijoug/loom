@@ -332,19 +332,22 @@ mod tests {
     #[test]
     fn analyzes_python_go_flutter_and_electron_projects() {
         let root = std::env::temp_dir().join(format!("loom-project-stacks-{}", now_ms()));
-        fs::create_dir_all(&root).unwrap();
-        fs::write(root.join("go.mod"), "module example.test/app\n").unwrap();
-        fs::write(root.join("pyproject.toml"), "[project]\nname='app'\n").unwrap();
-        fs::write(root.join("pubspec.yaml"), "name: app\n").unwrap();
+        fs::create_dir_all(&root).expect("project stack fixture root should be created");
+        fs::write(root.join("go.mod"), "module example.test/app\n")
+            .expect("go module fixture should be written");
+        fs::write(root.join("pyproject.toml"), "[project]\nname='app'\n")
+            .expect("python project fixture should be written");
+        fs::write(root.join("pubspec.yaml"), "name: app\n")
+            .expect("flutter project fixture should be written");
         fs::write(
             root.join("package.json"),
             r#"{"devDependencies":{"electron":"1.0.0","typescript":"1.0.0"},"scripts":{"dev":"electron ."}}"#,
         )
-        .unwrap();
+        .expect("electron package fixture should be written");
 
         let summary =
             analyze_project_path(&root, "project-stacks".to_string(), "stacks".to_string())
-                .unwrap();
+                .expect("project stack fixture should be analyzable");
         for stack in [
             "Node.js",
             "TypeScript",
@@ -369,7 +372,7 @@ mod tests {
                 "missing {command}"
             );
         }
-        fs::remove_dir_all(root).unwrap();
+        fs::remove_dir_all(root).expect("project stack fixture root should be cleaned up");
     }
 
     #[test]
