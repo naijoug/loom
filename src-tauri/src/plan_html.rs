@@ -773,12 +773,12 @@ mod tests {
         let root = std::env::temp_dir().join(format!("loom-plan-html-{}", now_ms()));
         let allowed_dir = root.join("docs").join("plans").join("2026-06-10");
         let outside_dir = root.join("outside");
-        fs::create_dir_all(&allowed_dir).unwrap();
-        fs::create_dir_all(&outside_dir).unwrap();
+        fs::create_dir_all(&allowed_dir).expect("allowed plans fixture directory");
+        fs::create_dir_all(&outside_dir).expect("outside fixture directory");
         let allowed = allowed_dir.join("plan.md");
         let outside = outside_dir.join("plan.md");
-        fs::write(&allowed, "# Allowed").unwrap();
-        fs::write(&outside, "# Outside").unwrap();
+        fs::write(&allowed, "# Allowed").expect("allowed plan fixture");
+        fs::write(&outside, "# Outside").expect("outside plan fixture");
 
         assert!(validate_plan_markdown_path(&root, &allowed).is_ok());
         assert!(validate_plan_markdown_path(&root, &outside).is_err());
@@ -792,12 +792,12 @@ mod tests {
         let root = std::env::temp_dir().join(format!("loom-planning-evidence-{}", now_ms()));
         let allowed_dir = root.join(".loom").join("planning").join("task-1");
         let outside_dir = root.join("outside");
-        fs::create_dir_all(&allowed_dir).unwrap();
-        fs::create_dir_all(&outside_dir).unwrap();
+        fs::create_dir_all(&allowed_dir).expect("planning evidence fixture directory");
+        fs::create_dir_all(&outside_dir).expect("outside fixture directory");
         let allowed = allowed_dir.join("agent.stderr.log");
         let outside = outside_dir.join("agent.stderr.log");
-        fs::write(&allowed, "fatal: nope").unwrap();
-        fs::write(&outside, "fatal: outside").unwrap();
+        fs::write(&allowed, "fatal: nope").expect("allowed evidence fixture");
+        fs::write(&outside, "fatal: outside").expect("outside evidence fixture");
 
         assert!(validate_planning_evidence_path(&root, &allowed).is_ok());
         assert!(validate_planning_evidence_path(&root, &outside).is_err());
