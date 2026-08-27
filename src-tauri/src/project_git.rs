@@ -245,25 +245,29 @@ mod tests {
             .args(args)
             .current_dir(root)
             .status()
-            .expect("git should run");
-        assert!(status.success());
+            .expect("git command should start for project git test");
+        assert!(status.success(), "git command should succeed: {args:?}");
     }
 
     #[test]
     fn baseline_distinguishes_pre_existing_and_task_changes() {
         let root = std::env::temp_dir().join(format!("loom-git-baseline-{}", now_ms()));
-        fs::create_dir_all(&root).unwrap();
+        fs::create_dir_all(&root).expect("create project git baseline fixture directory");
         git(&root, &["init", "-q"]);
         git(&root, &["config", "user.email", "loom@example.test"]);
         git(&root, &["config", "user.name", "Loom Test"]);
-        fs::write(root.join("tracked.txt"), "base\n").unwrap();
+        fs::write(root.join("tracked.txt"), "base\n")
+            .expect("write base tracked file in project git fixture");
         git(&root, &["add", "tracked.txt"]);
         git(&root, &["commit", "-qm", "base"]);
-        fs::write(root.join("tracked.txt"), "base\nuser work\n").unwrap();
+        fs::write(root.join("tracked.txt"), "base\nuser work\n")
+            .expect("write pre-existing tracked change in project git fixture");
         let baseline = capture_git_baseline(&root);
         assert!(baseline.available);
-        fs::write(root.join("tracked.txt"), "base\nuser work\ntask\n").unwrap();
-        fs::write(root.join("new.txt"), "task\n").unwrap();
+        fs::write(root.join("tracked.txt"), "base\nuser work\ntask\n")
+            .expect("write task tracked change in project git fixture");
+        fs::write(root.join("new.txt"), "task\n")
+            .expect("write task-introduced file in project git fixture");
 
         let task = Task {
             id: "task-git".to_string(),
@@ -306,6 +310,6 @@ mod tests {
         assert!(files
             .iter()
             .any(|file| { file.path == "new.txt" && file.attribution == "task_introduced" }));
-        fs::remove_dir_all(root).unwrap();
+        fs::remove_dir_all(root).expect("remove project git baseline fixture directory");
     }
 }
