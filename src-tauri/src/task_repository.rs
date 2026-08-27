@@ -215,30 +215,30 @@ mod tests {
     fn repository_releases_lock_after_save_update_and_delete() {
         let root =
             std::env::temp_dir().join(format!("loom-repository-lock-{}", crate::models::now_ms()));
-        std::fs::create_dir_all(&root).unwrap();
+        std::fs::create_dir_all(&root).expect("create lock release task repository fixture");
         let task = task_fixture(&root, "task-lock-release");
 
-        save(&task).unwrap();
+        save(&task).expect("save lock release task fixture");
         assert!(!lock_is_registered(&root, &task.id));
         update(&root, &task.id, |task| {
             task.title = "Updated".to_string();
             Ok(())
         })
-        .unwrap();
+        .expect("update lock release task fixture");
         assert!(!lock_is_registered(&root, &task.id));
-        assert!(delete(&root, &task.id).unwrap());
+        assert!(delete(&root, &task.id).expect("delete lock release task fixture"));
         assert!(!lock_is_registered(&root, &task.id));
 
-        let _ = std::fs::remove_dir_all(root);
+        std::fs::remove_dir_all(root).expect("clean up lock release task repository fixture");
     }
 
     #[test]
     fn repository_releases_lock_when_mutation_fails() {
         let root =
             std::env::temp_dir().join(format!("loom-repository-error-{}", crate::models::now_ms()));
-        std::fs::create_dir_all(&root).unwrap();
+        std::fs::create_dir_all(&root).expect("create lock error task repository fixture");
         let task = task_fixture(&root, "task-lock-error");
-        save(&task).unwrap();
+        save(&task).expect("save lock error task fixture");
 
         let error = match update(&root, &task.id, |_| Err::<(), _>("rejected".to_string())) {
             Ok(_) => panic!("mutation should fail"),
@@ -247,6 +247,6 @@ mod tests {
         assert_eq!(error, "rejected");
         assert!(!lock_is_registered(&root, &task.id));
 
-        let _ = std::fs::remove_dir_all(root);
+        std::fs::remove_dir_all(root).expect("clean up lock error task repository fixture");
     }
 }
