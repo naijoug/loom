@@ -4,10 +4,10 @@
 
 ```bash
 pnpm install
-scripts/start-local.sh desktop
+scripts/dev.sh desktop
 ```
 
-验证结束后运行 `scripts/start-local.sh stop`，避免遗留 Vite/Tauri 开发进程。
+验证结束后运行 `scripts/dev.sh stop`，避免遗留 Vite/Tauri 开发进程。
 
 也可以直接运行本轮生成的本地发布版：
 

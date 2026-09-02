@@ -26,7 +26,7 @@ if [[ ! -x "${BINARY}" ]]; then
   exit 1
 fi
 
-"${ROOT_DIR}/scripts/start-local.sh" stop >/dev/null 2>&1 || true
+"${ROOT_DIR}/scripts/dev.sh" stop >/dev/null 2>&1 || true
 
 run_cycle() {
   local cycle="$1"
