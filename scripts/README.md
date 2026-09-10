@@ -1,23 +1,23 @@
 # Loom Scripts
 
-本目录存放本地开发、预览和调试脚本。默认优先使用 `dev.sh`，它会在启动前清理上一轮 Loom 预览/桌面 dev 进程，避免 Vite 自动换端口后出现多个预览实例。
+本目录存放本地开发、预览和调试脚本。默认优先使用 `debug.sh`，它会在启动前清理上一轮 Loom 预览/桌面 dev 进程，避免 Vite 自动换端口后出现多个预览实例。
 
 ## 推荐启动方式
 
 ```bash
 pnpm install
-./scripts/dev.sh
+./scripts/debug.sh
 ```
 
-`dev.sh` 默认启动 Tauri 桌面 App，固定使用 `http://localhost:1420` 作为 dev URL。
+`debug.sh` 默认启动 Tauri 桌面 App，固定使用 `http://localhost:1420` 作为 dev URL。支持通过 `PORT` 与 `HOST` 环境变量自定义端口与主机。
 
 可用命令：
 
 ```bash
-./scripts/dev.sh desktop   # 启动 Tauri 桌面 App，默认命令
-./scripts/dev.sh web       # 启动浏览器预览
-./scripts/dev.sh status    # 查看当前预览/桌面 dev 状态
-./scripts/dev.sh stop      # 停止本仓库启动的预览/桌面 dev 进程
+./scripts/debug.sh desktop   # 启动 Tauri 桌面 App，默认命令
+./scripts/debug.sh web       # 启动浏览器预览
+./scripts/debug.sh status    # 查看当前预览/桌面 dev 状态
+./scripts/debug.sh stop      # 停止本仓库启动的预览/桌面 dev 进程
 ```
 
 ## 浏览器预览
@@ -59,19 +59,13 @@ LOOM_PREVIEW_LOG=/tmp/my-loom-preview.log ./scripts/preview.sh start
 
 除非明确需要临时端口，否则不要改 `LOOM_PREVIEW_PORT`。常规开发和验证应统一使用 `1420`。
 
-## 调试入口
+## 自定义端口调试
+
+`debug.sh` 默认端口为 `1420`，如果需要隔离调试端口或避免端口冲突，可通过环境变量覆盖：
 
 ```bash
-./scripts/debug.sh
+PORT=11420 HOST=127.0.0.1 ./scripts/debug.sh
 ```
-
-`debug.sh` 用于临时 Tauri 调试，默认端口为 `11420`，可通过环境变量覆盖：
-
-```bash
-PORT=11421 HOST=127.0.0.1 ./scripts/debug.sh
-```
-
-常规本地启动不要优先使用 `debug.sh`；只有在需要隔离调试端口或临时覆盖 Tauri dev URL 时使用它。
 
 ## Release smoke 入口
 
@@ -130,6 +124,6 @@ LOOM_E2E_RELEASE=1 pnpm e2e:complete  # 同时生成发布包
 ## 使用约定
 
 - 启动 UI 预览前先停止上一轮预览，避免多个 `vite` 进程占用不同端口。
-- 常规本地使用优先执行 `./scripts/dev.sh`。
-- 常规浏览器预览优先执行 `./scripts/dev.sh web` 或 `./scripts/preview.sh start`。
-- 验证结束后执行 `./scripts/dev.sh stop`。
+- 常规本地使用优先执行 `./scripts/debug.sh`。
+- 常规浏览器预览优先执行 `./scripts/debug.sh web` 或 `./scripts/preview.sh start`。
+- 验证结束后执行 `./scripts/debug.sh stop`。

@@ -39,7 +39,7 @@ Loom 是一个基于 Tauri 的桌面端应用，用于编排多个本地编程 A
 ## 本地预览
 
 - 启动 Web/Tauri UI 预览前，必须先关闭上一轮 Loom/Vite 预览，避免多个 `vite` 进程占用不同端口。
-- 本地启动优先使用 `scripts/dev.sh`：默认启动 Tauri 桌面，`web` 启动浏览器预览，`stop` 清理当前仓库的预览/桌面 dev 进程。
+- 本地启动优先使用 `scripts/debug.sh`：默认启动 Tauri 桌面，`web` 启动浏览器预览，`stop` 清理当前仓库的预览/桌面 dev 进程。
 - 默认使用 `scripts/preview.sh` 启动和停止预览；固定端口为 `1420`，日志为 `/tmp/loom-preview-vite.log`，PID 文件为 `/tmp/loom-preview-vite.pid`。
 - 需要手工启动时，也必须使用固定命令形态：`pnpm dev --host 127.0.0.1 --port 1420 --strictPort`，并先确认同一仓库没有旧 Vite 预览进程。
 - 验证结束后运行 `scripts/preview.sh stop`，不要遗留后台预览进程。
