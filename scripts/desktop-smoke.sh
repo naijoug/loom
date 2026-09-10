@@ -44,7 +44,7 @@ run_cycle() {
     sleep 0.2
   done
 
-  if rg -i "panic|fatal error|segmentation fault" "${log_file}" >/dev/null 2>&1; then
+  if grep -Eiq "panic|fatal error|segmentation fault" "${log_file}"; then
     echo "FAIL desktop cycle ${cycle}: fatal output detected" >&2
     sed -n '1,160p' "${log_file}" >&2
     exit 1

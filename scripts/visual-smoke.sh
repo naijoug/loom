@@ -41,7 +41,7 @@ capture() {
   local size
 
   "${CHROME}" --headless=new --disable-gpu --virtual-time-budget=2500 --dump-dom "${url}" > "${dom_file}" 2>>"${chrome_log}"
-  if ! rg -q "${expected}" "${dom_file}"; then
+  if ! grep -Eq "${expected}" "${dom_file}"; then
     echo "FAIL ${label}: missing DOM text /${expected}/" >&2
     exit 1
   fi
