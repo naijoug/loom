@@ -104,12 +104,19 @@ export function detectDangerousCommand(input: string): DangerousCommandFinding |
     };
   }
 
+  const packageManagerMutations = new Set(["add", "ci", "install", "remove", "uninstall", "update", "upgrade"]);
+  const mutatesDependencies = (candidateArgs: string[]) => {
+    const firstCommandIndex = candidateArgs.findIndex((arg) => !arg.startsWith("-"));
+    return firstCommandIndex >= 0 && packageManagerMutations.has(candidateArgs[firstCommandIndex]);
+  };
+  const runsPipModule = args.includes("-m") && args.includes("pip");
+  const pipModuleArgs = runsPipModule ? args.slice(args.indexOf("pip") + 1) : [];
+
   if (
-    (["pnpm", "npm", "yarn", "bun"].includes(program) && args[0] === "install") ||
-    (program === "cargo" && args[0] === "install") ||
-    (program === "pip" && args[0] === "install") ||
-    (program === "python" && args.includes("-m") && args.includes("pip") && args.includes("install")) ||
-    (program === "python3" && args.includes("-m") && args.includes("pip") && args.includes("install"))
+    (["pnpm", "npm", "yarn", "bun"].includes(program) && mutatesDependencies(args)) ||
+    (program === "cargo" && mutatesDependencies(args)) ||
+    (program === "pip" && mutatesDependencies(args)) ||
+    (["python", "python3"].includes(program) && runsPipModule && mutatesDependencies(pipModuleArgs))
   ) {
     return {
       reason: "dependency-install",

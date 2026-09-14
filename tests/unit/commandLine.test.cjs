@@ -39,13 +39,21 @@ test("detects destructive and reset commands", () => {
   assert.equal(detectDangerousCommand("git reset --hard HEAD").reason, "git-reset-hard");
 });
 
-test("detects dependency installs and production-like targets", () => {
+test("detects dependency installs and package mutations", () => {
   assert.equal(detectDangerousCommand("pnpm install").reason, "dependency-install");
-  assert.equal(detectDangerousCommand("python -m pip install requests").reason, "dependency-install");
+  assert.equal(detectDangerousCommand("npm ci").reason, "dependency-install");
+  assert.equal(detectDangerousCommand("yarn add vite").reason, "dependency-install");
+  assert.equal(detectDangerousCommand("bun remove left-pad").reason, "dependency-install");
+  assert.equal(detectDangerousCommand("cargo add serde").reason, "dependency-install");
+  assert.equal(detectDangerousCommand("python -m pip uninstall requests").reason, "dependency-install");
+});
+
+test("detects production-like targets", () => {
   assert.equal(detectDangerousCommand("curl https://api.production.example.com/deploy").reason, "production-target");
 });
 
 test("does not flag ordinary validation commands", () => {
   assert.equal(detectDangerousCommand("pnpm test"), null);
   assert.equal(detectDangerousCommand("cargo check --manifest-path src-tauri/Cargo.toml"), null);
+  assert.equal(detectDangerousCommand("npm run add-fixture"), null);
 });
