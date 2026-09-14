@@ -27,6 +27,7 @@
     "src/state/selectors.ts",
     "src/utils/agentRun.ts",
     "src/utils/commandRun.ts",
+    "src/utils/executionPolicy.ts",
     "src/utils/loopPolicy.ts",
     "src/utils/implementationReview.ts",
     "src/utils/taskTimeline.ts",
