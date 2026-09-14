@@ -320,23 +320,50 @@ fn classify_command(
         );
     }
 
-    let installs_dependency = match executable.as_str() {
-        "npm" | "pnpm" | "yarn" | "bun" => args.iter().any(|arg| {
-            matches!(arg.as_str(), "install" | "add" | "i")
-                || arg.starts_with("install=")
-                || arg.starts_with("add=")
-        }),
-        "pip" | "pip3" => args.iter().any(|arg| arg == "install"),
-        "cargo" => args
+    let package_manager_mutations = [
+        "add",
+        "ci",
+        "i",
+        "install",
+        "remove",
+        "uninstall",
+        "update",
+        "upgrade",
+    ];
+    let mutates_dependencies = |candidate_args: &[String]| {
+        let first_command = candidate_args
             .iter()
-            .any(|arg| matches!(arg.as_str(), "add" | "install")),
+            .find(|arg| !arg.starts_with('-'))
+            .map(String::as_str);
+        if matches!(first_command, Some("run" | "exec" | "dlx" | "x")) {
+            return false;
+        }
+        candidate_args
+            .iter()
+            .any(|arg| package_manager_mutations.contains(&arg.as_str()))
+    };
+    let pip_module_args = args
+        .windows(2)
+        .position(|window| window[0] == "-m" && window[1] == "pip")
+        .map(|pip_index| &args[(pip_index + 2)..]);
+
+    let installs_dependency = match executable.as_str() {
+        "npm" | "pnpm" | "yarn" | "bun" => mutates_dependencies(args),
+        "pip" | "pip3" => mutates_dependencies(args),
+        "python" | "python3" => pip_module_args.is_some_and(mutates_dependencies),
+        "cargo" => mutates_dependencies(args),
         "go" => args.iter().any(|arg| arg == "get"),
         _ => {
             joined.contains(" npm install")
+                || joined.contains(" npm ci")
                 || joined.contains(" pnpm install")
                 || joined.contains(" pnpm add")
+                || joined.contains(" yarn install")
                 || joined.contains(" yarn add")
+                || joined.contains(" bun install")
+                || joined.contains(" bun add")
                 || joined.contains(" pip install")
+                || joined.contains(" pip uninstall")
                 || joined.contains(" cargo add")
                 || joined.contains(" go get")
         }
@@ -472,6 +499,49 @@ mod tests {
             evaluate_execution(&request, false).decision,
             ExecutionDecision::Allowed
         );
+        fs::remove_dir_all(root).ok();
+    }
+
+    #[test]
+    fn package_mutations_cover_common_lockfile_and_removal_commands() {
+        let (root, nested) = project_fixture();
+
+        for (program, args) in [
+            ("npm", vec!["ci"]),
+            ("pnpm", vec!["--filter", "web", "update"]),
+            ("yarn", vec!["remove", "left-pad"]),
+            ("bun", vec!["upgrade"]),
+            ("pip3", vec!["uninstall", "requests"]),
+            ("python", vec!["-m", "pip", "uninstall", "requests"]),
+            ("cargo", vec!["remove", "serde"]),
+        ] {
+            let assessment = evaluate_execution(&request(&root, &nested, program, &args), true);
+
+            assert_eq!(assessment.decision, ExecutionDecision::ApprovalRequired);
+            assert_eq!(assessment.risk_level, ExecutionRiskLevel::Medium);
+            assert_eq!(
+                assessment.category,
+                ExecutionRiskCategory::DependencyInstall
+            );
+        }
+
+        fs::remove_dir_all(root).ok();
+    }
+
+    #[test]
+    fn package_like_script_names_do_not_trigger_dependency_approval() {
+        let (root, nested) = project_fixture();
+        let assessment = evaluate_execution(
+            &request(&root, &nested, "npm", &["run", "add-fixture"]),
+            true,
+        );
+        let pnpm_script_assessment =
+            evaluate_execution(&request(&root, &nested, "pnpm", &["run", "update"]), true);
+
+        assert_eq!(assessment.decision, ExecutionDecision::Allowed);
+        assert_eq!(assessment.category, ExecutionRiskCategory::None);
+        assert_eq!(pnpm_script_assessment.decision, ExecutionDecision::Allowed);
+        assert_eq!(pnpm_script_assessment.category, ExecutionRiskCategory::None);
         fs::remove_dir_all(root).ok();
     }
 

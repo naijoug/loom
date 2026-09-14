@@ -42,6 +42,7 @@ test("detects destructive and reset commands", () => {
 test("detects dependency installs and package mutations", () => {
   assert.equal(detectDangerousCommand("pnpm install").reason, "dependency-install");
   assert.equal(detectDangerousCommand("npm ci").reason, "dependency-install");
+  assert.equal(detectDangerousCommand("pnpm --filter web update").reason, "dependency-install");
   assert.equal(detectDangerousCommand("yarn add vite").reason, "dependency-install");
   assert.equal(detectDangerousCommand("bun remove left-pad").reason, "dependency-install");
   assert.equal(detectDangerousCommand("cargo add serde").reason, "dependency-install");
@@ -56,4 +57,5 @@ test("does not flag ordinary validation commands", () => {
   assert.equal(detectDangerousCommand("pnpm test"), null);
   assert.equal(detectDangerousCommand("cargo check --manifest-path src-tauri/Cargo.toml"), null);
   assert.equal(detectDangerousCommand("npm run add-fixture"), null);
+  assert.equal(detectDangerousCommand("pnpm run update"), null);
 });

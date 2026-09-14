@@ -106,8 +106,11 @@ export function detectDangerousCommand(input: string): DangerousCommandFinding |
 
   const packageManagerMutations = new Set(["add", "ci", "install", "remove", "uninstall", "update", "upgrade"]);
   const mutatesDependencies = (candidateArgs: string[]) => {
-    const firstCommandIndex = candidateArgs.findIndex((arg) => !arg.startsWith("-"));
-    return firstCommandIndex >= 0 && packageManagerMutations.has(candidateArgs[firstCommandIndex]);
+    const firstCommand = candidateArgs.find((arg) => !arg.startsWith("-"));
+    if (firstCommand && ["run", "exec", "dlx", "x"].includes(firstCommand)) {
+      return false;
+    }
+    return candidateArgs.some((arg) => packageManagerMutations.has(arg));
   };
   const runsPipModule = args.includes("-m") && args.includes("pip");
   const pipModuleArgs = runsPipModule ? args.slice(args.indexOf("pip") + 1) : [];
