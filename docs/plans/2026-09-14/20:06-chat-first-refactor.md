@@ -3,7 +3,7 @@
 - **Date**: 2026-09-14
 - **Author**: Droplet
 - **Status**: in_progress
-- **Progress**: M0–M2 完成（Codex/Claude 经 adapter 的 chat_send 垂直切片）；M3 resume UX / M4 Grok 未开始
+- **Progress**: M0–M3 完成；M4 Grok 未开始
 - **Scope**: 把 Loom 从 Board/Planning 主导的任务工作流，重构为可调用本地 Codex CLI、Claude Code CLI 与 Grok CLI 的 Grok-Bot 式 chat-first UX，同时保留现有 adapter / runner / PTY / stream 能力；Board 与 Planning 降级为高级入口，不在本轮重写任务状态机。
 
 ## 目标
@@ -174,3 +174,10 @@
 - **不**走 `start_command_run`（避免绑定 Task）
 - 前端 ChatPage 在 Tauri 下接真实命令；浏览器预览仍用 mock
 - contracts / `TAURI_COMMANDS` / `TAURI_EVENTS` 已登记
+
+
+## M3 交付物（2026-09-14）
+
+- `chat_send` 回合结束后用 `session_capture` 解析 Codex/Claude session id，写入 `ChatSession.resumeCommand`
+- 下一轮 `prepare_invocation` 自动带 resume（仅内建可解析命令）
+- `chat_clear_resume` + UI「开新 CLI 会话」；续聊失败保留旧 resume，错误进气泡

@@ -20,6 +20,7 @@ const COMMANDS: &[&str] = &[
     "chat_create",
     "chat_get",
     "chat_set_agent",
+    "chat_clear_resume",
     "chat_send",
     "chat_abort",
     "prepare_agent_invocation",

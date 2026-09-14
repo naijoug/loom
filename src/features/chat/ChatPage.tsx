@@ -147,6 +147,7 @@ export function ChatPage() {
               ),
             };
           });
+          void loadSession(payload.sessionId).catch(() => undefined);
           void refreshSummaries();
         },
       );
@@ -162,7 +163,7 @@ export function ChatPage() {
       disposed = true;
       for (const unsubscribe of unsubscribers) unsubscribe();
     };
-  }, [useBackend, refreshSummaries]);
+  }, [useBackend, refreshSummaries, loadSession]);
 
   async function handleCreate() {
     if (!projectPath) {
@@ -337,6 +338,38 @@ export function ChatPage() {
                   />
                   允许写入
                 </label>
+                {session.resumeCommand ? (
+                  <span className="chat-hint" title={session.resumeCommand}>
+                    可续聊
+                    <button
+                      type="button"
+                      className="chat-agent-select"
+                      style={{ marginLeft: 8 }}
+                      onClick={() => {
+                        void (async () => {
+                          if (!useBackend || !projectPath) return;
+                          try {
+                            const next = await invokeCommand<ChatSession>(
+                              TAURI_COMMANDS.chatClearResume,
+                              { projectPath, sessionId: session.id },
+                            );
+                            setSession(next);
+                          } catch (err) {
+                            setError(
+                              err instanceof Error
+                                ? err.message
+                                : `清除续聊失败：${String(err)}`,
+                            );
+                          }
+                        })();
+                      }}
+                    >
+                      开新 CLI 会话
+                    </button>
+                  </span>
+                ) : (
+                  <span className="chat-hint">新 CLI 会话</span>
+                )}
               </div>
             </div>
 
@@ -373,6 +406,7 @@ export function ChatPage() {
                 <span className="chat-hint">
                   {useBackend ? "本机 CLI" : "模拟"} ·{" "}
                   {session.permissionMode === "read_write" ? "可写" : "只读"}
+                  {session.resumeCommand ? " · 续聊中" : ""}
                   {sending ? " · 生成中…" : ""}
                 </span>
                 <div style={{ display: "flex", gap: 8 }}>

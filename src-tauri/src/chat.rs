@@ -4,6 +4,7 @@ use crate::agent_adapter::{
 };
 use crate::agents::{self, load_agents};
 use crate::models::{now_ms, IdGenerator};
+use crate::session_capture;
 use crate::storage;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -343,6 +344,17 @@ pub fn chat_set_agent(
     Ok(session)
 }
 
+
+#[tauri::command]
+pub fn chat_clear_resume(project_path: String, session_id: String) -> Result<ChatSession, String> {
+    let root = ensure_chat_dirs(Path::new(&project_path))?;
+    let mut session = load_session(&root, &session_id)?;
+    session.resume_command = None;
+    session.updated_at_ms = now_ms();
+    save_session(&root, &session)?;
+    Ok(session)
+}
+
 #[tauri::command]
 pub async fn chat_abort(
     registry: State<'_, ChatTurnRegistry>,
@@ -465,9 +477,12 @@ pub async fn chat_send(
             .find(|message| message.id == assistant_id)
         {
             match result {
-                Ok(content) => {
+                Ok((content, resume_command)) => {
                     message.content = content;
                     message.status = "complete".to_string();
+                    if resume_command.is_some() {
+                        session.resume_command = resume_command;
+                    }
                     let _ = app_handle.emit(
                         "loom://chat-turn-finished",
                         ChatTurnFinishedEvent {
@@ -485,6 +500,7 @@ pub async fn chat_send(
                     }
                     message.status = "error".to_string();
                     message.error_summary = Some(error.clone());
+                    // Keep prior resume_command; a failed turn should not wipe a good handle.
                     let _ = app_handle.emit(
                         "loom://chat-turn-finished",
                         ChatTurnFinishedEvent {
@@ -519,7 +535,8 @@ async fn run_chat_turn(
     message_id: String,
     prepared: PreparedAgentInvocation,
     output_mode: String,
-) -> Result<String, String> {
+) -> Result<(String, Option<String>), String> {
+    let program = prepared.program.clone();
     let mut command = Command::new(&prepared.program);
     command
         .args(&prepared.args)
@@ -540,8 +557,10 @@ async fn run_chat_turn(
     let stderr = child.stderr.take();
     let mut lines = BufReader::new(stdout).lines();
     let mut raw = String::new();
+    let mut stdout_lines: Vec<String> = Vec::new();
     while let Ok(Some(line)) = lines.next_line().await {
         let redacted = agents::redact_sensitive_text(&line);
+        stdout_lines.push(redacted.clone());
         raw.push_str(&redacted);
         raw.push('\n');
         let delta = if output_mode == "plain" {
@@ -576,6 +595,11 @@ async fn run_chat_turn(
         }
     }
     let content = extract_assistant_text(&output_mode, &raw);
+    let stderr_lines: Vec<String> = stderr_text
+        .lines()
+        .map(str::to_string)
+        .collect();
+    let captured = session_capture::capture_session_from_lines(&program, &stdout_lines, &stderr_lines);
     if !status.success() && content.trim().is_empty() {
         return Err(format!(
             "agent exited with status {status}; stderr: {}",
@@ -592,13 +616,14 @@ async fn run_chat_turn(
             done: true,
         },
     );
-    if content.trim().is_empty() {
-        Ok(if stderr_text.trim().is_empty() {
+    let content = if content.trim().is_empty() {
+        if stderr_text.trim().is_empty() {
             "（Agent 没有返回可见文本）".to_string()
         } else {
             format!("（无结构化输出，stderr）\n{}", stderr_text.trim())
-        })
+        }
     } else {
-        Ok(content)
-    }
+        content
+    };
+    Ok((content, captured.resume_command))
 }
