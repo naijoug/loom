@@ -2,8 +2,8 @@
 
 - **Date**: 2026-09-14
 - **Author**: Droplet
-- **Status**: draft
-- **Progress**: M0 未开始
+- **Status**: in_progress
+- **Progress**: M0 完成；M1 未开始
 - **Scope**: 把 Loom 从 Board/Planning 主导的任务工作流，重构为可调用本地 Codex CLI、Claude Code CLI 与 Grok CLI 的 Grok-Bot 式 chat-first UX，同时保留现有 adapter / runner / PTY / stream 能力；Board 与 Planning 降级为高级入口，不在本轮重写任务状态机。
 
 ## 目标
@@ -149,3 +149,12 @@
 ## 下一步建议
 
 先做 M0：定 PRD/IA、`ChatSession` 模型与 Tauri 命令草图，并在评审中冻结「不重写任务状态机、不依赖 Cloud Agents」。M0 通过后再开 M1 UI shell；Codex 端到端（M2）应是第一条可 dogfood 的垂直切片。
+
+
+## M0 交付物（2026-09-14）
+
+- PRD：`docs/guides/chat-first-prd.md`
+- IA：`docs/guides/chat-first-ia.md`
+- 契约：`docs/architecture/chat-contracts.md`
+- 前端类型：`src/domain/chat.ts`（已从 `src/domain/index.ts` 导出）
+- 待确认问题已在 PRD 拍板；Tauri commands 延后到 M2 再写入 `contracts.rs` manifest，避免空实现撑破契约测试。
