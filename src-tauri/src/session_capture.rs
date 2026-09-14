@@ -3,6 +3,7 @@ use std::path::Path;
 
 pub const ADAPTER_CODEX: &str = "codex_cli";
 pub const ADAPTER_CLAUDE_CODE: &str = "claude_code_cli";
+pub const ADAPTER_GROK: &str = "grok_cli";
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct CapturedSession {
@@ -38,6 +39,7 @@ pub fn resume_command_for_adapter(
     match adapter_type {
         ADAPTER_CLAUDE_CODE => Some(format!("{command} --resume {session_id}")),
         ADAPTER_CODEX => Some(format!("{command} resume {session_id}")),
+        ADAPTER_GROK => Some(format!("{command} --resume {session_id}")),
         _ => None,
     }
 }
@@ -51,6 +53,7 @@ pub fn adapter_type_for_command(command: &str) -> Option<&'static str> {
     match command_name {
         "codex" => Some(ADAPTER_CODEX),
         "claude" | "claude-code" => Some(ADAPTER_CLAUDE_CODE),
+        "grok" => Some(ADAPTER_GROK),
         _ => None,
     }
 }

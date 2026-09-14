@@ -46,6 +46,14 @@ pub(super) fn discover_default_agents() -> Vec<AgentConfig> {
             true,
             true,
         ),
+        (
+            "agent-grok",
+            "Grok",
+            "grok",
+            ADAPTER_GROK,
+            true,
+            true,
+        ),
     ]
     .into_iter()
     .map(
@@ -130,7 +138,7 @@ pub(super) fn merge_missing_default_agents(agents: &mut Vec<AgentConfig>) {
 }
 
 pub(super) fn is_default_agent_id(agent_id: &str) -> bool {
-    matches!(agent_id, "agent-codex" | "agent-claude" | "agent-dummy")
+    matches!(agent_id, "agent-codex" | "agent-claude" | "agent-grok" | "agent-dummy")
 }
 
 pub(super) fn command_available(agent: &AgentConfig) -> bool {

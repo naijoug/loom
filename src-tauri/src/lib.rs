@@ -81,6 +81,7 @@ pub fn run() {
             chat::chat_get,
             chat::chat_set_agent,
             chat::chat_clear_resume,
+            chat::chat_promote_to_task,
             chat::chat_send,
             chat::chat_abort,
             agents::prepare_agent_invocation,

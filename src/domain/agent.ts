@@ -11,6 +11,7 @@ export type AgentAdapterType =
   | "cli"
   | "codex_cli"
   | "claude_code_cli"
+  | "grok_cli"
   | "mcp"
   | "http";
 

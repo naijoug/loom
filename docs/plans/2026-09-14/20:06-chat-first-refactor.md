@@ -2,8 +2,8 @@
 
 - **Date**: 2026-09-14
 - **Author**: Droplet
-- **Status**: in_progress
-- **Progress**: M0–M3 完成；M4 Grok 未开始
+- **Status**: completed
+- **Progress**: M0–M5 完成（chat-first 主路径落地）
 - **Scope**: 把 Loom 从 Board/Planning 主导的任务工作流，重构为可调用本地 Codex CLI、Claude Code CLI 与 Grok CLI 的 Grok-Bot 式 chat-first UX，同时保留现有 adapter / runner / PTY / stream 能力；Board 与 Planning 降级为高级入口，不在本轮重写任务状态机。
 
 ## 目标
@@ -181,3 +181,16 @@
 - `chat_send` 回合结束后用 `session_capture` 解析 Codex/Claude session id，写入 `ChatSession.resumeCommand`
 - 下一轮 `prepare_invocation` 自动带 resume（仅内建可解析命令）
 - `chat_clear_resume` + UI「开新 CLI 会话」；续聊失败保留旧 resume，错误进气泡
+
+
+## M4 交付物（2026-09-14）
+
+- 一等 `grok_cli` adapter（`-p` + `streaming-json` + permission-mode plan/acceptEdits）
+- 默认 Agent `agent-grok`；`session_capture` 支持 `grok --resume`
+- Spike 笔记：`docs/guides/grok-cli-spike.md`
+
+## M5 交付物（2026-09-14）
+
+- 默认 `currentView = chat`；选项目后进 Chat
+- 侧栏「任务看板（高级）」
+- `chat_promote_to_task` stub：用最后一条用户消息创建草稿 Task，不推进状态机

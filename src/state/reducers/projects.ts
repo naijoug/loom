@@ -29,7 +29,7 @@ export function reduceProjects(state: AppState, action: AppAction): AppState {
         app: {
           ...state.app,
           activeProjectId: action.project.id,
-          currentView: "board",
+          currentView: "chat",
           selectedTaskId: null,
           selectedTodoId: null,
           viewedStage: null,
@@ -54,7 +54,7 @@ export function reduceProjects(state: AppState, action: AppAction): AppState {
         app: {
           ...state.app,
           activeProjectId: action.projectId,
-          currentView: "board",
+          currentView: "chat",
           selectedTaskId: null,
           selectedTodoId: null,
           viewedStage: null,
@@ -99,7 +99,7 @@ export function reduceProjects(state: AppState, action: AppAction): AppState {
           selectedTaskId: null,
           selectedTodoId: null,
           viewedStage: null,
-          currentView: "board",
+          currentView: "chat",
           isCreatingTask: false,
           isLoadingProjects: false,
           projectError: null,

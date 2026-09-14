@@ -4,6 +4,7 @@ use std::path::Path;
 
 pub const ADAPTER_CODEX: &str = "codex_cli";
 pub const ADAPTER_CLAUDE: &str = "claude_code_cli";
+pub const ADAPTER_GROK: &str = "grok_cli";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -80,6 +81,7 @@ pub trait AgentAdapter {
 
 struct CodexAdapter;
 struct ClaudeAdapter;
+struct GrokAdapter;
 struct CustomCliAdapter;
 
 pub fn prepare_invocation(
@@ -132,6 +134,7 @@ fn adapter_for(agent: &AgentConfig) -> Box<dyn AgentAdapter> {
     match agent.adapter_type.as_str() {
         ADAPTER_CODEX => Box::new(CodexAdapter),
         ADAPTER_CLAUDE => Box::new(ClaudeAdapter),
+        ADAPTER_GROK => Box::new(GrokAdapter),
         _ => Box::new(CustomCliAdapter),
     }
 }
@@ -254,6 +257,74 @@ impl AgentAdapter for ClaudeAdapter {
     }
 }
 
+
+impl AgentAdapter for GrokAdapter {
+    fn prepare(
+        &self,
+        agent: &AgentConfig,
+        request: &AdapterInvocationRequest<'_>,
+    ) -> Result<PreparedAgentInvocation, String> {
+        let mut args: Vec<String> = Vec::new();
+        let mut resumed = false;
+        if let Some(resume) = request.resume_command.and_then(parse_resume_command) {
+            if resume.program == agent.command {
+                // Accept: `grok --resume <id>` or `grok -r <id>`
+                let resume_idx = resume
+                    .args
+                    .iter()
+                    .position(|arg| arg == "--resume" || arg == "-r");
+                if let Some(idx) = resume_idx {
+                    let session_id = resume
+                        .args
+                        .get(idx + 1)
+                        .ok_or_else(|| "Grok resume command has no session id".to_string())?;
+                    args.extend(["--resume".to_string(), session_id.clone()]);
+                    resumed = true;
+                }
+            }
+        }
+
+        args.extend([
+            "--cwd".to_string(),
+            request.project_path.display().to_string(),
+            "--output-format".to_string(),
+            "streaming-json".to_string(),
+            "--include-partial-messages".to_string(),
+        ]);
+
+        let permission_mode = if request.stage.needs_write_access() {
+            "acceptEdits"
+        } else {
+            "plan"
+        };
+        args.extend(["--permission-mode".to_string(), permission_mode.to_string()]);
+
+        // Headless single-turn
+        args.push("-p".to_string());
+        if request.embed_prompt {
+            args.push(request.prompt.to_string());
+        } else if let Some(prompt_file) = request.prompt_file {
+            args.extend([
+                "--prompt-file".to_string(),
+                prompt_file.display().to_string(),
+            ]);
+            // remove the empty -p value path: use --prompt-file only
+            args.retain(|arg| arg != "-p");
+        } else {
+            return Err("Grok chat requires an embedded prompt or prompt file".to_string());
+        }
+
+        Ok(prepared(
+            agent,
+            args,
+            false,
+            "streaming_json",
+            resumed,
+            request.project_path,
+        ))
+    }
+}
+
 impl AgentAdapter for CustomCliAdapter {
     fn prepare(
         &self,
@@ -355,6 +426,8 @@ mod tests {
             name: "Test".to_string(),
             command: if adapter_type == ADAPTER_CLAUDE {
                 "claude".to_string()
+            } else if adapter_type == ADAPTER_GROK {
+                "grok".to_string()
             } else {
                 "codex".to_string()
             },
@@ -474,4 +547,29 @@ mod tests {
         .expect_err("shell wrappers should be rejected");
         assert!(error.contains("dedicated executable"));
     }
+
+    #[test]
+    fn grok_adapter_uses_single_turn_and_streaming_json() {
+        let root = Path::new("/repo");
+        let agent = agent(ADAPTER_GROK);
+        let prepared = prepare_invocation(
+            &agent,
+            &AdapterInvocationRequest {
+                project_path: root,
+                prompt: "hello",
+                prompt_file: None,
+                stage: AgentStage::Planning,
+                resume_command: None,
+                embed_prompt: true,
+            },
+        )
+        .expect("grok prepare");
+        assert_eq!(prepared.program, "grok");
+        assert!(prepared.args.iter().any(|arg| arg == "-p"));
+        assert!(prepared.args.iter().any(|arg| arg == "streaming-json"));
+        assert!(prepared.args.iter().any(|arg| arg == "plan"));
+        assert_eq!(prepared.output_mode, "streaming_json");
+        assert!(!prepared.stdin_prompt);
+    }
 }
+

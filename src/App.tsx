@@ -51,7 +51,7 @@ function AppContent() {
   }, [state.app.currentView, dispatch]);
 
   if (state.app.currentView === "settings") {
-    return <Suspense fallback={<ViewFallback />}><SettingsPage onBack={() => dispatch({ type: "app/viewSelected", view: "board" })} /></Suspense>;
+    return <Suspense fallback={<ViewFallback />}><SettingsPage onBack={() => dispatch({ type: "app/viewSelected", view: "chat" })} /></Suspense>;
   }
 
   let content;

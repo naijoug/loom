@@ -410,6 +410,33 @@ export function ChatPage() {
                   {sending ? " · 生成中…" : ""}
                 </span>
                 <div style={{ display: "flex", gap: 8 }}>
+                  {useBackend ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      disabled={sending || session.messages.every((m) => m.role !== "user")}
+                      onClick={() => {
+                        void (async () => {
+                          if (!projectPath) return;
+                          try {
+                            const result = await invokeCommand<{
+                              taskId: string;
+                              session: ChatSession;
+                            }>(TAURI_COMMANDS.chatPromoteToTask, {
+                              projectPath,
+                              sessionId: session.id,
+                            });
+                            setSession(result.session);
+                            setError(`已创建草稿任务 ${result.taskId}（未自动开跑）。可在「任务看板（高级）」查看。`);
+                          } catch (err) {
+                            setError(err instanceof Error ? err.message : String(err));
+                          }
+                        })();
+                      }}
+                    >
+                      升格为任务
+                    </Button>
+                  ) : null}
                   {sending && useBackend ? (
                     <Button type="button" variant="ghost" onClick={() => void handleAbort()}>
                       停止

@@ -87,7 +87,7 @@ export type AppAction =
 
 export const initialAppState: AppState = {
   app: {
-    currentView: "workspace",
+    currentView: "chat",
     activeProjectId: null,
     selectedTaskId: null,
     selectedTodoId: null,

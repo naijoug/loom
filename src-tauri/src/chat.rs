@@ -6,6 +6,7 @@ use crate::agents::{self, load_agents};
 use crate::models::{now_ms, IdGenerator};
 use crate::session_capture;
 use crate::storage;
+use crate::tasks;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -221,6 +222,7 @@ fn extract_assistant_text(output_mode: &str, raw: &str) -> String {
     if output_mode == "plain" {
         return trimmed.to_string();
     }
+    // streaming_json / claude_stream_json / codex_json share best-effort text extraction
     // Best-effort: collect text-ish fields from JSONL / JSON event streams.
     let mut chunks = Vec::new();
     for line in trimmed.lines() {
@@ -344,6 +346,58 @@ pub fn chat_set_agent(
     Ok(session)
 }
 
+
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChatPromoteInput {
+    pub project_path: String,
+    pub session_id: String,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChatPromoteResult {
+    pub task_id: String,
+    pub session: ChatSession,
+}
+
+#[tauri::command]
+pub fn chat_promote_to_task(
+    app: AppHandle,
+    ids: State<'_, IdGenerator>,
+    input: ChatPromoteInput,
+) -> Result<ChatPromoteResult, String> {
+    let root = ensure_chat_dirs(Path::new(&input.project_path))?;
+    let mut session = load_session(&root, &input.session_id)?;
+    let description = session
+        .messages
+        .iter()
+        .rev()
+        .find(|message| message.role == "user")
+        .map(|message| message.content.clone())
+        .unwrap_or_else(|| session.title.clone());
+    let title = description.chars().take(48).collect::<String>();
+    // Stub: create a draft task only — do not advance the task state machine.
+    let task = tasks::create_task(
+        app,
+        ids,
+        crate::models::CreateTaskInput {
+            project_path: input.project_path.clone(),
+            title,
+            raw_requirement: description,
+            selected_planning_agent_ids: Vec::new(),
+            primary_agent_id: Some(session.agent_id.clone()),
+        },
+    )?;
+    session.promoted_task_id = Some(task.id.clone());
+    session.updated_at_ms = now_ms();
+    save_session(&root, &session)?;
+    Ok(ChatPromoteResult {
+        task_id: task.id,
+        session,
+    })
+}
 
 #[tauri::command]
 pub fn chat_clear_resume(project_path: String, session_id: String) -> Result<ChatSession, String> {

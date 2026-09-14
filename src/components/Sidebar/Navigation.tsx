@@ -308,7 +308,7 @@ export function Navigation() {
                           }}
                         >
                           <LayoutGrid size={12} className="task-allboard-icon" />
-                          <span>任务看板</span>
+                          <span>任务看板（高级）</span>
                         </button>
                       </li>
                       {projectTasks.map((task, index) => {
