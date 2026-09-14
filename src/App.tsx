@@ -15,6 +15,9 @@ const WorkspaceSplit = lazy(() =>
 const SettingsPage = lazy(() =>
   import("./components/Settings").then((module) => ({ default: module.SettingsPage })),
 );
+const ChatPage = lazy(() =>
+  import("./features/chat").then((module) => ({ default: module.ChatPage })),
+);
 
 function ViewFallback() {
   return <div className="app-view-loading" role="status">正在加载工作区…</div>;
@@ -51,7 +54,14 @@ function AppContent() {
     return <Suspense fallback={<ViewFallback />}><SettingsPage onBack={() => dispatch({ type: "app/viewSelected", view: "board" })} /></Suspense>;
   }
 
-  const content = state.app.currentView === "board" ? <Board /> : <WorkspaceSplit />;
+  let content;
+  if (state.app.currentView === "chat") {
+    content = <ChatPage />;
+  } else if (state.app.currentView === "board") {
+    content = <Board />;
+  } else {
+    content = <WorkspaceSplit />;
+  }
 
   return (
     <AppLayout

@@ -10,7 +10,7 @@ import type {
 } from "../domain";
 import type { WorkflowStageId } from "./selectors";
 
-export type AppView = "workspace" | "board" | "planning" | "task-detail" | "settings";
+export type AppView = "workspace" | "board" | "planning" | "task-detail" | "settings" | "chat";
 
 export interface AppSlice {
   currentView: AppView;

@@ -3,7 +3,7 @@
 - **Date**: 2026-09-14
 - **Author**: Droplet
 - **Status**: in_progress
-- **Progress**: M0 完成；M1 未开始
+- **Progress**: M0–M1 完成；M2 未开始
 - **Scope**: 把 Loom 从 Board/Planning 主导的任务工作流，重构为可调用本地 Codex CLI、Claude Code CLI 与 Grok CLI 的 Grok-Bot 式 chat-first UX，同时保留现有 adapter / runner / PTY / stream 能力；Board 与 Planning 降级为高级入口，不在本轮重写任务状态机。
 
 ## 目标
@@ -158,3 +158,11 @@
 - 契约：`docs/architecture/chat-contracts.md`
 - 前端类型：`src/domain/chat.ts`（已从 `src/domain/index.ts` 导出）
 - 待确认问题已在 PRD 拍板；Tauri commands 延后到 M2 再写入 `contracts.rs` manifest，避免空实现撑破契约测试。
+
+
+## M1 交付物（2026-09-14）
+
+- `src/features/chat/`：ChatPage 壳（会话列表、消息、composer、Agent picker、允许写入开关）
+- `AppView` 增加 `chat`；侧栏项目下增加「对话」入口
+- M1 使用 `mockStore` 模拟回复，不调用本机 CLI（M2 再接）
+- 单测：`tests/unit/chatMockStore.test.cjs`

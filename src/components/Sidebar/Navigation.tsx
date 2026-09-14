@@ -7,6 +7,7 @@ import {
   FolderOpen,
   FolderPlus,
   LayoutGrid,
+  MessageSquare,
   Plus,
   Search,
   Settings,
@@ -276,6 +277,23 @@ export function Navigation() {
                 {expanded && (
                   <div className="task-nav-collapse">
                     <ul className="task-nav-list">
+                      <li>
+                        <button
+                          type="button"
+                          className={`task-nav-item all-tasks${
+                            active && state.app.currentView === "chat" ? " selected" : ""
+                          }`}
+                          onClick={() => {
+                            if (!active) {
+                              dispatch({ type: "projects/selected", projectId: project.id });
+                            }
+                            dispatch({ type: "app/viewSelected", view: "chat" });
+                          }}
+                        >
+                          <MessageSquare size={12} className="task-allboard-icon" />
+                          <span>对话</span>
+                        </button>
+                      </li>
                       <li>
                         <button
                           type="button"
