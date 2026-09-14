@@ -1,5 +1,10 @@
 # 计划文档索引
 
+## 2026-09-14
+
+- 20:06-chat-first-refactor.md
+  > 规划把 Loom 重构为可调用本地 Codex / Claude Code / Grok CLI 的 Grok-Bot 式 chat-first UX：新增 ChatSession 与 Chat UI，复用 agent_adapter / command_runner / stream；Board/Planning 降为 advanced；不重写任务状态机，Cloud Agents 不可用故走本机实现。
+
 ## 2026-08-20
 
 - 01:45-testing-pane-state-coverage.md
