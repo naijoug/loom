@@ -4,6 +4,12 @@ export const TAURI_COMMANDS = {
   deleteAgent: "delete_agent",
   diagnoseAgents: "diagnose_agents",
   listAgents: "list_agents",
+  chatListSessions: "chat_list_sessions",
+  chatCreate: "chat_create",
+  chatGet: "chat_get",
+  chatSetAgent: "chat_set_agent",
+  chatSend: "chat_send",
+  chatAbort: "chat_abort",
   prepareAgentInvocation: "prepare_agent_invocation",
   retryPlanningAgent: "retry_planning_agent",
   runPlanningDiscussion: "run_planning_discussion",
@@ -64,6 +70,8 @@ export const TAURI_EVENTS = {
   planningAgentLog: "loom://planning-agent-log",
   planningAgentStatus: "loom://planning-agent-status",
   ptyOutput: "loom://pty-output",
+  chatStream: "loom://chat-stream",
+  chatTurnFinished: "loom://chat-turn-finished",
 } as const;
 
 export const TASK_STATUSES = [

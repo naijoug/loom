@@ -16,6 +16,12 @@ const COMMANDS: &[&str] = &[
     "delete_agent",
     "diagnose_agents",
     "list_agents",
+    "chat_list_sessions",
+    "chat_create",
+    "chat_get",
+    "chat_set_agent",
+    "chat_send",
+    "chat_abort",
     "prepare_agent_invocation",
     "retry_planning_agent",
     "run_planning_discussion",
@@ -76,6 +82,8 @@ const EVENTS: &[&str] = &[
     "loom://planning-agent-log",
     "loom://planning-agent-status",
     "loom://pty-output",
+    "loom://chat-stream",
+    "loom://chat-turn-finished",
 ];
 
 const TASK_STATUSES: &[&str] = &[

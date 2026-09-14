@@ -3,7 +3,7 @@
 - **Date**: 2026-09-14
 - **Author**: Droplet
 - **Status**: in_progress
-- **Progress**: M0–M1 完成；M2 未开始
+- **Progress**: M0–M2 完成（Codex/Claude 经 adapter 的 chat_send 垂直切片）；M3 resume UX / M4 Grok 未开始
 - **Scope**: 把 Loom 从 Board/Planning 主导的任务工作流，重构为可调用本地 Codex CLI、Claude Code CLI 与 Grok CLI 的 Grok-Bot 式 chat-first UX，同时保留现有 adapter / runner / PTY / stream 能力；Board 与 Planning 降级为高级入口，不在本轮重写任务状态机。
 
 ## 目标
@@ -166,3 +166,11 @@
 - `AppView` 增加 `chat`；侧栏项目下增加「对话」入口
 - M1 使用 `mockStore` 模拟回复，不调用本机 CLI（M2 再接）
 - 单测：`tests/unit/chatMockStore.test.cjs`
+
+
+## M2 交付物（2026-09-14）
+
+- Rust `src-tauri/src/chat.rs`：`chat_list/create/get/set_agent/send/abort`，持久化 `.loom/chat/`，经 `agent_adapter::prepare_invocation` 启动本机 CLI，事件 `loom://chat-stream` / `loom://chat-turn-finished`
+- **不**走 `start_command_run`（避免绑定 Task）
+- 前端 ChatPage 在 Tauri 下接真实命令；浏览器预览仍用 mock
+- contracts / `TAURI_COMMANDS` / `TAURI_EVENTS` 已登记

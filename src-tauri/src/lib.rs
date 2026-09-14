@@ -2,6 +2,7 @@ mod agent_adapter;
 mod agent_diagnostics;
 mod agents;
 mod attachments;
+mod chat;
 mod command_runner;
 pub mod context_builder;
 #[cfg(test)]
@@ -68,12 +69,19 @@ pub fn run() {
         .manage(pty::PtyRegistry::default())
         .manage(run_recovery::RunRecoveryRegistry::default())
         .manage(models::IdGenerator::default())
+        .manage(chat::ChatTurnRegistry::default())
         .invoke_handler(tauri::generate_handler![
             health_check,
             agents::create_agent,
             agents::delete_agent,
             agent_diagnostics::diagnose_agents,
             agents::list_agents,
+            chat::chat_list_sessions,
+            chat::chat_create,
+            chat::chat_get,
+            chat::chat_set_agent,
+            chat::chat_send,
+            chat::chat_abort,
             agents::prepare_agent_invocation,
             agents::retry_planning_agent,
             agents::run_planning_discussion,
