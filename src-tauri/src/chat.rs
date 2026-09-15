@@ -1,7 +1,5 @@
 //! Chat-first sessions (M2). ChatSession ≠ Task — does not use task_state.
-use crate::agent_adapter::{
-    self, AdapterInvocationRequest, AgentStage, PreparedAgentInvocation,
-};
+use crate::agent_adapter::{self, AdapterInvocationRequest, AgentStage, PreparedAgentInvocation};
 use crate::agents::{self, load_agents};
 use crate::models::{now_ms, IdGenerator};
 use crate::session_capture;
@@ -206,7 +204,15 @@ fn build_prompt(session: &ChatSession, user_text: &str) -> String {
     parts.push(format!("Project path: {}", session.project_path));
     if !session.messages.is_empty() {
         parts.push("Conversation so far:".to_string());
-        for message in session.messages.iter().rev().take(12).collect::<Vec<_>>().into_iter().rev() {
+        for message in session
+            .messages
+            .iter()
+            .rev()
+            .take(12)
+            .collect::<Vec<_>>()
+            .into_iter()
+            .rev()
+        {
             parts.push(format!("{}: {}", message.role, message.content));
         }
     }
@@ -345,8 +351,6 @@ pub fn chat_set_agent(
     save_session(&root, &session)?;
     Ok(session)
 }
-
-
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -649,11 +653,9 @@ async fn run_chat_turn(
         }
     }
     let content = extract_assistant_text(&output_mode, &raw);
-    let stderr_lines: Vec<String> = stderr_text
-        .lines()
-        .map(str::to_string)
-        .collect();
-    let captured = session_capture::capture_session_from_lines(&program, &stdout_lines, &stderr_lines);
+    let stderr_lines: Vec<String> = stderr_text.lines().map(str::to_string).collect();
+    let captured =
+        session_capture::capture_session_from_lines(&program, &stdout_lines, &stderr_lines);
     if !status.success() && content.trim().is_empty() {
         return Err(format!(
             "agent exited with status {status}; stderr: {}",

@@ -257,7 +257,6 @@ impl AgentAdapter for ClaudeAdapter {
     }
 }
 
-
 impl AgentAdapter for GrokAdapter {
     fn prepare(
         &self,
@@ -572,4 +571,3 @@ mod tests {
         assert!(!prepared.stdin_prompt);
     }
 }
-

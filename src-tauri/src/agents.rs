@@ -12,7 +12,8 @@ use crate::{
     plan_html,
     process_supervisor::{self, ProcessKind, ProcessMetadata},
     session_capture::{
-        find_session_id, resume_command_for_adapter, ADAPTER_CLAUDE_CODE, ADAPTER_CODEX, ADAPTER_GROK,
+        find_session_id, resume_command_for_adapter, ADAPTER_CLAUDE_CODE, ADAPTER_CODEX,
+        ADAPTER_GROK,
     },
     storage, tasks,
 };
