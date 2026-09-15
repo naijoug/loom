@@ -194,3 +194,8 @@
 - 默认 `currentView = chat`；选项目后进 Chat
 - 侧栏「任务看板（高级）」
 - `chat_promote_to_task` stub：用最后一条用户消息创建草稿 Task，不推进状态机
+
+
+## Follow-up（2026-09-15）
+
+- `chat_promote_to_task` 写入含会话摘要的 `raw_requirement`，返回完整 Task；Chat UI 升格后 `tasks/upserted` + `tasks/selected` 跳任务详情（仍不自动开跑状态机）。

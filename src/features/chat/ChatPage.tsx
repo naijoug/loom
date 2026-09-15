@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { AgentConfig, ChatPermissionMode, ChatSession, ChatSessionSummary } from "../../domain";
+import type { AgentConfig, ChatPermissionMode, ChatSession, ChatSessionSummary, Task } from "../../domain";
 import { useAppState } from "../../state/AppStateContext";
 import { useAgentBridge } from "../../hooks/useAgentBridge";
 import { hasTauriRuntime } from "../../hooks/runtime";
@@ -34,7 +34,7 @@ function enabledAgents(agents: AgentConfig[]) {
 }
 
 export function ChatPage() {
-  const { state } = useAppState();
+  const { state, dispatch } = useAppState();
   const { loadAgents } = useAgentBridge();
   const projectPath = state.projects.current?.path ?? null;
   const agents = useMemo(() => enabledAgents(state.agents), [state.agents]);
@@ -421,13 +421,15 @@ export function ChatPage() {
                           try {
                             const result = await invokeCommand<{
                               taskId: string;
+                              task: Task;
                               session: ChatSession;
                             }>(TAURI_COMMANDS.chatPromoteToTask, {
                               projectPath,
                               sessionId: session.id,
                             });
                             setSession(result.session);
-                            setError(`已创建草稿任务 ${result.taskId}（未自动开跑）。可在「任务看板（高级）」查看。`);
+                            dispatch({ type: "tasks/upserted", task: result.task });
+                            dispatch({ type: "tasks/selected", taskId: result.taskId });
                           } catch (err) {
                             setError(err instanceof Error ? err.message : String(err));
                           }

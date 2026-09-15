@@ -359,11 +359,60 @@ pub struct ChatPromoteInput {
     pub session_id: String,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChatPromoteResult {
     pub task_id: String,
+    pub task: crate::models::Task,
     pub session: ChatSession,
+}
+
+fn promote_requirement_from_session(session: &ChatSession) -> (String, String) {
+    let latest_user = session
+        .messages
+        .iter()
+        .rev()
+        .find(|message| message.role == "user")
+        .map(|message| message.content.as_str())
+        .unwrap_or(session.title.as_str());
+    let title = latest_user.chars().take(48).collect::<String>();
+
+    let mut parts = Vec::new();
+    parts.push(format!(
+        "Promoted from Loom chat session `{}` (agent `{}`, permission `{}`).",
+        session.id, session.agent_id, session.permission_mode
+    ));
+    parts.push(String::new());
+    parts.push("## Latest user ask".to_string());
+    parts.push(latest_user.to_string());
+    parts.push(String::new());
+    parts.push("## Recent conversation".to_string());
+
+    let recent: Vec<_> = session
+        .messages
+        .iter()
+        .rev()
+        .take(20)
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+        .collect();
+    if recent.is_empty() {
+        parts.push("(no messages yet)".to_string());
+    } else {
+        for message in recent {
+            let body = message.content.chars().take(2000).collect::<String>();
+            parts.push(format!("{}: {}", message.role, body));
+        }
+    }
+
+    let mut requirement = parts.join("\n");
+    const MAX_CHARS: usize = 12_000;
+    if requirement.chars().count() > MAX_CHARS {
+        requirement = requirement.chars().take(MAX_CHARS).collect::<String>();
+        requirement.push_str("\n\n…(truncated)");
+    }
+    (title, requirement)
 }
 
 #[tauri::command]
@@ -374,14 +423,7 @@ pub fn chat_promote_to_task(
 ) -> Result<ChatPromoteResult, String> {
     let root = ensure_chat_dirs(Path::new(&input.project_path))?;
     let mut session = load_session(&root, &input.session_id)?;
-    let description = session
-        .messages
-        .iter()
-        .rev()
-        .find(|message| message.role == "user")
-        .map(|message| message.content.clone())
-        .unwrap_or_else(|| session.title.clone());
-    let title = description.chars().take(48).collect::<String>();
+    let (title, raw_requirement) = promote_requirement_from_session(&session);
     // Stub: create a draft task only — do not advance the task state machine.
     let task = tasks::create_task(
         app,
@@ -389,7 +431,7 @@ pub fn chat_promote_to_task(
         crate::models::CreateTaskInput {
             project_path: input.project_path.clone(),
             title,
-            raw_requirement: description,
+            raw_requirement,
             selected_planning_agent_ids: Vec::new(),
             primary_agent_id: Some(session.agent_id.clone()),
         },
@@ -398,7 +440,8 @@ pub fn chat_promote_to_task(
     session.updated_at_ms = now_ms();
     save_session(&root, &session)?;
     Ok(ChatPromoteResult {
-        task_id: task.id,
+        task_id: task.id.clone(),
+        task,
         session,
     })
 }
