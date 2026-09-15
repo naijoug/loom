@@ -378,7 +378,7 @@ test("removing the active project clears the selected workspace state", () => {
   assert.deepEqual(nextState.projects.recent.map((candidate) => candidate.id), [otherProject.id]);
   assert.equal(nextState.projects.current, null);
   assert.equal(nextState.app.activeProjectId, null);
-  assert.equal(nextState.app.currentView, "board");
+  assert.equal(nextState.app.currentView, "chat");
   assert.equal(nextState.app.selectedTaskId, null);
   assert.equal(nextState.app.selectedTodoId, null);
   assert.equal(nextState.app.viewedStage, null);

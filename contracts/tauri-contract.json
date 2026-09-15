@@ -6,6 +6,14 @@
     "delete_agent",
     "diagnose_agents",
     "list_agents",
+    "chat_list_sessions",
+    "chat_create",
+    "chat_get",
+    "chat_set_agent",
+    "chat_clear_resume",
+    "chat_promote_to_task",
+    "chat_send",
+    "chat_abort",
     "prepare_agent_invocation",
     "retry_planning_agent",
     "run_planning_discussion",
@@ -64,7 +72,9 @@
     "loom://command-log",
     "loom://planning-agent-log",
     "loom://planning-agent-status",
-    "loom://pty-output"
+    "loom://pty-output",
+    "loom://chat-stream",
+    "loom://chat-turn-finished"
   ],
   "taskStatuses": [
     "drafting_requirements",
@@ -110,9 +120,13 @@
       "id": "agent-contract",
       "name": "Contract Agent",
       "command": "agent",
-      "args": ["run"],
+      "args": [
+        "run"
+      ],
       "workingDirectoryPolicy": "project_root",
-      "capabilities": ["planning"],
+      "capabilities": [
+        "planning"
+      ],
       "adapterType": "cli",
       "canWriteFiles": false,
       "canRunCommands": false,
@@ -127,7 +141,9 @@
       "cwd": null
     },
     "projectAgentPreferences": {
-      "planningAgentIds": ["agent-contract"],
+      "planningAgentIds": [
+        "agent-contract"
+      ],
       "implementationAgentId": null,
       "reviewAgentIds": [],
       "debuggingAgentId": null,
@@ -168,7 +184,9 @@
         "blockedReason": null,
         "cancelledReason": null
       },
-      "selectedPlanningAgentIds": ["agent-contract"],
+      "selectedPlanningAgentIds": [
+        "agent-contract"
+      ],
       "primaryAgentId": null,
       "reviewAgentIds": [],
       "implementationReviewRuns": [],
