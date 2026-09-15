@@ -288,7 +288,7 @@ pub fn chat_list_sessions(project_path: String) -> Result<Vec<ChatSessionSummary
             });
         }
     }
-    summaries.sort_by(|a, b| b.updated_at_ms.cmp(&a.updated_at_ms));
+    summaries.sort_by_key(|a| std::cmp::Reverse(a.updated_at_ms));
     Ok(summaries)
 }
 
@@ -514,7 +514,6 @@ pub async fn chat_send(
         let result = run_chat_turn(
             app_handle.clone(),
             registry_inner,
-            project_path.clone(),
             session_id.clone(),
             turn_id.clone(),
             assistant_id.clone(),
@@ -587,7 +586,6 @@ pub async fn chat_send(
 async fn run_chat_turn(
     app: AppHandle,
     registry: Arc<Mutex<HashMap<String, u32>>>,
-    _project_path: String,
     session_id: String,
     turn_id: String,
     message_id: String,
