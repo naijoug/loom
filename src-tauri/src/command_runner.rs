@@ -937,6 +937,26 @@ mod tests {
         panic!("timed out waiting for run {run_id}");
     }
 
+    async fn wait_for_finished_event(
+        app: &CapturingCommandEmitter,
+        run_id: &str,
+    ) -> CommandFinishedEvent {
+        for _ in 0..60 {
+            if let Some(event) = app
+                .finished
+                .lock()
+                .unwrap()
+                .iter()
+                .find(|event| event.run_id == run_id)
+                .cloned()
+            {
+                return event;
+            }
+            sleep(Duration::from_millis(100)).await;
+        }
+        panic!("timed out waiting for finish event {run_id}");
+    }
+
     fn run_status<'a>(task: &'a Task, run_id: &str) -> &'a str {
         task.command_runs
             .iter()
@@ -1142,11 +1162,7 @@ mod tests {
         assert_eq!(persisted_run.session_id.as_deref(), Some("agent-session-1"));
         assert_eq!(persisted_run.resume_command, None);
 
-        let emitted = app.finished.lock().unwrap();
-        let event = emitted
-            .iter()
-            .find(|event| event.run_id == run.id)
-            .expect("finish event should be emitted");
+        let event = wait_for_finished_event(&app, &run.id).await;
         assert_eq!(event.session_id.as_deref(), Some("agent-session-1"));
         assert_eq!(event.resume_command, None);
 
@@ -1183,11 +1199,7 @@ mod tests {
         assert_eq!(persisted_run.status, "failed");
         assert_eq!(persisted_run.termination_reason.as_deref(), Some("timeout"));
 
-        let emitted = app.finished.lock().unwrap();
-        let event = emitted
-            .iter()
-            .find(|event| event.run_id == run.id)
-            .expect("timeout finish event should be emitted");
+        let event = wait_for_finished_event(&app, &run.id).await;
         assert_eq!(event.termination_reason.as_deref(), Some("timeout"));
 
         fs::remove_dir_all(root).expect("test project should be cleaned up");
