@@ -196,6 +196,7 @@ fn command_manifest_matches_tauri_registration() {
 fn event_manifest_matches_backend_emitters() {
     let sources = [
         include_str!("agents.rs"),
+        include_str!("chat.rs"),
         include_str!("command_runner.rs"),
         include_str!("pty.rs"),
     ]
