@@ -15,7 +15,6 @@ use tokio::process::Command;
 
 const CHAT_SCHEMA_VERSION: u32 = 1;
 
-
 const DEFAULT_PERMISSION_MODE: &str = "explore";
 const DEFAULT_SESSION_STATUS: &str = "active";
 
@@ -41,7 +40,6 @@ fn default_session_status() -> String {
 fn default_message_parts() -> Vec<ChatMessagePart> {
     Vec::new()
 }
-
 
 /// text | tool | error parts (M0 sketch). Flexible fields for forward-compat JSON.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -76,7 +74,10 @@ pub struct ChatMessage {
     pub created_at_ms: u128,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub error_summary: Option<String>,
-    #[serde(default = "default_message_parts", skip_serializing_if = "Vec::is_empty")]
+    #[serde(
+        default = "default_message_parts",
+        skip_serializing_if = "Vec::is_empty"
+    )]
     pub parts: Vec<ChatMessagePart>,
 }
 
@@ -250,7 +251,6 @@ fn permission_to_stage(mode: &str) -> AgentStage {
     }
 }
 
-
 fn chat_task_id(session_id: &str) -> String {
     format!("chat:{session_id}")
 }
@@ -291,8 +291,18 @@ fn json_event_type(value: &serde_json::Value) -> Option<String> {
     value
         .get("type")
         .and_then(|v| v.as_str())
-        .or_else(|| value.get("msg").and_then(|msg| msg.get("type")).and_then(|v| v.as_str()))
-        .or_else(|| value.get("event").and_then(|event| event.get("type")).and_then(|v| v.as_str()))
+        .or_else(|| {
+            value
+                .get("msg")
+                .and_then(|msg| msg.get("type"))
+                .and_then(|v| v.as_str())
+        })
+        .or_else(|| {
+            value
+                .get("event")
+                .and_then(|event| event.get("type"))
+                .and_then(|v| v.as_str())
+        })
         .or_else(|| value.get("event").and_then(|v| v.as_str()))
         .map(str::to_string)
 }
@@ -324,7 +334,10 @@ fn summarize_json(value: &serde_json::Value, max_chars: usize) -> Option<String>
     if trimmed.chars().count() <= max_chars {
         Some(trimmed.to_string())
     } else {
-        Some(format!("{}…", trimmed.chars().take(max_chars).collect::<String>()))
+        Some(format!(
+            "{}…",
+            trimmed.chars().take(max_chars).collect::<String>()
+        ))
     }
 }
 
