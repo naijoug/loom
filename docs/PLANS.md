@@ -3,7 +3,7 @@
 ## 2026-09-17
 
 - 09:03-craft-inspired-local-agent-chat.md
-  > 在已完成的 chat-first（M0–M5）之上规划 thorough refactor Phase 1：Craft Agents 启发的本机 Agent Chat（会话收件箱、三档权限、Turn 工具可视化、Agent picker/诊断），端到端 dogfood 本机 CLI；复用 agent_adapter/stream/chat 持久化并对齐进程监督；不重写 Task 状态机，不做云同步/MCP 深集成/市场。
+  > （实施中，M0 完成）Craft 启发本机 Agent Chat Phase 1：已冻结 PRD/IA、三档权限（explore/ask/auto）与旧值迁移、session status=active|archived、dogfood 探测 grok→codex→claude；Ask 无审批弹窗。下一步 M1 壳层拆分。
 
 ## 2026-09-14
 

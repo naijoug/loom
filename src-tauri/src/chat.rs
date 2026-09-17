@@ -17,6 +17,34 @@ use tokio::sync::Mutex;
 
 const CHAT_SCHEMA_VERSION: u32 = 1;
 
+
+const DEFAULT_PERMISSION_MODE: &str = "explore";
+const DEFAULT_SESSION_STATUS: &str = "active";
+
+/// Normalize chat permission strings for load/save compatibility.
+/// `read_only` → `explore`; `read_write` → `ask` (safer than auto).
+pub fn normalize_permission_mode(mode: &str) -> String {
+    match mode {
+        "explore" | "ask" | "auto" => mode.to_string(),
+        "read_only" => "explore".to_string(),
+        "read_write" => "ask".to_string(),
+        _ => DEFAULT_PERMISSION_MODE.to_string(),
+    }
+}
+
+fn default_permission_mode() -> String {
+    DEFAULT_PERMISSION_MODE.to_string()
+}
+
+fn default_session_status() -> String {
+    DEFAULT_SESSION_STATUS.to_string()
+}
+
+fn default_message_parts() -> Vec<ChatMessagePart> {
+    Vec::new()
+}
+
+
 #[derive(Clone)]
 pub struct ChatTurnRegistry {
     inner: Arc<Mutex<HashMap<String, u32>>>, // session_id -> pid
@@ -30,6 +58,29 @@ impl Default for ChatTurnRegistry {
     }
 }
 
+/// text | tool | error parts (M0 sketch). Flexible fields for forward-compat JSON.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "camelCase")]
+pub enum ChatMessagePart {
+    Text {
+        text: String,
+    },
+    Tool {
+        name: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        input_summary: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        output_summary: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        status: Option<String>,
+    },
+    Error {
+        message: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        code: Option<String>,
+    },
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChatMessage {
@@ -40,6 +91,8 @@ pub struct ChatMessage {
     pub created_at_ms: u128,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub error_summary: Option<String>,
+    #[serde(default = "default_message_parts", skip_serializing_if = "Vec::is_empty")]
+    pub parts: Vec<ChatMessagePart>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -49,6 +102,7 @@ pub struct ChatSession {
     pub project_path: String,
     pub agent_id: String,
     pub title: String,
+    #[serde(default = "default_permission_mode")]
     pub permission_mode: String,
     pub messages: Vec<ChatMessage>,
     pub created_at_ms: u128,
@@ -60,6 +114,9 @@ pub struct ChatSession {
     pub turn_status: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub promoted_task_id: Option<String>,
+    /// Phase 1: `active` | `archived`. Default active for old sessions.
+    #[serde(default = "default_session_status")]
+    pub status: String,
     pub schema_version: u32,
 }
 
@@ -72,6 +129,8 @@ pub struct ChatSessionSummary {
     pub updated_at_ms: u128,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub preview: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -179,7 +238,13 @@ fn load_session(root: &Path, session_id: &str) -> Result<ChatSession, String> {
     let path = session_path(root, session_id);
     let raw = std::fs::read_to_string(&path)
         .map_err(|error| format!("failed to read chat session: {error}"))?;
-    serde_json::from_str(&raw).map_err(|error| format!("invalid chat session: {error}"))
+    let mut session: ChatSession =
+        serde_json::from_str(&raw).map_err(|error| format!("invalid chat session: {error}"))?;
+    session.permission_mode = normalize_permission_mode(&session.permission_mode);
+    if session.status != "active" && session.status != "archived" {
+        session.status = DEFAULT_SESSION_STATUS.to_string();
+    }
+    Ok(session)
 }
 
 fn save_session(root: &Path, session: &ChatSession) -> Result<(), String> {
@@ -190,10 +255,11 @@ fn save_session(root: &Path, session: &ChatSession) -> Result<(), String> {
 }
 
 fn permission_to_stage(mode: &str) -> AgentStage {
-    if mode == "read_write" {
-        AgentStage::Debugging
-    } else {
-        AgentStage::Planning
+    // explore/ask (+ legacy read_only / read_write→ask) → Planning (conservative CLI).
+    // auto → Debugging (workspace-write / acceptEdits).
+    match normalize_permission_mode(mode).as_str() {
+        "auto" => AgentStage::Debugging,
+        _ => AgentStage::Planning,
     }
 }
 
@@ -285,6 +351,7 @@ pub fn chat_list_sessions(project_path: String) -> Result<Vec<ChatSessionSummary
                 agent_id: session.agent_id,
                 updated_at_ms: session.updated_at_ms,
                 preview,
+                status: Some(session.status),
             });
         }
     }
@@ -311,9 +378,12 @@ pub fn chat_create(
             .map(|value| value.trim().to_string())
             .filter(|value| !value.is_empty())
             .unwrap_or_else(|| "新对话".to_string()),
-        permission_mode: input
-            .permission_mode
-            .unwrap_or_else(|| "read_only".to_string()),
+        permission_mode: normalize_permission_mode(
+            &input
+                .permission_mode
+                .unwrap_or_else(|| DEFAULT_PERMISSION_MODE.to_string()),
+        ),
+        status: DEFAULT_SESSION_STATUS.to_string(),
         messages: Vec::new(),
         created_at_ms,
         updated_at_ms: created_at_ms,
@@ -485,7 +555,7 @@ pub async fn chat_send(
     let root = ensure_chat_dirs(&project)?;
     let mut session = load_session(&root, &input.session_id)?;
     if let Some(mode) = input.permission_mode {
-        session.permission_mode = mode;
+        session.permission_mode = normalize_permission_mode(&mode);
     }
     if session.turn_status == "streaming" {
         return Err("a chat turn is already running for this session".to_string());
@@ -525,6 +595,7 @@ pub async fn chat_send(
         status: "complete".to_string(),
         created_at_ms: now,
         error_summary: None,
+        parts: Vec::new(),
     };
     let assistant_id = ids.next("msg");
     let turn_id = ids.next("turn");
@@ -535,6 +606,7 @@ pub async fn chat_send(
         status: "streaming".to_string(),
         created_at_ms: now + 1,
         error_summary: None,
+        parts: Vec::new(),
     };
     if session.messages.is_empty() && session.title == "新对话" {
         session.title = text.chars().take(32).collect();
@@ -723,4 +795,30 @@ async fn run_chat_turn(
         content
     };
     Ok((content, captured.resume_command))
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::{normalize_permission_mode, permission_to_stage};
+    use crate::agent_adapter::AgentStage;
+
+    #[test]
+    fn normalizes_legacy_permission_modes() {
+        assert_eq!(normalize_permission_mode("read_only"), "explore");
+        assert_eq!(normalize_permission_mode("read_write"), "ask");
+        assert_eq!(normalize_permission_mode("explore"), "explore");
+        assert_eq!(normalize_permission_mode("ask"), "ask");
+        assert_eq!(normalize_permission_mode("auto"), "auto");
+        assert_eq!(normalize_permission_mode("nope"), "explore");
+    }
+
+    #[test]
+    fn permission_modes_map_to_conservative_or_write_stages() {
+        assert_eq!(permission_to_stage("explore"), AgentStage::Planning);
+        assert_eq!(permission_to_stage("ask"), AgentStage::Planning);
+        assert_eq!(permission_to_stage("read_only"), AgentStage::Planning);
+        assert_eq!(permission_to_stage("read_write"), AgentStage::Planning);
+        assert_eq!(permission_to_stage("auto"), AgentStage::Debugging);
+    }
 }

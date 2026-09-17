@@ -324,11 +324,10 @@ export function ChatPage() {
                 <label className="chat-permission">
                   <input
                     type="checkbox"
-                    checked={session.permissionMode === "read_write"}
+                    checked={session.permissionMode !== "explore"}
                     onChange={(event) => {
-                      const mode: ChatPermissionMode = event.target.checked
-                        ? "read_write"
-                        : "read_only";
+                      // M0/M1 bridge: unchecked → explore; checked → ask (safer than auto).
+                      const mode: ChatPermissionMode = event.target.checked ? "ask" : "explore";
                       if (!useBackend) {
                         setSession(mockChatStore.setPermissionMode(session.id, mode) ?? null);
                         return;
@@ -336,7 +335,7 @@ export function ChatPage() {
                       setSession({ ...session, permissionMode: mode });
                     }}
                   />
-                  允许写入
+                  允许写入（Ask）
                 </label>
                 {session.resumeCommand ? (
                   <span className="chat-hint" title={session.resumeCommand}>
@@ -376,7 +375,7 @@ export function ChatPage() {
             <div className="chat-messages" data-testid="chat-messages">
               {session.messages.length === 0 ? (
                 <div className="chat-messages-empty">
-                  发送第一条消息。默认只读；勾选「允许写入」后才会用可写阶段调用 Agent。
+                  发送第一条消息。默认「探索」只读；勾选「允许写入（Ask）」为保守档（Phase 1 无审批弹窗）；完整「自动」可写在后续 Header 三档控件落地。
                 </div>
               ) : (
                 session.messages.map((message) => (
@@ -405,7 +404,7 @@ export function ChatPage() {
               <div className="chat-composer-actions">
                 <span className="chat-hint">
                   {useBackend ? "本机 CLI" : "模拟"} ·{" "}
-                  {session.permissionMode === "read_write" ? "可写" : "只读"}
+                  {session.permissionMode === "auto" ? "自动" : session.permissionMode === "ask" ? "询问编辑" : "探索"}
                   {session.resumeCommand ? " · 续聊中" : ""}
                   {sending ? " · 生成中…" : ""}
                 </span>

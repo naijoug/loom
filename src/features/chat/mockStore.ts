@@ -4,7 +4,11 @@ import type {
   ChatSession,
   ChatSessionSummary,
 } from "../../domain/chat";
-import { DEFAULT_CHAT_PERMISSION_MODE } from "../../domain/chat";
+import {
+  DEFAULT_CHAT_PERMISSION_MODE,
+  DEFAULT_CHAT_SESSION_STATUS,
+  normalizeChatPermissionMode,
+} from "../../domain/chat";
 
 function now() {
   return Date.now();
@@ -49,7 +53,10 @@ export class MockChatStore {
       projectPath: input.projectPath,
       agentId: input.agentId,
       title: input.title?.trim() || "新对话",
-      permissionMode: input.permissionMode ?? DEFAULT_CHAT_PERMISSION_MODE,
+      permissionMode: normalizeChatPermissionMode(
+        input.permissionMode ?? DEFAULT_CHAT_PERMISSION_MODE,
+      ),
+      status: DEFAULT_CHAT_SESSION_STATUS,
       messages: [],
       createdAtMs,
       updatedAtMs: createdAtMs,
@@ -71,7 +78,11 @@ export class MockChatStore {
   setPermissionMode(sessionId: string, permissionMode: ChatPermissionMode): ChatSession | undefined {
     const session = this.sessions.get(sessionId);
     if (!session) return undefined;
-    const next = { ...session, permissionMode, updatedAtMs: now() };
+    const next = {
+      ...session,
+      permissionMode: normalizeChatPermissionMode(permissionMode),
+      updatedAtMs: now(),
+    };
     this.sessions.set(sessionId, next);
     return next;
   }

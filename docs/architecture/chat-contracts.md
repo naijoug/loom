@@ -42,12 +42,17 @@
 
 `chat_send` → 组装 prompt（含历史裁剪）→ `agent_adapter::prepare`（stage 由 permissionMode 映射）→ `command_runner` → 解析 stream → 追加 `ChatMessage` → emit 事件。
 
-### permissionMode → adapter stage（草案）
+### permissionMode → adapter stage（Craft Phase 1 / M0）
+
+权威细节与 CLI flag 见 [craft-local-chat-prd.md](../guides/craft-local-chat-prd.md) 附录。
 
 | permissionMode | stage | 说明 |
 |---|---|---|
-| `read_only` | `planning` | 默认；只读 sandbox |
-| `read_write` | `debugging` | 需会话开关；可写 + 跑命令（仍受 execution_policy） |
+| `explore` | `planning` | 默认；只读 sandbox / plan |
+| `ask` | `planning` | Phase 1 与 explore 同级保守 CLI；**无**审批 UI |
+| `auto` | `debugging` | 可写 + 跑命令（仍受 agent flags / execution_policy） |
+
+旧值：`read_only`→`explore`；`read_write`→`ask`（偏安全）。`ChatMessage.parts`（text/tool/error）可选；`ChatSession.status`：`active`|`archived`（缺省 active）。
 
 ## Events（拟定，M2 注册到 manifest）
 

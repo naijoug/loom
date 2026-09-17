@@ -2,8 +2,8 @@
 
 - **Date**: 2026-09-17
 - **Author**: Droplet
-- **Status**: draft
-- **Progress**: 未开工（仅计划）
+- **Status**: in_progress
+- **Progress**: M0 完成（PRD/IA/契约类型冻结；三档权限 + 旧值迁移；Rust/TS 规范化与单测）
 - **Scope**: 在已完成的 chat-first（`docs/plans/2026-09-14/20:06-chat-first-refactor.md` M0–M5）之上，做**彻底重构的 Phase 1**：把产品主表面做成 Craft Agents 风格的**本机 Agent Chat**（会话收件箱 + 转录 + composer + Agent / 权限档位），端到端可 dogfood 调用本机已接线 Agent；**不**在本阶段重写 Task 状态机，不引入云同步 / 市场 / Electron 服务端架构。
 
 参考：
@@ -88,9 +88,9 @@ Craft 侧已阅读要点（README + `docs/cli.md` + shared session/permission + 
 | Craft | Loom Phase 1 |
 |---|---|
 | Workspace | 已打开的 Project（`projectPath`） |
-| Session + Inbox status | `ChatSession` + `inboxStatus`（最小：active / needs_attention / done；可映射 todo/in_progress/done） |
-| Flag / Archive | `flagged` bool；archive = `inboxStatus=done` 或 `archivedAt`（二选一，M0 定稿） |
-| Permission `safe/ask/allow-all` | `explore` / `ask` / `auto`；映射 adapter：explore→只读 stage；ask→可写但需 Loom 确认门（最小：发送前确认或回合内拦截写工具——Open Question）；auto→debugging/acceptEdits |
+| Session + Inbox status | `ChatSession.status`：`active` \| `archived`（M0 冻结） |
+| Flag / Archive | archive = `status=archived`；旗标可后加 |
+| Permission `safe/ask/allow-all` | `explore` / `ask` / `auto`；ask Phase 1 = 保守 CLI（同 explore），无审批 UI；auto→debugging/acceptEdits |
 | Sources 面板 | 可选右侧「上下文」：先展示项目路径 + 当前 Agent 诊断；MCP 接入列为 Phase 2+ |
 | TurnCard / tool viz | `ChatMessage` 增加 `parts[]`（text / tool / command）或并行 `ChatTurnEvent`；UI 用 Loom 卡片样式 |
 | LLM Connection picker | Agent picker（本机 CLI 配置） |
@@ -101,11 +101,13 @@ Craft 侧已阅读要点（README + `docs/cli.md` + shared session/permission + 
 
 ### M0 — 差距冻结 + IA/契约修订 + 权限映射表
 
+**Progress**: ✅ 完成（2026-09-17）— `docs/guides/craft-local-chat-prd.md` / `craft-local-chat-ia.md`；`src/domain/chat.ts` + `src-tauri/src/chat.rs` 三档权限与旧值迁移；决策 1–3 已冻结。
+
 **Outcome**: 在既有 chat-first 文档上修订 Phase 1 边界；前后端契约可评审；不写大块 UI。
 
 | # | Task | Files / Output | Verification |
 |---|---|---|---|
-| 0.1 | 修订 PRD/IA：Inbox + 三档权限 + Turn 可视化；标明「build on M0–M5」 | `docs/guides/chat-first-prd.md`、`chat-first-ia.md` 增补或 `docs/guides/craft-chat-phase1.md` | 中文 IA 含线框级区域：inbox / transcript / composer / agent / mode |
+| 0.1 | 修订 PRD/IA：Inbox + 三档权限 + Turn 可视化；标明「build on M0–M5」 | `docs/guides/craft-local-chat-prd.md`、`craft-local-chat-ia.md`（保留 chat-first-* 对照） | 中文 IA 含线框级区域：inbox / transcript / composer / agent / mode |
 | 0.2 | 扩展领域类型：`inboxStatus`、`flagged`、`ChatPermissionMode` 三档、消息 `parts` 草案 | `src/domain/chat.ts` + `docs/architecture/chat-contracts.md` | ChatSession ≠ Task 仍成立；schemaVersion 策略写清 |
 | 0.3 | 权限映射表：Loom 档位 → `AgentStage` + 各 adapter CLI flag（Codex sandbox / Claude permission-mode / Grok plan\|acceptEdits） | 契约附录或 `agent-adapter.md` 小节 | 表可被 M2 单测引用 |
 | 0.4 | 决定 Chat 进程：supervisor wrap vs 共享 spawn 辅助（写进本计划 Progress） | 短决策笔记 | 选定一条；禁止再增加第三路径 |
@@ -186,15 +188,20 @@ Craft 侧已阅读要点（README + `docs/cli.md` + shared session/permission + 
 - Code review：Chat 仍经 `agent_adapter`；无第二套 argv 拼装；ChatSession 不推进 Task stage。
 - M2+：至少一次本机真实 Agent dogfood（或 CI fixture + 本地一次人工）。
 
-## 待确认问题
+## 已冻结决策（M0）
 
-1. **Ask 档最小语义**：Phase 1 用「发送前确认可写」还是做到「工具/写文件级审批」（接近 Craft）？
-2. **Inbox 状态集合**：精简三态（active / needs_attention / done）是否足够，还是要对齐 Craft 五态？
-3. **垂直切片首选 Agent**：本机 dogfood 默认 Codex，若本机无 Codex 是否接受 Claude / Grok 作为 M2 验收 Agent？
-4. **Chat 进程是否必须在 M2 接入 `ProcessSupervisor`**，还是允许先共享 spawn/abort 辅助、Supervisor 放到 Phase 1.1？
-5. **Sources / MCP**：是否同意 Phase 1 只做上下文空态，MCP stdio 明确放到下一阶段？
-6. **会话存储位置**：继续项目级 `.loom/chat/`，还是部分元数据升到用户级 app data（跨项目 Inbox）？
+1. **Ask 档 Phase 1**：映射保守 CLI 权限（与 explore 同级），**不做** per-tool / 写文件审批弹窗；完整 tool-gate 留后续阶段。
+2. **Inbox / session status Phase 1**：仅 `active` | `archived`（不对齐 Craft 五态）。
+3. **Dogfood 首选 Agent**：`command -v` 探测，优先级 **grok → codex → claude**；第一个命中者作 M2 垂直切片验收。
+4. **Chat 进程（仍开放到 M2 收口）**：倾向对齐 `ProcessSupervisor` 或共享 spawn/abort；禁止第三路径——M2 必须选定一条。
+5. **Sources / MCP**：Phase 1 只做上下文空态；MCP stdio 明确下一阶段。
+6. **会话存储**：继续项目级 `.loom/chat/`（不升用户级跨项目 Inbox）。
+
+### 权限旧值迁移（M0）
+
+- `read_only` → `explore`
+- `read_write` → `ask`（偏安全；需显式选 `auto` 才可写）
 
 ## 下一步建议
 
-计划评审通过后从 **M0** 开工：冻结 IA/契约与权限映射、选定 Chat 进程策略，再进入 M1 壳层；**M2 Codex（或指定本机 Agent）垂直切片** 作为第一条可 dogfood 的完成定义。不要并行铺 MCP / 后台任务 / Task 状态机改造。
+M0 已完成。下一步 **M1**：拆分 Chat IA 壳（Inbox / Transcript / Composer / Header 三档权限）；再 **M2** 按 grok→codex→claude 探测结果做垂直切片。不要并行铺 MCP / 后台任务 / Task 状态机改造。

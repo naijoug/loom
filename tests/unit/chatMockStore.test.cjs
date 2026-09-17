@@ -36,7 +36,7 @@ class MockChatStore {
       projectPath: input.projectPath,
       agentId: input.agentId,
       title: input.title?.trim() || "新对话",
-      permissionMode: input.permissionMode ?? "read_only",
+      permissionMode: input.permissionMode ?? "explore",
       messages: [],
       createdAtMs,
       updatedAtMs: createdAtMs,
@@ -89,7 +89,7 @@ test("mock chat store creates sessions and mock replies", () => {
     projectPath: "/tmp/demo",
     agentId: "agent-codex",
   });
-  assert.equal(session.permissionMode, "read_only");
+  assert.equal(session.permissionMode, "explore");
   assert.equal(store.list("/tmp/demo").length, 1);
   const after = store.send(session.id, "hello loom");
   assert.ok(after);
