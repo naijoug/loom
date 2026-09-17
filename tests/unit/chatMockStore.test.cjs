@@ -26,6 +26,7 @@ class MockChatStore {
         preview: session.messages.length
           ? session.messages[session.messages.length - 1].content.slice(0, 80)
           : undefined,
+        status: session.status ?? "active",
       }));
   }
 
@@ -37,6 +38,7 @@ class MockChatStore {
       agentId: input.agentId,
       title: input.title?.trim() || "新对话",
       permissionMode: input.permissionMode ?? "explore",
+      status: "active",
       messages: [],
       createdAtMs,
       updatedAtMs: createdAtMs,
@@ -45,6 +47,26 @@ class MockChatStore {
     };
     this.sessions.set(session.id, session);
     return session;
+  }
+
+  setStatus(sessionId, status) {
+    const session = this.sessions.get(sessionId);
+    if (!session) return undefined;
+    const next = {
+      ...session,
+      status: status === "archived" ? "archived" : "active",
+      updatedAtMs: now(),
+    };
+    this.sessions.set(sessionId, next);
+    return next;
+  }
+
+  setPermissionMode(sessionId, permissionMode) {
+    const session = this.sessions.get(sessionId);
+    if (!session) return undefined;
+    const next = { ...session, permissionMode, updatedAtMs: now() };
+    this.sessions.set(sessionId, next);
+    return next;
   }
 
   send(sessionId, text) {
@@ -90,6 +112,7 @@ test("mock chat store creates sessions and mock replies", () => {
     agentId: "agent-codex",
   });
   assert.equal(session.permissionMode, "explore");
+  assert.equal(session.status, "active");
   assert.equal(store.list("/tmp/demo").length, 1);
   const after = store.send(session.id, "hello loom");
   assert.ok(after);
@@ -97,4 +120,19 @@ test("mock chat store creates sessions and mock replies", () => {
   assert.equal(after.messages[0].role, "user");
   assert.equal(after.messages[1].role, "assistant");
   assert.match(after.title, /hello/);
+});
+
+test("mock chat store archives sessions and filters via status", () => {
+  const store = new MockChatStore();
+  const session = store.create({
+    projectPath: "/tmp/demo",
+    agentId: "agent-codex",
+  });
+  store.setStatus(session.id, "archived");
+  store.setPermissionMode(session.id, "auto");
+  const listed = store.list("/tmp/demo");
+  assert.equal(listed.length, 1);
+  assert.equal(listed[0].status, "archived");
+  assert.equal(store.sessions.get(session.id).permissionMode, "auto");
+  assert.equal(store.sessions.get(session.id).status, "archived");
 });

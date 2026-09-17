@@ -3,7 +3,7 @@
 - **Date**: 2026-09-17
 - **Author**: Droplet
 - **Status**: in_progress
-- **Progress**: M0 ✅ (`baa135a`)；本机 grok/codex/claude 均在 PATH → M2 默认 **grok**；下一步 **M1** UI 壳（见文末细拆与验收清单）
+- **Progress**: M1 ✅（Craft IA 壳拆分 + 三档权限 + active/archived + `chat_update_meta`）；本机 grok/codex/claude 均在 PATH → M2 默认 **grok**
 - **Scope**: 在已完成的 chat-first（`docs/plans/2026-09-14/20:06-chat-first-refactor.md` M0–M5）之上，做**彻底重构的 Phase 1**：把产品主表面做成 Craft Agents 风格的**本机 Agent Chat**（会话收件箱 + 转录 + composer + Agent / 权限档位），端到端可 dogfood 调用本机已接线 Agent；**不**在本阶段重写 Task 状态机，不引入云同步 / 市场 / Electron 服务端架构。
 
 参考：
@@ -113,6 +113,8 @@ Craft 侧已阅读要点（README + `docs/cli.md` + shared session/permission + 
 | 0.4 | 决定 Chat 进程：supervisor wrap vs 共享 spawn 辅助（写进本计划 Progress） | 短决策笔记 | 选定一条；禁止再增加第三路径 |
 
 ### M1 — Craft 风格 Chat IA 壳（可仍接 mock / 现有后端）
+
+**Progress**: ✅ 完成（2026-09-17）— `ChatInbox` / `ChatTranscript` / `ChatComposer` / `ChatSessionHeader` / `chatPermission.ts`；三档分段控件 + Shift+Tab；`chat_update_meta`；去掉 checkbox 主交互。
 
 **Outcome**: UI 信息架构接近 Craft，默认仍可用现有 send 路径发纯文本。
 
@@ -233,14 +235,14 @@ src/features/chat/
 
 ### M1 验收清单（可勾选）
 
-- [ ] 默认视图仍是 Chat；Board 入口文案保持「高级」
-- [ ] 左侧 Inbox：会话列表、新建、选中高亮；至少支持 active / archived 过滤或归档动作之一
-- [ ] 主区 Transcript：用户/助手气泡；`parts` 有则分块渲染，无则回退 `content`
-- [ ] Composer：发送 / 停止；Agent `<select>`；**三档分段控件**（探索 / 询问编辑 / 自动），不再用「可写」单 checkbox 作为主交互
-- [ ] Shift+Tab（或文档声明的等价快捷键）循环三档；切换写入当前 session（后端已有则调用，否则先本地 + 下次 send 带上）
-- [ ] mock 路径（无 Tauri）仍可点通新建/发送
-- [ ] `pnpm exec tsc --noEmit` + 既有 `chatPermission` / `chatMockStore` 单测通过
-- [ ] **不**在 M1 改 stream parser、不接 ProcessSupervisor、不铺 MCP
+- [x] 默认视图仍是 Chat；Board 入口文案保持「高级」
+- [x] 左侧 Inbox：会话列表、新建、选中高亮；至少支持 active / archived 过滤或归档动作之一
+- [x] 主区 Transcript：用户/助手气泡；`parts` 有则分块渲染，无则回退 `content`
+- [x] Composer：发送 / 停止；Agent `<select>`；**三档分段控件**（探索 / 询问编辑 / 自动），不再用「可写」单 checkbox 作为主交互
+- [x] Shift+Tab（或文档声明的等价快捷键）循环三档；切换写入当前 session（后端已有则调用，否则先本地 + 下次 send 带上）
+- [x] mock 路径（无 Tauri）仍可点通新建/发送
+- [x] `pnpm exec tsc --noEmit` + 既有 `chatPermission` / `chatMockStore` 单测通过
+- [x] **不**在 M1 改 stream parser、不接 ProcessSupervisor、不铺 MCP
 
 ### M1 非范围（防膨胀）
 
@@ -262,7 +264,8 @@ src/features/chat/
 | 2026-09-17 | 初稿 Phase 1（Craft 启发本机 Chat） |
 | 2026-09-17 | M0 落地 `baa135a`；冻结 Ask/status/探针优先级；旧值迁移 read_only→explore、read_write→ask |
 | 2026-09-17 | **完善计划**：写入本机探针实绩（三 CLI 皆可用）、M1 文件级拆分与验收清单、M2 默认 grok、明确 M1 非范围 |
+| 2026-09-17 | **M1 完成**：Chat IA 壳拆分；三档权限 + Shift+Tab；active/archived；`chat_update_meta` |
 
 ## 下一步建议
 
-立刻做 **M1**（上表验收清单）。完成后进入 **M2（grok 垂直切片）**。不要并行 MCP / 后台任务 / Task 状态机改造。
+M1 已完成。立刻做 **M2（grok 垂直切片）**：真实本机 Agent + 流式 Turn 可视化 + 权限真正传入 `prepare_invocation` + 进程对齐 ProcessSupervisor/共享 spawn。不要并行 MCP / 后台任务 / Task 状态机改造。

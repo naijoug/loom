@@ -424,6 +424,43 @@ pub fn chat_set_agent(
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct ChatUpdateMetaInput {
+    pub project_path: String,
+    pub session_id: String,
+    #[serde(default)]
+    pub title: Option<String>,
+    #[serde(default)]
+    pub permission_mode: Option<String>,
+    #[serde(default)]
+    pub status: Option<String>,
+}
+
+#[tauri::command]
+pub fn chat_update_meta(input: ChatUpdateMetaInput) -> Result<ChatSession, String> {
+    let root = ensure_chat_dirs(Path::new(&input.project_path))?;
+    let mut session = load_session(&root, &input.session_id)?;
+    if let Some(title) = input.title {
+        let trimmed = title.trim();
+        if !trimmed.is_empty() {
+            session.title = trimmed.to_string();
+        }
+    }
+    if let Some(mode) = input.permission_mode {
+        session.permission_mode = normalize_permission_mode(&mode);
+    }
+    if let Some(status) = input.status {
+        session.status = match status.as_str() {
+            "archived" => "archived".to_string(),
+            _ => DEFAULT_SESSION_STATUS.to_string(),
+        };
+    }
+    session.updated_at_ms = now_ms();
+    save_session(&root, &session)?;
+    Ok(session)
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ChatPromoteInput {
     pub project_path: String,
     pub session_id: String,

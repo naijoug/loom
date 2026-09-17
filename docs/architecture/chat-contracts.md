@@ -2,7 +2,7 @@
 
 - **Related**: [chat-first-prd.md](../guides/chat-first-prd.md)
 - **Frontend types**: `src/domain/chat.ts`
-- **Status**: sketch — commands not registered in `contracts.rs` until M2 implements them（避免空命令撑破 manifest 测试）
+- **Status**: Phase 1 / M1 — chat commands registered；`parts` 可视化与 ProcessSupervisor 对齐属 M2+
 
 ## 持久化
 
@@ -36,6 +36,7 @@
 | `chat_send` | `{ projectPath, sessionId, text, permissionMode? }` | `{ turnId: string }` |
 | `chat_abort` | `{ projectPath, sessionId, turnId? }` | `{ ok: true }` |
 | `chat_set_agent` | `{ projectPath, sessionId, agentId }` | `ChatSession` |
+| `chat_update_meta` | `{ projectPath, sessionId, title?, permissionMode?, status? }` | `ChatSession` |
 | `chat_promote_to_task` | `{ projectPath, sessionId }` | `{ taskId: string }` stub |
 
 调用链（强制）：

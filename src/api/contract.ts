@@ -8,6 +8,7 @@ export const TAURI_COMMANDS = {
   chatCreate: "chat_create",
   chatGet: "chat_get",
   chatSetAgent: "chat_set_agent",
+  chatUpdateMeta: "chat_update_meta",
   chatClearResume: "chat_clear_resume",
   chatPromoteToTask: "chat_promote_to_task",
   chatSend: "chat_send",

@@ -2,6 +2,7 @@ import type {
   ChatMessage,
   ChatPermissionMode,
   ChatSession,
+  ChatSessionStatus,
   ChatSessionSummary,
 } from "../../domain/chat";
 import {
@@ -18,7 +19,7 @@ function id(prefix: string) {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-/** In-memory mock for M1 shell. M2 replaces with Tauri chat_* commands. */
+/** In-memory mock for non-Tauri / browser preview. */
 export class MockChatStore {
   private sessions = new Map<string, ChatSession>();
 
@@ -34,6 +35,7 @@ export class MockChatStore {
         preview: session.messages.length
           ? session.messages[session.messages.length - 1].content.slice(0, 80)
           : undefined,
+        status: session.status ?? DEFAULT_CHAT_SESSION_STATUS,
       }));
   }
 
@@ -83,6 +85,29 @@ export class MockChatStore {
       permissionMode: normalizeChatPermissionMode(permissionMode),
       updatedAtMs: now(),
     };
+    this.sessions.set(sessionId, next);
+    return next;
+  }
+
+  setStatus(sessionId: string, status: ChatSessionStatus): ChatSession | undefined {
+    const session = this.sessions.get(sessionId);
+    if (!session) return undefined;
+    const nextStatus: ChatSessionStatus = status === "archived" ? "archived" : "active";
+    const next: ChatSession = {
+      ...session,
+      status: nextStatus,
+      updatedAtMs: now(),
+    };
+    this.sessions.set(sessionId, next);
+    return next;
+  }
+
+  setTitle(sessionId: string, title: string): ChatSession | undefined {
+    const session = this.sessions.get(sessionId);
+    if (!session) return undefined;
+    const trimmed = title.trim();
+    if (!trimmed) return session;
+    const next = { ...session, title: trimmed, updatedAtMs: now() };
     this.sessions.set(sessionId, next);
     return next;
   }

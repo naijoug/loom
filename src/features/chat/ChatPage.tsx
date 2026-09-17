@@ -1,11 +1,21 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { AgentConfig, ChatPermissionMode, ChatSession, ChatSessionSummary, Task } from "../../domain";
+import type {
+  AgentConfig,
+  ChatPermissionMode,
+  ChatSession,
+  ChatSessionSummary,
+  Task,
+} from "../../domain";
 import { useAppState } from "../../state/AppStateContext";
 import { useAgentBridge } from "../../hooks/useAgentBridge";
 import { hasTauriRuntime } from "../../hooks/runtime";
 import { invokeCommand, listenToEvent, TAURI_COMMANDS, TAURI_EVENTS } from "../../api";
-import { Button } from "../../components/common/Button";
 import { mockChatStore } from "./mockStore";
+import { ChatInbox, type InboxFilter } from "./ChatInbox";
+import { ChatTranscript } from "./ChatTranscript";
+import { ChatComposer } from "./ChatComposer";
+import { ChatSessionHeader } from "./ChatSessionHeader";
+import { cyclePermissionMode } from "./chatPermission";
 import "./ChatPage.css";
 
 interface ChatStreamEvent {
@@ -33,11 +43,47 @@ function enabledAgents(agents: AgentConfig[]) {
   return agents.filter((agent) => agent.enabled && agent.adapterType !== "dummy");
 }
 
+async function updateSessionMeta(input: {
+  useBackend: boolean;
+  projectPath: string;
+  sessionId: string;
+  title?: string;
+  permissionMode?: ChatPermissionMode;
+  status?: "active" | "archived";
+}): Promise<ChatSession | null> {
+  if (!input.useBackend) {
+    if (input.permissionMode) {
+      mockChatStore.setPermissionMode(input.sessionId, input.permissionMode);
+    }
+    if (input.status) {
+      mockChatStore.setStatus(input.sessionId, input.status);
+    }
+    if (input.title !== undefined) {
+      mockChatStore.setTitle(input.sessionId, input.title);
+    }
+    return mockChatStore.get(input.sessionId) ?? null;
+  }
+  return invokeCommand<ChatSession>(TAURI_COMMANDS.chatUpdateMeta, {
+    projectPath: input.projectPath,
+    sessionId: input.sessionId,
+    title: input.title,
+    permissionMode: input.permissionMode,
+    status: input.status,
+  });
+}
+
 export function ChatPage() {
   const { state, dispatch } = useAppState();
   const { loadAgents } = useAgentBridge();
   const projectPath = state.projects.current?.path ?? null;
   const agents = useMemo(() => enabledAgents(state.agents), [state.agents]);
+  const agentNameById = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const agent of state.agents) {
+      map[agent.id] = agent.name;
+    }
+    return map;
+  }, [state.agents]);
   const useBackend = hasTauriRuntime();
 
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -46,6 +92,7 @@ export function ChatPage() {
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [inboxFilter, setInboxFilter] = useState<InboxFilter>("active");
 
   const refreshSummaries = useCallback(async () => {
     if (!projectPath) {
@@ -176,6 +223,7 @@ export function ChatPage() {
       return;
     }
     setError(null);
+    setInboxFilter("active");
     if (!useBackend) {
       const created = mockChatStore.create({ projectPath, agentId });
       setSessionId(created.id);
@@ -234,6 +282,99 @@ export function ChatPage() {
     setSending(false);
   }
 
+  async function handlePermissionChange(mode: ChatPermissionMode) {
+    if (!session || !projectPath) return;
+    try {
+      const next = await updateSessionMeta({
+        useBackend,
+        projectPath,
+        sessionId: session.id,
+        permissionMode: mode,
+      });
+      setSession(next);
+      await refreshSummaries();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  async function handleCyclePermission() {
+    if (!session || sending) return;
+    await handlePermissionChange(cyclePermissionMode(session.permissionMode));
+  }
+
+  async function handleAgentChange(agentId: string) {
+    if (!session || !projectPath) return;
+    try {
+      if (!useBackend) {
+        const next = mockChatStore.setAgent(session.id, agentId);
+        setSession(next ?? null);
+        await refreshSummaries();
+        return;
+      }
+      const next = await invokeCommand<ChatSession>(TAURI_COMMANDS.chatSetAgent, {
+        projectPath,
+        sessionId: session.id,
+        agentId,
+      });
+      setSession(next);
+      await refreshSummaries();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  async function handleArchive(id: string) {
+    if (!projectPath) return;
+    try {
+      await updateSessionMeta({
+        useBackend,
+        projectPath,
+        sessionId: id,
+        status: "archived",
+      });
+      if (sessionId === id) {
+        setSessionId(null);
+        setSession(null);
+      }
+      await refreshSummaries();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  async function handleClearResume() {
+    if (!session || !projectPath || !useBackend) return;
+    try {
+      const next = await invokeCommand<ChatSession>(TAURI_COMMANDS.chatClearResume, {
+        projectPath,
+        sessionId: session.id,
+      });
+      setSession(next);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `清除续聊失败：${String(err)}`);
+    }
+  }
+
+  async function handlePromote() {
+    if (!session || !projectPath || !useBackend) return;
+    try {
+      const result = await invokeCommand<{
+        taskId: string;
+        task: Task;
+        session: ChatSession;
+      }>(TAURI_COMMANDS.chatPromoteToTask, {
+        projectPath,
+        sessionId: session.id,
+      });
+      setSession(result.session);
+      dispatch({ type: "tasks/upserted", task: result.task });
+      dispatch({ type: "tasks/selected", taskId: result.taskId });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
   if (!projectPath) {
     return (
       <div className="chat-page-empty" role="status">
@@ -244,211 +385,63 @@ export function ChatPage() {
     );
   }
 
+  const canPromote = Boolean(session && session.messages.some((message) => message.role === "user"));
+
   return (
-    <div className="chat-page" data-testid="chat-page">
-      <aside className="chat-session-pane" aria-label="会话列表">
-        <div className="chat-session-header">
-          <h2>对话</h2>
-          <Button type="button" onClick={() => void handleCreate()}>
-            新建
-          </Button>
-        </div>
-        {summaries.length === 0 ? (
-          <div className="chat-session-empty">
-            还没有会话。点「新建」开始。
-            {useBackend ? " 将通过本机 Agent CLI 流式回复。" : " （浏览器预览使用模拟回复）"}
-          </div>
-        ) : (
-          <ul className="chat-session-list">
-            {summaries.map((item) => (
-              <li key={item.id}>
-                <button
-                  type="button"
-                  className={`chat-session-item${item.id === sessionId ? " selected" : ""}`}
-                  onClick={() => {
-                    setSessionId(item.id);
-                    setError(null);
-                  }}
-                >
-                  <span className="chat-session-title">{item.title}</span>
-                  {item.preview ? <span className="chat-session-preview">{item.preview}</span> : null}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </aside>
+    <div
+      className="chat-page"
+      data-testid="chat-page"
+      onKeyDown={(event) => {
+        if (event.key !== "Tab" || !event.shiftKey || !session) return;
+        const target = event.target as HTMLElement | null;
+        if (!target?.closest(".chat-main")) return;
+        event.preventDefault();
+        void handleCyclePermission();
+      }}
+    >
+      <ChatInbox
+        summaries={summaries}
+        selectedId={sessionId}
+        filter={inboxFilter}
+        agentNameById={agentNameById}
+        useBackend={useBackend}
+        onFilterChange={setInboxFilter}
+        onSelect={(id) => {
+          setSessionId(id);
+          setError(null);
+        }}
+        onCreate={() => void handleCreate()}
+        onArchive={(id) => void handleArchive(id)}
+      />
 
       <section className="chat-main" aria-label="当前会话">
         {!session ? (
           <div className="chat-messages-empty">选择或新建一个会话开始聊天。</div>
         ) : (
           <>
-            <div className="chat-main-header">
-              <h1 className="chat-main-title">{session.title}</h1>
-              <div className="chat-main-meta">
-                <label>
-                  <span className="visually-hidden">Agent</span>
-                  <select
-                    className="chat-agent-select"
-                    value={session.agentId}
-                    onChange={(event) => {
-                      const agentId = event.target.value;
-                      void (async () => {
-                        if (!useBackend) {
-                          const next = mockChatStore.setAgent(session.id, agentId);
-                          setSession(next ?? null);
-                          return;
-                        }
-                        const next = await invokeCommand<ChatSession>(TAURI_COMMANDS.chatSetAgent, {
-                          projectPath,
-                          sessionId: session.id,
-                          agentId,
-                        });
-                        setSession(next);
-                      })();
-                    }}
-                    aria-label="选择 Agent"
-                  >
-                    {agents.length === 0 ? (
-                      <option value={session.agentId}>无可用 Agent</option>
-                    ) : (
-                      agents.map((agent) => (
-                        <option key={agent.id} value={agent.id}>
-                          {agent.name}
-                        </option>
-                      ))
-                    )}
-                  </select>
-                </label>
-                <label className="chat-permission">
-                  <input
-                    type="checkbox"
-                    checked={session.permissionMode !== "explore"}
-                    onChange={(event) => {
-                      // M0/M1 bridge: unchecked → explore; checked → ask (safer than auto).
-                      const mode: ChatPermissionMode = event.target.checked ? "ask" : "explore";
-                      if (!useBackend) {
-                        setSession(mockChatStore.setPermissionMode(session.id, mode) ?? null);
-                        return;
-                      }
-                      setSession({ ...session, permissionMode: mode });
-                    }}
-                  />
-                  允许写入（Ask）
-                </label>
-                {session.resumeCommand ? (
-                  <span className="chat-hint" title={session.resumeCommand}>
-                    可续聊
-                    <button
-                      type="button"
-                      className="chat-agent-select"
-                      style={{ marginLeft: 8 }}
-                      onClick={() => {
-                        void (async () => {
-                          if (!useBackend || !projectPath) return;
-                          try {
-                            const next = await invokeCommand<ChatSession>(
-                              TAURI_COMMANDS.chatClearResume,
-                              { projectPath, sessionId: session.id },
-                            );
-                            setSession(next);
-                          } catch (err) {
-                            setError(
-                              err instanceof Error
-                                ? err.message
-                                : `清除续聊失败：${String(err)}`,
-                            );
-                          }
-                        })();
-                      }}
-                    >
-                      开新 CLI 会话
-                    </button>
-                  </span>
-                ) : (
-                  <span className="chat-hint">新 CLI 会话</span>
-                )}
-              </div>
-            </div>
-
-            <div className="chat-messages" data-testid="chat-messages">
-              {session.messages.length === 0 ? (
-                <div className="chat-messages-empty">
-                  发送第一条消息。默认「探索」只读；勾选「允许写入（Ask）」为保守档（Phase 1 无审批弹窗）；完整「自动」可写在后续 Header 三档控件落地。
-                </div>
-              ) : (
-                session.messages.map((message) => (
-                  <div key={message.id} className={`chat-bubble ${message.role}`}>
-                    {message.content || (message.status === "streaming" ? "…" : "")}
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div className="chat-composer">
-              {error ? <div className="chat-hint" role="alert">{error}</div> : null}
-              <textarea
-                value={draft}
-                onChange={(event) => setDraft(event.target.value)}
-                placeholder="输入消息…（Enter 发送，Shift+Enter 换行）"
-                aria-label="消息输入"
-                disabled={sending}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" && !event.shiftKey) {
-                    event.preventDefault();
-                    void handleSend();
-                  }
-                }}
-              />
-              <div className="chat-composer-actions">
-                <span className="chat-hint">
-                  {useBackend ? "本机 CLI" : "模拟"} ·{" "}
-                  {session.permissionMode === "auto" ? "自动" : session.permissionMode === "ask" ? "询问编辑" : "探索"}
-                  {session.resumeCommand ? " · 续聊中" : ""}
-                  {sending ? " · 生成中…" : ""}
-                </span>
-                <div style={{ display: "flex", gap: 8 }}>
-                  {useBackend ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      disabled={sending || session.messages.every((m) => m.role !== "user")}
-                      onClick={() => {
-                        void (async () => {
-                          if (!projectPath) return;
-                          try {
-                            const result = await invokeCommand<{
-                              taskId: string;
-                              task: Task;
-                              session: ChatSession;
-                            }>(TAURI_COMMANDS.chatPromoteToTask, {
-                              projectPath,
-                              sessionId: session.id,
-                            });
-                            setSession(result.session);
-                            dispatch({ type: "tasks/upserted", task: result.task });
-                            dispatch({ type: "tasks/selected", taskId: result.taskId });
-                          } catch (err) {
-                            setError(err instanceof Error ? err.message : String(err));
-                          }
-                        })();
-                      }}
-                    >
-                      升格为任务
-                    </Button>
-                  ) : null}
-                  {sending && useBackend ? (
-                    <Button type="button" variant="ghost" onClick={() => void handleAbort()}>
-                      停止
-                    </Button>
-                  ) : null}
-                  <Button type="button" onClick={() => void handleSend()} disabled={!draft.trim() || sending}>
-                    发送
-                  </Button>
-                </div>
-              </div>
-            </div>
+            <ChatSessionHeader
+              session={session}
+              useBackend={useBackend}
+              canPromote={canPromote}
+              onClearResume={() => void handleClearResume()}
+              onPromote={() => void handlePromote()}
+            />
+            <ChatTranscript messages={session.messages} />
+            <ChatComposer
+              draft={draft}
+              sending={sending}
+              error={error}
+              useBackend={useBackend}
+              agentId={session.agentId}
+              agents={agents}
+              permissionMode={session.permissionMode}
+              resumeHint={Boolean(session.resumeCommand)}
+              onDraftChange={setDraft}
+              onSend={() => void handleSend()}
+              onAbort={() => void handleAbort()}
+              onAgentChange={(id) => void handleAgentChange(id)}
+              onPermissionChange={(mode) => void handlePermissionChange(mode)}
+            />
           </>
         )}
       </section>
