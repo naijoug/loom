@@ -34,6 +34,13 @@ import {
   isChatTurnRunning,
   turnRunningHint,
 } from "./chatTurn";
+import {
+  chatStoreDraftFor,
+  chatStoreSelectProject,
+  chatStoreSetDraft,
+  createChatStoreSnapshot,
+  type ChatStoreSnapshot,
+} from "./state/chatStore";
 import "./ChatPage.css";
 
 interface ChatStreamEvent {
@@ -127,7 +134,6 @@ export function ChatPage() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [session, setSession] = useState<ChatSession | null>(null);
   const [summaries, setSummaries] = useState<ChatSessionSummary[]>([]);
-  const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [turnStartedAtMs, setTurnStartedAtMs] = useState<number | null>(null);
@@ -141,6 +147,20 @@ export function ChatPage() {
   }, []);
   const [inboxFilter, setInboxFilter] = useState<InboxFilter>("active");
   const [inboxSearch, setInboxSearch] = useState("");
+  const [chatStore, setChatStore] = useState<ChatStoreSnapshot>(() =>
+    createChatStoreSnapshot(projectPath),
+  );
+
+  useEffect(() => {
+    setChatStore((prev) => chatStoreSelectProject(prev, projectPath));
+  }, [projectPath]);
+  const draft = chatStoreDraftFor(chatStore, sessionId);
+  const setDraft = (value: string) => {
+    if (!sessionId) return;
+    setChatStore((prev) => chatStoreSetDraft(prev, sessionId, value));
+  };
+
+
   const [contextOpen, setContextOpen] = useState(false);
 
   const [diagnostics, setDiagnostics] = useState<AgentDiagnostic[]>([]);
