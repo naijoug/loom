@@ -1,0 +1,65 @@
+[
+  {
+    "name": "npm clean install",
+    "command": "npm ci",
+    "program": "npm",
+    "args": ["ci"],
+    "dependencyMutation": true
+  },
+  {
+    "name": "pnpm filtered update",
+    "command": "pnpm --filter web update",
+    "program": "pnpm",
+    "args": ["--filter", "web", "update"],
+    "dependencyMutation": true
+  },
+  {
+    "name": "yarn removal",
+    "command": "yarn remove left-pad",
+    "program": "yarn",
+    "args": ["remove", "left-pad"],
+    "dependencyMutation": true
+  },
+  {
+    "name": "bun upgrade",
+    "command": "bun upgrade",
+    "program": "bun",
+    "args": ["upgrade"],
+    "dependencyMutation": true
+  },
+  {
+    "name": "pip3 uninstall",
+    "command": "pip3 uninstall requests",
+    "program": "pip3",
+    "args": ["uninstall", "requests"],
+    "dependencyMutation": true
+  },
+  {
+    "name": "python pip uninstall",
+    "command": "python -m pip uninstall requests",
+    "program": "python",
+    "args": ["-m", "pip", "uninstall", "requests"],
+    "dependencyMutation": true
+  },
+  {
+    "name": "cargo remove",
+    "command": "cargo remove serde",
+    "program": "cargo",
+    "args": ["remove", "serde"],
+    "dependencyMutation": true
+  },
+  {
+    "name": "npm script with package-like name",
+    "command": "npm run add-fixture",
+    "program": "npm",
+    "args": ["run", "add-fixture"],
+    "dependencyMutation": false
+  },
+  {
+    "name": "pnpm script named update",
+    "command": "pnpm run update",
+    "program": "pnpm",
+    "args": ["run", "update"],
+    "dependencyMutation": false
+  }
+]

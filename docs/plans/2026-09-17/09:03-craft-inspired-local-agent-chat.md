@@ -3,7 +3,7 @@
 - **Date**: 2026-09-17
 - **Author**: Droplet
 - **Status**: in_progress
-- **Progress**: M0 完成（PRD/IA/契约类型冻结；三档权限 + 旧值迁移；Rust/TS 规范化与单测）
+- **Progress**: M0 ✅ (`baa135a`)；本机 grok/codex/claude 均在 PATH → M2 默认 **grok**；下一步 **M1** UI 壳（见文末细拆与验收清单）
 - **Scope**: 在已完成的 chat-first（`docs/plans/2026-09-14/20:06-chat-first-refactor.md` M0–M5）之上，做**彻底重构的 Phase 1**：把产品主表面做成 Craft Agents 风格的**本机 Agent Chat**（会话收件箱 + 转录 + composer + Agent / 权限档位），端到端可 dogfood 调用本机已接线 Agent；**不**在本阶段重写 Task 状态机，不引入云同步 / 市场 / Electron 服务端架构。
 
 参考：
@@ -202,6 +202,67 @@ Craft 侧已阅读要点（README + `docs/cli.md` + shared session/permission + 
 - `read_only` → `explore`
 - `read_write` → `ask`（偏安全；需显式选 `auto` 才可写）
 
+## 本机探针（2026-09-17）
+
+| Binary | Path | Phase 1 角色 |
+|---|---|---|
+| `grok` | `/Users/guojian/.grok/bin/grok` | **M2 默认垂直切片**（冻结优先级第一且本机可用） |
+| `codex` | `/Users/guojian/.npm-global/bin/codex` | M3 对等；M2 可作对照 smoke |
+| `claude` | `/Users/guojian/.local/bin/claude` | M3 对等；M2 可作对照 smoke |
+
+> PATH 以用户 GUI/开发机为准；Settings 仍应支持绝对路径覆盖（桌面 App 可能看不到 shell PATH）。
+
+## M1 实施细拆（相对当前 `ChatPage.tsx` 单体 ~459 行）
+
+当前：`src/features/chat/ChatPage.tsx` 仍集会话列表、转录、composer、权限 checkbox 桥接于一身（M0 仅把 checkbox 映射到 explore/ask）。
+
+### 目标结构
+
+```
+src/features/chat/
+  ChatPage.tsx              # 布局编排 + 数据钩子
+  ChatInbox.tsx             # 会话列表 / 新建 / 归档过滤
+  ChatTranscript.tsx        # 消息列表；parts 渲染（text/tool/error）
+  ChatComposer.tsx          # 输入、发送、停止、Agent、权限三档
+  ChatSessionHeader.tsx     # 标题、权限徽章、升格入口
+  chatPermission.ts         # cyclePermissionMode(explore→ask→auto)
+  ChatPage.css              # 分区布局（inbox | main）
+  mockStore.ts              # 保持浏览器预览
+  index.ts
+```
+
+### M1 验收清单（可勾选）
+
+- [ ] 默认视图仍是 Chat；Board 入口文案保持「高级」
+- [ ] 左侧 Inbox：会话列表、新建、选中高亮；至少支持 active / archived 过滤或归档动作之一
+- [ ] 主区 Transcript：用户/助手气泡；`parts` 有则分块渲染，无则回退 `content`
+- [ ] Composer：发送 / 停止；Agent `<select>`；**三档分段控件**（探索 / 询问编辑 / 自动），不再用「可写」单 checkbox 作为主交互
+- [ ] Shift+Tab（或文档声明的等价快捷键）循环三档；切换写入当前 session（后端已有则调用，否则先本地 + 下次 send 带上）
+- [ ] mock 路径（无 Tauri）仍可点通新建/发送
+- [ ] `pnpm exec tsc --noEmit` + 既有 `chatPermission` / `chatMockStore` 单测通过
+- [ ] **不**在 M1 改 stream parser、不接 ProcessSupervisor、不铺 MCP
+
+### M1 非范围（防膨胀）
+
+- 不实现真实 tool 事件解析（那是 M2）
+- 不做会话搜索/重命名 API（可先 UI placeholder；API 放 M4）
+- 不改升格业务逻辑（按钮可挪到 Header）
+
+## M2 验收预告（依赖 M1）
+
+- 默认 Agent = **grok**（可用绝对路径启动）
+- 一轮：新建 → 流式 → Stop → 再发 → resume 续聊
+- explore 不进入可写 stage；auto 才 `acceptEdits` / workspace-write
+- 进程：M2 必须二选一写进 Progress——`ProcessSupervisor(intent=chat)` **或** 共享 spawn/abort 辅助（禁止第三套）
+
+## 计划变更日志
+
+| 日期 | 变更 |
+|---|---|
+| 2026-09-17 | 初稿 Phase 1（Craft 启发本机 Chat） |
+| 2026-09-17 | M0 落地 `baa135a`；冻结 Ask/status/探针优先级；旧值迁移 read_only→explore、read_write→ask |
+| 2026-09-17 | **完善计划**：写入本机探针实绩（三 CLI 皆可用）、M1 文件级拆分与验收清单、M2 默认 grok、明确 M1 非范围 |
+
 ## 下一步建议
 
-M0 已完成。下一步 **M1**：拆分 Chat IA 壳（Inbox / Transcript / Composer / Header 三档权限）；再 **M2** 按 grok→codex→claude 探测结果做垂直切片。不要并行铺 MCP / 后台任务 / Task 状态机改造。
+立刻做 **M1**（上表验收清单）。完成后进入 **M2（grok 垂直切片）**。不要并行 MCP / 后台任务 / Task 状态机改造。

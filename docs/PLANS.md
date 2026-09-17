@@ -3,7 +3,7 @@
 ## 2026-09-17
 
 - 09:03-craft-inspired-local-agent-chat.md
-  > （实施中，M0 完成）Craft 启发本机 Agent Chat Phase 1：已冻结 PRD/IA、三档权限（explore/ask/auto）与旧值迁移、session status=active|archived、dogfood 探测 grok→codex→claude；Ask 无审批弹窗。下一步 M1 壳层拆分。
+  > （实施中，M0 ✅）Craft 启发本机 Agent Chat Phase 1：M0 已合入；计划已补本机探针（三 CLI 可用、M2 默认 grok）、M1 文件级拆分与验收清单。下一步 M1 Chat 壳。
 
 ## 2026-09-14
 
