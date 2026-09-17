@@ -19,5 +19,7 @@ Linux box / CI 通常无用户 Mac 上的 `claude`/`grok` 二进制；M3 以 str
 
 | UI | stage | Grok | Codex | Claude |
 |---|---|---|---|---|
+> **Phase 2 更新（2026-09-17）**：`ask` 改为 Debugging / 可写 CLI + Composer 每回合确认；见 `docs/plans/2026-09-17/10:55-craft-chat-phase2.md`。下表保留 Phase 1 历史映射。
+
 | explore / ask | Planning | `plan` | `read-only` | 不传 `--permission-mode` |
 | auto | Debugging | `acceptEdits` | `workspace-write` | `acceptEdits` |

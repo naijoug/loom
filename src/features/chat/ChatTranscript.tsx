@@ -65,7 +65,7 @@ export function ChatTranscript({ messages, emptyHint }: ChatTranscriptProps) {
       <div className="chat-transcript chat-transcript-empty" data-testid="chat-messages">
         <div className="chat-messages-empty">
           {emptyHint ??
-            "发送第一条消息。权限三档：探索（只读）/ 询问编辑（Phase 1 保守，无审批弹窗）/ 自动（可写）。Shift+Tab 循环切换。"}
+            "发送第一条消息。权限三档：探索（只读）/ 询问编辑（可写，每回合确认）/ 自动（可写）。Shift+Tab 循环切换。"}
         </div>
       </div>
     );

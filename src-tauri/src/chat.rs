@@ -327,10 +327,13 @@ fn reconcile_interrupted_session(session: &mut ChatSession) -> bool {
 }
 
 fn permission_to_stage(mode: &str) -> AgentStage {
-    // explore/ask (+ legacy read_only / read_write→ask) → Planning (conservative CLI).
-    // auto → Debugging (workspace-write / acceptEdits).
+    // Phase 2:
+    // - explore (+ legacy read_only) → Planning (conservative CLI)
+    // - ask (+ legacy read_write→ask) → Debugging (writable CLI); UI requires
+    //   per-turn confirm before send (Composer gate — not enforced here)
+    // - auto → Debugging without UI confirm
     match normalize_permission_mode(mode).as_str() {
-        "auto" => AgentStage::Debugging,
+        "ask" | "auto" => AgentStage::Debugging,
         _ => AgentStage::Planning,
     }
 }
@@ -1315,9 +1318,9 @@ mod tests {
     #[test]
     fn permission_modes_map_to_conservative_or_write_stages() {
         assert_eq!(permission_to_stage("explore"), AgentStage::Planning);
-        assert_eq!(permission_to_stage("ask"), AgentStage::Planning);
+        assert_eq!(permission_to_stage("ask"), AgentStage::Debugging);
         assert_eq!(permission_to_stage("read_only"), AgentStage::Planning);
-        assert_eq!(permission_to_stage("read_write"), AgentStage::Planning);
+        assert_eq!(permission_to_stage("read_write"), AgentStage::Debugging);
         assert_eq!(permission_to_stage("auto"), AgentStage::Debugging);
     }
 
@@ -1326,7 +1329,7 @@ mod tests {
         let root = Path::new("/repo");
         let cases = [
             ("explore", AgentStage::Planning),
-            ("ask", AgentStage::Planning),
+            ("ask", AgentStage::Debugging),
             ("auto", AgentStage::Debugging),
         ];
 
@@ -1346,10 +1349,10 @@ mod tests {
                 },
             )
             .expect("grok");
-            let expected_perm = if mode == "auto" {
-                "acceptEdits"
-            } else {
+            let expected_perm = if mode == "explore" {
                 "plan"
+            } else {
+                "acceptEdits"
             };
             assert_eq!(
                 arg_pair(&grok.args, "--permission-mode"),
@@ -1369,10 +1372,10 @@ mod tests {
                 },
             )
             .expect("codex");
-            let expected_sandbox = if mode == "auto" {
-                "workspace-write"
-            } else {
+            let expected_sandbox = if mode == "explore" {
                 "read-only"
+            } else {
+                "workspace-write"
             };
             assert_eq!(
                 arg_pair(&codex.args, "--sandbox"),
@@ -1392,16 +1395,16 @@ mod tests {
                 },
             )
             .expect("claude");
-            if mode == "auto" {
-                assert_eq!(
-                    arg_pair(&claude.args, "--permission-mode"),
-                    Some("acceptEdits"),
-                    "claude auto"
-                );
-            } else {
+            if mode == "explore" {
                 assert!(
                     arg_pair(&claude.args, "--permission-mode").is_none(),
                     "claude {mode} should omit permission-mode"
+                );
+            } else {
+                assert_eq!(
+                    arg_pair(&claude.args, "--permission-mode"),
+                    Some("acceptEdits"),
+                    "claude {mode}"
                 );
             }
         }

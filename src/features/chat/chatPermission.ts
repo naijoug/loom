@@ -1,6 +1,9 @@
 import type { AgentAdapterType } from "../../domain/agent";
 import type { ChatPermissionMode } from "../../domain/chat";
-import { normalizeChatPermissionMode } from "../../domain/chat";
+import {
+  chatPermissionAllowsWrite,
+  normalizeChatPermissionMode,
+} from "../../domain/chat";
 
 /** Cycle order for Shift+Tab / permission control. */
 export const CHAT_PERMISSION_CYCLE: readonly ChatPermissionMode[] = [
@@ -15,6 +18,9 @@ const LABELS: Record<ChatPermissionMode, string> = {
   auto: "自动",
 };
 
+/** Copy for the Ask per-turn write gate (P2-M1). */
+export const ASK_TURN_CONFIRM_LABEL = "允许本回合写文件/跑可写工具";
+
 export function permissionModeLabel(mode: ChatPermissionMode): string {
   return LABELS[normalizeChatPermissionMode(mode)];
 }
@@ -27,21 +33,34 @@ export function cyclePermissionMode(mode: ChatPermissionMode): ChatPermissionMod
   return next ?? "explore";
 }
 
-/** M0/M2 mapping table — keep Chat UI aligned when switching agents. */
+/**
+ * Phase 2 Ask gate: ask requires an explicit in-UI confirm before each send.
+ * explore / auto do not.
+ */
+export function askTurnRequiresConfirm(mode: ChatPermissionMode | string): boolean {
+  return normalizeChatPermissionMode(mode) === "ask";
+}
+
+/** M0/M2/P2 mapping — Chat UI CLI hint when switching agents. */
 export function permissionCliHint(
   adapterType: AgentAdapterType | string | undefined,
   mode: ChatPermissionMode,
 ): string {
-  const write = normalizeChatPermissionMode(mode) === "auto";
+  const write = chatPermissionAllowsWrite(mode);
+  const askGate = askTurnRequiresConfirm(mode);
+  const gateSuffix = askGate ? " · 发送前确认" : "";
   switch (adapterType) {
     case "grok_cli":
-      return write ? "CLI · --permission-mode acceptEdits" : "CLI · --permission-mode plan";
+      return (write ? "CLI · --permission-mode acceptEdits" : "CLI · --permission-mode plan") + gateSuffix;
     case "codex_cli":
-      return write ? "CLI · --sandbox workspace-write" : "CLI · --sandbox read-only";
+      return (write ? "CLI · --sandbox workspace-write" : "CLI · --sandbox read-only") + gateSuffix;
     case "claude_code_cli":
-      return write ? "CLI · --permission-mode acceptEdits" : "CLI · 默认只读（不传 permission-mode）";
+      return (
+        (write ? "CLI · --permission-mode acceptEdits" : "CLI · 默认只读（不传 permission-mode）") +
+        gateSuffix
+      );
     default:
-      return write ? "CLI · 可写 stage" : "CLI · 只读 stage";
+      return (write ? "CLI · 可写 stage" : "CLI · 只读 stage") + gateSuffix;
   }
 }
 

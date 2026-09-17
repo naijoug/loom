@@ -1,6 +1,6 @@
-/** Chat-first / Craft Phase 1 domain types. ChatSession ≠ Task. */
+/** Chat-first / Craft Chat domain types (Phase 1–2). ChatSession ≠ Task. */
 
-/** Craft-inspired permission tiers (Phase 1). */
+/** Craft-inspired permission tiers (Phase 2 Ask = writable + confirm). */
 export type ChatPermissionMode = "explore" | "ask" | "auto";
 
 /** Legacy values persisted by chat-first M0–M5; normalize on read. */
@@ -101,7 +101,7 @@ export const DEFAULT_CHAT_SESSION_STATUS: ChatSessionStatus = "active";
 /**
  * Normalize disk / UI permission strings.
  * - read_only → explore
- * - read_write → ask (safer: old "writable" sessions load as Ask / conservative CLI)
+ * - read_write → ask (safer: old "writable" sessions load as Ask = writable + per-turn confirm)
  */
 export function normalizeChatPermissionMode(
   value: ChatPermissionModeInput | null | undefined,
@@ -120,9 +120,14 @@ export function normalizeChatPermissionMode(
   }
 }
 
-/** True when mode maps to write-capable adapter stage (auto only in Phase 1). */
+/**
+ * True when mode maps to write-capable adapter stage.
+ * Phase 2: ask and auto both use Debugging / acceptEdits; ask still requires
+ * a per-turn UI confirm before send (see chatPermission.askTurnRequiresConfirm).
+ */
 export function chatPermissionAllowsWrite(mode: ChatPermissionModeInput): boolean {
-  return normalizeChatPermissionMode(mode) === "auto";
+  const normalized = normalizeChatPermissionMode(mode);
+  return normalized === "ask" || normalized === "auto";
 }
 
 /** Whether an active session should appear under the needs_attention filter. */

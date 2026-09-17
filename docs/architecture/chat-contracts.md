@@ -49,22 +49,22 @@
 
 仅在 turn **complete** 时写入新的 resume handle；abort/error 保留旧 handle。
 
-### permissionMode → adapter stage（Phase 1）
+### permissionMode → adapter stage（Phase 2）
 
-权威 CLI flag 见 [craft-local-chat-prd.md](../guides/craft-local-chat-prd.md) 附录。
+权威 CLI flag 见 [craft-local-chat-prd.md](../guides/craft-local-chat-prd.md) 附录。Ask 门禁见 Phase 2 计划 `docs/plans/2026-09-17/10:55-craft-chat-phase2.md`。
 
 | permissionMode | stage | 说明 |
 |---|---|---|
 | `explore` | `planning` | 默认；只读 sandbox / plan |
-| `ask` | `planning` | 与 explore 同级保守 CLI；**无**审批 UI（Phase 2+） |
-| `auto` | `debugging` | 可写 + 跑命令（仍受 agent flags / execution_policy） |
+| `ask` | `debugging` | 可写 CLI；**每回合发送前** Composer 确认「允许本回合写文件/跑可写工具」 |
+| `auto` | `debugging` | 可写 + 跑命令（无确认；仍受 agent flags / execution_policy） |
 
-旧值：`read_only`→`explore`；`read_write`→`ask`（偏安全）。
+旧值：`read_only`→`explore`；`read_write`→`ask`（偏安全：可写但需确认）。
 
 | UI | Grok | Codex | Claude |
 |---|---|---|---|
-| explore / ask | `--permission-mode plan` | `--sandbox read-only` | 不传 `--permission-mode` |
-| auto | `acceptEdits` | `workspace-write` | `acceptEdits` |
+| explore | `--permission-mode plan` | `--sandbox read-only` | 不传 `--permission-mode` |
+| ask / auto | `acceptEdits` | `workspace-write` | `acceptEdits` |
 
 ## Events
 
@@ -83,4 +83,4 @@
 
 - Chat 不复用 `run_planning_discussion` 作为传输
 - 不把 Chat turn 绑进 Task stage
-- MCP / Sources 连接、Ask per-tool 审批、后台任务产品化、Craft 五态 Inbox
+- MCP / Sources 连接、Ask **per-tool** 运行时审批（当前为发送前确认 stub）、后台任务产品化、Craft 五态 Inbox

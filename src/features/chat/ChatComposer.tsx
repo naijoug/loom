@@ -1,7 +1,10 @@
+import { useEffect, useState } from "react";
 import type { AgentConfig, AgentDiagnostic, ChatPermissionMode } from "../../domain";
 import { Button } from "../../components/common/Button";
 import {
+  ASK_TURN_CONFIRM_LABEL,
   CHAT_PERMISSION_CYCLE,
+  askTurnRequiresConfirm,
   permissionCliHint,
   permissionModeLabel,
 } from "./chatPermission";
@@ -44,15 +47,63 @@ export function ChatComposer({
   onAgentChange,
   onPermissionChange,
 }: ChatComposerProps) {
+  const [askConfirmOpen, setAskConfirmOpen] = useState(false);
   const selectedAgent = agents.find((agent) => agent.id === agentId);
   const selectedDiagnostic = diagnostics.find((item) => item.agentId === agentId);
   const cliHint = permissionCliHint(selectedAgent?.adapterType, permissionMode);
+  const needsAskConfirm = askTurnRequiresConfirm(permissionMode);
+
+  useEffect(() => {
+    // Dismiss pending gate when mode changes away from ask or send starts.
+    if (!needsAskConfirm || sending) {
+      setAskConfirmOpen(false);
+    }
+  }, [needsAskConfirm, sending, permissionMode]);
+
+  function requestSend() {
+    if (!draft.trim() || sending) return;
+    if (needsAskConfirm && !askConfirmOpen) {
+      setAskConfirmOpen(true);
+      return;
+    }
+    setAskConfirmOpen(false);
+    onSend();
+  }
+
+  function cancelAskConfirm() {
+    setAskConfirmOpen(false);
+  }
 
   return (
     <div className="chat-composer">
       {error ? (
         <div className="chat-hint" role="alert">
           {error}
+        </div>
+      ) : null}
+
+      {askConfirmOpen && needsAskConfirm ? (
+        <div
+          className="chat-ask-confirm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="chat-ask-confirm-title"
+        >
+          <div className="chat-ask-confirm-body">
+            <strong id="chat-ask-confirm-title">询问编辑 · 本回合授权</strong>
+            <p>
+              当前档位会使用可写 CLI（acceptEdits / workspace-write）。确认后仅对本回合生效：
+              <span className="chat-ask-confirm-label"> {ASK_TURN_CONFIRM_LABEL}</span>
+            </p>
+          </div>
+          <div className="chat-ask-confirm-actions">
+            <Button type="button" variant="ghost" onClick={cancelAskConfirm}>
+              取消
+            </Button>
+            <Button type="button" onClick={requestSend}>
+              确认并发送
+            </Button>
+          </div>
         </div>
       ) : null}
 
@@ -127,7 +178,11 @@ export function ChatComposer({
         onKeyDown={(event) => {
           if (event.key === "Enter" && !event.shiftKey) {
             event.preventDefault();
-            onSend();
+            requestSend();
+          }
+          if (event.key === "Escape" && askConfirmOpen) {
+            event.preventDefault();
+            cancelAskConfirm();
           }
         }}
       />
@@ -136,6 +191,7 @@ export function ChatComposer({
         <span className="chat-hint">
           {useBackend ? "本机 CLI" : "模拟"} · {permissionModeLabel(permissionMode)}
           {selectedAgent ? ` · ${cliHint}` : ""}
+          {needsAskConfirm ? " · 每回合需确认可写" : ""}
           {resumeHint ? " · 续聊中" : ""}
           {sending ? " · 生成中…" : ""}
         </span>
@@ -145,8 +201,8 @@ export function ChatComposer({
               停止
             </Button>
           ) : null}
-          <Button type="button" onClick={onSend} disabled={!draft.trim() || sending}>
-            发送
+          <Button type="button" onClick={requestSend} disabled={!draft.trim() || sending}>
+            {needsAskConfirm ? "发送…" : "发送"}
           </Button>
         </div>
       </div>

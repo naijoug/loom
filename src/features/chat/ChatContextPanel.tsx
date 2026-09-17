@@ -56,6 +56,9 @@ export function ChatContextPanel({
           <p>
             当前档位：<strong>{permissionModeLabel(permissionMode)}</strong>
             <span className="chat-hint">（Shift+Tab 可循环）</span>
+            {permissionMode === "ask" ? (
+              <span className="chat-hint"> · 询问编辑：可写 CLI，发送前需确认本回合授权</span>
+            ) : null}
           </p>
         ) : (
           <p className="chat-hint">选择会话后显示权限档位。</p>

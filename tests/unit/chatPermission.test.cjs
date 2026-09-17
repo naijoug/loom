@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-/** Mirror of src/domain/chat.ts normalizeChatPermissionMode (contract note for M0). */
+/** Mirror of src/domain/chat.ts normalizeChatPermissionMode (contract note). */
 function normalizeChatPermissionMode(value) {
   switch (value) {
     case "explore":
@@ -17,8 +17,10 @@ function normalizeChatPermissionMode(value) {
   }
 }
 
+/** Phase 2: ask and auto map to write-capable adapter stage. */
 function chatPermissionAllowsWrite(mode) {
-  return normalizeChatPermissionMode(mode) === "auto";
+  const normalized = normalizeChatPermissionMode(mode);
+  return normalized === "ask" || normalized === "auto";
 }
 
 test("chat permission enum aliases map read_only→explore and read_write→ask", () => {
@@ -31,9 +33,10 @@ test("chat permission enum aliases map read_only→explore and read_write→ask"
   assert.equal(normalizeChatPermissionMode("weird"), "explore");
 });
 
-test("only auto allows write-capable adapter stage in Phase 1", () => {
+test("ask and auto allow write-capable adapter stage (Phase 2)", () => {
   assert.equal(chatPermissionAllowsWrite("explore"), false);
-  assert.equal(chatPermissionAllowsWrite("ask"), false);
-  assert.equal(chatPermissionAllowsWrite("read_write"), false);
+  assert.equal(chatPermissionAllowsWrite("ask"), true);
+  assert.equal(chatPermissionAllowsWrite("read_write"), true);
   assert.equal(chatPermissionAllowsWrite("auto"), true);
+  assert.equal(chatPermissionAllowsWrite("read_only"), false);
 });

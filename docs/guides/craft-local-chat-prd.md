@@ -63,27 +63,27 @@ Board / Planning / Testing = advanced，侧栏或菜单可达，**不是**默认
 ## 已冻结决策（原计划待确认 → 拍板）
 
 1. **Dogfood 首选 Agent**：用 `command -v` 探测，优先级 **grok → codex → claude**；以本机第一个命中者为 M2 垂直切片验收 Agent。探测结果与失败原因走既有 `agent_diagnostics`，并在 Chat / Settings 可读。
-2. **Ask 档 Phase 1 语义**：映射为**保守 CLI 权限**（与 Explore 同级只读 / plan 沙箱），**不做** per-tool / 写文件审批弹窗。产品文案仍为「询问编辑」；完整 tool-gate 留 Phase 2+。
+2. **Ask 档 Phase 2 语义**：映射为**可写 CLI**（同 Auto 的 Debugging / acceptEdits），但 **每回合发送前** 须在 Composer 确认「允许本回合写文件/跑可写工具」。**不做** stream 级 per-tool 审批弹窗（完整 tool-gate 仍可后续）。
 3. **会话 status Phase 1**：仅 `active` | `archived`。不做 Craft 五态（todo / in_progress / needs_review / done / cancelled）；旗标 / needs_attention 可后续再加。
 
 其它沿用 chat-first 拍板：持久化仍项目级 `.loom/chat/`；升格 stub 不自动开跑。
 
 ## 权限档位 → adapter 映射（附录）
 
-权威实现将落在 `chat.rs` 的 `permission_to_stage` + 各 adapter 的 stage→CLI flag。Phase 1 Ask **故意**与 Explore 共用保守 CLI flags。
+权威实现落在 `chat.rs` 的 `permission_to_stage` + 各 adapter 的 stage→CLI flag + Composer Ask 确认门。Phase 2 Ask 与 Auto 共用可写 CLI flags，但 UI 每回合确认。
 
 | Loom `ChatPermissionMode` | `AgentStage` | Codex CLI | Claude Code CLI | Grok CLI | 产品语义 |
 |---|---|---|---|---|---|
 | `explore` | `Planning` | `--sandbox read-only` | 不传 `--permission-mode`（默认只读倾向） | `--permission-mode plan` | 探索 / 只读 |
-| `ask` | `Planning` | 同 explore（保守） | 同 explore（保守） | 同 explore（`plan`） | 询问编辑；Phase 1 **无**审批 UI |
-| `auto` | `Debugging` | `--sandbox workspace-write` | `--permission-mode acceptEdits` | `--permission-mode acceptEdits` | 自动可写（仍受 agent `can_write_files` / `can_run_commands` 与 execution_policy） |
+| `ask` | `Debugging` | `--sandbox workspace-write` | `--permission-mode acceptEdits` | `--permission-mode acceptEdits` | 询问编辑；可写 CLI + **每回合发送前确认** |
+| `auto` | `Debugging` | `--sandbox workspace-write` | `--permission-mode acceptEdits` | `--permission-mode acceptEdits` | 自动可写（无确认；仍受 agent `can_write_files` / `can_run_commands` 与 execution_policy） |
 
 ### 旧值迁移（向后兼容）
 
 | 磁盘上的旧值 | 规范化后 | 说明 |
 |---|---|---|
 | `read_only` | `explore` | 语义等价 |
-| `read_write` | `ask` | **偏安全**：旧「可写」会话加载后变为 Ask（保守 CLI），需用户显式选 `auto` 才恢复可写 |
+| `read_write` | `ask` | **偏安全**：旧「可写」会话加载后变为 Ask（可写但每回合确认）；选 `auto` 可去掉确认 |
 | 缺省 / 未知 | `explore` | 默认只读 |
 
 `schemaVersion` 仍为 `1`：加载时规范化字符串，不强制 bump；写回时使用新枚举字面量。

@@ -43,7 +43,7 @@
 | **Transcript** | 渲染 `messages`（及可选 `parts`）；流式尾气泡；错误摘要 | M1 可先纯文本；M2+ 工具卡 |
 | **Composer** | `chat_send` / `chat_abort`；无 Agent / 流式中禁用发送 | Enter 发送，Shift+Enter 换行 |
 | **Agent picker** | `list_agents` + diagnostics；切换 `agentId` | 不可用时显示诊断摘要（M3 打磨） |
-| **Permission** | 三档：`explore` / `ask` / `auto`（文案：探索 / 询问编辑 / 自动） | 写入 session；经映射表进 adapter；Ask **无**审批弹窗 |
+| **Permission** | 三档：`explore` / `ask` / `auto`（文案：探索 / 询问编辑 / 自动） | 写入 session；经映射表进 adapter；Ask = 可写 CLI + **每回合发送前确认** |
 | **SessionHeader / 菜单** | 标题、续聊状态、开新 CLI 会话、升格 stub、归档 | 密度对齐 Craft SessionMenu，不抄样式 |
 | **AdvancedNav** | 链到 Board / Settings | 文案标明「高级工作流」 |
 
@@ -52,7 +52,7 @@
 | 档位 | 中文 | UI 行为 Phase 1 |
 |---|---|---|
 | `explore` | 探索 | 默认；只读 CLI |
-| `ask` | 询问编辑 | 与 explore 同级保守 CLI；**无** per-tool modal |
+| `ask` | 询问编辑 | 可写 CLI（同 auto）；发送前确认「允许本回合写文件/跑可写工具」；非 per-tool modal |
 | `auto` | 自动 | 可写 CLI（acceptEdits / workspace-write） |
 
 快捷键循环（若框架允许）：Shift+Tab 在三档间切换（M1）。
