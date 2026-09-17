@@ -78,6 +78,7 @@ export function ChatComposer({
   }
 
   return (
+    <div className="chat-composer-shell">
     <div className="chat-composer">
       {error ? (
         <div className="chat-hint" role="alert">
@@ -209,6 +210,7 @@ export function ChatComposer({
           </Button>
         </div>
       </div>
+    </div>
     </div>
   );
 }

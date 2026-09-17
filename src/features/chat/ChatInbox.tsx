@@ -4,13 +4,21 @@ import { Button } from "../../components/common/Button";
 
 export type InboxFilter = ChatInboxFilter;
 
+/** Craft SessionItem trailing time: compact relative / locale short. */
 function formatUpdatedAt(updatedAtMs: number): string {
+  const delta = Date.now() - updatedAtMs;
+  if (!Number.isFinite(delta) || delta < 0) return "";
+  const minute = 60_000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+  if (delta < minute) return "刚刚";
+  if (delta < hour) return `${Math.floor(delta / minute)} 分钟前`;
+  if (delta < day) return `${Math.floor(delta / hour)} 小时前`;
+  if (delta < 7 * day) return `${Math.floor(delta / day)} 天前`;
   try {
     return new Date(updatedAtMs).toLocaleString("zh-CN", {
       month: "numeric",
       day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
     });
   } catch {
     return "";
@@ -52,52 +60,57 @@ export function ChatInbox({
   );
 
   return (
-    <aside className="chat-inbox" aria-label="会话收件箱">
+    <aside className="chat-inbox" aria-label="会话列表">
       <div className="chat-inbox-header">
         <h2>对话</h2>
-        <Button type="button" onClick={onCreate}>
+        <Button type="button" variant="ghost" className="chat-inbox-new" onClick={onCreate}>
           新建
         </Button>
       </div>
 
-      <label className="chat-inbox-search">
-        <span className="sr-only">搜索会话</span>
+      {/* Mirrors craft SessionSearchHeader: muted rounded search field */}
+      <div className="chat-inbox-search">
+        <span className="chat-inbox-search-icon" aria-hidden="true">
+          ⌕
+        </span>
         <input
           type="search"
           value={searchQuery}
-          placeholder="搜索标题或预览"
+          placeholder="搜索标题或内容…"
           aria-label="搜索会话"
           onChange={(event) => onSearchQueryChange(event.target.value)}
         />
-      </label>
+        {searchQuery ? (
+          <button
+            type="button"
+            className="chat-inbox-search-clear"
+            aria-label="清除搜索"
+            onClick={() => onSearchQueryChange("")}
+          >
+            ×
+          </button>
+        ) : null}
+      </div>
+
       <div className="chat-inbox-filters" role="tablist" aria-label="会话过滤">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={filter === "active"}
-          className={`chat-inbox-filter${filter === "active" ? " active" : ""}`}
-          onClick={() => onFilterChange("active")}
-        >
-          进行中
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={filter === "needs_attention"}
-          className={`chat-inbox-filter${filter === "needs_attention" ? " active" : ""}`}
-          onClick={() => onFilterChange("needs_attention")}
-        >
-          需关注
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={filter === "archived"}
-          className={`chat-inbox-filter${filter === "archived" ? " active" : ""}`}
-          onClick={() => onFilterChange("archived")}
-        >
-          已归档
-        </button>
+        {(
+          [
+            ["active", "进行中"],
+            ["needs_attention", "需关注"],
+            ["archived", "已归档"],
+          ] as const
+        ).map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            role="tab"
+            aria-selected={filter === value}
+            className={`chat-inbox-filter${filter === value ? " active" : ""}`}
+            onClick={() => onFilterChange(value)}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       {filtered.length === 0 ? (
@@ -112,56 +125,65 @@ export function ChatInbox({
         </div>
       ) : (
         <ul className="chat-inbox-list">
-          {filtered.map((item) => (
-            <li key={item.id} className="chat-inbox-row">
-              <button
-                type="button"
-                className={`chat-inbox-item${item.id === selectedId ? " selected" : ""}`}
-                onClick={() => onSelect(item.id)}
-              >
-                <span className="chat-inbox-title-row">
-                  <span className="chat-inbox-title">{item.title}</span>
-                  {item.needsAttention || item.flagged ? (
-                    <span className="chat-inbox-attention" title="需要关注">
-                      !
+          {filtered.map((item, index) => {
+            const selected = item.id === selectedId;
+            const attention = item.needsAttention || item.flagged;
+            return (
+              <li key={item.id} className="chat-inbox-row">
+                <button
+                  type="button"
+                  className={`chat-inbox-item${selected ? " selected" : ""}`}
+                  data-session-id={item.id}
+                  onClick={() => onSelect(item.id)}
+                >
+                  {index > 0 ? <span className="chat-inbox-sep" aria-hidden="true" /> : null}
+                  <span className="chat-inbox-leading" aria-hidden="true">
+                    <span className={`chat-inbox-status${attention ? " is-attention" : ""}`} />
+                  </span>
+                  <span className="chat-inbox-body">
+                    <span className="chat-inbox-title-row">
+                      <span className="chat-inbox-title">{item.title}</span>
+                      <span className="chat-inbox-time">{formatUpdatedAt(item.updatedAtMs)}</span>
                     </span>
-                  ) : null}
-                </span>
-                {item.preview ? <span className="chat-inbox-preview">{item.preview}</span> : null}
-                <span className="chat-inbox-meta">
-                  <span>{agentNameById[item.agentId] ?? item.agentId}</span>
-                  <span>{formatUpdatedAt(item.updatedAtMs)}</span>
-                </span>
-              </button>
-              {filter !== "archived" ? (
-                <button
-                  type="button"
-                  className="chat-inbox-archive"
-                  aria-label={`归档 ${item.title}`}
-                  title="归档"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onArchive(item.id);
-                  }}
-                >
-                  归档
+                    {item.preview ? (
+                      <span className="chat-inbox-preview">{item.preview}</span>
+                    ) : (
+                      <span className="chat-inbox-preview chat-inbox-preview--muted">
+                        {agentNameById[item.agentId] ?? item.agentId}
+                      </span>
+                    )}
+                  </span>
                 </button>
-              ) : (
-                <button
-                  type="button"
-                  className="chat-inbox-restore"
-                  aria-label={`恢复 ${item.title}`}
-                  title="恢复"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onRestore(item.id);
-                  }}
-                >
-                  恢复
-                </button>
-              )}
-            </li>
-          ))}
+                {filter !== "archived" ? (
+                  <button
+                    type="button"
+                    className="chat-inbox-archive"
+                    aria-label={`归档 ${item.title}`}
+                    title="归档"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onArchive(item.id);
+                    }}
+                  >
+                    归档
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="chat-inbox-archive"
+                    aria-label={`恢复 ${item.title}`}
+                    title="恢复"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onRestore(item.id);
+                    }}
+                  >
+                    恢复
+                  </button>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
     </aside>
