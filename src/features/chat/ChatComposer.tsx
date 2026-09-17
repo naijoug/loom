@@ -1,6 +1,11 @@
-import type { AgentConfig, ChatPermissionMode } from "../../domain";
+import type { AgentConfig, AgentDiagnostic, ChatPermissionMode } from "../../domain";
 import { Button } from "../../components/common/Button";
-import { CHAT_PERMISSION_CYCLE, permissionModeLabel } from "./chatPermission";
+import {
+  CHAT_PERMISSION_CYCLE,
+  permissionCliHint,
+  permissionModeLabel,
+} from "./chatPermission";
+import { ChatAgentStatusPopover } from "./ChatAgentStatusPopover";
 
 export interface ChatComposerProps {
   draft: string;
@@ -11,6 +16,9 @@ export interface ChatComposerProps {
   agents: AgentConfig[];
   permissionMode: ChatPermissionMode;
   resumeHint: boolean;
+  diagnostics: AgentDiagnostic[];
+  diagnosticsLoading: boolean;
+  onRefreshDiagnostics: () => void;
   onDraftChange: (value: string) => void;
   onSend: () => void;
   onAbort: () => void;
@@ -27,12 +35,19 @@ export function ChatComposer({
   agents,
   permissionMode,
   resumeHint,
+  diagnostics,
+  diagnosticsLoading,
+  onRefreshDiagnostics,
   onDraftChange,
   onSend,
   onAbort,
   onAgentChange,
   onPermissionChange,
 }: ChatComposerProps) {
+  const selectedAgent = agents.find((agent) => agent.id === agentId);
+  const selectedDiagnostic = diagnostics.find((item) => item.agentId === agentId);
+  const cliHint = permissionCliHint(selectedAgent?.adapterType, permissionMode);
+
   return (
     <div className="chat-composer">
       {error ? (
@@ -54,14 +69,32 @@ export function ChatComposer({
             {agents.length === 0 ? (
               <option value={agentId}>无可用 Agent</option>
             ) : (
-              agents.map((agent) => (
-                <option key={agent.id} value={agent.id}>
-                  {agent.name}
-                </option>
-              ))
+              agents.map((agent) => {
+                const diagnostic = diagnostics.find((item) => item.agentId === agent.id);
+                const suffix =
+                  diagnostic?.status === "missing"
+                    ? "（缺失）"
+                    : diagnostic?.status === "disabled"
+                      ? "（已停用）"
+                      : "";
+                return (
+                  <option key={agent.id} value={agent.id}>
+                    {agent.name}
+                    {suffix}
+                  </option>
+                );
+              })
             )}
           </select>
         </label>
+
+        <ChatAgentStatusPopover
+          agent={selectedAgent}
+          diagnostic={selectedDiagnostic}
+          loading={diagnosticsLoading}
+          useBackend={useBackend}
+          onRefresh={onRefreshDiagnostics}
+        />
 
         <div
           className="chat-permission-tiers"
@@ -102,6 +135,7 @@ export function ChatComposer({
       <div className="chat-composer-actions">
         <span className="chat-hint">
           {useBackend ? "本机 CLI" : "模拟"} · {permissionModeLabel(permissionMode)}
+          {selectedAgent ? ` · ${cliHint}` : ""}
           {resumeHint ? " · 续聊中" : ""}
           {sending ? " · 生成中…" : ""}
         </span>

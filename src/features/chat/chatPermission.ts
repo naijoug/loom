@@ -1,3 +1,4 @@
+import type { AgentAdapterType } from "../../domain/agent";
 import type { ChatPermissionMode } from "../../domain/chat";
 import { normalizeChatPermissionMode } from "../../domain/chat";
 
@@ -24,4 +25,35 @@ export function cyclePermissionMode(mode: ChatPermissionMode): ChatPermissionMod
   const index = CHAT_PERMISSION_CYCLE.indexOf(current);
   const next = CHAT_PERMISSION_CYCLE[(index + 1) % CHAT_PERMISSION_CYCLE.length];
   return next ?? "explore";
+}
+
+/** M0/M2 mapping table — keep Chat UI aligned when switching agents. */
+export function permissionCliHint(
+  adapterType: AgentAdapterType | string | undefined,
+  mode: ChatPermissionMode,
+): string {
+  const write = normalizeChatPermissionMode(mode) === "auto";
+  switch (adapterType) {
+    case "grok_cli":
+      return write ? "CLI · --permission-mode acceptEdits" : "CLI · --permission-mode plan";
+    case "codex_cli":
+      return write ? "CLI · --sandbox workspace-write" : "CLI · --sandbox read-only";
+    case "claude_code_cli":
+      return write ? "CLI · --permission-mode acceptEdits" : "CLI · 默认只读（不传 permission-mode）";
+    default:
+      return write ? "CLI · 可写 stage" : "CLI · 只读 stage";
+  }
+}
+
+export function diagnosticStatusLabel(status: string | undefined): string {
+  switch (status) {
+    case "ready":
+      return "就绪";
+    case "disabled":
+      return "已停用";
+    case "missing":
+      return "缺失";
+    default:
+      return "未知";
+  }
 }

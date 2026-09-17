@@ -3,7 +3,7 @@
 - **Date**: 2026-09-17
 - **Author**: Droplet
 - **Status**: in_progress
-- **Progress**: M2 ✅（ProcessSupervisor `ProcessKind::Chat` + 三档权限→CLI + stream parts + grok 优先）；M1 ✅；本机 dogfood 默认 **grok**（绝对路径探测）
+- **Progress**: M3 ✅（Claude stream-json → 同一 `parts[]`；权限档 CLI hint 对齐 Grok/Codex/Claude；Chat 内 Agent 状态弹出复用 `diagnose_agents`）；M2 ✅；M1 ✅；本机 dogfood 默认 **grok**
 - **Scope**: 在已完成的 chat-first（`docs/plans/2026-09-14/20:06-chat-first-refactor.md` M0–M5）之上，做**彻底重构的 Phase 1**：把产品主表面做成 Craft Agents 风格的**本机 Agent Chat**（会话收件箱 + 转录 + composer + Agent / 权限档位），端到端可 dogfood 调用本机已接线 Agent；**不**在本阶段重写 Task 状态机，不引入云同步 / 市场 / Electron 服务端架构。
 
 参考：
@@ -150,6 +150,8 @@ Craft 侧已阅读要点（README + `docs/cli.md` + shared session/permission + 
 
 ### M3 — 多 Agent 对等体验 + 诊断内联
 
+**Progress**: ✅ 完成（2026-09-17）— Claude stream-json/`stream_event` 工具事件进同一 `parts[]`；权限三档 CLI hint；Chat 内 Agent 状态弹出复用 `diagnose_agents`。
+
 **Outcome**: Claude / Grok 与 Codex 在同一 IA 下体验对等；不可用 Agent 有可读诊断。
 
 | # | Task | Files / Output | Verification |
@@ -158,6 +160,15 @@ Craft 侧已阅读要点（README + `docs/cli.md` + shared session/permission + 
 | 3.2 | Grok：UI 档位与 `plan` / `acceptEdits` 对齐（见 grok spike） | adapter + Chat header | 无二进制时 picker 显示诊断摘要 |
 | 3.3 | Chat 内「Agent 状态」抽屉/弹出：复用 `agent_diagnostics` | UI + invoke | 不打开 Settings 也能看到路径/版本/失败提示 |
 | 3.4 | 门禁 | CI 本地 | `pnpm check`；相关单测 |
+
+
+#### M3 验收清单
+
+- [x] Claude stream-json / stream_event `content_block` / `tool_result` → 同一 `parts[]`（与 Grok/Codex 卡片对等）
+- [x] 切换 Agent 时权限三档 CLI hint 与 M0/M2 表一致（Grok `plan`/`acceptEdits`；Codex sandbox；Claude auto 才 `acceptEdits`）
+- [x] Chat 内 Agent 状态弹出：路径 / 版本 / 失败说明，复用 `diagnose_agents`，无需打开 Settings
+- [x] 门禁：`tsc` + 相关单测；`cargo test chat::tests`
+- [ ] 本机 Mac dogfood：Claude 工具卡 + 诊断弹出（需本机 claude；CI/box 无二进制则人工勾选）
 
 ### M4 — Inbox 工作流打磨 + transcript 恢复韧性
 
@@ -277,8 +288,9 @@ src/features/chat/
 | 2026-09-17 | M0 落地 `baa135a`；冻结 Ask/status/探针优先级；旧值迁移 read_only→explore、read_write→ask |
 | 2026-09-17 | **完善计划**：写入本机探针实绩（三 CLI 皆可用）、M1 文件级拆分与验收清单、M2 默认 grok、明确 M1 非范围 |
 | 2026-09-17 | **M1 完成**：Chat IA 壳拆分；三档权限 + Shift+Tab；active/archived；`chat_update_meta` |
+| 2026-09-17 | **M3 完成**：Claude stream parts 对等；权限 CLI hint；Chat Agent 状态弹出；见 `docs/dogfood/craft-chat-m3-parity.md` |
 | 2026-09-17 | **M2 完成**：ProcessSupervisor(`Chat`)；权限→CLI 单测；stream parts；grok 优先+绝对路径；见 `docs/dogfood/craft-chat-m2-grok.md` |
 
 ## 下一步建议
 
-M2 已完成。下一步 **M3**：Claude/Grok 工具事件对等、Chat 内 Agent 诊断抽屉、门禁。不要并行 MCP Sources / 完整 Ask 审批 / Task 状态机改造。
+M3 已完成。下一步 **M4**：Inbox 工作流打磨（needs_attention / 归档过滤）、transcript 恢复韧性、标题重命名、续聊菜单密度。不要并行 MCP Sources / 完整 Ask 审批 / Task 状态机改造。

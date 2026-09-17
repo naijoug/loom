@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type {
   AgentConfig,
+  AgentDiagnostic,
   ChatMessagePart,
   ChatPermissionMode,
   ChatSession,
@@ -89,7 +90,7 @@ async function updateSessionMeta(input: {
 
 export function ChatPage() {
   const { state, dispatch } = useAppState();
-  const { loadAgents } = useAgentBridge();
+  const { loadAgents, diagnoseAgents } = useAgentBridge();
   const projectPath = state.projects.current?.path ?? null;
   const agents = useMemo(() => enabledAgents(state.agents), [state.agents]);
   const agentNameById = useMemo(() => {
@@ -108,6 +109,26 @@ export function ChatPage() {
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [inboxFilter, setInboxFilter] = useState<InboxFilter>("active");
+
+  const [diagnostics, setDiagnostics] = useState<AgentDiagnostic[]>([]);
+  const [diagnosticsLoading, setDiagnosticsLoading] = useState(false);
+
+  const refreshDiagnostics = useCallback(async () => {
+    if (!useBackend) {
+      setDiagnostics([]);
+      return;
+    }
+    setDiagnosticsLoading(true);
+    try {
+      const next = await diagnoseAgents();
+      setDiagnostics(next);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `诊断失败：${String(err)}`);
+    } finally {
+      setDiagnosticsLoading(false);
+    }
+  }, [useBackend, diagnoseAgents]);
+
 
   const refreshSummaries = useCallback(async () => {
     if (!projectPath) {
@@ -142,7 +163,8 @@ export function ChatPage() {
 
   useEffect(() => {
     void loadAgents();
-  }, [loadAgents]);
+    void refreshDiagnostics();
+  }, [loadAgents, refreshDiagnostics]);
 
   useEffect(() => {
     void refreshSummaries();
@@ -464,6 +486,9 @@ export function ChatPage() {
               agents={agents}
               permissionMode={session.permissionMode}
               resumeHint={Boolean(session.resumeCommand)}
+              diagnostics={diagnostics}
+              diagnosticsLoading={diagnosticsLoading}
+              onRefreshDiagnostics={() => void refreshDiagnostics()}
               onDraftChange={setDraft}
               onSend={() => void handleSend()}
               onAbort={() => void handleAbort()}

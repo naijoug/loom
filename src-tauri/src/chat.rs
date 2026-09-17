@@ -328,7 +328,59 @@ fn summarize_json(value: &serde_json::Value, max_chars: usize) -> Option<String>
     }
 }
 
+fn unwrap_stream_event(value: &serde_json::Value) -> &serde_json::Value {
+    // Claude Code `--output-format stream-json --include-partial-messages` wraps
+    // content_block_* payloads as `{ "type":"stream_event", "event": { ... } }`.
+    if json_event_type(value).as_deref() == Some("stream_event") {
+        value.get("event").unwrap_or(value)
+    } else {
+        value
+    }
+}
+
+fn tool_part_from_content_item(item: &serde_json::Value) -> Option<ChatMessagePart> {
+    let item_type = item.get("type").and_then(|v| v.as_str()).unwrap_or("");
+    if item_type == "tool_use" || item_type == "tool_call" || item_type == "function_call" {
+        let name = item
+            .get("name")
+            .or_else(|| item.pointer("/function/name"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("tool")
+            .to_string();
+        let input = item
+            .get("input")
+            .or_else(|| item.get("arguments"))
+            .or_else(|| item.pointer("/function/arguments"));
+        return Some(ChatMessagePart::Tool {
+            name,
+            input_summary: input.and_then(|v| summarize_json(v, 240)),
+            output_summary: None,
+            status: Some("running".to_string()),
+        });
+    }
+    if item_type == "tool_result" {
+        let name = item
+            .get("name")
+            .or_else(|| item.get("tool_use_id"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("tool_result")
+            .to_string();
+        let output = item
+            .get("content")
+            .or_else(|| item.get("output"))
+            .or_else(|| item.get("result"));
+        return Some(ChatMessagePart::Tool {
+            name,
+            input_summary: None,
+            output_summary: output.and_then(|v| summarize_json(v, 240)),
+            status: Some("done".to_string()),
+        });
+    }
+    None
+}
+
 fn extract_tool_or_command_part(value: &serde_json::Value) -> Option<ChatMessagePart> {
+    let value = unwrap_stream_event(value);
     let event = json_event_type(value).unwrap_or_default();
     let event_l = event.to_ascii_lowercase();
 
@@ -339,29 +391,20 @@ fn extract_tool_or_command_part(value: &serde_json::Value) -> Option<ChatMessage
         .and_then(|v| v.as_array())
     {
         for item in parts {
-            let item_type = item.get("type").and_then(|v| v.as_str()).unwrap_or("");
-            if item_type == "tool_use" || item_type == "tool_call" || item_type == "function_call" {
-                let name = item
-                    .get("name")
-                    .or_else(|| item.pointer("/function/name"))
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("tool")
-                    .to_string();
-                let input = item
-                    .get("input")
-                    .or_else(|| item.get("arguments"))
-                    .or_else(|| item.pointer("/function/arguments"));
-                return Some(ChatMessagePart::Tool {
-                    name,
-                    input_summary: input.and_then(|v| summarize_json(v, 240)),
-                    output_summary: None,
-                    status: Some("running".to_string()),
-                });
+            if let Some(part) = tool_part_from_content_item(item) {
+                return Some(part);
             }
         }
     }
 
-    if let Some(block) = value.get("content_block") {
+    // Claude content_block_start / content_block_stop (top-level or under stream_event).
+    if let Some(block) = value
+        .get("content_block")
+        .or_else(|| value.pointer("/event/content_block"))
+    {
+        if let Some(part) = tool_part_from_content_item(block) {
+            return Some(part);
+        }
         let block_type = block.get("type").and_then(|v| v.as_str()).unwrap_or("");
         if block_type == "tool_use" || block_type == "tool_call" {
             let name = block
@@ -491,6 +534,28 @@ fn extract_assistant_text(output_mode: &str, raw: &str) -> String {
             continue;
         }
         if let Ok(value) = serde_json::from_str::<serde_json::Value>(line) {
+            let value = unwrap_stream_event(&value);
+            // Claude assistant message: collect every text block in content[].
+            if let Some(parts) = value
+                .pointer("/message/content")
+                .or_else(|| value.pointer("/content"))
+                .and_then(|v| v.as_array())
+            {
+                let mut block_text = Vec::new();
+                for item in parts {
+                    if item.get("type").and_then(|v| v.as_str()) == Some("text") {
+                        if let Some(text) = item.get("text").and_then(|v| v.as_str()) {
+                            if !text.is_empty() {
+                                block_text.push(text.to_string());
+                            }
+                        }
+                    }
+                }
+                if !block_text.is_empty() {
+                    chunks.extend(block_text);
+                    continue;
+                }
+            }
             if let Some(text) = value
                 .pointer("/msg/text")
                 .or_else(|| value.pointer("/message/content/0/text"))
@@ -500,8 +565,10 @@ fn extract_assistant_text(output_mode: &str, raw: &str) -> String {
                 chunks.push(text.to_string());
                 continue;
             }
+            // Claude content_block_delta / stream_event text deltas.
             if let Some(delta) = value
-                .pointer("/delta")
+                .pointer("/delta/text")
+                .or_else(|| value.pointer("/delta"))
                 .or_else(|| value.pointer("/message/delta"))
                 .and_then(|v| v.as_str())
             {
@@ -1269,5 +1336,63 @@ mod tests {
         let parsed = parse_chat_stream_line("streaming_json", "hello plain");
         assert_eq!(parsed.delta, "hello plain");
         assert!(parsed.part.is_none());
+    }
+
+    #[test]
+    fn parses_claude_assistant_tool_use_part() {
+        let line = r#"{"type":"assistant","message":{"id":"msg_1","role":"assistant","content":[{"type":"text","text":"Looking"},{"type":"tool_use","id":"toolu_1","name":"Read","input":{"path":"src/main.rs"}}]}}"#;
+        let parsed = parse_chat_stream_line("claude_stream_json", line);
+        assert!(parsed.delta.contains("Looking"), "delta={}", parsed.delta);
+        match parsed.part {
+            Some(ChatMessagePart::Tool {
+                name,
+                input_summary,
+                status,
+                ..
+            }) => {
+                assert_eq!(name, "Read");
+                assert!(input_summary.unwrap_or_default().contains("main.rs"));
+                assert_eq!(status.as_deref(), Some("running"));
+            }
+            other => panic!("expected tool part, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parses_claude_stream_event_content_block_tool_use() {
+        let line = r#"{"type":"stream_event","event":{"type":"content_block_start","index":1,"content_block":{"type":"tool_use","id":"toolu_2","name":"Bash","input":{"command":"ls -la"}}}}"#;
+        let parsed = parse_chat_stream_line("claude_stream_json", line);
+        match parsed.part {
+            Some(ChatMessagePart::Tool {
+                name,
+                input_summary,
+                status,
+                ..
+            }) => {
+                assert_eq!(name, "Bash");
+                assert!(input_summary.unwrap_or_default().contains("ls -la"));
+                assert_eq!(status.as_deref(), Some("running"));
+            }
+            other => panic!("expected tool part, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parses_claude_tool_result_part() {
+        let line = r#"{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_1","content":"fn main() {}"}]}}"#;
+        let parsed = parse_chat_stream_line("claude_stream_json", line);
+        match parsed.part {
+            Some(ChatMessagePart::Tool {
+                name,
+                output_summary,
+                status,
+                ..
+            }) => {
+                assert_eq!(name, "toolu_1");
+                assert_eq!(output_summary.as_deref(), Some("fn main() {}"));
+                assert_eq!(status.as_deref(), Some("done"));
+            }
+            other => panic!("expected tool_result part, got {other:?}"),
+        }
     }
 }

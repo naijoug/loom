@@ -407,3 +407,85 @@
   border: 0;
 }
 
+
+
+/* M3: inline Agent diagnostics popover */
+.chat-agent-status {
+  position: relative;
+}
+
+.chat-agent-status-trigger {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.chat-agent-status-trigger.tone-ok {
+  color: var(--text);
+}
+
+.chat-agent-status-trigger.tone-err {
+  color: var(--danger, #c44);
+  border-color: color-mix(in srgb, var(--danger, #c44) 35%, var(--border));
+}
+
+.chat-agent-status-popover {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 280px;
+  max-width: 360px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-1, var(--surface));
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+  display: grid;
+  gap: 10px;
+}
+
+.chat-agent-status-popover-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.chat-agent-status-dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.chat-agent-status-dl > div {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  gap: 8px;
+  align-items: start;
+}
+
+.chat-agent-status-dl dt {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.chat-agent-status-dl dd {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.chat-agent-status-dl dd[data-tone="err"] {
+  color: var(--danger, #c44);
+}
+
+.chat-agent-status-dl code {
+  font-size: 11px;
+}
