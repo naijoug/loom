@@ -1,5 +1,10 @@
 # 计划文档索引
 
+## 2026-09-17
+
+- 09:03-craft-inspired-local-agent-chat.md
+  > 在已完成的 chat-first（M0–M5）之上规划 thorough refactor Phase 1：Craft Agents 启发的本机 Agent Chat（会话收件箱、三档权限、Turn 工具可视化、Agent picker/诊断），端到端 dogfood 本机 CLI；复用 agent_adapter/stream/chat 持久化并对齐进程监督；不重写 Task 状态机，不做云同步/MCP 深集成/市场。
+
 ## 2026-09-14
 
 - 20:06-chat-first-refactor.md
