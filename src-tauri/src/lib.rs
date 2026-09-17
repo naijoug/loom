@@ -69,7 +69,6 @@ pub fn run() {
         .manage(pty::PtyRegistry::default())
         .manage(run_recovery::RunRecoveryRegistry::default())
         .manage(models::IdGenerator::default())
-        .manage(chat::ChatTurnRegistry::default())
         .invoke_handler(tauri::generate_handler![
             health_check,
             agents::create_agent,

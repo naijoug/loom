@@ -3,7 +3,7 @@
 - **Date**: 2026-09-17
 - **Author**: Droplet
 - **Status**: in_progress
-- **Progress**: M1 ✅（Craft IA 壳拆分 + 三档权限 + active/archived + `chat_update_meta`）；本机 grok/codex/claude 均在 PATH → M2 默认 **grok**
+- **Progress**: M2 ✅（ProcessSupervisor `ProcessKind::Chat` + 三档权限→CLI + stream parts + grok 优先）；M1 ✅；本机 dogfood 默认 **grok**（绝对路径探测）
 - **Scope**: 在已完成的 chat-first（`docs/plans/2026-09-14/20:06-chat-first-refactor.md` M0–M5）之上，做**彻底重构的 Phase 1**：把产品主表面做成 Craft Agents 风格的**本机 Agent Chat**（会话收件箱 + 转录 + composer + Agent / 权限档位），端到端可 dogfood 调用本机已接线 Agent；**不**在本阶段重写 Task 状态机，不引入云同步 / 市场 / Electron 服务端架构。
 
 参考：
@@ -127,14 +127,26 @@ Craft 侧已阅读要点（README + `docs/cli.md` + shared session/permission + 
 
 ### M2 — 垂直切片：真实本机 Agent + 流式 Turn 可视化 + 进程对齐
 
-**Outcome**: 选定一个已接线 Agent（**优先 Codex**）完成可 dogfood 的端到端 Chat。
+**Progress**: ✅ 完成（2026-09-17）— 进程选 **ProcessSupervisor(`ProcessKind::Chat`)**；权限三档→`prepare_invocation`；stream best-effort tool/command `parts`；默认偏好 grok + 绝对路径探测。
+
+**Outcome**: 选定一个已接线 Agent（**优先 grok**）完成可 dogfood 的端到端 Chat。
 
 | # | Task | Files / Output | Verification |
 |---|---|---|---|
-| 2.1 | 按 M0 决策把 `run_chat_turn` 挂到 `ProcessSupervisor` 或共享 spawn/abort | `chat.rs` + 必要 runner 辅助 | abort 能杀掉进程组；超时进 error 气泡 |
-| 2.2 | Stream：解析并 emit tool/command 片段；前端 Turn 卡片渲染 | `agents/stream` 消费者 + Chat UI | 一次真实 Codex（或 fixture）回合可见文本 + 至少一种工具/命令行 |
+| 2.1 | 按 M0 决策把 `run_chat_turn` 挂到 `ProcessSupervisor` 或共享 spawn/abort | `chat.rs` + `process_supervisor.rs` | abort 能杀掉进程组；超时进 error 气泡 |
+| 2.2 | Stream：解析并 emit tool/command 片段；前端 Turn 卡片渲染 | `chat.rs` parse + Chat UI | 一次真实 Codex（或 fixture）回合可见文本 + 至少一种工具/命令行 |
 | 2.3 | 三档权限真正传入 `prepare_invocation`；去掉仅前端的二档 checkbox | `chat.rs` `permission_to_stage` 演进 | 单测覆盖三档映射；explore 不走 workspace-write |
 | 2.4 | Dogfood 笔记：本机 Codex（或 Claude/Grok）一轮完整路径 | `docs/` 短笔记或本计划 Progress | 人工勾选成功标准条目 |
+
+#### M2 验收清单
+
+- [x] **进程决策**：`ProcessSupervisor` + `ProcessKind::Chat`（`chat:{sessionId}`）；去掉 `ChatTurnRegistry` / 裸 `kill pid`
+- [x] 权限 `explore`/`ask` → Planning（grok `plan` / codex `read-only` / claude 不传 permission-mode）；`auto` → Debugging（`acceptEdits` / `workspace-write`）
+- [x] Composer 改权限写入 session，下次 `chat_send` 带上并影响 CLI flags
+- [x] Stream best-effort 解析 tool/command → `parts[]`；UI 已渲染；无 parts 回退 `content`
+- [x] 新建会话默认偏好 **grok**；`discover_default_agents` 探测绝对路径（含 `~/.grok/bin/grok`）
+- [x] 单测：permission→stage/flags；stream part fixtures
+- [ ] 本机 Mac dogfood：新建 → 流式 → Stop → 再发 → resume（需本机 grok；CI/box 无二进制则人工在 Mac 勾选）
 
 ### M3 — 多 Agent 对等体验 + 诊断内联
 
@@ -195,7 +207,7 @@ Craft 侧已阅读要点（README + `docs/cli.md` + shared session/permission + 
 1. **Ask 档 Phase 1**：映射保守 CLI 权限（与 explore 同级），**不做** per-tool / 写文件审批弹窗；完整 tool-gate 留后续阶段。
 2. **Inbox / session status Phase 1**：仅 `active` | `archived`（不对齐 Craft 五态）。
 3. **Dogfood 首选 Agent**：`command -v` 探测，优先级 **grok → codex → claude**；第一个命中者作 M2 垂直切片验收。
-4. **Chat 进程（仍开放到 M2 收口）**：倾向对齐 `ProcessSupervisor` 或共享 spawn/abort；禁止第三路径——M2 必须选定一条。
+4. **Chat 进程（M2 已收口）**：选定 **`ProcessSupervisor` + `ProcessKind::Chat`**（`task_id = chat:{sessionId}`，`run_id = turnId`）；spawn 用 `configure_process_group`，abort 用 `request_stop` / `stop_task_runs`。**不**另建共享 spawn 辅助，**不**保留直启 `kill pid`。
 5. **Sources / MCP**：Phase 1 只做上下文空态；MCP stdio 明确下一阶段。
 6. **会话存储**：继续项目级 `.loom/chat/`（不升用户级跨项目 Inbox）。
 
@@ -250,12 +262,12 @@ src/features/chat/
 - 不做会话搜索/重命名 API（可先 UI placeholder；API 放 M4）
 - 不改升格业务逻辑（按钮可挪到 Header）
 
-## M2 验收预告（依赖 M1）
+## M2 验收（已完成）
 
 - 默认 Agent = **grok**（可用绝对路径启动）
-- 一轮：新建 → 流式 → Stop → 再发 → resume 续聊
+- 一轮：新建 → 流式 → Stop → 再发 → resume 续聊（Mac 人工 dogfood）
 - explore 不进入可写 stage；auto 才 `acceptEdits` / workspace-write
-- 进程：M2 必须二选一写进 Progress——`ProcessSupervisor(intent=chat)` **或** 共享 spawn/abort 辅助（禁止第三套）
+- 进程：**已选** `ProcessSupervisor` + `ProcessKind::Chat`（禁止第三套）
 
 ## 计划变更日志
 
@@ -265,7 +277,8 @@ src/features/chat/
 | 2026-09-17 | M0 落地 `baa135a`；冻结 Ask/status/探针优先级；旧值迁移 read_only→explore、read_write→ask |
 | 2026-09-17 | **完善计划**：写入本机探针实绩（三 CLI 皆可用）、M1 文件级拆分与验收清单、M2 默认 grok、明确 M1 非范围 |
 | 2026-09-17 | **M1 完成**：Chat IA 壳拆分；三档权限 + Shift+Tab；active/archived；`chat_update_meta` |
+| 2026-09-17 | **M2 完成**：ProcessSupervisor(`Chat`)；权限→CLI 单测；stream parts；grok 优先+绝对路径；见 `docs/dogfood/craft-chat-m2-grok.md` |
 
 ## 下一步建议
 
-M1 已完成。立刻做 **M2（grok 垂直切片）**：真实本机 Agent + 流式 Turn 可视化 + 权限真正传入 `prepare_invocation` + 进程对齐 ProcessSupervisor/共享 spawn。不要并行 MCP / 后台任务 / Task 状态机改造。
+M2 已完成。下一步 **M3**：Claude/Grok 工具事件对等、Chat 内 Agent 诊断抽屉、门禁。不要并行 MCP Sources / 完整 Ask 审批 / Task 状态机改造。

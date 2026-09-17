@@ -2,18 +2,16 @@
 use crate::agent_adapter::{self, AdapterInvocationRequest, AgentStage, PreparedAgentInvocation};
 use crate::agents::{self, load_agents};
 use crate::models::{now_ms, IdGenerator};
+use crate::process_supervisor::{self, ProcessKind, ProcessMetadata};
 use crate::session_capture;
 use crate::storage;
 use crate::tasks;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
-use std::sync::Arc;
 use tauri::{AppHandle, Emitter, State};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
-use tokio::sync::Mutex;
 
 const CHAT_SCHEMA_VERSION: u32 = 1;
 
@@ -45,21 +43,8 @@ fn default_message_parts() -> Vec<ChatMessagePart> {
 }
 
 
-#[derive(Clone)]
-pub struct ChatTurnRegistry {
-    inner: Arc<Mutex<HashMap<String, u32>>>, // session_id -> pid
-}
-
-impl Default for ChatTurnRegistry {
-    fn default() -> Self {
-        Self {
-            inner: Arc::new(Mutex::new(HashMap::new())),
-        }
-    }
-}
-
 /// text | tool | error parts (M0 sketch). Flexible fields for forward-compat JSON.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum ChatMessagePart {
     Text {
@@ -178,6 +163,8 @@ struct ChatStreamEvent {
     message_id: String,
     delta: String,
     done: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    part: Option<ChatMessagePart>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -261,6 +248,207 @@ fn permission_to_stage(mode: &str) -> AgentStage {
         "auto" => AgentStage::Debugging,
         _ => AgentStage::Planning,
     }
+}
+
+
+fn chat_task_id(session_id: &str) -> String {
+    format!("chat:{session_id}")
+}
+
+/// Best-effort parse of one stdout line into text delta and/or a tool/command part.
+#[derive(Debug, Default, PartialEq, Eq)]
+struct ParsedChatLine {
+    delta: String,
+    part: Option<ChatMessagePart>,
+}
+
+fn parse_chat_stream_line(output_mode: &str, line: &str) -> ParsedChatLine {
+    let trimmed = line.trim();
+    if trimmed.is_empty() {
+        return ParsedChatLine::default();
+    }
+    if output_mode == "plain" {
+        return ParsedChatLine {
+            delta: format!("{trimmed}\n"),
+            part: None,
+        };
+    }
+    let Ok(value) = serde_json::from_str::<serde_json::Value>(trimmed) else {
+        if !trimmed.starts_with('{') {
+            return ParsedChatLine {
+                delta: trimmed.to_string(),
+                part: None,
+            };
+        }
+        return ParsedChatLine::default();
+    };
+    let part = extract_tool_or_command_part(&value);
+    let delta = extract_assistant_text(output_mode, trimmed);
+    ParsedChatLine { delta, part }
+}
+
+fn json_event_type(value: &serde_json::Value) -> Option<String> {
+    value
+        .get("type")
+        .and_then(|v| v.as_str())
+        .or_else(|| value.get("msg").and_then(|msg| msg.get("type")).and_then(|v| v.as_str()))
+        .or_else(|| value.get("event").and_then(|event| event.get("type")).and_then(|v| v.as_str()))
+        .or_else(|| value.get("event").and_then(|v| v.as_str()))
+        .map(str::to_string)
+}
+
+fn deep_str<'a>(value: &'a serde_json::Value, keys: &[&str]) -> Option<&'a str> {
+    match value {
+        serde_json::Value::Object(map) => {
+            for key in keys {
+                if let Some(text) = map.get(*key).and_then(|v| v.as_str()) {
+                    return Some(text);
+                }
+            }
+            map.values().find_map(|child| deep_str(child, keys))
+        }
+        serde_json::Value::Array(items) => items.iter().find_map(|child| deep_str(child, keys)),
+        _ => None,
+    }
+}
+
+fn summarize_json(value: &serde_json::Value, max_chars: usize) -> Option<String> {
+    let raw = match value {
+        serde_json::Value::String(text) => text.clone(),
+        other => serde_json::to_string(other).ok()?,
+    };
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    if trimmed.chars().count() <= max_chars {
+        Some(trimmed.to_string())
+    } else {
+        Some(format!("{}…", trimmed.chars().take(max_chars).collect::<String>()))
+    }
+}
+
+fn extract_tool_or_command_part(value: &serde_json::Value) -> Option<ChatMessagePart> {
+    let event = json_event_type(value).unwrap_or_default();
+    let event_l = event.to_ascii_lowercase();
+
+    // Nested content blocks (Claude / Grok streaming-json style).
+    if let Some(parts) = value
+        .pointer("/message/content")
+        .or_else(|| value.pointer("/content"))
+        .and_then(|v| v.as_array())
+    {
+        for item in parts {
+            let item_type = item.get("type").and_then(|v| v.as_str()).unwrap_or("");
+            if item_type == "tool_use" || item_type == "tool_call" || item_type == "function_call" {
+                let name = item
+                    .get("name")
+                    .or_else(|| item.pointer("/function/name"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("tool")
+                    .to_string();
+                let input = item
+                    .get("input")
+                    .or_else(|| item.get("arguments"))
+                    .or_else(|| item.pointer("/function/arguments"));
+                return Some(ChatMessagePart::Tool {
+                    name,
+                    input_summary: input.and_then(|v| summarize_json(v, 240)),
+                    output_summary: None,
+                    status: Some("running".to_string()),
+                });
+            }
+        }
+    }
+
+    if let Some(block) = value.get("content_block") {
+        let block_type = block.get("type").and_then(|v| v.as_str()).unwrap_or("");
+        if block_type == "tool_use" || block_type == "tool_call" {
+            let name = block
+                .get("name")
+                .and_then(|v| v.as_str())
+                .unwrap_or("tool")
+                .to_string();
+            return Some(ChatMessagePart::Tool {
+                name,
+                input_summary: block.get("input").and_then(|v| summarize_json(v, 240)),
+                output_summary: None,
+                status: Some("running".to_string()),
+            });
+        }
+    }
+
+    if event_l.contains("tool_result")
+        || event_l.contains("tool_use")
+        || event_l.contains("tool_call")
+        || event_l.contains("function_call")
+        || event_l.contains("mcp_tool")
+    {
+        let name = deep_str(value, &["name", "tool_name", "toolName", "function_name"])
+            .unwrap_or("tool")
+            .to_string();
+        let input = value
+            .get("input")
+            .or_else(|| value.get("arguments"))
+            .or_else(|| value.get("params"));
+        let output = value
+            .get("output")
+            .or_else(|| value.get("result"))
+            .or_else(|| value.get("content"));
+        let status = if event_l.contains("result") {
+            Some("done".to_string())
+        } else {
+            Some("running".to_string())
+        };
+        return Some(ChatMessagePart::Tool {
+            name,
+            input_summary: input.and_then(|v| summarize_json(v, 240)),
+            output_summary: output.and_then(|v| summarize_json(v, 240)),
+            status,
+        });
+    }
+
+    let nested_item_type = value
+        .pointer("/item/type")
+        .or_else(|| value.pointer("/msg/type"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
+    let commandish = event_l.contains("exec_command")
+        || event_l.contains("command_execution")
+        || event_l.contains("shell")
+        || nested_item_type.contains("command_execution")
+        || nested_item_type.contains("exec_command")
+        || (event_l.contains("command") && !event_l.contains("permission"));
+    if commandish {
+        let command = deep_str(value, &["command", "cmd", "shell_command"])
+            .unwrap_or("command")
+            .to_string();
+        let output = deep_str(value, &["output", "stdout", "text"]);
+        return Some(ChatMessagePart::Tool {
+            name: "command".to_string(),
+            input_summary: Some(command),
+            output_summary: output.map(|text| {
+                if text.chars().count() > 240 {
+                    format!("{}…", text.chars().take(240).collect::<String>())
+                } else {
+                    text.to_string()
+                }
+            }),
+            status: Some(
+                if event_l.contains("end")
+                    || event_l.contains("completed")
+                    || nested_item_type.contains("completed")
+                {
+                    "done".to_string()
+                } else {
+                    "running".to_string()
+                },
+            ),
+        });
+    }
+
+    None
 }
 
 fn build_prompt(session: &ChatSession, user_text: &str) -> String {
@@ -564,16 +752,18 @@ pub fn chat_clear_resume(project_path: String, session_id: String) -> Result<Cha
 }
 
 #[tauri::command]
-pub async fn chat_abort(
-    registry: State<'_, ChatTurnRegistry>,
-    input: ChatAbortInput,
-) -> Result<(), String> {
+pub async fn chat_abort(input: ChatAbortInput) -> Result<(), String> {
     let _ = input.project_path;
-    let _ = input.turn_id;
-    let mut guard = registry.inner.lock().await;
-    if let Some(pid) = guard.remove(&input.session_id) {
-        let _ = Command::new("kill").arg(pid.to_string()).status().await;
+    let reason = "chat_abort";
+    if let Some(turn_id) = input.turn_id.as_deref().filter(|value| !value.is_empty()) {
+        let _ = process_supervisor::supervisor().request_stop(turn_id, reason)?;
+        return Ok(());
     }
+    let _ = process_supervisor::supervisor().stop_task_runs(
+        &chat_task_id(&input.session_id),
+        &[ProcessKind::Chat],
+        reason,
+    )?;
     Ok(())
 }
 
@@ -581,7 +771,6 @@ pub async fn chat_abort(
 pub async fn chat_send(
     app: AppHandle,
     ids: State<'_, IdGenerator>,
-    registry: State<'_, ChatTurnRegistry>,
     input: ChatSendInput,
 ) -> Result<ChatSendResult, String> {
     let text = input.text.trim().to_string();
@@ -659,13 +848,11 @@ pub async fn chat_send(
     let session_id = session.id.clone();
     let project_path = session.project_path.clone();
     let output_mode = prepared.output_mode.clone();
-    let registry_inner = registry.inner.clone();
 
     let turn_id_for_result = turn_id.clone();
     tauri::async_runtime::spawn(async move {
         let result = run_chat_turn(
             app_handle.clone(),
-            registry_inner,
             session_id.clone(),
             turn_id.clone(),
             assistant_id.clone(),
@@ -686,11 +873,12 @@ pub async fn chat_send(
             .find(|message| message.id == assistant_id)
         {
             match result {
-                Ok((content, resume_command)) => {
-                    message.content = content;
-                    message.status = "complete".to_string();
-                    if resume_command.is_some() {
-                        session.resume_command = resume_command;
+                Ok(outcome) => {
+                    message.content = outcome.content;
+                    message.parts = outcome.parts;
+                    message.status = outcome.status.clone();
+                    if outcome.resume_command.is_some() {
+                        session.resume_command = outcome.resume_command;
                     }
                     let _ = app_handle.emit(
                         "loom://chat-turn-finished",
@@ -698,8 +886,8 @@ pub async fn chat_send(
                             session_id: session_id.clone(),
                             turn_id: turn_id.clone(),
                             message_id: assistant_id.clone(),
-                            status: "complete".to_string(),
-                            error_summary: None,
+                            status: outcome.status,
+                            error_summary: outcome.error_summary,
                         },
                     );
                 }
@@ -709,6 +897,10 @@ pub async fn chat_send(
                     }
                     message.status = "error".to_string();
                     message.error_summary = Some(error.clone());
+                    message.parts.push(ChatMessagePart::Error {
+                        message: error.clone(),
+                        code: None,
+                    });
                     // Keep prior resume_command; a failed turn should not wipe a good handle.
                     let _ = app_handle.emit(
                         "loom://chat-turn-finished",
@@ -737,13 +929,12 @@ pub async fn chat_send(
 
 async fn run_chat_turn(
     app: AppHandle,
-    registry: Arc<Mutex<HashMap<String, u32>>>,
     session_id: String,
     turn_id: String,
     message_id: String,
     prepared: PreparedAgentInvocation,
     output_mode: String,
-) -> Result<(String, Option<String>), String> {
+) -> Result<ChatTurnOutcome, String> {
     let program = prepared.program.clone();
     let mut command = Command::new(&prepared.program);
     command
@@ -752,11 +943,18 @@ async fn run_chat_turn(
         .kill_on_drop(true)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
+    process_supervisor::configure_process_group(&mut command);
     let mut child = command
         .spawn()
         .map_err(|error| format!("failed to start agent: {error}"))?;
     if let Some(pid) = child.id() {
-        registry.lock().await.insert(session_id.clone(), pid);
+        process_supervisor::supervisor().register(ProcessMetadata::new(
+            &turn_id,
+            chat_task_id(&session_id),
+            ProcessKind::Chat,
+            pid,
+            None,
+        ))?;
     }
     let stdout = child
         .stdout
@@ -766,25 +964,37 @@ async fn run_chat_turn(
     let mut lines = BufReader::new(stdout).lines();
     let mut raw = String::new();
     let mut stdout_lines: Vec<String> = Vec::new();
+    let mut parts: Vec<ChatMessagePart> = Vec::new();
     while let Ok(Some(line)) = lines.next_line().await {
         let redacted = agents::redact_sensitive_text(&line);
         stdout_lines.push(redacted.clone());
         raw.push_str(&redacted);
         raw.push('\n');
-        let delta = if output_mode == "plain" {
-            format!("{redacted}\n")
-        } else {
-            extract_assistant_text(&output_mode, &redacted)
-        };
-        if !delta.is_empty() {
+        let parsed = parse_chat_stream_line(&output_mode, &redacted);
+        if let Some(part) = parsed.part.clone() {
+            parts.push(part.clone());
             let _ = app.emit(
                 "loom://chat-stream",
                 ChatStreamEvent {
                     session_id: session_id.clone(),
                     turn_id: turn_id.clone(),
                     message_id: message_id.clone(),
-                    delta,
+                    delta: String::new(),
                     done: false,
+                    part: Some(part),
+                },
+            );
+        }
+        if !parsed.delta.is_empty() {
+            let _ = app.emit(
+                "loom://chat-stream",
+                ChatStreamEvent {
+                    session_id: session_id.clone(),
+                    turn_id: turn_id.clone(),
+                    message_id: message_id.clone(),
+                    delta: parsed.delta,
+                    done: false,
+                    part: None,
                 },
             );
         }
@@ -793,7 +1003,11 @@ async fn run_chat_turn(
         .wait()
         .await
         .map_err(|error| format!("failed waiting for agent: {error}"))?;
-    registry.lock().await.remove(&session_id);
+    let meta = process_supervisor::supervisor().complete(&turn_id);
+    let aborted = meta
+        .as_ref()
+        .and_then(|value| value.termination_reason.as_deref())
+        == Some("chat_abort");
     let mut stderr_text = String::new();
     if let Some(stderr) = stderr {
         let mut err_lines = BufReader::new(stderr).lines();
@@ -806,12 +1020,6 @@ async fn run_chat_turn(
     let stderr_lines: Vec<String> = stderr_text.lines().map(str::to_string).collect();
     let captured =
         session_capture::capture_session_from_lines(&program, &stdout_lines, &stderr_lines);
-    if !status.success() && content.trim().is_empty() {
-        return Err(format!(
-            "agent exited with status {status}; stderr: {}",
-            stderr_text.trim()
-        ));
-    }
     let _ = app.emit(
         "loom://chat-stream",
         ChatStreamEvent {
@@ -820,8 +1028,31 @@ async fn run_chat_turn(
             message_id,
             delta: String::new(),
             done: true,
+            part: None,
         },
     );
+
+    if aborted {
+        let content = if content.trim().is_empty() {
+            "（已停止）".to_string()
+        } else {
+            content
+        };
+        return Ok(ChatTurnOutcome {
+            content,
+            parts,
+            resume_command: captured.resume_command,
+            status: "aborted".to_string(),
+            error_summary: None,
+        });
+    }
+
+    if !status.success() && content.trim().is_empty() {
+        return Err(format!(
+            "agent exited with status {status}; stderr: {}",
+            stderr_text.trim()
+        ));
+    }
     let content = if content.trim().is_empty() {
         if stderr_text.trim().is_empty() {
             "（Agent 没有返回可见文本）".to_string()
@@ -831,14 +1062,63 @@ async fn run_chat_turn(
     } else {
         content
     };
-    Ok((content, captured.resume_command))
+    Ok(ChatTurnOutcome {
+        content,
+        parts,
+        resume_command: captured.resume_command,
+        status: "complete".to_string(),
+        error_summary: None,
+    })
 }
 
+#[derive(Debug)]
+struct ChatTurnOutcome {
+    content: String,
+    parts: Vec<ChatMessagePart>,
+    resume_command: Option<String>,
+    status: String,
+    error_summary: Option<String>,
+}
 
 #[cfg(test)]
 mod tests {
-    use super::{normalize_permission_mode, permission_to_stage};
-    use crate::agent_adapter::AgentStage;
+    use super::{
+        extract_tool_or_command_part, normalize_permission_mode, parse_chat_stream_line,
+        permission_to_stage, ChatMessagePart,
+    };
+    use crate::agent_adapter::{
+        prepare_invocation, AdapterInvocationRequest, AgentStage, ADAPTER_CLAUDE, ADAPTER_CODEX,
+        ADAPTER_GROK,
+    };
+    use crate::models::AgentConfig;
+    use std::path::Path;
+
+    fn sample_agent(adapter_type: &str, command: &str) -> AgentConfig {
+        AgentConfig {
+            id: "agent-test".to_string(),
+            name: "Test".to_string(),
+            command: command.to_string(),
+            args: Vec::new(),
+            working_directory_policy: "project_root".to_string(),
+            capabilities: vec![
+                "planning".to_string(),
+                "implementation".to_string(),
+                "review".to_string(),
+                "debugging".to_string(),
+            ],
+            adapter_type: adapter_type.to_string(),
+            can_write_files: true,
+            can_run_commands: true,
+            enabled: true,
+            available: true,
+        }
+    }
+
+    fn arg_pair<'a>(args: &'a [String], flag: &str) -> Option<&'a str> {
+        args.windows(2)
+            .find(|pair| pair[0] == flag)
+            .map(|pair| pair[1].as_str())
+    }
 
     #[test]
     fn normalizes_legacy_permission_modes() {
@@ -857,5 +1137,137 @@ mod tests {
         assert_eq!(permission_to_stage("read_only"), AgentStage::Planning);
         assert_eq!(permission_to_stage("read_write"), AgentStage::Planning);
         assert_eq!(permission_to_stage("auto"), AgentStage::Debugging);
+    }
+
+    #[test]
+    fn permission_tiers_drive_prepare_invocation_cli_flags() {
+        let root = Path::new("/repo");
+        let cases = [
+            ("explore", AgentStage::Planning),
+            ("ask", AgentStage::Planning),
+            ("auto", AgentStage::Debugging),
+        ];
+
+        for (mode, expected_stage) in cases {
+            let stage = permission_to_stage(mode);
+            assert_eq!(stage, expected_stage, "mode {mode}");
+
+            let grok = prepare_invocation(
+                &sample_agent(ADAPTER_GROK, "grok"),
+                &AdapterInvocationRequest {
+                    project_path: root,
+                    prompt: "hello",
+                    prompt_file: None,
+                    stage,
+                    resume_command: None,
+                    embed_prompt: true,
+                },
+            )
+            .expect("grok");
+            let expected_perm = if mode == "auto" {
+                "acceptEdits"
+            } else {
+                "plan"
+            };
+            assert_eq!(
+                arg_pair(&grok.args, "--permission-mode"),
+                Some(expected_perm),
+                "grok {mode}"
+            );
+
+            let codex = prepare_invocation(
+                &sample_agent(ADAPTER_CODEX, "codex"),
+                &AdapterInvocationRequest {
+                    project_path: root,
+                    prompt: "hello",
+                    prompt_file: None,
+                    stage,
+                    resume_command: None,
+                    embed_prompt: true,
+                },
+            )
+            .expect("codex");
+            let expected_sandbox = if mode == "auto" {
+                "workspace-write"
+            } else {
+                "read-only"
+            };
+            assert_eq!(
+                arg_pair(&codex.args, "--sandbox"),
+                Some(expected_sandbox),
+                "codex {mode}"
+            );
+
+            let claude = prepare_invocation(
+                &sample_agent(ADAPTER_CLAUDE, "claude"),
+                &AdapterInvocationRequest {
+                    project_path: root,
+                    prompt: "hello",
+                    prompt_file: None,
+                    stage,
+                    resume_command: None,
+                    embed_prompt: true,
+                },
+            )
+            .expect("claude");
+            if mode == "auto" {
+                assert_eq!(
+                    arg_pair(&claude.args, "--permission-mode"),
+                    Some("acceptEdits"),
+                    "claude auto"
+                );
+            } else {
+                assert!(
+                    arg_pair(&claude.args, "--permission-mode").is_none(),
+                    "claude {mode} should omit permission-mode"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn parses_grok_style_tool_use_part() {
+        let line = r#"{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Bash","input":{"command":"ls -la"}}]}}"#;
+        let parsed = parse_chat_stream_line("streaming_json", line);
+        match parsed.part {
+            Some(ChatMessagePart::Tool {
+                name,
+                input_summary,
+                status,
+                ..
+            }) => {
+                assert_eq!(name, "Bash");
+                assert!(input_summary.unwrap_or_default().contains("ls -la"));
+                assert_eq!(status.as_deref(), Some("running"));
+            }
+            other => panic!("expected tool part, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parses_codex_style_command_part() {
+        let line = r#"{"type":"item.completed","item":{"type":"command_execution","command":"pwd","output":"/repo"}}"#;
+        let value = serde_json::from_str(line).unwrap();
+        let part = extract_tool_or_command_part(&value).expect("command part");
+        match part {
+            ChatMessagePart::Tool {
+                name,
+                input_summary,
+                output_summary,
+                ..
+            } => {
+                assert_eq!(name, "command");
+                assert_eq!(input_summary.as_deref(), Some("pwd"));
+                assert_eq!(output_summary.as_deref(), Some("/repo"));
+            }
+            other => panic!("expected tool/command part, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parse_falls_back_to_text_for_non_json() {
+        let parsed = parse_chat_stream_line("streaming_json", "hello plain");
+        assert_eq!(parsed.delta, "hello plain");
+        assert!(parsed.part.is_none());
     }
 }

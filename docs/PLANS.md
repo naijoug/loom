@@ -3,7 +3,7 @@
 ## 2026-09-17
 
 - 09:03-craft-inspired-local-agent-chat.md
-  > （实施中，M0 ✅）Craft 启发本机 Agent Chat Phase 1：M0 已合入；计划已补本机探针（三 CLI 可用、M2 默认 grok）、M1 文件级拆分与验收清单。下一步 M1 Chat 壳。
+  > （实施中，M0–M2 ✅）Craft 启发本机 Agent Chat Phase 1：M2 已选 ProcessSupervisor(Chat)、权限→CLI、stream parts、grok 优先；下一步 M3 多 Agent 对等 + 诊断。
 
 ## 2026-09-14
 

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type {
   AgentConfig,
+  ChatMessagePart,
   ChatPermissionMode,
   ChatSession,
   ChatSessionSummary,
@@ -24,6 +25,7 @@ interface ChatStreamEvent {
   messageId: string;
   delta: string;
   done: boolean;
+  part?: ChatMessagePart;
 }
 
 interface ChatTurnFinishedEvent {
@@ -41,6 +43,19 @@ interface ChatSendResult {
 
 function enabledAgents(agents: AgentConfig[]) {
   return agents.filter((agent) => agent.enabled && agent.adapterType !== "dummy");
+}
+
+/** Dogfood preference: grok → codex → claude → first enabled. */
+function preferredAgentId(agents: AgentConfig[]): string | undefined {
+  const enabled = enabledAgents(agents);
+  const byId = (id: string) => enabled.find((agent) => agent.id === id);
+  return (
+    byId("agent-grok")?.id ??
+    enabled.find((agent) => agent.adapterType === "grok_cli")?.id ??
+    byId("agent-codex")?.id ??
+    byId("agent-claude")?.id ??
+    enabled[0]?.id
+  );
 }
 
 async function updateSessionMeta(input: {
@@ -155,15 +170,23 @@ export function ChatPage() {
           if (!current || current.id !== payload.sessionId) return current;
           return {
             ...current,
-            messages: current.messages.map((message) =>
-              message.id === payload.messageId
-                ? {
-                    ...message,
-                    content: payload.done ? message.content : `${message.content}${payload.delta}`,
-                    status: payload.done ? message.status : "streaming",
-                  }
-                : message,
-            ),
+            messages: current.messages.map((message) => {
+              if (message.id !== payload.messageId) return message;
+              const nextParts = [...(message.parts ?? [])];
+              if (payload.part) {
+                nextParts.push(payload.part);
+              }
+              return {
+                ...message,
+                content: payload.done
+                  ? message.content
+                  : payload.delta
+                    ? `${message.content}${payload.delta}`
+                    : message.content,
+                parts: nextParts.length > 0 ? nextParts : message.parts,
+                status: payload.done ? message.status : "streaming",
+              };
+            }),
             turnStatus: payload.done ? current.turnStatus : "streaming",
           };
         });
@@ -183,7 +206,12 @@ export function ChatPage() {
                 message.id === payload.messageId
                   ? {
                       ...message,
-                      status: payload.status === "error" ? "error" : "complete",
+                      status:
+                        payload.status === "error"
+                          ? "error"
+                          : payload.status === "aborted"
+                            ? "aborted"
+                            : "complete",
                       errorSummary: payload.errorSummary,
                       content:
                         payload.status === "error" && !message.content
@@ -217,7 +245,7 @@ export function ChatPage() {
       setError("请先在侧栏选择或添加一个项目。");
       return;
     }
-    const agentId = agents[0]?.id;
+    const agentId = preferredAgentId(agents);
     if (!agentId) {
       setError("还没有可用的 Agent。请先到设置里配置 Codex / Claude Code / CLI。");
       return;

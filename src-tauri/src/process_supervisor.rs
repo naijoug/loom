@@ -22,6 +22,8 @@ pub enum ProcessKind {
     Command,
     ImplementationReview,
     Pty,
+    /// Chat-first turns (not Task stage). task_id uses `chat:{sessionId}`.
+    Chat,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]

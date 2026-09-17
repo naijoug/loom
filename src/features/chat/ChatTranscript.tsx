@@ -35,10 +35,21 @@ function renderPart(part: ChatMessagePart, index: number) {
 function MessageBody({ message }: { message: ChatMessage }) {
   const parts = message.parts ?? [];
   if (parts.length > 0) {
-    return <>{parts.map((part, index) => renderPart(part, index))}</>;
+    const hasTextPart = parts.some((part) => part.type === "text");
+    return (
+      <>
+        {!hasTextPart && message.content ? (
+          <div className="chat-part chat-part-text">{message.content}</div>
+        ) : null}
+        {parts.map((part, index) => renderPart(part, index))}
+      </>
+    );
   }
   if (message.errorSummary && message.status === "error") {
     return <>{message.content || `（调用失败）${message.errorSummary}`}</>;
+  }
+  if (message.status === "aborted" && !message.content) {
+    return <>（已停止）</>;
   }
   return <>{message.content || (message.status === "streaming" ? "…" : "")}</>;
 }

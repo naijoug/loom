@@ -54,7 +54,7 @@ pub(super) fn discover_default_agents() -> Vec<AgentConfig> {
             let mut agent = AgentConfig {
                 id: id.to_string(),
                 name: name.to_string(),
-                command: command.to_string(),
+                command: resolve_default_command(command),
                 args: Vec::new(),
                 working_directory_policy: "project_root".to_string(),
                 capabilities: vec![
@@ -135,6 +135,87 @@ pub(super) fn is_default_agent_id(agent_id: &str) -> bool {
         agent_id,
         "agent-codex" | "agent-claude" | "agent-grok" | "agent-dummy"
     )
+}
+
+
+/// Prefer an absolute path when PATH is thin (common for GUI-launched Tauri apps).
+/// Basename fallback keeps Settings editable when nothing is installed yet.
+pub(super) fn resolve_default_command(basename: &str) -> String {
+    if let Some(resolved) = which_command(basename) {
+        return resolved;
+    }
+    for candidate in default_command_candidates(basename) {
+        if Path::new(&candidate).is_file() {
+            return candidate;
+        }
+    }
+    basename.to_string()
+}
+
+fn which_command(basename: &str) -> Option<String> {
+    #[cfg(windows)]
+    {
+        let output = Command::new("where").arg(basename).output().ok()?;
+        if !output.status.success() {
+            return None;
+        }
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let first = stdout.lines().next()?.trim();
+        if first.is_empty() {
+            None
+        } else {
+            Some(first.to_string())
+        }
+    }
+    #[cfg(not(windows))]
+    {
+        let output = Command::new("sh")
+            .arg("-c")
+            .arg(format!("command -v {}", shell_escape(basename)))
+            .output()
+            .ok()?;
+        if !output.status.success() {
+            return None;
+        }
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let first = stdout.lines().next()?.trim();
+        if first.is_empty() {
+            None
+        } else {
+            Some(first.to_string())
+        }
+    }
+}
+
+fn default_command_candidates(basename: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    if let Ok(home) = std::env::var("HOME") {
+        let home = PathBuf::from(home);
+        match basename {
+            "grok" => {
+                out.push(home.join(".grok/bin/grok").display().to_string());
+            }
+            "codex" => {
+                out.push(home.join(".npm-global/bin/codex").display().to_string());
+                out.push(home.join(".local/bin/codex").display().to_string());
+            }
+            "claude" => {
+                out.push(home.join(".local/bin/claude").display().to_string());
+            }
+            _ => {}
+        }
+    }
+    // Mac dogfood absolute paths (ignored when missing).
+    if basename == "grok" {
+        out.push("/Users/guojian/.grok/bin/grok".to_string());
+    }
+    if basename == "codex" {
+        out.push("/Users/guojian/.npm-global/bin/codex".to_string());
+    }
+    if basename == "claude" {
+        out.push("/Users/guojian/.local/bin/claude".to_string());
+    }
+    out
 }
 
 pub(super) fn command_available(agent: &AgentConfig) -> bool {
