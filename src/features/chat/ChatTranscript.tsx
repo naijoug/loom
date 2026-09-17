@@ -51,7 +51,14 @@ function MessageBody({ message }: { message: ChatMessage }) {
   if (message.status === "aborted" && !message.content) {
     return <>（已停止）</>;
   }
-  return <>{message.content || (message.status === "streaming" ? "…" : "")}</>;
+  return (
+      <>
+        {message.content || (message.status === "streaming" ? "…" : "")}
+        {message.status === "streaming" ? (
+          <span className="chat-turn-spinner chat-turn-spinner--inline" aria-hidden="true" />
+        ) : null}
+      </>
+    );
 }
 
 export interface ChatTranscriptProps {
@@ -76,7 +83,7 @@ export function ChatTranscript({ messages, emptyHint }: ChatTranscriptProps) {
       {messages.map((message) => (
         <div
           key={message.id}
-          className={`chat-bubble ${message.role}${message.status === "error" ? " error" : ""}`}
+          className={`chat-bubble ${message.role}${message.status === "error" ? " error" : ""}${message.status === "streaming" ? " is-streaming" : ""}`}
           data-status={message.status}
         >
           <MessageBody message={message} />

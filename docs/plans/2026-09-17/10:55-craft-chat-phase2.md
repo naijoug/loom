@@ -3,7 +3,7 @@
 - **Date**: 2026-09-17
 - **Author**: Droplet
 - **Status**: in_progress
-- **Progress**: P2-M0 ✅（Ask 语义 PRD 冻结：ask = 可写 CLI + 每回合发送前确认）；P2-M1 ✅（Composer 确认门 + CLI/stage 映射与 explore 分离）；P2-M2 deferred；P2-M3 / P2-M4 未开
+- **Progress**: P2-M0 ✅；P2-M1 ✅；P2-M2 deferred；P2-M3 ✅（后台回合指示 + 10min 超时自动 abort）；P2-M4 未开（可选）
 - **Scope**: 在 Phase 1（`08e3193`，`docs/plans/2026-09-17/09:03-craft-inspired-local-agent-chat.md`）之上，把 **Ask** 从「与 explore 相同的只读 CLI」升格为可区分产品档位；顺带排期 Sources/MCP 尖刺、后台回合指示、可选 Inbox 五态。**仍不**做完整 Electron Craft 移植；保持 Tauri + `ProcessSupervisor` Chat 路径；**ChatSession ≠ Task**。
 
 参考：
@@ -76,7 +76,7 @@
 
 ### P2-M3 — Background turn indicator / timeout
 
-**Progress**: 未开始 — 产品化后台回合指示与超时文案；现有 spinner/abort/120s safety timeout 可作基线。
+**Progress**: ✅ 完成（2026-09-17）— Rust `CHAT_TURN_TIMEOUT_MS`（10min）经 `ProcessSupervisor::request_stop(..., "chat_timeout")` 自动停止；气泡 `aborted` + 可读超时文案；Composer/Header 运行指示 + 已用时；前端去掉仅清 sending 的 120s safety，改为同路径 abort。
 
 ### P2-M4 — Inbox status expansion
 
@@ -107,3 +107,4 @@
 | 日期 | 变更 |
 |---|---|
 | 2026-09-17 10:55 CST | 初稿 Phase 2；冻结 Ask=可写+每回合确认；P2-M0/M1 实施；P2-M2 defer |
+| 2026-09-17 ~11:20 CST | P2-M3：10min turn timeout + running indicator / elapsed |

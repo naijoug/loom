@@ -729,3 +729,41 @@
 .chat-link-btn[aria-pressed="true"] {
   background: var(--selected, var(--bg-2));
 }
+
+.chat-turn-running {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.chat-turn-spinner {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent, #5b8def);
+  animation: chat-turn-spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+.chat-turn-spinner--inline {
+  display: inline-block;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.chat-bubble.is-streaming {
+  position: relative;
+}
+
+.chat-composer-actions.is-running .chat-hint {
+  color: var(--text-2);
+}
+
+@keyframes chat-turn-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

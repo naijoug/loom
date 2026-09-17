@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   AgentConfig,
   AgentDiagnostic,
@@ -19,6 +19,11 @@ import { ChatComposer } from "./ChatComposer";
 import { ChatSessionHeader } from "./ChatSessionHeader";
 import { ChatContextPanel } from "./ChatContextPanel";
 import { cyclePermissionMode } from "./chatPermission";
+import {
+  CHAT_TURN_TIMEOUT_MS,
+  isChatTurnRunning,
+  turnRunningHint,
+} from "./chatTurn";
 import "./ChatPage.css";
 
 interface ChatStreamEvent {
@@ -119,6 +124,15 @@ export function ChatPage() {
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [turnStartedAtMs, setTurnStartedAtMs] = useState<number | null>(null);
+  const [elapsedMs, setElapsedMs] = useState(0);
+  const turnTimeoutIdRef = useRef<number | null>(null);
+  const clearTurnTimeout = useCallback(() => {
+    if (turnTimeoutIdRef.current != null) {
+      window.clearTimeout(turnTimeoutIdRef.current);
+      turnTimeoutIdRef.current = null;
+    }
+  }, []);
   const [inboxFilter, setInboxFilter] = useState<InboxFilter>("active");
   const [contextOpen, setContextOpen] = useState(false);
 
@@ -178,6 +192,25 @@ export function ChatPage() {
     void refreshDiagnostics();
   }, [loadAgents, refreshDiagnostics]);
 
+
+  useEffect(() => () => clearTurnTimeout(), [clearTurnTimeout]);
+
+  const turnRunning = isChatTurnRunning({
+    sending,
+    turnStatus: session?.turnStatus,
+  });
+
+  useEffect(() => {
+    if (!turnRunning || turnStartedAtMs == null) {
+      setElapsedMs(0);
+      return;
+    }
+    const tick = () => setElapsedMs(Date.now() - turnStartedAtMs);
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [turnRunning, turnStartedAtMs]);
+
   useEffect(() => {
     void refreshSummaries();
   }, [refreshSummaries]);
@@ -230,6 +263,8 @@ export function ChatPage() {
         (payload) => {
           if (disposed) return;
           setSending(false);
+          clearTurnTimeout();
+          setTurnStartedAtMs(null);
           setSession((current) => {
             if (!current || current.id !== payload.sessionId) return current;
             return {
@@ -326,8 +361,17 @@ export function ChatPage() {
       setDraft("");
       setSession(result.session);
       await refreshSummaries();
-      // sending cleared on chat-turn-finished; safety timeout
-      window.setTimeout(() => setSending(false), 120_000);
+      setTurnStartedAtMs(Date.now());
+      clearTurnTimeout();
+      // Rust enforces CHAT_TURN_TIMEOUT_MS via ProcessSupervisor; UI mirrors it and
+      // aborts through the same chat_abort / request_stop path if the finished event is late.
+      turnTimeoutIdRef.current = window.setTimeout(() => {
+        void invokeCommand(TAURI_COMMANDS.chatAbort, {
+          projectPath,
+          sessionId: session.id,
+          turnId: session.activeTurnId,
+        }).catch(() => undefined);
+      }, CHAT_TURN_TIMEOUT_MS);
     } catch (err) {
       setSending(false);
       setError(err instanceof Error ? err.message : String(err));
@@ -342,6 +386,8 @@ export function ChatPage() {
       turnId: session.activeTurnId,
     });
     setSending(false);
+    clearTurnTimeout();
+          setTurnStartedAtMs(null);
   }
 
   async function handlePermissionChange(mode: ChatPermissionMode) {
@@ -549,6 +595,8 @@ async function handleClearResume() {
         ) : (
           <>
             <ChatSessionHeader
+              turnRunning={turnRunning}
+              elapsedHint={turnRunning ? turnRunningHint(elapsedMs) : null}
               session={session}
               useBackend={useBackend}
               canPromote={canPromote}
@@ -564,7 +612,8 @@ async function handleClearResume() {
             <ChatTranscript messages={session.messages} />
             <ChatComposer
               draft={draft}
-              sending={sending}
+              sending={turnRunning}
+              elapsedHint={turnRunning ? turnRunningHint(elapsedMs) : null}
               error={error}
               useBackend={useBackend}
               agentId={session.agentId}

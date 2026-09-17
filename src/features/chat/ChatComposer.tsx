@@ -13,6 +13,8 @@ import { ChatAgentStatusPopover } from "./ChatAgentStatusPopover";
 export interface ChatComposerProps {
   draft: string;
   sending: boolean;
+  /** Optional elapsed label while a turn is running. */
+  elapsedHint?: string | null;
   error: string | null;
   useBackend: boolean;
   agentId: string;
@@ -32,6 +34,7 @@ export interface ChatComposerProps {
 export function ChatComposer({
   draft,
   sending,
+  elapsedHint = null,
   error,
   useBackend,
   agentId,
@@ -187,13 +190,13 @@ export function ChatComposer({
         }}
       />
 
-      <div className="chat-composer-actions">
+      <div className={`chat-composer-actions${sending ? " is-running" : ""}`}>
         <span className="chat-hint">
           {useBackend ? "本机 CLI" : "模拟"} · {permissionModeLabel(permissionMode)}
           {selectedAgent ? ` · ${cliHint}` : ""}
           {needsAskConfirm ? " · 每回合需确认可写" : ""}
           {resumeHint ? " · 续聊中" : ""}
-          {sending ? " · 生成中…" : ""}
+          {sending ? ` · ${elapsedHint ?? "生成中…"}` : ""}
         </span>
         <div className="chat-composer-buttons">
           {sending && useBackend ? (

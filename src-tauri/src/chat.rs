@@ -12,8 +12,14 @@ use std::process::Stdio;
 use tauri::{AppHandle, Emitter, State};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
+use tokio::time::{sleep, Duration};
 
 const CHAT_SCHEMA_VERSION: u32 = 1;
+
+/// Wall-clock budget for one chat turn. On expiry the turn is stopped via
+/// `ProcessSupervisor::request_stop(..., "chat_timeout")` so the session
+/// becomes sendable again with an aborted message.
+pub const CHAT_TURN_TIMEOUT_MS: u64 = 10 * 60 * 1000;
 
 
 const DEFAULT_PERMISSION_MODE: &str = "explore";
@@ -928,10 +934,67 @@ pub fn chat_clear_resume(project_path: String, session_id: String) -> Result<Cha
     Ok(session)
 }
 
+
+const STOP_REASON_ABORT: &str = "chat_abort";
+const STOP_REASON_TIMEOUT: &str = "chat_timeout";
+
+struct TimeoutWatchdog(tauri::async_runtime::JoinHandle<()>);
+
+impl Drop for TimeoutWatchdog {
+    fn drop(&mut self) {
+        self.0.abort();
+    }
+}
+
+/// True when ProcessSupervisor recorded a cooperative stop (user abort or turn timeout).
+pub fn is_chat_stop_reason(reason: Option<&str>) -> bool {
+    matches!(reason, Some(STOP_REASON_ABORT) | Some(STOP_REASON_TIMEOUT))
+}
+
+pub fn chat_timeout_summary() -> String {
+    let minutes = CHAT_TURN_TIMEOUT_MS / 60_000;
+    format!("回合超时（超过 {minutes} 分钟，已自动停止）")
+}
+
+fn chat_stop_outcome(
+    reason: Option<&str>,
+    content: String,
+    mut parts: Vec<ChatMessagePart>,
+) -> ChatTurnOutcome {
+    let timed_out = reason == Some(STOP_REASON_TIMEOUT);
+    let error_summary = if timed_out {
+        Some(chat_timeout_summary())
+    } else {
+        None
+    };
+    if let Some(summary) = error_summary.as_ref() {
+        parts.push(ChatMessagePart::Error {
+            message: summary.clone(),
+            code: Some("chat_timeout".to_string()),
+        });
+    }
+    let content = if content.trim().is_empty() {
+        if timed_out {
+            format!("（已超时）{}", error_summary.as_deref().unwrap_or(""))
+        } else {
+            "（已停止）".to_string()
+        }
+    } else {
+        content
+    };
+    ChatTurnOutcome {
+        content,
+        parts,
+        resume_command: None,
+        status: "aborted".to_string(),
+        error_summary,
+    }
+}
+
 #[tauri::command]
 pub async fn chat_abort(input: ChatAbortInput) -> Result<(), String> {
     let _ = input.project_path;
-    let reason = "chat_abort";
+    let reason = STOP_REASON_ABORT;
     if let Some(turn_id) = input.turn_id.as_deref().filter(|value| !value.is_empty()) {
         let _ = process_supervisor::supervisor().request_stop(turn_id, reason)?;
         return Ok(());
@@ -1054,13 +1117,15 @@ pub async fn chat_send(
                     message.content = outcome.content;
                     message.parts = outcome.parts;
                     message.status = outcome.status.clone();
+                    message.error_summary = outcome.error_summary.clone();
                     // Only adopt a new resume handle on a complete turn — never on abort/error.
                     if outcome.status == "complete" {
                         if let Some(resume) = outcome.resume_command {
                             session.resume_command = Some(resume);
                         }
                     }
-                    if outcome.status == "error" {
+                    // Flag hard errors and turn timeouts (timeout carries error_summary).
+                    if outcome.status == "error" || outcome.error_summary.is_some() {
                         session.flagged = true;
                     }
                     let _ = app_handle.emit(
@@ -1138,9 +1203,15 @@ async fn run_chat_turn(
             chat_task_id(&session_id),
             ProcessKind::Chat,
             pid,
-            None,
+            Some(CHAT_TURN_TIMEOUT_MS),
         ))?;
     }
+    let turn_id_for_timeout = turn_id.clone();
+    let timeout_watchdog = TimeoutWatchdog(tauri::async_runtime::spawn(async move {
+        sleep(Duration::from_millis(CHAT_TURN_TIMEOUT_MS)).await;
+        let _ = process_supervisor::supervisor()
+            .request_stop(&turn_id_for_timeout, STOP_REASON_TIMEOUT);
+    }));
     let stdout = child
         .stdout
         .take()
@@ -1188,11 +1259,12 @@ async fn run_chat_turn(
         .wait()
         .await
         .map_err(|error| format!("failed waiting for agent: {error}"))?;
+    drop(timeout_watchdog);
     let meta = process_supervisor::supervisor().complete(&turn_id);
-    let aborted = meta
+    let stop_reason = meta
         .as_ref()
-        .and_then(|value| value.termination_reason.as_deref())
-        == Some("chat_abort");
+        .and_then(|value| value.termination_reason.as_deref());
+    let aborted = is_chat_stop_reason(stop_reason);
     let mut stderr_text = String::new();
     if let Some(stderr) = stderr {
         let mut err_lines = BufReader::new(stderr).lines();
@@ -1218,18 +1290,9 @@ async fn run_chat_turn(
     );
 
     if aborted {
-        let content = if content.trim().is_empty() {
-            "（已停止）".to_string()
-        } else {
-            content
-        };
-        return Ok(ChatTurnOutcome {
-            content,
-            parts,
-            resume_command: captured.resume_command,
-            status: "aborted".to_string(),
-            error_summary: None,
-        });
+        // Keep any prior resume handle outside this outcome; abort/timeout must not adopt a new one.
+        let _ = captured.resume_command;
+        return Ok(chat_stop_outcome(stop_reason, content, parts));
     }
 
     if !status.success() && content.trim().is_empty() {
@@ -1271,6 +1334,7 @@ mod tests {
         extract_tool_or_command_part, normalize_permission_mode, parse_chat_stream_line,
         permission_to_stage, ChatMessagePart,
     };
+    // chat_stop_outcome / is_chat_stop_reason / chat_timeout_summary tested via super::
     use crate::agent_adapter::{
         prepare_invocation, AdapterInvocationRequest, AgentStage, ADAPTER_CLAUDE, ADAPTER_CODEX,
         ADAPTER_GROK,
@@ -1597,6 +1661,48 @@ mod tests {
         assert_eq!(session.messages[0].content, "partial");
         assert!(session.flagged);
         assert_eq!(session.resume_command.as_deref(), Some("resume-1"));
+    }
+
+    #[test]
+    fn chat_turn_timeout_constant_is_within_product_window() {
+        // Plan: sensible default 5–10 minutes.
+        assert!(super::CHAT_TURN_TIMEOUT_MS >= 5 * 60 * 1000);
+        assert!(super::CHAT_TURN_TIMEOUT_MS <= 10 * 60 * 1000);
+    }
+
+    #[test]
+    fn stop_reason_covers_abort_and_timeout() {
+        assert!(super::is_chat_stop_reason(Some("chat_abort")));
+        assert!(super::is_chat_stop_reason(Some("chat_timeout")));
+        assert!(!super::is_chat_stop_reason(Some("other")));
+        assert!(!super::is_chat_stop_reason(None));
+    }
+
+    #[test]
+    fn timeout_summary_is_readable() {
+        let summary = super::chat_timeout_summary();
+        assert!(summary.contains("超时"), "{summary}");
+        assert!(summary.contains("自动停止"), "{summary}");
+    }
+
+    #[test]
+    fn chat_stop_outcome_marks_timeout_aborted_with_error() {
+        let outcome = super::chat_stop_outcome(Some("chat_timeout"), String::new(), Vec::new());
+        assert_eq!(outcome.status, "aborted");
+        assert!(outcome.error_summary.as_deref().unwrap_or("").contains("超时"));
+        assert!(outcome.content.contains("超时"));
+        assert!(matches!(
+            outcome.parts.first(),
+            Some(ChatMessagePart::Error { code: Some(code), .. }) if code == "chat_timeout"
+        ));
+    }
+
+    #[test]
+    fn chat_stop_outcome_user_abort_keeps_simple_stopped_copy() {
+        let outcome = super::chat_stop_outcome(Some("chat_abort"), String::new(), Vec::new());
+        assert_eq!(outcome.status, "aborted");
+        assert!(outcome.error_summary.is_none());
+        assert_eq!(outcome.content, "（已停止）");
     }
 
 }

@@ -47,7 +47,9 @@
 
 `chat_send` → 组装 prompt → `agent_adapter::prepare_invocation`（stage 由 permissionMode 映射）→ `ProcessSupervisor`（`ProcessKind::Chat`，`task_id=chat:{sessionId}`，`run_id=turnId`）→ 解析 stream → 追加 `ChatMessage` / `parts` → emit 事件。
 
-仅在 turn **complete** 时写入新的 resume handle；abort/error 保留旧 handle。
+仅在 turn **complete** 时写入新的 resume handle；abort/error/timeout 保留旧 handle。
+
+Turn timeout：`CHAT_TURN_TIMEOUT_MS`（默认 10 分钟）到期时 `ProcessSupervisor::request_stop(turnId, "chat_timeout")`；消息 `status=aborted`，`errorSummary` 为可读超时文案；会话 `turnStatus` 回到 idle，可再发送。
 
 ### permissionMode → adapter stage（Phase 2）
 
@@ -83,4 +85,5 @@
 
 - Chat 不复用 `run_planning_discussion` 作为传输
 - 不把 Chat turn 绑进 Task stage
-- MCP / Sources 连接、Ask **per-tool** 运行时审批（当前为发送前确认 stub）、后台任务产品化、Craft 五态 Inbox
+- MCP / Sources 连接、Ask **per-tool** 运行时审批（当前为发送前确认 stub）、Craft 五态 Inbox（P2-M4 可选）
+- 后台回合指示 / 超时已在 Phase 2 P2-M3 落地（非完整 Background tasks 产品）

@@ -3,6 +3,8 @@ import type { ChatPermissionMode, ChatSession } from "../../domain";
 import { permissionModeLabel } from "./chatPermission";
 
 export interface ChatSessionHeaderProps {
+  turnRunning?: boolean;
+  elapsedHint?: string | null;
   session: ChatSession;
   useBackend: boolean;
   canPromote: boolean;
@@ -17,6 +19,8 @@ export interface ChatSessionHeaderProps {
 }
 
 export function ChatSessionHeader({
+  turnRunning = false,
+  elapsedHint = null,
   session,
   useBackend,
   canPromote,
@@ -97,6 +101,12 @@ export function ChatSessionHeader({
         ) : null}
       </div>
       <div className="chat-main-meta">
+        {turnRunning ? (
+          <span className="chat-turn-running" role="status" aria-live="polite">
+            <span className="chat-turn-spinner" aria-hidden="true" />
+            {elapsedHint ?? "生成中…"}
+          </span>
+        ) : null}
         <span className="chat-hint" title={session.resumeCommand ?? undefined}>
           {session.resumeCommand ? "可续聊" : "新 CLI 会话"}
         </span>

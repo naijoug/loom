@@ -3,7 +3,7 @@
 ## 2026-09-17
 
 - 10:55-craft-chat-phase2.md
-  > （进行中，P2-M0–M1 ✅；P2-M2 defer）Craft Chat Phase 2：Ask=可写 CLI + 每回合发送前确认（与 explore 分离）；MCP Sources 尖刺推迟；后台回合/Inbox 五态待开；Beta 公证仅笔记。
+  > （进行中，P2-M0–M1 ✅；P2-M2 defer；P2-M3 ✅）Craft Chat Phase 2：Ask 确认门；后台回合指示/10min 超时；MCP Sources defer；Inbox 五态可选；Beta 公证仅笔记。
 
 - 09:03-craft-inspired-local-agent-chat.md
   > （已完成，M0–M5）Craft 启发本机 Agent Chat Phase 1：Inbox/三档权限/ProcessSupervisor(Chat)/多 Agent parts+诊断/Session 菜单与恢复韧性/可选上下文空态；MCP·Ask 审批·后台任务推迟 Phase 2；见 `docs/dogfood/craft-chat-phase1-checklist.md`。
