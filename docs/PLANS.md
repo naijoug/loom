@@ -2,11 +2,14 @@
 
 ## 2026-09-17
 
+- 10:15-local-agent-chat-rebuild.md
+  > （实施中）本机 Agent Chat 重构：IPC 信封/真实测试门禁、会话隔离、存储路径边界、单 Agent MVP；次级 Agent 不阻塞。接替旧 Craft Phase 1/2 作为继续实施入口。
+
 - 10:55-craft-chat-phase2.md
-  > （进行中，P2-M0–M1 ✅；P2-M2 defer；P2-M3 ✅）Craft Chat Phase 2：Ask 确认门；后台回合指示/10min 超时；MCP Sources defer；Inbox 五态可选；Beta 公证仅笔记。
+  > （历史切片，P2-M0–M1/M3 已合入 main；P2-M2 defer）Ask 确认门 + 超时指示；继续工作转 10:15 重构计划。
 
 - 09:03-craft-inspired-local-agent-chat.md
-  > （已完成，M0–M5）Craft 启发本机 Agent Chat Phase 1：Inbox/三档权限/ProcessSupervisor(Chat)/多 Agent parts+诊断/Session 菜单与恢复韧性/可选上下文空态；MCP·Ask 审批·后台任务推迟 Phase 2；见 `docs/dogfood/craft-chat-phase1-checklist.md`。
+  > （已完成合入 main，M0–M5；后续入口转 10:15）Craft Phase 1 历史；见 `docs/dogfood/craft-chat-phase1-checklist.md`。
 
 ## 2026-09-14
 

@@ -1,9 +1,10 @@
 # Loom Craft 启发的本机 Agent Chat — Plan（Phase 1）
 
+> 2026-09-17 更新：后续未完成工作由 [本机 Agent Chat 重构实施计划](./10:15-local-agent-chat-rebuild.md) 接替。以下 M0/M1 进展与原有决策保留为历史记录；旧 M2–M5 及“下一步建议”不再作为执行入口。新计划已于 12:06 Review 修订，尚未实施。
+
 - **Date**: 2026-09-17
 - **Author**: Droplet
-- **Status**: completed
-- **Progress**: M5 ✅（可选上下文空态；架构/契约/PLANS 收口；Phase 1 dogfood 清单；升格 stub 文案）；M4 ✅；M3 ✅；M2 ✅；M1 ✅；M0 ✅；本机 dogfood 默认 **grok**
+- 状态：completed（M0–M5 已合入 main）；后续未完成/重构工作转 [10:15-local-agent-chat-rebuild.md](./10:15-local-agent-chat-rebuild.md)。
 - **Scope**: 在已完成的 chat-first（`docs/plans/2026-09-14/20:06-chat-first-refactor.md` M0–M5）之上，做**彻底重构的 Phase 1**：把产品主表面做成 Craft Agents 风格的**本机 Agent Chat**（会话收件箱 + 转录 + composer + Agent / 权限档位），端到端可 dogfood 调用本机已接线 Agent；**不**在本阶段重写 Task 状态机，不引入云同步 / 市场 / Electron 服务端架构。
 
 参考：

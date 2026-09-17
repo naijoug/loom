@@ -6,12 +6,22 @@ import type {
   ChatPermissionMode,
   ChatSession,
   ChatSessionSummary,
-  Task,
 } from "../../domain";
 import { useAppState } from "../../state/AppStateContext";
 import { useAgentBridge } from "../../hooks/useAgentBridge";
 import { hasTauriRuntime } from "../../hooks/runtime";
-import { invokeCommand, listenToEvent, TAURI_COMMANDS, TAURI_EVENTS } from "../../api";
+import { listenToEvent, TAURI_EVENTS } from "../../api";
+import {
+  chatAbort,
+  chatClearResume,
+  chatCreate,
+  chatGet,
+  chatListSessions,
+  chatPromoteToTask,
+  chatSend,
+  chatSetAgent,
+  chatUpdateMeta,
+} from "../../api/chatClient";
 import { mockChatStore } from "./mockStore";
 import { ChatInbox, type InboxFilter } from "./ChatInbox";
 import { ChatTranscript } from "./ChatTranscript";
@@ -43,10 +53,6 @@ interface ChatTurnFinishedEvent {
   errorSummary?: string;
 }
 
-interface ChatSendResult {
-  turnId: string;
-  session: ChatSession;
-}
 
 function enabledAgents(agents: AgentConfig[]) {
   return agents.filter((agent) => agent.enabled && agent.adapterType !== "dummy");
@@ -93,7 +99,7 @@ async function updateSessionMeta(input: {
     }
     return mockChatStore.get(input.sessionId) ?? null;
   }
-  return invokeCommand<ChatSession>(TAURI_COMMANDS.chatUpdateMeta, {
+  return chatUpdateMeta({
     projectPath: input.projectPath,
     sessionId: input.sessionId,
     title: input.title,
@@ -165,9 +171,7 @@ export function ChatPage() {
       setSummaries(mockChatStore.list(projectPath));
       return;
     }
-    const listed = await invokeCommand<ChatSessionSummary[]>(TAURI_COMMANDS.chatListSessions, {
-      projectPath,
-    });
+    const listed = await chatListSessions(projectPath);
     setSummaries(listed);
   }, [projectPath, useBackend]);
 
@@ -178,10 +182,7 @@ export function ChatPage() {
         setSession(mockChatStore.get(id) ?? null);
         return;
       }
-      const next = await invokeCommand<ChatSession>(TAURI_COMMANDS.chatGet, {
-        projectPath,
-        sessionId: id,
-      });
+      const next = await chatGet(projectPath, id);
       setSession(next);
     },
     [projectPath, useBackend],
@@ -329,10 +330,7 @@ export function ChatPage() {
       await refreshSummaries();
       return;
     }
-    const created = await invokeCommand<ChatSession>(TAURI_COMMANDS.chatCreate, {
-      projectPath,
-      agentId,
-    });
+    const created = await chatCreate({ projectPath, agentId });
     setSessionId(created.id);
     setSession(created);
     setDraft("");
@@ -352,7 +350,7 @@ export function ChatPage() {
         await refreshSummaries();
         return;
       }
-      const result = await invokeCommand<ChatSendResult>(TAURI_COMMANDS.chatSend, {
+      const result = await chatSend({
         projectPath,
         sessionId: session.id,
         text: draft,
@@ -366,7 +364,7 @@ export function ChatPage() {
       // Rust enforces CHAT_TURN_TIMEOUT_MS via ProcessSupervisor; UI mirrors it and
       // aborts through the same chat_abort / request_stop path if the finished event is late.
       turnTimeoutIdRef.current = window.setTimeout(() => {
-        void invokeCommand(TAURI_COMMANDS.chatAbort, {
+        void chatAbort({
           projectPath,
           sessionId: session.id,
           turnId: session.activeTurnId,
@@ -380,11 +378,11 @@ export function ChatPage() {
 
   async function handleAbort() {
     if (!session || !projectPath || !useBackend) return;
-    await invokeCommand(TAURI_COMMANDS.chatAbort, {
-      projectPath,
-      sessionId: session.id,
-      turnId: session.activeTurnId,
-    });
+    await chatAbort({
+          projectPath,
+          sessionId: session.id,
+          turnId: session.activeTurnId,
+        });
     setSending(false);
     clearTurnTimeout();
           setTurnStartedAtMs(null);
@@ -420,11 +418,7 @@ export function ChatPage() {
         await refreshSummaries();
         return;
       }
-      const next = await invokeCommand<ChatSession>(TAURI_COMMANDS.chatSetAgent, {
-        projectPath,
-        sessionId: session.id,
-        agentId,
-      });
+      const next = await chatSetAgent(projectPath, session.id, agentId);
       setSession(next);
       await refreshSummaries();
     } catch (err) {
@@ -503,10 +497,7 @@ export function ChatPage() {
 async function handleClearResume() {
     if (!session || !projectPath || !useBackend) return;
     try {
-      const next = await invokeCommand<ChatSession>(TAURI_COMMANDS.chatClearResume, {
-        projectPath,
-        sessionId: session.id,
-      });
+      const next = await chatClearResume(projectPath, session.id);
       setSession(next);
     } catch (err) {
       setError(err instanceof Error ? err.message : `清除续聊失败：${String(err)}`);
@@ -516,11 +507,7 @@ async function handleClearResume() {
   async function handlePromote() {
     if (!session || !projectPath || !useBackend) return;
     try {
-      const result = await invokeCommand<{
-        taskId: string;
-        task: Task;
-        session: ChatSession;
-      }>(TAURI_COMMANDS.chatPromoteToTask, {
+      const result = await chatPromoteToTask({
         projectPath,
         sessionId: session.id,
       });

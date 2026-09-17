@@ -33,7 +33,12 @@
     "src/utils/taskTimeline.ts",
     "src/utils/commandLine.ts",
     "src/utils/terminalSlots.ts",
-    "src/contexts/ThemeContext.tsx"
+    "src/contexts/ThemeContext.tsx",
+    "src/features/chat/chatPermission.ts",
+    "src/features/chat/chatTurn.ts",
+    "src/features/chat/mockStore.ts",
+    "src/features/chat/ChatContextPanel.tsx",
+    "src/features/chat/ChatInbox.tsx"
   ],
   "references": []
 }
