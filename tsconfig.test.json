@@ -38,7 +38,8 @@
     "src/features/chat/chatTurn.ts",
     "src/features/chat/mockStore.ts",
     "src/features/chat/ChatContextPanel.tsx",
-    "src/features/chat/ChatInbox.tsx"
+    "src/features/chat/ChatInbox.tsx",
+    "src/features/chat/state/chatStore.ts"
   ],
   "references": []
 }

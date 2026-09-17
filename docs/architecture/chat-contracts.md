@@ -87,3 +87,22 @@ Turn timeout：`CHAT_TURN_TIMEOUT_MS`（默认 10 分钟）到期时 `ProcessSup
 - 不把 Chat turn 绑进 Task stage
 - MCP / Sources 连接、Ask **per-tool** 运行时审批（当前为发送前确认 stub）、Craft 五态 Inbox（P2-M4 可选）
 - 后台回合指示 / 超时已在 Phase 2 P2-M3 落地（非完整 Background tasks 产品）
+
+## v2 冻结补充（10:15 rebuild）
+
+执行入口：`docs/plans/2026-09-17/10:15-local-agent-chat-rebuild.md`。
+
+### IPC 信封
+- **`{ input: {...} }`**：`chat_create`、`chat_update_meta`、`chat_send`、`chat_abort`、`chat_promote_to_task`
+- **平铺字段**：`chat_list_sessions`、`chat_get`、`chat_set_agent`、`chat_clear_resume`
+- 前端唯一封装：`src/api/chatClient.ts`
+
+### 回合状态
+`idle → streaming → (complete | aborted | error)`；同会话同时仅一个 streaming 回合；abort/timeout 均走 ProcessSupervisor。
+
+### 权限
+`explore` / `ask` / `auto`（旧 `read_only`→explore，`read_write`→ask）。Ask 发送前确认门已在 Phase 2 落地。
+
+### 存储与隔离
+`.loom/chat/`；ChatSession ≠ Task；禁止为 Chat 伪造 taskId。路径 canonical，拒绝 `..` 逃逸。崩溃后 streaming → interrupted，由用户手动继续。
+

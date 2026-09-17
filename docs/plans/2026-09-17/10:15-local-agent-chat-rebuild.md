@@ -1,7 +1,7 @@
 # Loom 本机 Agent Chat 重构实施计划
 
 - 日期：2026-09-17 10:15（Asia/Shanghai）
-- 状态：reviewed-revised；2026-09-17 12:06 完成代码对照 Review 并修订计划，以下代码任务尚未实施。
+- 状态：implementing；M0.0 IPC 信封已合入分支；M0 文档/探针/契约已补；Inbox 搜索/恢复与 chatStore 隔离已落地；M1 Rust 拆分改后续 PR（保持 chat.rs 可编译）。
 - 代码基线：Loom `b8e35c7` 加当前工作区；相对上次增量核对没有更新的提交，`src-tauri/src/chat.rs` 未提交变化仅为格式调整，本轮未修改业务代码。
 - Review 结论：原稿 `needs-rework`；已修正前置门禁、测试覆盖、任务顺序与交付范围，详见第 12 节。文档修订不表示代码缺陷已修复。
 - 参考基线：Craft Agents OSS `e8963854c3679edcceb105a42537a06749e6cb64`。

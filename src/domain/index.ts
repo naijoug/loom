@@ -14,4 +14,5 @@ export {
   chatSessionNeedsAttention,
   titleFromUserMessage,
   filterChatSummaries,
+  filterChatSummariesByQuery,
 } from "./chat";

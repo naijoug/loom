@@ -188,3 +188,17 @@ export function filterChatSummaries<T extends {
   return summaries.filter((item) => (item.status ?? "active") === "active");
 }
 
+
+/** Case-insensitive title/preview substring filter (empty query = passthrough). */
+export function filterChatSummariesByQuery<T extends {
+  title: string;
+  preview?: string;
+}>(summaries: T[], query: string): T[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return summaries;
+  return summaries.filter((item) => {
+    const title = item.title.toLowerCase();
+    const preview = (item.preview ?? "").toLowerCase();
+    return title.includes(q) || preview.includes(q);
+  });
+}

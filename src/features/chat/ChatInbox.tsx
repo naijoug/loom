@@ -1,5 +1,5 @@
 import type { ChatInboxFilter, ChatSessionSummary } from "../../domain";
-import { filterChatSummaries } from "../../domain";
+import { filterChatSummaries, filterChatSummariesByQuery } from "../../domain";
 import { Button } from "../../components/common/Button";
 
 export type InboxFilter = ChatInboxFilter;
@@ -27,6 +27,9 @@ export interface ChatInboxProps {
   onSelect: (sessionId: string) => void;
   onCreate: () => void;
   onArchive: (sessionId: string) => void;
+  onRestore: (sessionId: string) => void;
+  searchQuery: string;
+  onSearchQueryChange: (query: string) => void;
 }
 
 export function ChatInbox({
@@ -39,8 +42,14 @@ export function ChatInbox({
   onSelect,
   onCreate,
   onArchive,
+  onRestore,
+  searchQuery,
+  onSearchQueryChange,
 }: ChatInboxProps) {
-  const filtered = filterChatSummaries(summaries, filter);
+  const filtered = filterChatSummariesByQuery(
+    filterChatSummaries(summaries, filter),
+    searchQuery,
+  );
 
   return (
     <aside className="chat-inbox" aria-label="会话收件箱">
@@ -51,6 +60,16 @@ export function ChatInbox({
         </Button>
       </div>
 
+      <label className="chat-inbox-search">
+        <span className="sr-only">搜索会话</span>
+        <input
+          type="search"
+          value={searchQuery}
+          placeholder="搜索标题或预览"
+          aria-label="搜索会话"
+          onChange={(event) => onSearchQueryChange(event.target.value)}
+        />
+      </label>
       <div className="chat-inbox-filters" role="tablist" aria-label="会话过滤">
         <button
           type="button"
@@ -127,7 +146,20 @@ export function ChatInbox({
                 >
                   归档
                 </button>
-              ) : null}
+              ) : (
+                <button
+                  type="button"
+                  className="chat-inbox-restore"
+                  aria-label={`恢复 ${item.title}`}
+                  title="恢复"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onRestore(item.id);
+                  }}
+                >
+                  恢复
+                </button>
+              )}
             </li>
           ))}
         </ul>

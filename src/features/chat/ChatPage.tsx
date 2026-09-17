@@ -140,6 +140,7 @@ export function ChatPage() {
     }
   }, []);
   const [inboxFilter, setInboxFilter] = useState<InboxFilter>("active");
+  const [inboxSearch, setInboxSearch] = useState("");
   const [contextOpen, setContextOpen] = useState(false);
 
   const [diagnostics, setDiagnostics] = useState<AgentDiagnostic[]>([]);
@@ -446,6 +447,24 @@ export function ChatPage() {
   }
 
   
+  async function handleRestore(id: string) {
+    if (!projectPath) return;
+    try {
+      await updateSessionMeta({
+        useBackend,
+        projectPath,
+        sessionId: id,
+        status: "active",
+      });
+      setInboxFilter("active");
+      setSessionId(id);
+      await refreshSummaries();
+      await loadSession(id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
   async function handleRename(title: string) {
     if (!session || !projectPath) return;
     try {
@@ -564,6 +583,9 @@ async function handleClearResume() {
         }}
         onCreate={() => void handleCreate()}
         onArchive={(id) => void handleArchive(id)}
+        onRestore={(id) => void handleRestore(id)}
+        searchQuery={inboxSearch}
+        onSearchQueryChange={setInboxSearch}
       />
 
       <section className="chat-main" aria-label="当前会话">

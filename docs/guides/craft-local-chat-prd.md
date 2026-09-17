@@ -101,3 +101,5 @@ Board / Planning / Testing = advanced，侧栏或菜单可达，**不是**默认
 ## 下一步
 
 M0 文档与类型冻结后进入 **M1**：拆分 Chat IA 壳（Inbox / Transcript / Composer / Header），仍可接现有 send 路径。
+
+> 2026-09-17：执行入口转为 `docs/plans/2026-09-17/10:15-local-agent-chat-rebuild.md`；Chat 验收不再要求四阶段任务闭环。
