@@ -1,8 +1,9 @@
-# Chat 契约草图（M0）
+# Chat 契约（Phase 1）
 
-- **Related**: [chat-first-prd.md](../guides/chat-first-prd.md)
+- **Related**: [craft-local-chat-prd.md](../guides/craft-local-chat-prd.md) · [craft-local-chat-ia.md](../guides/craft-local-chat-ia.md) · [chat-first-prd.md](../guides/chat-first-prd.md)
 - **Frontend types**: `src/domain/chat.ts`
-- **Status**: Phase 1 / M1 — chat commands registered；`parts` 可视化与 ProcessSupervisor 对齐属 M2+
+- **Backend**: `src-tauri/src/chat.rs`
+- **Status**: Phase 1 **completed**（M0–M5）— commands / events / ProcessSupervisor(Chat) / Inbox meta / 上下文空态已落地；MCP Sources 属 Phase 2+
 
 ## 持久化
 
@@ -13,58 +14,73 @@
 ```
 
 - `schemaVersion`: 1
-- 不写入 task store；升格时 **复制** 描述到新 Task，不移动会话文件
+- 不写入 task store；升格时 **复制** 描述到新 Task 草稿，不移动会话文件，**不**自动开跑状态机
 
 ## 领域模型（与 `src/domain/chat.ts` 对齐）
 
-见 TypeScript：`ChatSession`、`ChatMessage`、`ChatTurnStatus`、`ChatPermissionMode`。
+见 TypeScript：`ChatSession`、`ChatSessionSummary`、`ChatMessage`、`ChatTurnStatus`、`ChatPermissionMode`。
 
 要点：
 
-- `ChatSession` 含 `id`、`projectPath`、`agentId`、`title`、`permissionMode`、`messages`、`createdAtMs`、`updatedAtMs`、可选 `resumeCommand`、可选 `activeTurnId`
-- **无** `taskId` 必填字段；可选 `promotedTaskId` 仅在升格后回写
+- `ChatSession`：`id`、`projectPath`、`agentId`、`title`、`permissionMode`、`messages`、`createdAtMs`、`updatedAtMs`、可选 `resumeCommand`、`activeTurnId`、`turnStatus`、`status`（`active`|`archived`）、`flagged`、可选 `promotedTaskId`
+- **无** `taskId` 必填字段；`promotedTaskId` 仅在升格 stub 后回写
+- `ChatSessionSummary` 可含派生 `needsAttention`（旗标或最近错误）
 - `ChatMessage.role`: `user` | `assistant` | `system`
 - `ChatMessage.status`: `complete` | `streaming` | `aborted` | `error`
+- `ChatMessage.parts?`: `text` / `tool` / `error`（stream best-effort；无 parts 回退 `content`）
 
-## Tauri commands（拟定，M2 实现）
+## Tauri commands
 
 | Command | Input | Output |
 |---|---|---|
-| `chat_list_sessions` | `{ projectPath: string }` | `ChatSessionSummary[]` |
+| `chat_list_sessions` | `{ projectPath }` | `ChatSessionSummary[]` |
 | `chat_create` | `{ projectPath, agentId, title? }` | `ChatSession` |
-| `chat_get` | `{ projectPath, sessionId }` | `ChatSession` |
-| `chat_send` | `{ projectPath, sessionId, text, permissionMode? }` | `{ turnId: string }` |
+| `chat_get` | `{ projectPath, sessionId }` | `ChatSession`（load 时 reconcile 中断的 streaming → aborted） |
+| `chat_send` | `{ projectPath, sessionId, text, permissionMode? }` | `{ turnId, session }` |
 | `chat_abort` | `{ projectPath, sessionId, turnId? }` | `{ ok: true }` |
 | `chat_set_agent` | `{ projectPath, sessionId, agentId }` | `ChatSession` |
-| `chat_update_meta` | `{ projectPath, sessionId, title?, permissionMode?, status? }` | `ChatSession` |
-| `chat_promote_to_task` | `{ projectPath, sessionId }` | `{ taskId: string }` stub |
+| `chat_update_meta` | `{ projectPath, sessionId, title?, permissionMode?, status?, flagged?, titleFromFirstMessage? }` | `ChatSession` |
+| `chat_clear_resume` | `{ projectPath, sessionId }` | `ChatSession`（开新 CLI 会话；失败不丢旧 handle） |
+| `chat_promote_to_task` | `{ projectPath, sessionId }` | `{ taskId, task, session }` **草稿 stub** |
 
 调用链（强制）：
 
-`chat_send` → 组装 prompt（含历史裁剪）→ `agent_adapter::prepare`（stage 由 permissionMode 映射）→ `command_runner` → 解析 stream → 追加 `ChatMessage` → emit 事件。
+`chat_send` → 组装 prompt → `agent_adapter::prepare_invocation`（stage 由 permissionMode 映射）→ `ProcessSupervisor`（`ProcessKind::Chat`，`task_id=chat:{sessionId}`，`run_id=turnId`）→ 解析 stream → 追加 `ChatMessage` / `parts` → emit 事件。
 
-### permissionMode → adapter stage（Craft Phase 1 / M0）
+仅在 turn **complete** 时写入新的 resume handle；abort/error 保留旧 handle。
 
-权威细节与 CLI flag 见 [craft-local-chat-prd.md](../guides/craft-local-chat-prd.md) 附录。
+### permissionMode → adapter stage（Phase 1）
+
+权威 CLI flag 见 [craft-local-chat-prd.md](../guides/craft-local-chat-prd.md) 附录。
 
 | permissionMode | stage | 说明 |
 |---|---|---|
 | `explore` | `planning` | 默认；只读 sandbox / plan |
-| `ask` | `planning` | Phase 1 与 explore 同级保守 CLI；**无**审批 UI |
+| `ask` | `planning` | 与 explore 同级保守 CLI；**无**审批 UI（Phase 2+） |
 | `auto` | `debugging` | 可写 + 跑命令（仍受 agent flags / execution_policy） |
 
-旧值：`read_only`→`explore`；`read_write`→`ask`（偏安全）。`ChatMessage.parts`（text/tool/error）可选；`ChatSession.status`：`active`|`archived`（缺省 active）。
+旧值：`read_only`→`explore`；`read_write`→`ask`（偏安全）。
 
-## Events（拟定，M2 注册到 manifest）
+| UI | Grok | Codex | Claude |
+|---|---|---|---|
+| explore / ask | `--permission-mode plan` | `--sandbox read-only` | 不传 `--permission-mode` |
+| auto | `acceptEdits` | `workspace-write` | `acceptEdits` |
 
-命名对齐现有 `loom://…`：
+## Events
 
 | Event | Payload |
 |---|---|
-| `loom://chat-stream` | `{ sessionId, turnId, messageId, delta: string, done: boolean }` |
+| `loom://chat-stream` | `{ sessionId, turnId, messageId, delta, done, part? }` |
 | `loom://chat-turn-finished` | `{ sessionId, turnId, messageId, status, errorSummary? }` |
 
-## 明确不做（契约层）
+## UI 边界（Phase 1）
 
-- Chat 不复用 `run_planning_discussion` 作为传输。
-- 不把 `taskId` 塞进 adapter 必填语义来「假装」有任务；若 prepare 签名仍要 taskId，M2 使用稳定占位如 `chat:<sessionId>` 并在门禁中识别 chat 前缀（实现时文档化）。
+- Inbox：`active` | `needs_attention`（过滤）| `archived`；status 持久化仅两态
+- 可选右侧「上下文」空态：项目路径、`.loom/chat` 提示、当前权限、复用 `agent_diagnostics`；**不**实现 MCP/Sources 连接
+- 升格入口在 Session 菜单；文案强调仅草稿、不自动开跑
+
+## 明确不做（契约层 / Phase 2+）
+
+- Chat 不复用 `run_planning_discussion` 作为传输
+- 不把 Chat turn 绑进 Task stage
+- MCP / Sources 连接、Ask per-tool 审批、后台任务产品化、Craft 五态 Inbox

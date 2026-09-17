@@ -6,6 +6,8 @@ export interface ChatSessionHeaderProps {
   session: ChatSession;
   useBackend: boolean;
   canPromote: boolean;
+  contextOpen?: boolean;
+  onToggleContext?: () => void;
   onClearResume: () => void;
   onPromote: () => void;
   onRename: (title: string) => void;
@@ -18,6 +20,8 @@ export function ChatSessionHeader({
   session,
   useBackend,
   canPromote,
+  contextOpen = false,
+  onToggleContext,
   onClearResume,
   onPromote,
   onRename,
@@ -96,6 +100,17 @@ export function ChatSessionHeader({
         <span className="chat-hint" title={session.resumeCommand ?? undefined}>
           {session.resumeCommand ? "可续聊" : "新 CLI 会话"}
         </span>
+        {onToggleContext ? (
+          <button
+            type="button"
+            className="chat-link-btn"
+            aria-pressed={contextOpen}
+            onClick={onToggleContext}
+            title="项目路径、权限与 Agent 诊断（无 MCP）"
+          >
+            {contextOpen ? "隐藏上下文" : "上下文"}
+          </button>
+        ) : null}
         <div className="chat-session-menu" ref={menuRef}>
           <button
             type="button"
@@ -161,11 +176,13 @@ export function ChatSessionHeader({
                     onPromote();
                   }}
                 >
-                  升格为任务（草稿）
+                  升格为任务（仅草稿，不自动开跑）
                 </button>
               ) : null}
               {session.promotedTaskId ? (
-                <div className="chat-session-menu-note">已升格 · {session.promotedTaskId}</div>
+                <div className="chat-session-menu-note">
+                  已升格草稿 · {session.promotedTaskId}（不会自动推进任务状态机）
+                </div>
               ) : null}
               <button
                 type="button"

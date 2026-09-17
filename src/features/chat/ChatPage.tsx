@@ -17,6 +17,7 @@ import { ChatInbox, type InboxFilter } from "./ChatInbox";
 import { ChatTranscript } from "./ChatTranscript";
 import { ChatComposer } from "./ChatComposer";
 import { ChatSessionHeader } from "./ChatSessionHeader";
+import { ChatContextPanel } from "./ChatContextPanel";
 import { cyclePermissionMode } from "./chatPermission";
 import "./ChatPage.css";
 
@@ -119,6 +120,7 @@ export function ChatPage() {
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [inboxFilter, setInboxFilter] = useState<InboxFilter>("active");
+  const [contextOpen, setContextOpen] = useState(false);
 
   const [diagnostics, setDiagnostics] = useState<AgentDiagnostic[]>([]);
   const [diagnosticsLoading, setDiagnosticsLoading] = useState(false);
@@ -496,9 +498,17 @@ async function handleClearResume() {
 
   const canPromote = Boolean(session && session.messages.some((message) => message.role === "user"));
 
+  const selectedAgent = session
+    ? agents.find((agent) => agent.id === session.agentId) ??
+      state.agents.find((agent) => agent.id === session.agentId)
+    : undefined;
+  const selectedDiagnostic = session
+    ? diagnostics.find((item) => item.agentId === session.agentId)
+    : undefined;
+
   return (
     <div
-      className="chat-page"
+      className={`chat-page${contextOpen ? " chat-page--context-open" : ""}`}
       data-testid="chat-page"
       onKeyDown={(event) => {
         if (event.key !== "Tab" || !event.shiftKey || !session) return;
@@ -525,13 +535,25 @@ async function handleClearResume() {
 
       <section className="chat-main" aria-label="当前会话">
         {!session ? (
-          <div className="chat-messages-empty">选择或新建一个会话开始聊天。</div>
+          <div className="chat-messages-empty">
+            <p>选择或新建一个会话开始聊天。</p>
+            <button
+              type="button"
+              className="chat-link-btn"
+              aria-pressed={contextOpen}
+              onClick={() => setContextOpen((open) => !open)}
+            >
+              {contextOpen ? "隐藏上下文" : "查看上下文"}
+            </button>
+          </div>
         ) : (
           <>
             <ChatSessionHeader
               session={session}
               useBackend={useBackend}
               canPromote={canPromote}
+              contextOpen={contextOpen}
+              onToggleContext={() => setContextOpen((open) => !open)}
               onClearResume={() => void handleClearResume()}
               onPromote={() => void handlePromote()}
               onRename={(title) => void handleRename(title)}
@@ -561,6 +583,19 @@ async function handleClearResume() {
           </>
         )}
       </section>
+
+      {contextOpen ? (
+        <ChatContextPanel
+          projectPath={projectPath}
+          permissionMode={session?.permissionMode ?? null}
+          agent={selectedAgent}
+          diagnostic={selectedDiagnostic}
+          diagnosticsLoading={diagnosticsLoading}
+          useBackend={useBackend}
+          onRefreshDiagnostics={() => void refreshDiagnostics()}
+          onClose={() => setContextOpen(false)}
+        />
+      ) : null}
     </div>
   );
 }

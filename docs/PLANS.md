@@ -3,7 +3,7 @@
 ## 2026-09-17
 
 - 09:03-craft-inspired-local-agent-chat.md
-  > （实施中，M0–M2 ✅）Craft 启发本机 Agent Chat Phase 1：M2 已选 ProcessSupervisor(Chat)、权限→CLI、stream parts、grok 优先；下一步 M3 多 Agent 对等 + 诊断。
+  > （已完成，M0–M5）Craft 启发本机 Agent Chat Phase 1：Inbox/三档权限/ProcessSupervisor(Chat)/多 Agent parts+诊断/Session 菜单与恢复韧性/可选上下文空态；MCP·Ask 审批·后台任务推迟 Phase 2；见 `docs/dogfood/craft-chat-phase1-checklist.md`。
 
 ## 2026-09-14
 

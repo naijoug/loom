@@ -2,8 +2,8 @@
 
 - **Date**: 2026-09-17
 - **Author**: Droplet
-- **Status**: in_progress
-- **Progress**: M4 ✅（Inbox needs_attention / 归档过滤；streaming 重启对账为 aborted；标题重命名+首条消息；Session 菜单密度；resume 失败保留旧 handle）；M3 ✅；M2 ✅；M1 ✅；本机 dogfood 默认 **grok**
+- **Status**: completed
+- **Progress**: M5 ✅（可选上下文空态；架构/契约/PLANS 收口；Phase 1 dogfood 清单；升格 stub 文案）；M4 ✅；M3 ✅；M2 ✅；M1 ✅；M0 ✅；本机 dogfood 默认 **grok**
 - **Scope**: 在已完成的 chat-first（`docs/plans/2026-09-14/20:06-chat-first-refactor.md` M0–M5）之上，做**彻底重构的 Phase 1**：把产品主表面做成 Craft Agents 风格的**本机 Agent Chat**（会话收件箱 + 转录 + composer + Agent / 权限档位），端到端可 dogfood 调用本机已接线 Agent；**不**在本阶段重写 Task 状态机，不引入云同步 / 市场 / Electron 服务端架构。
 
 参考：
@@ -187,6 +187,8 @@ Craft 侧已阅读要点（README + `docs/cli.md` + shared session/permission + 
 
 ### M5 — 可选 Sources 空态 + 文档收口 + dogfood 清单
 
+**Progress**: ✅ 完成（2026-09-17）— `ChatContextPanel` 空态（路径 / `.loom/chat` / 权限 / 诊断；MCP 标后续）；架构+契约+PLANS 收口；`docs/dogfood/craft-chat-phase1-checklist.md`；升格「仅草稿，不自动开跑」。
+
 **Outcome**: Phase 1 可宣布完成；Phase 2 入口清晰。
 
 | # | Task | Files / Output | Verification |
@@ -195,6 +197,15 @@ Craft 侧已阅读要点（README + `docs/cli.md` + shared session/permission + 
 | 5.2 | 更新 `docs/architecture.md` / chat 契约 / 本计划 Progress=completed 条件 | docs | 与代码一致 |
 | 5.3 | 回归：Chat dogfood 清单 + 打开 Board 既有任务 | 手动/冒烟 | `pnpm check`；无 Task 状态机回归 |
 | 5.4 | 升格 stub 入口保留在 Session 菜单；文案强调不自动开跑 | UI | 点击仍只建草稿 Task |
+
+#### M5 验收清单
+
+- [x] 可选上下文面板：项目路径、`.loom/chat` 提示、当前权限、复用 `diagnose_agents`
+- [x] Sources/MCP 标注后续阶段；无连接 UI
+- [x] 架构 / chat-contracts / PLANS / 本计划 Status=completed
+- [x] Phase 1 dogfood 清单合并 M2–M4 笔记
+- [x] 升格 stub 文案强调不自动开跑
+- [ ] 本机 Mac 勾选 Phase 1 清单 + Board 冒烟（CI/box 无 CLI 则人工）
 
 ## 风险
 
@@ -295,7 +306,14 @@ src/features/chat/
 | 2026-09-17 | **M4 完成**：needs_attention Inbox；interrupt reconcile；标题重命名；Session 菜单；resume 保守更新 |
 | 2026-09-17 | **M3 完成**：Claude stream parts 对等；权限 CLI hint；Chat Agent 状态弹出；见 `docs/dogfood/craft-chat-m3-parity.md` |
 | 2026-09-17 | **M2 完成**：ProcessSupervisor(`Chat`)；权限→CLI 单测；stream parts；grok 优先+绝对路径；见 `docs/dogfood/craft-chat-m2-grok.md` |
+| 2026-09-17 | **M5 完成 / Phase 1 收口**：上下文空态；文档与契约同步；`craft-chat-phase1-checklist.md`；升格 stub 文案；Status → completed |
 
-## 下一步建议
+## 下一步建议（Phase 2+，已推迟）
 
-M4 已完成。下一步 **M5**：可选 Sources/上下文空态、契约/架构文档收口、dogfood 清单、升格 stub 文案。不要并行 MCP 连接 / 完整 Ask 审批 / Task 状态机改造。
+Phase 1（M0–M5）已完成。后续可选方向（**不要**在未开新计划前并行塞进 main）：
+
+- Sources / MCP 连接（stdio/http）与工具可见性
+- Ask 档真实审批 / tool-gate UI
+- 后台任务条产品化、更完整权限规则引擎
+- Inbox 工作流是否对齐 Craft 五态（需单独产品决策）
+- Beta 公证 / 公开分发（见 beta-release-readiness）

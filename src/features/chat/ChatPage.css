@@ -7,6 +7,10 @@
   color: var(--text);
 }
 
+.chat-page--context-open {
+  grid-template-columns: 260px minmax(0, 1fr) minmax(220px, 280px);
+}
+
 .chat-inbox {
   display: flex;
   flex-direction: column;
@@ -308,6 +312,14 @@
   line-height: 1.6;
   max-width: 420px;
   padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.chat-messages-empty p {
+  margin: 0;
 }
 
 .chat-composer {
@@ -596,3 +608,88 @@
   padding: 6px 10px;
 }
 
+
+
+/* M5: optional context rail (empty-state; no MCP) */
+.chat-context-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-left: 1px solid var(--border);
+  background: var(--sidebar, var(--bg-2));
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+  padding: 0 0 16px;
+}
+
+.chat-context-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 12px 8px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: inherit;
+  z-index: 1;
+}
+
+.chat-context-panel-header h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.chat-context-section {
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.chat-context-section h3 {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.chat-context-section p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.chat-context-path {
+  overflow-wrap: anywhere;
+}
+
+.chat-context-path code,
+.chat-context-section code {
+  font-size: 11px;
+}
+
+.chat-context-diag-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.chat-context-later {
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+}
+
+.chat-context-later strong {
+  font-weight: 600;
+}
+
+.chat-link-btn[aria-pressed="true"] {
+  background: var(--selected, var(--bg-2));
+}

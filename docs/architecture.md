@@ -9,6 +9,7 @@ Loom 是本地优先的 Tauri 桌面开发工作台。React 负责流程展示�
 | 层 | 主要模块 | 职责 |
 |---|---|---|
 | UI | `src/components`, `src/state`, `src/hooks` | 四阶段导航、表单、实时日志、Review、人工反馈、总结与设置 |
+| Chat | `src/features/chat/`, `src-tauri/src/chat.rs`, `docs/architecture/chat-contracts.md` | Craft 启发本机 Agent Chat（Inbox / Transcript / Composer / 权限三档 / 可选上下文空态）；经 `agent_adapter` + `ProcessSupervisor(Chat)`；**不等于** Task |
 | Orchestrator | `task_state.rs`, `task_repository.rs`, `tasks/{lifecycle,testing}.rs`, `run_recovery.rs` | 权威状态转换、事务化任务 mutation、生命周期门禁、重启对账、任务事件 |
 | Agent Adapter | `agent_adapter.rs`, `agent_diagnostics.rs`, `agents/{config,orchestrator,prompts,stream,artifacts}.rs` | Codex、Claude、自定义 CLI 参数映射、能力/权限检查、输出解析、规划编排和 session |
 | Review Engine | `implementation_review.rs` | 独立 Reviewer 上下文、结构化 finding、决策、blocker gate 与重审 |
@@ -34,6 +35,9 @@ Loom 是本地优先的 Tauri 桌面开发工作台。React 负责流程展示�
   loom.json
   agent-preferences.json
   terminals.json
+  chat/
+    index.json
+    sessions/<session-id>.json
   tasks/<task-id>.json
   tasks/<task-id>/attachments/*
   tasks/<task-id>/summary.json
@@ -59,3 +63,11 @@ Task、Agent 配置、App Settings、终端槽位和项目 Agent 偏好均使用
 ## 扩展 Agent
 
 新增 Agent 时实现 adapter 的 prepare 映射，声明 output mode、阶段能力、文件/命令权限和可恢复 session 规则。核心 task、review 和 testing 流程只依赖 `PreparedAgentInvocation`，不依赖具体 CLI。详见 [Agent Adapter](agent-adapter.md)。
+
+## 本机 Agent Chat（Phase 1）
+
+Craft 启发的本机会话面已完成 M0–M5：默认冷启动进 Chat；会话收件箱（`active` / `needs_attention` 过滤 / `archived`）、三档权限（`explore`/`ask`/`auto`）、流式 Turn + best-effort `parts`、内联 Agent 诊断、可选右侧「上下文」空态（项目路径 / `.loom/chat` / 权限 / 诊断；**无 MCP 连接**）。升格为 Task 仅为草稿 stub，不自动推进状态机。
+
+进程：`ProcessSupervisor` + `ProcessKind::Chat`（`task_id=chat:{sessionId}`）。契约见 [chat-contracts.md](architecture/chat-contracts.md)；dogfood 清单见 [craft-chat-phase1-checklist.md](dogfood/craft-chat-phase1-checklist.md)。
+
+**Phase 2+（明确推迟）**：Sources/MCP 连接、Ask 审批 UI、后台任务产品化、Inbox 五态对齐 Craft。

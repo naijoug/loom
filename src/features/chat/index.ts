@@ -7,3 +7,4 @@ export {
   CHAT_PERMISSION_CYCLE,
 } from "./chatPermission";
 export { ChatAgentStatusPopover } from "./ChatAgentStatusPopover";
+export { ChatContextPanel } from "./ChatContextPanel";
