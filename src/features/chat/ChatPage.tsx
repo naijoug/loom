@@ -41,6 +41,8 @@ import {
   createChatStoreSnapshot,
   type ChatStoreSnapshot,
 } from "./state/chatStore";
+import { AddProjectModal } from "../../components/Sidebar/AddProjectModal";
+import { Button } from "../../components/common/Button";
 import "./ChatPage.css";
 
 interface ChatStreamEvent {
@@ -147,6 +149,7 @@ export function ChatPage() {
   }, []);
   const [inboxFilter, setInboxFilter] = useState<InboxFilter>("active");
   const [inboxSearch, setInboxSearch] = useState("");
+  const [addProjectOpen, setAddProjectOpen] = useState(false);
   const [chatStore, setChatStore] = useState<ChatStoreSnapshot>(() =>
     createChatStoreSnapshot(projectPath),
   );
@@ -561,9 +564,23 @@ async function handleClearResume() {
   if (!projectPath) {
     return (
       <div className="chat-page-empty" role="status">
-        先在左侧选择一个项目，再开始对话。
-        <br />
-        Chat 与 Task 是分开的：这里不会推进任务状态机。
+        <div className="chat-page-empty-card">
+          <h2 className="chat-page-empty-title">开始本机 Agent 对话</h2>
+          <p className="chat-page-empty-copy">
+            先添加一个本地项目目录。Chat 与 Task 相互独立，这里不会推进任务状态机。
+          </p>
+          <div className="chat-page-empty-actions">
+            <Button type="button" variant="primary" onClick={() => setAddProjectOpen(true)}>
+              添加项目
+            </Button>
+          </div>
+          {state.projects.recent.length > 0 ? (
+            <p className="chat-page-empty-hint">或在左侧「最近项目」里点选一个已有项目。</p>
+          ) : (
+            <p className="chat-page-empty-hint">还没有最近项目时，请用「添加项目」选择本地文件夹。</p>
+          )}
+        </div>
+        {addProjectOpen ? <AddProjectModal onClose={() => setAddProjectOpen(false)} /> : null}
       </div>
     );
   }
@@ -611,15 +628,27 @@ async function handleClearResume() {
       <section className="chat-main" aria-label="当前会话">
         {!session ? (
           <div className="chat-messages-empty">
-            <p>选择或新建一个会话开始聊天。</p>
-            <button
-              type="button"
-              className="chat-link-btn"
-              aria-pressed={contextOpen}
-              onClick={() => setContextOpen((open) => !open)}
-            >
-              {contextOpen ? "隐藏上下文" : "查看上下文"}
-            </button>
+            <h3 className="chat-messages-empty-title">还没有选中会话</h3>
+            <p>在左侧新建会话，或点选已有会话。支持流式回复、停止生成、续聊与权限三档。</p>
+            <div className="chat-messages-empty-actions">
+              <Button type="button" variant="primary" onClick={() => void handleCreate()}>
+                新建会话
+              </Button>
+              <button
+                type="button"
+                className="chat-link-btn"
+                aria-pressed={contextOpen}
+                onClick={() => setContextOpen((open) => !open)}
+              >
+                {contextOpen ? "隐藏上下文" : "查看上下文"}
+              </button>
+            </div>
+            {agents.length === 0 ? (
+              <p className="chat-messages-empty-warn" role="status">
+                当前没有可用 Agent。请到「设置」检查本机 CLI（推荐 grok，或 Codex / Claude Code）是否已安装并登录。
+              </p>
+            ) : null}
+            {error ? <p className="chat-messages-empty-warn" role="alert">{error}</p> : null}
           </div>
         ) : (
           <>

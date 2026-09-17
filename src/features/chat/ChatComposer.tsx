@@ -204,7 +204,7 @@ export function ChatComposer({
               停止
             </Button>
           ) : null}
-          <Button type="button" onClick={requestSend} disabled={!draft.trim() || sending}>
+          <Button type="button" onClick={requestSend} disabled={!draft.trim() || sending || agents.length === 0}>
             {needsAskConfirm ? "发送…" : "发送"}
           </Button>
         </div>

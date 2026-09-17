@@ -13,12 +13,25 @@ export function reduceProjects(state: AppState, action: AppAction): AppState {
         ...state,
         app: { ...state.app, isLoadingProjects: false, projectError: action.error },
       };
-    case "projects/recentLoaded":
+    case "projects/recentLoaded": {
+      const recent = action.projects;
+      const currentStillValid =
+        state.projects.current != null &&
+        recent.some((project) => project.id === state.projects.current?.id);
+      const nextCurrent = currentStillValid
+        ? state.projects.current
+        : (recent[0] ?? null);
       return {
         ...state,
-        app: { ...state.app, isLoadingProjects: false, projectError: null },
-        projects: { ...state.projects, recent: action.projects },
+        app: {
+          ...state.app,
+          isLoadingProjects: false,
+          projectError: null,
+          activeProjectId: nextCurrent?.id ?? null,
+        },
+        projects: { ...state.projects, recent, current: nextCurrent },
       };
+    }
     case "projects/registered": {
       const recent = [
         action.project,

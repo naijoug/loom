@@ -70,6 +70,7 @@ export function Navigation() {
   const { loadRecentProjects, removeRecentProject } = useProjectBridge();
   const { deleteTask } = useTaskBridge();
   const [addProjectOpen, setAddProjectOpen] = useState(false);
+  const [autoOpenedAddProject, setAutoOpenedAddProject] = useState(false);
   const [taskMenu, setTaskMenu] = useState<TaskMenuState | null>(null);
   const [projectMenu, setProjectMenu] = useState<ProjectMenuState | null>(null);
   const [confirmTaskId, setConfirmTaskId] = useState<string | null>(null);
@@ -104,6 +105,19 @@ export function Navigation() {
   useEffect(() => {
     void loadRecentProjects();
   }, [loadRecentProjects]);
+
+  useEffect(() => {
+    if (autoOpenedAddProject) return;
+    if (state.app.isLoadingProjects) return;
+    if (state.projects.recent.length > 0 || state.projects.current) return;
+    setAddProjectOpen(true);
+    setAutoOpenedAddProject(true);
+  }, [
+    autoOpenedAddProject,
+    state.app.isLoadingProjects,
+    state.projects.recent.length,
+    state.projects.current,
+  ]);
 
   useEffect(() => {
     if (!taskMenu && !projectMenu) {
@@ -348,7 +362,16 @@ export function Navigation() {
             );
           })}
           {state.projects.recent.length === 0 && (
-            <li className="nav-empty">暂无最近项目</li>
+            <li className="nav-empty">
+              <div className="nav-empty-copy">暂无最近项目</div>
+              <button
+                type="button"
+                className="nav-empty-cta"
+                onClick={() => setAddProjectOpen(true)}
+              >
+                添加第一个项目
+              </button>
+            </li>
           )}
         </ul>
       </nav>
