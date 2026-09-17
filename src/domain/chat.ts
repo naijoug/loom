@@ -10,6 +10,9 @@ export type ChatPermissionModeInput = ChatPermissionMode | LegacyChatPermissionM
 
 export type ChatSessionStatus = "active" | "archived";
 
+/** Inbox filter tabs (status stays active|archived; needs_attention is derived/filter). */
+export type ChatInboxFilter = ChatSessionStatus | "needs_attention";
+
 export type ChatMessageRole = "user" | "assistant" | "system";
 
 export type ChatMessageStatus = "complete" | "streaming" | "aborted" | "error";
@@ -60,6 +63,8 @@ export interface ChatSession {
   promotedTaskId?: string;
   /** Phase 1 inbox status; default active for old sessions. */
   status?: ChatSessionStatus;
+  /** User flag — contributes to needs_attention. */
+  flagged?: boolean;
   schemaVersion: 1;
 }
 
@@ -70,6 +75,9 @@ export interface ChatSessionSummary {
   updatedAtMs: number;
   preview?: string;
   status?: ChatSessionStatus;
+  /** True when flagged or last turn/message is error (active sessions). */
+  needsAttention?: boolean;
+  flagged?: boolean;
 }
 
 export interface ChatCreateInput {
@@ -116,3 +124,62 @@ export function normalizeChatPermissionMode(
 export function chatPermissionAllowsWrite(mode: ChatPermissionModeInput): boolean {
   return normalizeChatPermissionMode(mode) === "auto";
 }
+
+/** Whether an active session should appear under the needs_attention filter. */
+export function chatSessionNeedsAttention(session: {
+  status?: ChatSessionStatus | string | null;
+  flagged?: boolean | null;
+  turnStatus?: ChatTurnStatus | string | null;
+  messages?: Array<{ status?: ChatMessageStatus | string | null }>;
+}): boolean {
+  const status = session.status ?? DEFAULT_CHAT_SESSION_STATUS;
+  if (status === "archived") return false;
+  if (session.flagged) return true;
+  if (session.turnStatus === "error") return true;
+  return (session.messages ?? []).some((message) => message.status === "error");
+}
+
+/**
+ * Title from first user text: first non-empty line, collapse whitespace,
+ * truncate at a word boundary near maxLen (default 48) — not a blind slice.
+ */
+export function titleFromUserMessage(text: string, maxLen = 48): string {
+  const firstLine =
+    text
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .find((line) => line.length > 0) ?? text.trim();
+  const collapsed = firstLine.replace(/\s+/g, " ").trim();
+  if (!collapsed) return "新对话";
+  if ([...collapsed].length <= maxLen) return collapsed;
+  const chars = [...collapsed];
+  let cut = maxLen;
+  for (let i = maxLen; i >= Math.floor(maxLen * 0.5); i -= 1) {
+    if (/\s/.test(chars[i] ?? "")) {
+      cut = i;
+      break;
+    }
+  }
+  const sliced = chars.slice(0, cut).join("").trimEnd();
+  return `${sliced}…`;
+}
+
+/** Filter inbox summaries for a tab (active includes needs_attention items). */
+export function filterChatSummaries<T extends {
+  status?: ChatSessionStatus | string | null;
+  needsAttention?: boolean | null;
+  flagged?: boolean | null;
+}>(summaries: T[], filter: ChatInboxFilter): T[] {
+  if (filter === "archived") {
+    return summaries.filter((item) => (item.status ?? "active") === "archived");
+  }
+  if (filter === "needs_attention") {
+    return summaries.filter(
+      (item) =>
+        (item.status ?? "active") === "active" &&
+        Boolean(item.needsAttention || item.flagged),
+    );
+  }
+  return summaries.filter((item) => (item.status ?? "active") === "active");
+}
+

@@ -66,6 +66,8 @@ async function updateSessionMeta(input: {
   title?: string;
   permissionMode?: ChatPermissionMode;
   status?: "active" | "archived";
+  flagged?: boolean;
+  titleFromFirstMessage?: boolean;
 }): Promise<ChatSession | null> {
   if (!input.useBackend) {
     if (input.permissionMode) {
@@ -77,6 +79,12 @@ async function updateSessionMeta(input: {
     if (input.title !== undefined) {
       mockChatStore.setTitle(input.sessionId, input.title);
     }
+    if (input.flagged !== undefined) {
+      mockChatStore.setFlagged(input.sessionId, input.flagged);
+    }
+    if (input.titleFromFirstMessage) {
+      mockChatStore.setTitleFromFirstMessage(input.sessionId);
+    }
     return mockChatStore.get(input.sessionId) ?? null;
   }
   return invokeCommand<ChatSession>(TAURI_COMMANDS.chatUpdateMeta, {
@@ -85,6 +93,8 @@ async function updateSessionMeta(input: {
     title: input.title,
     permissionMode: input.permissionMode,
     status: input.status,
+    flagged: input.flagged,
+    titleFromFirstMessage: input.titleFromFirstMessage,
   });
 }
 
@@ -393,7 +403,56 @@ export function ChatPage() {
     }
   }
 
-  async function handleClearResume() {
+  
+  async function handleRename(title: string) {
+    if (!session || !projectPath) return;
+    try {
+      const next = await updateSessionMeta({
+        useBackend,
+        projectPath,
+        sessionId: session.id,
+        title,
+      });
+      setSession(next);
+      await refreshSummaries();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  async function handleTitleFromFirstMessage() {
+    if (!session || !projectPath) return;
+    try {
+      const next = await updateSessionMeta({
+        useBackend,
+        projectPath,
+        sessionId: session.id,
+        titleFromFirstMessage: true,
+      });
+      setSession(next);
+      await refreshSummaries();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  async function handleToggleFlag() {
+    if (!session || !projectPath) return;
+    try {
+      const next = await updateSessionMeta({
+        useBackend,
+        projectPath,
+        sessionId: session.id,
+        flagged: !session.flagged,
+      });
+      setSession(next);
+      await refreshSummaries();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+async function handleClearResume() {
     if (!session || !projectPath || !useBackend) return;
     try {
       const next = await invokeCommand<ChatSession>(TAURI_COMMANDS.chatClearResume, {
@@ -475,6 +534,10 @@ export function ChatPage() {
               canPromote={canPromote}
               onClearResume={() => void handleClearResume()}
               onPromote={() => void handlePromote()}
+              onRename={(title) => void handleRename(title)}
+              onTitleFromFirstMessage={() => void handleTitleFromFirstMessage()}
+              onToggleFlag={() => void handleToggleFlag()}
+              onArchive={() => void handleArchive(session.id)}
             />
             <ChatTranscript messages={session.messages} />
             <ChatComposer

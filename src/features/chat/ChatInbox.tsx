@@ -1,7 +1,8 @@
-import type { ChatSessionStatus, ChatSessionSummary } from "../../domain";
+import type { ChatInboxFilter, ChatSessionSummary } from "../../domain";
+import { filterChatSummaries } from "../../domain";
 import { Button } from "../../components/common/Button";
 
-export type InboxFilter = ChatSessionStatus;
+export type InboxFilter = ChatInboxFilter;
 
 function formatUpdatedAt(updatedAtMs: number): string {
   try {
@@ -39,7 +40,7 @@ export function ChatInbox({
   onCreate,
   onArchive,
 }: ChatInboxProps) {
-  const filtered = summaries.filter((item) => (item.status ?? "active") === filter);
+  const filtered = filterChatSummaries(summaries, filter);
 
   return (
     <aside className="chat-inbox" aria-label="会话收件箱">
@@ -63,6 +64,15 @@ export function ChatInbox({
         <button
           type="button"
           role="tab"
+          aria-selected={filter === "needs_attention"}
+          className={`chat-inbox-filter${filter === "needs_attention" ? " active" : ""}`}
+          onClick={() => onFilterChange("needs_attention")}
+        >
+          需关注
+        </button>
+        <button
+          type="button"
+          role="tab"
           aria-selected={filter === "archived"}
           className={`chat-inbox-filter${filter === "archived" ? " active" : ""}`}
           onClick={() => onFilterChange("archived")}
@@ -75,9 +85,11 @@ export function ChatInbox({
         <div className="chat-inbox-empty">
           {filter === "archived"
             ? "没有已归档会话。"
-            : `还没有会话。点「新建」开始。${
-                useBackend ? " 将通过本机 Agent CLI 流式回复。" : " （浏览器预览使用模拟回复）"
-              }`}
+            : filter === "needs_attention"
+              ? "没有需要关注的会话。"
+              : `还没有会话。点「新建」开始。${
+                  useBackend ? " 将通过本机 Agent CLI 流式回复。" : " （浏览器预览使用模拟回复）"
+                }`}
         </div>
       ) : (
         <ul className="chat-inbox-list">
@@ -88,14 +100,21 @@ export function ChatInbox({
                 className={`chat-inbox-item${item.id === selectedId ? " selected" : ""}`}
                 onClick={() => onSelect(item.id)}
               >
-                <span className="chat-inbox-title">{item.title}</span>
+                <span className="chat-inbox-title-row">
+                  <span className="chat-inbox-title">{item.title}</span>
+                  {item.needsAttention || item.flagged ? (
+                    <span className="chat-inbox-attention" title="需要关注">
+                      !
+                    </span>
+                  ) : null}
+                </span>
                 {item.preview ? <span className="chat-inbox-preview">{item.preview}</span> : null}
                 <span className="chat-inbox-meta">
                   <span>{agentNameById[item.agentId] ?? item.agentId}</span>
                   <span>{formatUpdatedAt(item.updatedAtMs)}</span>
                 </span>
               </button>
-              {filter === "active" ? (
+              {filter !== "archived" ? (
                 <button
                   type="button"
                   className="chat-inbox-archive"

@@ -27,6 +27,8 @@ class MockChatStore {
           ? session.messages[session.messages.length - 1].content.slice(0, 80)
           : undefined,
         status: session.status ?? "active",
+        flagged: Boolean(session.flagged),
+        needsAttention: Boolean(session.flagged),
       }));
   }
 
@@ -65,6 +67,24 @@ class MockChatStore {
     const session = this.sessions.get(sessionId);
     if (!session) return undefined;
     const next = { ...session, permissionMode, updatedAtMs: now() };
+    this.sessions.set(sessionId, next);
+    return next;
+  }
+
+  setTitle(sessionId, title) {
+    const session = this.sessions.get(sessionId);
+    if (!session) return undefined;
+    const trimmed = String(title ?? "").trim();
+    if (!trimmed) return session;
+    const next = { ...session, title: trimmed, updatedAtMs: Date.now() };
+    this.sessions.set(sessionId, next);
+    return next;
+  }
+
+  setFlagged(sessionId, flagged) {
+    const session = this.sessions.get(sessionId);
+    if (!session) return undefined;
+    const next = { ...session, flagged: Boolean(flagged), updatedAtMs: Date.now() };
     this.sessions.set(sessionId, next);
     return next;
   }
@@ -135,4 +155,18 @@ test("mock chat store archives sessions and filters via status", () => {
   assert.equal(listed[0].status, "archived");
   assert.equal(store.sessions.get(session.id).permissionMode, "auto");
   assert.equal(store.sessions.get(session.id).status, "archived");
+});
+
+test("mock chat store rename and flag feed needsAttention", () => {
+  const store = new MockChatStore();
+  const session = store.create({
+    projectPath: "/tmp/demo",
+    agentId: "agent-codex",
+  });
+  store.setTitle(session.id, "手动标题");
+  store.setFlagged(session.id, true);
+  const listed = store.list("/tmp/demo");
+  assert.equal(listed[0].title, "手动标题");
+  assert.equal(listed[0].flagged, true);
+  assert.equal(listed[0].needsAttention, true);
 });

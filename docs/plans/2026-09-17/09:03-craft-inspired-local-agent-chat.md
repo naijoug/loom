@@ -3,7 +3,7 @@
 - **Date**: 2026-09-17
 - **Author**: Droplet
 - **Status**: in_progress
-- **Progress**: M3 ✅（Claude stream-json → 同一 `parts[]`；权限档 CLI hint 对齐 Grok/Codex/Claude；Chat 内 Agent 状态弹出复用 `diagnose_agents`）；M2 ✅；M1 ✅；本机 dogfood 默认 **grok**
+- **Progress**: M4 ✅（Inbox needs_attention / 归档过滤；streaming 重启对账为 aborted；标题重命名+首条消息；Session 菜单密度；resume 失败保留旧 handle）；M3 ✅；M2 ✅；M1 ✅；本机 dogfood 默认 **grok**
 - **Scope**: 在已完成的 chat-first（`docs/plans/2026-09-14/20:06-chat-first-refactor.md` M0–M5）之上，做**彻底重构的 Phase 1**：把产品主表面做成 Craft Agents 风格的**本机 Agent Chat**（会话收件箱 + 转录 + composer + Agent / 权限档位），端到端可 dogfood 调用本机已接线 Agent；**不**在本阶段重写 Task 状态机，不引入云同步 / 市场 / Electron 服务端架构。
 
 参考：
@@ -172,6 +172,10 @@ Craft 侧已阅读要点（README + `docs/cli.md` + shared session/permission + 
 
 ### M4 — Inbox 工作流打磨 + transcript 恢复韧性
 
+**Progress**: ✅ 完成（2026-09-17）— `flagged` + 派生 `needsAttention`；`active|needs_attention|archived` 过滤；load 时 reconcile streaming→aborted；`chat_update_meta` 支持 rename/flag/titleFromFirstMessage；Session 菜单收纳续聊/升格/归档；complete 才写入 resume handle。
+
+
+
 **Outcome**: 会话管理接近「可当主工作台」；重启与失败不丢话。
 
 | # | Task | Files / Output | Verification |
@@ -288,9 +292,10 @@ src/features/chat/
 | 2026-09-17 | M0 落地 `baa135a`；冻结 Ask/status/探针优先级；旧值迁移 read_only→explore、read_write→ask |
 | 2026-09-17 | **完善计划**：写入本机探针实绩（三 CLI 皆可用）、M1 文件级拆分与验收清单、M2 默认 grok、明确 M1 非范围 |
 | 2026-09-17 | **M1 完成**：Chat IA 壳拆分；三档权限 + Shift+Tab；active/archived；`chat_update_meta` |
+| 2026-09-17 | **M4 完成**：needs_attention Inbox；interrupt reconcile；标题重命名；Session 菜单；resume 保守更新 |
 | 2026-09-17 | **M3 完成**：Claude stream parts 对等；权限 CLI hint；Chat Agent 状态弹出；见 `docs/dogfood/craft-chat-m3-parity.md` |
 | 2026-09-17 | **M2 完成**：ProcessSupervisor(`Chat`)；权限→CLI 单测；stream parts；grok 优先+绝对路径；见 `docs/dogfood/craft-chat-m2-grok.md` |
 
 ## 下一步建议
 
-M3 已完成。下一步 **M4**：Inbox 工作流打磨（needs_attention / 归档过滤）、transcript 恢复韧性、标题重命名、续聊菜单密度。不要并行 MCP Sources / 完整 Ask 审批 / Task 状态机改造。
+M4 已完成。下一步 **M5**：可选 Sources/上下文空态、契约/架构文档收口、dogfood 清单、升格 stub 文案。不要并行 MCP 连接 / 完整 Ask 审批 / Task 状态机改造。

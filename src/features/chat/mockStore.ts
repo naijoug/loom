@@ -9,6 +9,8 @@ import {
   DEFAULT_CHAT_PERMISSION_MODE,
   DEFAULT_CHAT_SESSION_STATUS,
   normalizeChatPermissionMode,
+  titleFromUserMessage,
+  chatSessionNeedsAttention,
 } from "../../domain/chat";
 
 function now() {
@@ -36,6 +38,8 @@ export class MockChatStore {
           ? session.messages[session.messages.length - 1].content.slice(0, 80)
           : undefined,
         status: session.status ?? DEFAULT_CHAT_SESSION_STATUS,
+        flagged: Boolean(session.flagged),
+        needsAttention: chatSessionNeedsAttention(session),
       }));
   }
 
@@ -59,6 +63,7 @@ export class MockChatStore {
         input.permissionMode ?? DEFAULT_CHAT_PERMISSION_MODE,
       ),
       status: DEFAULT_CHAT_SESSION_STATUS,
+      flagged: false,
       messages: [],
       createdAtMs,
       updatedAtMs: createdAtMs,
@@ -112,6 +117,33 @@ export class MockChatStore {
     return next;
   }
 
+
+  setFlagged(sessionId: string, flagged: boolean): ChatSession | undefined {
+    const session = this.sessions.get(sessionId);
+    if (!session) return undefined;
+    const next: ChatSession = {
+      ...session,
+      flagged,
+      updatedAtMs: now(),
+    };
+    this.sessions.set(sessionId, next);
+    return next;
+  }
+
+  setTitleFromFirstMessage(sessionId: string): ChatSession | undefined {
+    const session = this.sessions.get(sessionId);
+    if (!session) return undefined;
+    const firstUser = session.messages.find((message) => message.role === "user");
+    if (!firstUser) return session;
+    const next = {
+      ...session,
+      title: titleFromUserMessage(firstUser.content),
+      updatedAtMs: now(),
+    };
+    this.sessions.set(sessionId, next);
+    return next;
+  }
+
   /** Mock send: append user + fake assistant reply (no CLI). */
   send(sessionId: string, text: string): ChatSession | undefined {
     const session = this.sessions.get(sessionId);
@@ -137,7 +169,7 @@ export class MockChatStore {
     };
     const title =
       session.messages.length === 0 && session.title === "新对话"
-        ? trimmed.slice(0, 32)
+        ? titleFromUserMessage(trimmed)
         : session.title;
     const next: ChatSession = {
       ...session,

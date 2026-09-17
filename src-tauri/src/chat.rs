@@ -102,6 +102,9 @@ pub struct ChatSession {
     /// Phase 1: `active` | `archived`. Default active for old sessions.
     #[serde(default = "default_session_status")]
     pub status: String,
+    /// User flag — contributes to needs_attention inbox filter.
+    #[serde(default)]
+    pub flagged: bool,
     pub schema_version: u32,
 }
 
@@ -116,6 +119,10 @@ pub struct ChatSessionSummary {
     pub preview: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub status: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub needs_attention: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub flagged: Option<bool>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -231,6 +238,9 @@ fn load_session(root: &Path, session_id: &str) -> Result<ChatSession, String> {
     if session.status != "active" && session.status != "archived" {
         session.status = DEFAULT_SESSION_STATUS.to_string();
     }
+    if reconcile_interrupted_session(&mut session) {
+        let _ = save_session(root, &session);
+    }
     Ok(session)
 }
 
@@ -239,6 +249,81 @@ fn save_session(root: &Path, session: &ChatSession) -> Result<(), String> {
         .map_err(|error| format!("failed to serialize chat session: {error}"))?;
     std::fs::write(session_path(root, &session.id), raw)
         .map_err(|error| format!("failed to write chat session: {error}"))
+}
+
+
+
+/// Title from first user text: first non-empty line, collapse whitespace,
+/// truncate near `max_chars` on a word boundary (not a blind byte/char slice).
+pub fn title_from_user_message(text: &str, max_chars: usize) -> String {
+    let first_line = text
+        .lines()
+        .map(str::trim)
+        .find(|line| !line.is_empty())
+        .unwrap_or_else(|| text.trim());
+    let collapsed = first_line.split_whitespace().collect::<Vec<_>>().join(" ");
+    if collapsed.is_empty() {
+        return "新对话".to_string();
+    }
+    let chars: Vec<char> = collapsed.chars().collect();
+    if chars.len() <= max_chars {
+        return collapsed;
+    }
+    let min_cut = max_chars / 2;
+    let mut cut = max_chars;
+    for i in (min_cut..=max_chars).rev() {
+        if chars.get(i).map(|c| c.is_whitespace()).unwrap_or(false) {
+            cut = i;
+            break;
+        }
+    }
+    let mut title: String = chars.into_iter().take(cut).collect();
+    while title.ends_with(char::is_whitespace) {
+        title.pop();
+    }
+    title.push('…');
+    title
+}
+
+fn session_needs_attention(session: &ChatSession) -> bool {
+    if session.status == "archived" {
+        return false;
+    }
+    if session.flagged {
+        return true;
+    }
+    if session.turn_status == "error" {
+        return true;
+    }
+    session.messages.iter().any(|message| message.status == "error")
+}
+
+/// Lazy repair after app restart: streaming turns become aborted, partial text kept.
+fn reconcile_interrupted_session(session: &mut ChatSession) -> bool {
+    let mut changed = false;
+    if session.turn_status == "streaming" {
+        session.turn_status = "idle".to_string();
+        session.active_turn_id = None;
+        changed = true;
+    }
+    for message in &mut session.messages {
+        if message.status == "streaming" {
+            message.status = "aborted".to_string();
+            if message.content.trim().is_empty() {
+                message.content = "（已中断）".to_string();
+            }
+            if message.error_summary.is_none() {
+                message.error_summary = Some("interrupted_by_restart".to_string());
+            }
+            changed = true;
+        }
+    }
+    if changed {
+        // Surface in needs_attention without inventing Craft five-state.
+        session.flagged = true;
+        session.updated_at_ms = now_ms();
+    }
+    changed
 }
 
 fn permission_to_stage(mode: &str) -> AgentStage {
@@ -600,6 +685,8 @@ pub fn chat_list_sessions(project_path: String) -> Result<Vec<ChatSessionSummary
                 .messages
                 .last()
                 .map(|message| message.content.chars().take(80).collect::<String>());
+                        let needs_attention = session_needs_attention(&session);
+            let flagged = session.flagged;
             summaries.push(ChatSessionSummary {
                 id: session.id,
                 title: session.title,
@@ -607,6 +694,8 @@ pub fn chat_list_sessions(project_path: String) -> Result<Vec<ChatSessionSummary
                 updated_at_ms: session.updated_at_ms,
                 preview,
                 status: Some(session.status),
+                needs_attention: Some(needs_attention),
+                flagged: Some(flagged),
             });
         }
     }
@@ -646,6 +735,7 @@ pub fn chat_create(
         active_turn_id: None,
         turn_status: "idle".to_string(),
         promoted_task_id: None,
+        flagged: false,
         schema_version: CHAT_SCHEMA_VERSION,
     };
     save_session(&root, &session)?;
@@ -688,6 +778,11 @@ pub struct ChatUpdateMetaInput {
     pub permission_mode: Option<String>,
     #[serde(default)]
     pub status: Option<String>,
+    #[serde(default)]
+    pub flagged: Option<bool>,
+    /// When true, set title from the first user message (smart truncate).
+    #[serde(default)]
+    pub title_from_first_message: Option<bool>,
 }
 
 #[tauri::command]
@@ -700,6 +795,15 @@ pub fn chat_update_meta(input: ChatUpdateMetaInput) -> Result<ChatSession, Strin
             session.title = trimmed.to_string();
         }
     }
+    if input.title_from_first_message.unwrap_or(false) {
+        if let Some(first_user) = session
+            .messages
+            .iter()
+            .find(|message| message.role == "user")
+        {
+            session.title = title_from_user_message(&first_user.content, 48);
+        }
+    }
     if let Some(mode) = input.permission_mode {
         session.permission_mode = normalize_permission_mode(&mode);
     }
@@ -708,6 +812,9 @@ pub fn chat_update_meta(input: ChatUpdateMetaInput) -> Result<ChatSession, Strin
             "archived" => "archived".to_string(),
             _ => DEFAULT_SESSION_STATUS.to_string(),
         };
+    }
+    if let Some(flagged) = input.flagged {
+        session.flagged = flagged;
     }
     session.updated_at_ms = now_ms();
     save_session(&root, &session)?;
@@ -902,7 +1009,7 @@ pub async fn chat_send(
         parts: Vec::new(),
     };
     if session.messages.is_empty() && session.title == "新对话" {
-        session.title = text.chars().take(32).collect();
+        session.title = title_from_user_message(&text, 48);
     }
     session.messages.push(user_message);
     session.messages.push(assistant_message);
@@ -944,8 +1051,14 @@ pub async fn chat_send(
                     message.content = outcome.content;
                     message.parts = outcome.parts;
                     message.status = outcome.status.clone();
-                    if outcome.resume_command.is_some() {
-                        session.resume_command = outcome.resume_command;
+                    // Only adopt a new resume handle on a complete turn — never on abort/error.
+                    if outcome.status == "complete" {
+                        if let Some(resume) = outcome.resume_command {
+                            session.resume_command = Some(resume);
+                        }
+                    }
+                    if outcome.status == "error" {
+                        session.flagged = true;
                     }
                     let _ = app_handle.emit(
                         "loom://chat-turn-finished",
@@ -969,6 +1082,8 @@ pub async fn chat_send(
                         code: None,
                     });
                     // Keep prior resume_command; a failed turn should not wipe a good handle.
+                    session.flagged = true;
+                    session.flagged = true;
                     let _ = app_handle.emit(
                         "loom://chat-turn-finished",
                         ChatTurnFinishedEvent {
@@ -1395,4 +1510,90 @@ mod tests {
             other => panic!("expected tool_result part, got {other:?}"),
         }
     }
+
+
+    #[test]
+    fn title_from_user_message_truncates_on_word_boundary() {
+        let title = super::title_from_user_message(
+            "hello world this is a fairly long first line that should wrap",
+            24,
+        );
+        assert!(title.ends_with('…'), "{title}");
+        assert!(!title.contains("wrap"), "{title}");
+        assert!(title.starts_with("hello"), "{title}");
+    }
+
+    #[test]
+    fn session_needs_attention_from_flag_or_error() {
+        let mut session = super::ChatSession {
+            id: "s1".into(),
+            project_path: "/tmp".into(),
+            agent_id: "a1".into(),
+            title: "t".into(),
+            permission_mode: "explore".into(),
+            messages: vec![],
+            created_at_ms: 1,
+            updated_at_ms: 1,
+            resume_command: None,
+            active_turn_id: None,
+            turn_status: "idle".into(),
+            promoted_task_id: None,
+            status: "active".into(),
+            flagged: false,
+            schema_version: 1,
+        };
+        assert!(!super::session_needs_attention(&session));
+        session.flagged = true;
+        assert!(super::session_needs_attention(&session));
+        session.flagged = false;
+        session.messages.push(super::ChatMessage {
+            id: "m1".into(),
+            role: "assistant".into(),
+            content: "x".into(),
+            status: "error".into(),
+            created_at_ms: 1,
+            error_summary: Some("boom".into()),
+            parts: vec![],
+        });
+        assert!(super::session_needs_attention(&session));
+        session.status = "archived".into();
+        assert!(!super::session_needs_attention(&session));
+    }
+
+    #[test]
+    fn reconcile_interrupted_marks_streaming_aborted() {
+        let mut session = super::ChatSession {
+            id: "s1".into(),
+            project_path: "/tmp".into(),
+            agent_id: "a1".into(),
+            title: "t".into(),
+            permission_mode: "explore".into(),
+            messages: vec![super::ChatMessage {
+                id: "m1".into(),
+                role: "assistant".into(),
+                content: "partial".into(),
+                status: "streaming".into(),
+                created_at_ms: 1,
+                error_summary: None,
+                parts: vec![],
+            }],
+            created_at_ms: 1,
+            updated_at_ms: 1,
+            resume_command: Some("resume-1".into()),
+            active_turn_id: Some("turn-1".into()),
+            turn_status: "streaming".into(),
+            promoted_task_id: None,
+            status: "active".into(),
+            flagged: false,
+            schema_version: 1,
+        };
+        assert!(super::reconcile_interrupted_session(&mut session));
+        assert_eq!(session.turn_status, "idle");
+        assert!(session.active_turn_id.is_none());
+        assert_eq!(session.messages[0].status, "aborted");
+        assert_eq!(session.messages[0].content, "partial");
+        assert!(session.flagged);
+        assert_eq!(session.resume_command.as_deref(), Some("resume-1"));
+    }
+
 }

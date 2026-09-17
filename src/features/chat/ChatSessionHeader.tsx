@@ -1,5 +1,5 @@
+import { useEffect, useRef, useState } from "react";
 import type { ChatPermissionMode, ChatSession } from "../../domain";
-import { Button } from "../../components/common/Button";
 import { permissionModeLabel } from "./chatPermission";
 
 export interface ChatSessionHeaderProps {
@@ -8,6 +8,10 @@ export interface ChatSessionHeaderProps {
   canPromote: boolean;
   onClearResume: () => void;
   onPromote: () => void;
+  onRename: (title: string) => void;
+  onTitleFromFirstMessage: () => void;
+  onToggleFlag: () => void;
+  onArchive: () => void;
 }
 
 export function ChatSessionHeader({
@@ -16,38 +20,166 @@ export function ChatSessionHeader({
   canPromote,
   onClearResume,
   onPromote,
+  onRename,
+  onTitleFromFirstMessage,
+  onToggleFlag,
+  onArchive,
 }: ChatSessionHeaderProps) {
   const mode = session.permissionMode as ChatPermissionMode;
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [draftTitle, setDraftTitle] = useState(session.title);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setDraftTitle(session.title);
+  }, [session.title, session.id]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    return () => document.removeEventListener("mousedown", onPointerDown);
+  }, [menuOpen]);
+
+  function commitRename() {
+    const trimmed = draftTitle.trim();
+    if (trimmed && trimmed !== session.title) {
+      onRename(trimmed);
+    } else {
+      setDraftTitle(session.title);
+    }
+    setRenaming(false);
+  }
+
+  const flagged = Boolean(session.flagged);
+  const hasUserMessage = session.messages.some((message) => message.role === "user");
 
   return (
     <div className="chat-session-main-header">
       <div className="chat-session-main-heading">
-        <h1 className="chat-main-title">{session.title}</h1>
+        {renaming ? (
+          <input
+            className="chat-title-input"
+            value={draftTitle}
+            aria-label="会话标题"
+            autoFocus
+            onChange={(event) => setDraftTitle(event.target.value)}
+            onBlur={() => commitRename()}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                commitRename();
+              } else if (event.key === "Escape") {
+                setDraftTitle(session.title);
+                setRenaming(false);
+              }
+            }}
+          />
+        ) : (
+          <h1 className="chat-main-title">{session.title}</h1>
+        )}
         <span className="chat-permission-badge" data-mode={mode} title="当前权限档位">
           {permissionModeLabel(mode)}
         </span>
+        {flagged ? (
+          <span className="chat-flag-badge" title="已标记需关注">
+            需关注
+          </span>
+        ) : null}
       </div>
       <div className="chat-main-meta">
-        {session.resumeCommand ? (
-          <span className="chat-hint" title={session.resumeCommand}>
-            可续聊
-            {useBackend ? (
-              <button type="button" className="chat-link-btn" onClick={onClearResume}>
-                开新 CLI 会话
+        <span className="chat-hint" title={session.resumeCommand ?? undefined}>
+          {session.resumeCommand ? "可续聊" : "新 CLI 会话"}
+        </span>
+        <div className="chat-session-menu" ref={menuRef}>
+          <button
+            type="button"
+            className="chat-session-menu-trigger"
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            会话
+          </button>
+          {menuOpen ? (
+            <div className="chat-session-menu-pop" role="menu">
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setMenuOpen(false);
+                  setRenaming(true);
+                }}
+              >
+                重命名
               </button>
-            ) : null}
-          </span>
-        ) : (
-          <span className="chat-hint">新 CLI 会话</span>
-        )}
-        {useBackend && canPromote ? (
-          <Button type="button" variant="ghost" onClick={onPromote}>
-            升格为任务
-          </Button>
-        ) : null}
-        {session.promotedTaskId ? (
-          <span className="chat-hint">已升格 · {session.promotedTaskId}</span>
-        ) : null}
+              <button
+                type="button"
+                role="menuitem"
+                disabled={!hasUserMessage}
+                onClick={() => {
+                  setMenuOpen(false);
+                  onTitleFromFirstMessage();
+                }}
+              >
+                用首条消息作标题
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onToggleFlag();
+                }}
+              >
+                {flagged ? "取消需关注" : "标记需关注"}
+              </button>
+              <hr />
+              {useBackend && session.resumeCommand ? (
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onClearResume();
+                  }}
+                >
+                  开新 CLI 会话
+                </button>
+              ) : null}
+              {useBackend && canPromote ? (
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onPromote();
+                  }}
+                >
+                  升格为任务（草稿）
+                </button>
+              ) : null}
+              {session.promotedTaskId ? (
+                <div className="chat-session-menu-note">已升格 · {session.promotedTaskId}</div>
+              ) : null}
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onArchive();
+                }}
+              >
+                归档
+              </button>
+            </div>
+          ) : null}
+        </div>
       </div>
     </div>
   );

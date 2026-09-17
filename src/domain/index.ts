@@ -11,4 +11,7 @@ export {
   DEFAULT_CHAT_SESSION_STATUS,
   normalizeChatPermissionMode,
   chatPermissionAllowsWrite,
+  chatSessionNeedsAttention,
+  titleFromUserMessage,
+  filterChatSummaries,
 } from "./chat";
