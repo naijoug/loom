@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
 const root = new URL("..", import.meta.url).pathname;
@@ -42,9 +42,13 @@ function writeStyleStubs(directory) {
 
 writeStyleStubs(join(root, "src"));
 
+const requestedTestFiles = process.argv.slice(2).filter((arg) => arg.endsWith(".test.cjs"));
 const testDir = join(root, "tests", "unit");
-const testFiles = readdirSync(testDir)
-  .filter((file) => file.endsWith(".test.cjs"))
-  .map((file) => join(testDir, file));
+const testFiles = requestedTestFiles.length > 0
+  ? requestedTestFiles.map((file) => (isAbsolute(file) ? file : resolve(root, file)))
+  : readdirSync(testDir)
+      .filter((file) => file.endsWith(".test.cjs"))
+      .sort()
+      .map((file) => join(testDir, file));
 
 run("node", ["--test", ...testFiles]);
