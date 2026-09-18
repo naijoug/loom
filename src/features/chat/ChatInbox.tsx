@@ -1,5 +1,5 @@
 import type { ChatInboxFilter, ChatSessionSummary } from "../../domain";
-import { filterChatSummaries, filterChatSummariesByQuery } from "../../domain";
+import { chatInboxEmptyMessage, filterChatSummaries, filterChatSummariesByQuery } from "../../domain";
 import { Button } from "../../components/common/Button";
 
 export type InboxFilter = ChatInboxFilter;
@@ -116,13 +116,7 @@ export function ChatInbox({
 
       {filtered.length === 0 ? (
         <div className="chat-inbox-empty">
-          {filter === "archived"
-            ? "没有已归档会话。"
-            : filter === "needs_attention"
-              ? "没有需要关注的会话。"
-              : `还没有会话。点「新建」开始。${
-                  useBackend ? " 将通过本机 Agent CLI 流式回复。" : " （浏览器预览使用模拟回复）"
-                }`}
+          {chatInboxEmptyMessage({ filter, searchQuery, useBackend })}
         </div>
       ) : (
         <ul className="chat-inbox-list">

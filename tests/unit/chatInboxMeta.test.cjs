@@ -2,6 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const {
+  chatInboxEmptyMessage,
   chatSessionNeedsAttention,
   filterChatSummaries,
   filterChatSummariesByQuery,
@@ -93,5 +94,24 @@ test("inbox query can include visible fallback metadata", () => {
       (item) => ({ openclaw: "OpenClaw 本地助手" })[item.agentId] ?? item.agentId,
     ).map((item) => item.id),
     ["2"],
+  );
+});
+
+test("inbox empty copy distinguishes empty tabs from empty search results", () => {
+  assert.equal(
+    chatInboxEmptyMessage({ filter: "active", searchQuery: "", useBackend: true }),
+    "还没有会话。点「新建」开始。 将通过本机 Agent CLI 流式回复。",
+  );
+  assert.equal(
+    chatInboxEmptyMessage({ filter: "archived", searchQuery: "", useBackend: true }),
+    "没有已归档会话。",
+  );
+  assert.equal(
+    chatInboxEmptyMessage({ filter: "needs_attention", searchQuery: "", useBackend: false }),
+    "没有需要关注的会话。",
+  );
+  assert.equal(
+    chatInboxEmptyMessage({ filter: "active", searchQuery: "  openclaw  ", useBackend: false }),
+    "没有匹配的会话。试试换个关键词或清除搜索。",
   );
 });

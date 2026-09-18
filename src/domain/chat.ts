@@ -204,3 +204,23 @@ export function filterChatSummariesByQuery<T extends {
     return searchable.includes(q);
   });
 }
+
+/** Empty-state copy that distinguishes no sessions from no search matches. */
+export function chatInboxEmptyMessage({
+  filter,
+  searchQuery,
+  useBackend,
+}: {
+  filter: ChatInboxFilter;
+  searchQuery: string;
+  useBackend: boolean;
+}): string {
+  if (searchQuery.trim()) {
+    return "没有匹配的会话。试试换个关键词或清除搜索。";
+  }
+  if (filter === "archived") return "没有已归档会话。";
+  if (filter === "needs_attention") return "没有需要关注的会话。";
+  return `还没有会话。点「新建」开始。${
+    useBackend ? " 将通过本机 Agent CLI 流式回复。" : " （浏览器预览使用模拟回复）"
+  }`;
+}
