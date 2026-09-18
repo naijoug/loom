@@ -16,5 +16,6 @@ export {
   filterChatSummaries,
   filterChatSummariesByQuery,
   chatInboxEmptyMessage,
+  chatInboxSearchAriaLabel,
   chatInboxSearchPlaceholder,
 } from "./chat";

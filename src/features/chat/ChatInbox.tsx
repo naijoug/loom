@@ -1,6 +1,7 @@
 import type { ChatInboxFilter, ChatSessionSummary } from "../../domain";
 import {
   chatInboxEmptyMessage,
+  chatInboxSearchAriaLabel,
   chatInboxSearchPlaceholder,
   filterChatSummaries,
   filterChatSummariesByQuery,
@@ -83,7 +84,7 @@ export function ChatInbox({
           type="search"
           value={searchQuery}
           placeholder={chatInboxSearchPlaceholder()}
-          aria-label="搜索会话"
+          aria-label={chatInboxSearchAriaLabel()}
           onChange={(event) => onSearchQueryChange(event.target.value)}
         />
         {searchQuery ? (

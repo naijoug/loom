@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 
 const {
   chatInboxEmptyMessage,
+  chatInboxSearchAriaLabel,
   chatInboxSearchPlaceholder,
   chatSessionNeedsAttention,
   filterChatSummaries,
@@ -100,6 +101,10 @@ test("inbox query can include visible fallback metadata", () => {
 
 test("inbox search placeholder lists all searchable visible fields", () => {
   assert.equal(chatInboxSearchPlaceholder(), "搜索标题、内容或 Agent…");
+});
+
+test("inbox search accessible label lists all searchable visible fields", () => {
+  assert.equal(chatInboxSearchAriaLabel(), "搜索会话标题、内容或 Agent");
 });
 
 test("inbox empty copy distinguishes empty tabs from empty search results", () => {

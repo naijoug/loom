@@ -210,6 +210,11 @@ export function chatInboxSearchPlaceholder(): string {
   return "搜索标题、内容或 Agent…";
 }
 
+/** Accessible label must name the same searchable fields as the visible hint. */
+export function chatInboxSearchAriaLabel(): string {
+  return "搜索会话标题、内容或 Agent";
+}
+
 /** Empty-state copy that distinguishes no sessions from no search matches. */
 export function chatInboxEmptyMessage({
   filter,
