@@ -246,7 +246,8 @@ export function chatInboxEmptyMessage({
 
 /**
  * Fallback text for failed messages whose structured parts do not already carry
- * an explicit error card. Keeps agent failure summaries visible beside tool rows.
+ * an explicit error card. Keeps agent failure summaries visible beside tool
+ * rows and partial stdout.
  */
 export function chatMessageErrorFallbackText(message: {
   status?: ChatMessageStatus | string | null;
@@ -255,7 +256,6 @@ export function chatMessageErrorFallbackText(message: {
   parts?: Array<{ type?: string | null }> | null;
 }): string | undefined {
   if (message.status !== "error" || !message.errorSummary) return undefined;
-  if (message.content?.trim()) return undefined;
   if ((message.parts ?? []).some((part) => part.type === "error")) return undefined;
   return `（调用失败）${message.errorSummary}`;
 }

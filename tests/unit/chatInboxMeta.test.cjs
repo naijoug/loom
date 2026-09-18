@@ -173,7 +173,7 @@ test("message error fallback stays visible beside structured tool parts", () => 
       errorSummary: "Codex exited 1",
       parts: [{ type: "tool" }],
     }),
-    undefined,
+    "（调用失败）Codex exited 1",
   );
   assert.equal(
     chatMessageErrorFallbackText({
