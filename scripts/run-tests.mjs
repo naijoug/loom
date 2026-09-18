@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 
 const root = new URL("..", import.meta.url).pathname;
@@ -17,14 +18,6 @@ function run(command, args) {
   }
 }
 
-if (existsSync(outDir)) {
-  rmSync(outDir, { recursive: true, force: true });
-}
-
-mkdirSync(outDir, { recursive: true });
-run("pnpm", ["exec", "tsc", "-p", "tsconfig.test.json"]);
-writeFileSync(join(outDir, "package.json"), '{"type":"commonjs"}\n');
-
 // TypeScript preserves CSS imports in emitted CommonJS. Empty style stubs let
 // Node load isolated React components while jsdom owns layout-independent tests.
 function writeStyleStubs(directory) {
@@ -40,9 +33,7 @@ function writeStyleStubs(directory) {
   }
 }
 
-writeStyleStubs(join(root, "src"));
-
-function findTestsInDirectory(directory) {
+export function findTestsInDirectory(directory) {
   return readdirSync(directory, { withFileTypes: true })
     .flatMap((entry) => {
       const path = join(directory, entry.name);
@@ -55,8 +46,8 @@ function findTestsInDirectory(directory) {
     .sort();
 }
 
-function resolveRequestedTestTarget(target) {
-  const path = isAbsolute(target) ? target : resolve(root, target);
+export function resolveRequestedTestTarget(target, rootDirectory = root) {
+  const path = isAbsolute(target) ? target : resolve(rootDirectory, target);
 
   if (!existsSync(path)) {
     throw new Error(`Test target does not exist: ${target}`);
@@ -78,16 +69,39 @@ function resolveRequestedTestTarget(target) {
   throw new Error(`Unsupported test target: ${target}. Pass a .test.cjs file or a directory containing .test.cjs files.`);
 }
 
-const testDir = join(root, "tests", "unit");
-let testFiles;
-try {
-  const requestedTestTargets = process.argv.slice(2).filter((arg) => arg !== "--");
-  testFiles = requestedTestTargets.length > 0
-    ? requestedTestTargets.flatMap(resolveRequestedTestTarget).sort()
+export function resolveRequestedTestFiles(args, rootDirectory = root) {
+  const testDir = join(rootDirectory, "tests", "unit");
+  const requestedTestTargets = args.filter((arg) => arg !== "--");
+  return requestedTestTargets.length > 0
+    ? requestedTestTargets.flatMap((target) => resolveRequestedTestTarget(target, rootDirectory)).sort()
     : findTestsInDirectory(testDir);
-} catch (error) {
-  console.error(error.message);
-  process.exit(1);
 }
 
-run("node", ["--test", ...testFiles]);
+function buildTestArtifacts() {
+  if (existsSync(outDir)) {
+    rmSync(outDir, { recursive: true, force: true });
+  }
+
+  mkdirSync(outDir, { recursive: true });
+  run("pnpm", ["exec", "tsc", "-p", "tsconfig.test.json"]);
+  writeFileSync(join(outDir, "package.json"), '{"type":"commonjs"}\n');
+  writeStyleStubs(join(root, "src"));
+}
+
+export function main(args = process.argv.slice(2)) {
+  buildTestArtifacts();
+
+  let testFiles;
+  try {
+    testFiles = resolveRequestedTestFiles(args);
+  } catch (error) {
+    console.error(error.message);
+    process.exit(1);
+  }
+
+  run("node", ["--test", ...testFiles]);
+}
+
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main();
+}
