@@ -1,48 +1,12 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-function titleFromUserMessage(text, maxLen = 48) {
-  const firstLine =
-    text
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .find((line) => line.length > 0) ?? text.trim();
-  const collapsed = firstLine.replace(/\s+/g, " ").trim();
-  if (!collapsed) return "新对话";
-  if ([...collapsed].length <= maxLen) return collapsed;
-  const chars = [...collapsed];
-  let cut = maxLen;
-  for (let i = maxLen; i >= Math.floor(maxLen * 0.5); i -= 1) {
-    if (/\s/.test(chars[i] ?? "")) {
-      cut = i;
-      break;
-    }
-  }
-  const sliced = chars.slice(0, cut).join("").trimEnd();
-  return `${sliced}…`;
-}
-
-function chatSessionNeedsAttention(session) {
-  const status = session.status ?? "active";
-  if (status === "archived") return false;
-  if (session.flagged) return true;
-  if (session.turnStatus === "error") return true;
-  return (session.messages ?? []).some((message) => message.status === "error");
-}
-
-function filterChatSummaries(summaries, filter) {
-  if (filter === "archived") {
-    return summaries.filter((item) => (item.status ?? "active") === "archived");
-  }
-  if (filter === "needs_attention") {
-    return summaries.filter(
-      (item) =>
-        (item.status ?? "active") === "active" &&
-        Boolean(item.needsAttention || item.flagged),
-    );
-  }
-  return summaries.filter((item) => (item.status ?? "active") === "active");
-}
+const {
+  chatSessionNeedsAttention,
+  filterChatSummaries,
+  filterChatSummariesByQuery,
+  titleFromUserMessage,
+} = require("../../.tmp/test-build/src/domain/chat.js");
 
 test("titleFromUserMessage truncates on word boundary", () => {
   const title = titleFromUserMessage(
@@ -96,4 +60,21 @@ test("inbox filters active / needs_attention / archived", () => {
     filterChatSummaries(summaries, "archived").map((item) => item.id),
     ["3"],
   );
+});
+
+test("inbox query filters title and preview without changing empty query order", () => {
+  const summaries = [
+    { id: "1", title: "继续修复 CLI", preview: "Codex stdout is green" },
+    { id: "2", title: "UI polish", preview: "permission menu still needs copy" },
+    { id: "3", title: "Release note", preview: "desktop smoke passed" },
+  ];
+  assert.deepEqual(
+    filterChatSummariesByQuery(summaries, "cli").map((item) => item.id),
+    ["1"],
+  );
+  assert.deepEqual(
+    filterChatSummariesByQuery(summaries, "PERMISSION").map((item) => item.id),
+    ["2"],
+  );
+  assert.deepEqual(filterChatSummariesByQuery(summaries, "  "), summaries);
 });
