@@ -1,5 +1,10 @@
 import type { ChatInboxFilter, ChatSessionSummary } from "../../domain";
-import { chatInboxEmptyMessage, filterChatSummaries, filterChatSummariesByQuery } from "../../domain";
+import {
+  chatInboxEmptyMessage,
+  chatInboxSearchPlaceholder,
+  filterChatSummaries,
+  filterChatSummariesByQuery,
+} from "../../domain";
 import { Button } from "../../components/common/Button";
 
 export type InboxFilter = ChatInboxFilter;
@@ -77,7 +82,7 @@ export function ChatInbox({
         <input
           type="search"
           value={searchQuery}
-          placeholder="搜索标题或内容…"
+          placeholder={chatInboxSearchPlaceholder()}
           aria-label="搜索会话"
           onChange={(event) => onSearchQueryChange(event.target.value)}
         />

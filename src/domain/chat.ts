@@ -205,6 +205,11 @@ export function filterChatSummariesByQuery<T extends {
   });
 }
 
+/** Search hint mirrors the searchable inbox fields. */
+export function chatInboxSearchPlaceholder(): string {
+  return "搜索标题、内容或 Agent…";
+}
+
 /** Empty-state copy that distinguishes no sessions from no search matches. */
 export function chatInboxEmptyMessage({
   filter,
