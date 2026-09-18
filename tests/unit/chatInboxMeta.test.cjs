@@ -6,6 +6,7 @@ const {
   chatInboxSearchAriaLabel,
   chatInboxSearchPlaceholder,
   chatInboxVisibleAgentFallbackText,
+  chatMessageErrorFallbackText,
   chatSessionNeedsAttention,
   filterChatSummaries,
   filterChatSummariesByQuery,
@@ -153,5 +154,33 @@ test("inbox empty copy distinguishes empty tabs from empty search results", () =
   assert.equal(
     chatInboxEmptyMessage({ filter: "active", searchQuery: "  openclaw  ", useBackend: false }),
     "没有匹配的会话。试试换个关键词或清除搜索。",
+  );
+});
+
+test("message error fallback stays visible beside structured tool parts", () => {
+  assert.equal(
+    chatMessageErrorFallbackText({
+      status: "error",
+      errorSummary: "Codex exited 1",
+      parts: [{ type: "tool" }],
+    }),
+    "（调用失败）Codex exited 1",
+  );
+  assert.equal(
+    chatMessageErrorFallbackText({
+      status: "error",
+      content: "partial stdout",
+      errorSummary: "Codex exited 1",
+      parts: [{ type: "tool" }],
+    }),
+    undefined,
+  );
+  assert.equal(
+    chatMessageErrorFallbackText({
+      status: "error",
+      errorSummary: "Codex exited 1",
+      parts: [{ type: "error" }],
+    }),
+    undefined,
   );
 });

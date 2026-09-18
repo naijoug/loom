@@ -19,4 +19,5 @@ export {
   chatInboxEmptyMessage,
   chatInboxSearchAriaLabel,
   chatInboxSearchPlaceholder,
+  chatMessageErrorFallbackText,
 } from "./chat";

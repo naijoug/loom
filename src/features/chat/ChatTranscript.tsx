@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { ChatMessage, ChatMessagePart } from "../../domain";
+import { chatMessageErrorFallbackText } from "../../domain";
 
 function ToolActivityRow({ part }: { part: Extract<ChatMessagePart, { type: "tool" }> }) {
   const [open, setOpen] = useState(false);
@@ -49,6 +50,7 @@ function renderPart(part: ChatMessagePart, index: number) {
 
 function MessageBody({ message }: { message: ChatMessage }) {
   const parts = message.parts ?? [];
+  const errorFallback = chatMessageErrorFallbackText(message);
   if (parts.length > 0) {
     const hasTextPart = parts.some((part) => part.type === "text");
     return (
@@ -57,11 +59,16 @@ function MessageBody({ message }: { message: ChatMessage }) {
           <div className="chat-part chat-part-text">{message.content}</div>
         ) : null}
         {parts.map((part, index) => renderPart(part, index))}
+        {errorFallback ? (
+          <div className="chat-part chat-part-error" role="alert">
+            {errorFallback}
+          </div>
+        ) : null}
       </>
     );
   }
   if (message.errorSummary && message.status === "error") {
-    return <>{message.content || `（调用失败）${message.errorSummary}`}</>;
+    return <>{message.content || errorFallback}</>;
   }
   if (message.status === "aborted" && !message.content) {
     return <>（已停止）</>;

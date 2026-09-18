@@ -243,3 +243,19 @@ export function chatInboxEmptyMessage({
     useBackend ? " 将通过本机 Agent CLI 流式回复。" : " （浏览器预览使用模拟回复）"
   }`;
 }
+
+/**
+ * Fallback text for failed messages whose structured parts do not already carry
+ * an explicit error card. Keeps agent failure summaries visible beside tool rows.
+ */
+export function chatMessageErrorFallbackText(message: {
+  status?: ChatMessageStatus | string | null;
+  content?: string | null;
+  errorSummary?: string | null;
+  parts?: Array<{ type?: string | null }> | null;
+}): string | undefined {
+  if (message.status !== "error" || !message.errorSummary) return undefined;
+  if (message.content?.trim()) return undefined;
+  if ((message.parts ?? []).some((part) => part.type === "error")) return undefined;
+  return `（调用失败）${message.errorSummary}`;
+}
