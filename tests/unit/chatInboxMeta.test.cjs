@@ -78,3 +78,20 @@ test("inbox query filters title and preview without changing empty query order",
   );
   assert.deepEqual(filterChatSummariesByQuery(summaries, "  "), summaries);
 });
+
+test("inbox query can include visible fallback metadata", () => {
+  const summaries = [
+    { id: "1", title: "Continue CLI fix", agentId: "codex", preview: "green logs" },
+    { id: "2", title: "Release review", agentId: "openclaw" },
+    { id: "3", title: "Visual polish", agentId: "hermes" },
+  ];
+
+  assert.deepEqual(
+    filterChatSummariesByQuery(
+      summaries,
+      "OpenClaw",
+      (item) => ({ openclaw: "OpenClaw 本地助手" })[item.agentId] ?? item.agentId,
+    ).map((item) => item.id),
+    ["2"],
+  );
+});

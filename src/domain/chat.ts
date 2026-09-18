@@ -189,16 +189,18 @@ export function filterChatSummaries<T extends {
 }
 
 
-/** Case-insensitive title/preview substring filter (empty query = passthrough). */
+/** Case-insensitive visible inbox text filter (empty query = passthrough). */
 export function filterChatSummariesByQuery<T extends {
   title: string;
   preview?: string;
-}>(summaries: T[], query: string): T[] {
+}>(summaries: T[], query: string, getExtraText?: (item: T) => string | undefined): T[] {
   const q = query.trim().toLowerCase();
   if (!q) return summaries;
   return summaries.filter((item) => {
-    const title = item.title.toLowerCase();
-    const preview = (item.preview ?? "").toLowerCase();
-    return title.includes(q) || preview.includes(q);
+    const searchable = [item.title, item.preview, getExtraText?.(item)]
+      .filter((value): value is string => Boolean(value))
+      .join("\n")
+      .toLowerCase();
+    return searchable.includes(q);
   });
 }

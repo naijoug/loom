@@ -57,6 +57,7 @@ export function ChatInbox({
   const filtered = filterChatSummariesByQuery(
     filterChatSummaries(summaries, filter),
     searchQuery,
+    (item) => agentNameById[item.agentId] ?? item.agentId,
   );
 
   return (
