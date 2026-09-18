@@ -5,6 +5,7 @@ const {
   chatInboxEmptyMessage,
   chatInboxSearchAriaLabel,
   chatInboxSearchPlaceholder,
+  chatInboxVisibleAgentFallbackText,
   chatSessionNeedsAttention,
   filterChatSummaries,
   filterChatSummariesByQuery,
@@ -94,6 +95,35 @@ test("inbox query can include visible fallback metadata", () => {
       summaries,
       "OpenClaw",
       (item) => ({ openclaw: "OpenClaw 本地助手" })[item.agentId] ?? item.agentId,
+    ).map((item) => item.id),
+    ["2"],
+  );
+});
+
+test("inbox agent metadata search mirrors whether fallback text is visible", () => {
+  const agentNameById = { codex: "Codex CLI", openclaw: "OpenClaw 本地助手" };
+  const summaries = [
+    { id: "1", title: "Has preview", agentId: "codex", preview: "green logs" },
+    { id: "2", title: "No preview", agentId: "openclaw" },
+    { id: "3", title: "Unknown agent", agentId: "hermes" },
+  ];
+
+  assert.equal(chatInboxVisibleAgentFallbackText(summaries[0], agentNameById), undefined);
+  assert.equal(chatInboxVisibleAgentFallbackText(summaries[1], agentNameById), "OpenClaw 本地助手");
+  assert.equal(chatInboxVisibleAgentFallbackText(summaries[2], agentNameById), "hermes");
+  assert.deepEqual(
+    filterChatSummariesByQuery(
+      summaries,
+      "Codex",
+      (item) => chatInboxVisibleAgentFallbackText(item, agentNameById),
+    ).map((item) => item.id),
+    [],
+  );
+  assert.deepEqual(
+    filterChatSummariesByQuery(
+      summaries,
+      "OpenClaw",
+      (item) => chatInboxVisibleAgentFallbackText(item, agentNameById),
     ).map((item) => item.id),
     ["2"],
   );

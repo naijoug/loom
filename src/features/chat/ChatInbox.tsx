@@ -3,6 +3,7 @@ import {
   chatInboxEmptyMessage,
   chatInboxSearchAriaLabel,
   chatInboxSearchPlaceholder,
+  chatInboxVisibleAgentFallbackText,
   filterChatSummaries,
   filterChatSummariesByQuery,
 } from "../../domain";
@@ -63,7 +64,7 @@ export function ChatInbox({
   const filtered = filterChatSummariesByQuery(
     filterChatSummaries(summaries, filter),
     searchQuery,
-    (item) => agentNameById[item.agentId] ?? item.agentId,
+    (item) => chatInboxVisibleAgentFallbackText(item, agentNameById),
   );
 
   return (
@@ -150,7 +151,7 @@ export function ChatInbox({
                       <span className="chat-inbox-preview">{item.preview}</span>
                     ) : (
                       <span className="chat-inbox-preview chat-inbox-preview--muted">
-                        {agentNameById[item.agentId] ?? item.agentId}
+                        {chatInboxVisibleAgentFallbackText(item, agentNameById)}
                       </span>
                     )}
                   </span>

@@ -205,6 +205,15 @@ export function filterChatSummariesByQuery<T extends {
   });
 }
 
+/** Agent fallback text is visible only when the inbox row has no preview. */
+export function chatInboxVisibleAgentFallbackText<T extends {
+  preview?: string;
+  agentId: string;
+}>(summary: T, agentNameById: Record<string, string>): string | undefined {
+  if (summary.preview) return undefined;
+  return agentNameById[summary.agentId] ?? summary.agentId;
+}
+
 /** Search hint mirrors the searchable inbox fields. */
 export function chatInboxSearchPlaceholder(): string {
   return "搜索标题、内容或 Agent…";
