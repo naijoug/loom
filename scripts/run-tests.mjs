@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
@@ -42,13 +42,52 @@ function writeStyleStubs(directory) {
 
 writeStyleStubs(join(root, "src"));
 
-const requestedTestFiles = process.argv.slice(2).filter((arg) => arg.endsWith(".test.cjs"));
+function findTestsInDirectory(directory) {
+  return readdirSync(directory, { withFileTypes: true })
+    .flatMap((entry) => {
+      const path = join(directory, entry.name);
+      if (entry.isDirectory()) {
+        return findTestsInDirectory(path);
+      }
+
+      return entry.isFile() && entry.name.endsWith(".test.cjs") ? [path] : [];
+    })
+    .sort();
+}
+
+function resolveRequestedTestTarget(target) {
+  const path = isAbsolute(target) ? target : resolve(root, target);
+
+  if (!existsSync(path)) {
+    throw new Error(`Test target does not exist: ${target}`);
+  }
+
+  const stats = statSync(path);
+  if (stats.isDirectory()) {
+    const files = findTestsInDirectory(path);
+    if (files.length === 0) {
+      throw new Error(`Test directory contains no .test.cjs files: ${target}`);
+    }
+    return files;
+  }
+
+  if (stats.isFile() && path.endsWith(".test.cjs")) {
+    return [path];
+  }
+
+  throw new Error(`Unsupported test target: ${target}. Pass a .test.cjs file or a directory containing .test.cjs files.`);
+}
+
 const testDir = join(root, "tests", "unit");
-const testFiles = requestedTestFiles.length > 0
-  ? requestedTestFiles.map((file) => (isAbsolute(file) ? file : resolve(root, file)))
-  : readdirSync(testDir)
-      .filter((file) => file.endsWith(".test.cjs"))
-      .sort()
-      .map((file) => join(testDir, file));
+let testFiles;
+try {
+  const requestedTestTargets = process.argv.slice(2).filter((arg) => arg !== "--");
+  testFiles = requestedTestTargets.length > 0
+    ? requestedTestTargets.flatMap(resolveRequestedTestTarget).sort()
+    : findTestsInDirectory(testDir);
+} catch (error) {
+  console.error(error.message);
+  process.exit(1);
+}
 
 run("node", ["--test", ...testFiles]);
