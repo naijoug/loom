@@ -1,5 +1,7 @@
 # Craft 启发的本机 Agent Chat — 信息架构（Phase 1 / M0）
 
+> 历史设计参考。当前产品范围见 [需求文档](../requirements.md)，实现与重构目标见 [Chat 契约](../architecture/chat-contracts.md)；下文旧阶段声明不代表当前验收状态。
+
 - **Related**: [craft-local-chat-prd.md](./craft-local-chat-prd.md) · [chat-first-ia.md](./chat-first-ia.md) · [chat-contracts.md](../architecture/chat-contracts.md)
 - **Plan**: [09:03-craft-inspired-local-agent-chat.md](../plans/2026-09-17/09:03-craft-inspired-local-agent-chat.md)
 

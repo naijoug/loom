@@ -1,9 +1,10 @@
-# Chat 契约（Phase 1）
+# Chat 当前契约与重构目标
 
 - **Related**: [craft-local-chat-prd.md](../guides/craft-local-chat-prd.md) · [craft-local-chat-ia.md](../guides/craft-local-chat-ia.md) · [chat-first-prd.md](../guides/chat-first-prd.md)
 - **Frontend types**: `src/domain/chat.ts`
 - **Backend**: `src-tauri/src/chat.rs`
-- **Status**: Phase 1 **completed**（M0–M5）— commands / events / ProcessSupervisor(Chat) / Inbox meta / 上下文空态已落地；MCP Sources 属 Phase 2+
+- **核对日期**：2026-09-20；当前 schema v1，以生产类型、IPC wrapper 和 Rust 实现为现状依据。历史 Phase 1 完成记录不代表 v2 目标或所有 CLI 已验收。
+- **范围来源**：[现行需求](../requirements.md)；[重构计划](../plans/2026-09-17/10:15-local-agent-chat-rebuild.md) 管理后续工作。
 
 ## 持久化
 
@@ -34,32 +35,32 @@
 | Command | Input | Output |
 |---|---|---|
 | `chat_list_sessions` | `{ projectPath }` | `ChatSessionSummary[]` |
-| `chat_create` | `{ projectPath, agentId, title? }` | `ChatSession` |
+| `chat_create` | `{ input: { projectPath, agentId, title?, permissionMode? } }` | `ChatSession` |
 | `chat_get` | `{ projectPath, sessionId }` | `ChatSession`（load 时 reconcile 中断的 streaming → aborted） |
-| `chat_send` | `{ projectPath, sessionId, text, permissionMode? }` | `{ turnId, session }` |
-| `chat_abort` | `{ projectPath, sessionId, turnId? }` | `{ ok: true }` |
+| `chat_send` | `{ input: { projectPath, sessionId, text, permissionMode? } }` | `{ turnId, session }` |
+| `chat_abort` | `{ input: { projectPath, sessionId, turnId? } }` | `null`（Rust `Result<(), String>`） |
 | `chat_set_agent` | `{ projectPath, sessionId, agentId }` | `ChatSession` |
-| `chat_update_meta` | `{ projectPath, sessionId, title?, permissionMode?, status?, flagged?, titleFromFirstMessage? }` | `ChatSession` |
+| `chat_update_meta` | `{ input: { projectPath, sessionId, title?, permissionMode?, status?, flagged?, titleFromFirstMessage? } }` | `ChatSession` |
 | `chat_clear_resume` | `{ projectPath, sessionId }` | `ChatSession`（开新 CLI 会话；失败不丢旧 handle） |
-| `chat_promote_to_task` | `{ projectPath, sessionId }` | `{ taskId, task, session }` **草稿 stub** |
+| `chat_promote_to_task` | `{ input: { projectPath, sessionId } }` | `{ taskId, task, session }` **草稿 stub** |
 
-调用链（强制）：
+当前调用链：
 
-`chat_send` → 组装 prompt → `agent_adapter::prepare_invocation`（stage 由 permissionMode 映射）→ `ProcessSupervisor`（`ProcessKind::Chat`，`task_id=chat:{sessionId}`，`run_id=turnId`）→ 解析 stream → 追加 `ChatMessage` / `parts` → emit 事件。
+`chat_send` → `chat_context::prepare_chat_invocation` → `agent_adapter::prepare_invocation`（stage 由 permissionMode 映射）→ `ProcessSupervisor`（`ProcessKind::Chat`，`task_id=chat:{sessionId}`，`run_id=turnId`）→ 解析 stream → 追加 `ChatMessage` / `parts` → emit 事件。
 
 仅在 turn **complete** 时写入新的 resume handle；abort/error/timeout 保留旧 handle。
 
 Turn timeout：`CHAT_TURN_TIMEOUT_MS`（默认 10 分钟）到期时 `ProcessSupervisor::request_stop(turnId, "chat_timeout")`；消息 `status=aborted`，`errorSummary` 为可读超时文案；会话 `turnStatus` 回到 idle，可再发送。
 
-### permissionMode → adapter stage（Phase 2）
+### 当前 permissionMode → adapter stage
 
-权威 CLI flag 见 [craft-local-chat-prd.md](../guides/craft-local-chat-prd.md) 附录。Ask 门禁见 Phase 2 计划 `docs/plans/2026-09-17/10:55-craft-chat-phase2.md`。
+以下是当前参数映射，不是 CLI 安全能力验收结果。Ask 仅 Composer 每回合确认，Rust 当前不校验独立授权凭证，也无逐工具审批传输。
 
 | permissionMode | stage | 说明 |
 |---|---|---|
-| `explore` | `planning` | 默认；只读 sandbox / plan |
+| `explore` | `planning` | 默认；请求只读/plan，保障取决于已验收的 CLI 能力 |
 | `ask` | `debugging` | 可写 CLI；**每回合发送前** Composer 确认「允许本回合写文件/跑可写工具」 |
-| `auto` | `debugging` | 可写 + 跑命令（无确认；仍受 agent flags / execution_policy） |
+| `auto` | `debugging` | 请求可写；无 Composer 确认，受 adapter 配置及 CLI 自身策略限制 |
 
 旧值：`read_only`→`explore`；`read_write`→`ask`（偏安全：可写但需确认）。
 
@@ -88,21 +89,22 @@ Turn timeout：`CHAT_TURN_TIMEOUT_MS`（默认 10 分钟）到期时 `ProcessSup
 - MCP / Sources 连接、Ask **per-tool** 运行时审批（当前为发送前确认 stub）、Craft 五态 Inbox（P2-M4 可选）
 - 后台回合指示 / 超时已在 Phase 2 P2-M3 落地（非完整 Background tasks 产品）
 
-## v2 冻结补充（10:15 rebuild）
+## 上下文与续聊
 
-执行入口：`docs/plans/2026-09-17/10:15-local-agent-chat-rebuild.md`。
+`chat_context.rs` 使用 adapter 返回的 `resumed` 判断传输方式，而不是仅看磁盘中是否有 resume 字符串。原生续聊只传最新输入；无句柄或 adapter 明确返回非 resume 调用时，使用受预算约束的历史 JSON；适配器明确拒绝的句柄/协议直接报错，不绕过拒绝。CLI 已开始执行后失败不会自动重试。
 
-### IPC 信封
-- **`{ input: {...} }`**：`chat_create`、`chat_update_meta`、`chat_send`、`chat_abort`、`chat_promote_to_task`
-- **平铺字段**：`chat_list_sessions`、`chat_get`、`chat_set_agent`、`chat_clear_resume`
-- 前端唯一封装：`src/api/chatClient.ts`
+历史最多 12 条、每条正文最多 2000 个 Unicode 字符、序列化后总预算 12000 字符，保留消息角色和状态并明确标记截断；最新输入完整保留，超过 32000 字符在启动前报错。原始转录不随 prompt 裁剪。当前不生成语义摘要，不能宣称已保留全部早期约束。换 Agent/权限会清除不相容句柄，活动回合拒绝这类配置变更。
 
-### 回合状态
-`idle → streaming → (complete | aborted | error)`；同会话同时仅一个 streaming 回合；abort/timeout 均走 ProcessSupervisor。
+## 当前限制与 v2 目标（尚未完成）
 
-### 权限
-`explore` / `ask` / `auto`（旧 `read_only`→explore，`read_write`→ask）。Ask 发送前确认门已在 Phase 2 落地。
+| 方面 | 当前实现 | 重构目标 |
+|---|---|---|
+| 进程归属 | supervisor 使用 `task_id=chat:{sessionId}` 兼容键；没有创建领域 Task | 独立 `ProcessOwner::Chat`，移除兼容假 taskId |
+| 回合状态 | session `idle/streaming`；消息 `complete/streaming/aborted/error`，崩溃恢复为 aborted | starting/running/cancelling 与独立 completed/failed/cancelled/timed_out/interrupted |
+| 持久化 | `.loom/chat/` v1 JSON，结束时保存结果 | v2 journal、原子快照、增量持久化、单 writer 与重放 |
+| 事件 | 两类现有事件，含 sessionId/turnId | 带 projectKey 与单调 seq 的统一事件和补流 |
+| 权限 | stage 参数映射；Ask UI 回合授权；部分 CLI/resume 限制待实测 | 能力驱动的有效权限；有双向协议才能提供逐工具审批 |
 
-### 存储与隔离
-`.loom/chat/`；ChatSession ≠ Task；禁止为 Chat 伪造 taskId。路径 canonical，拒绝 `..` 逃逸。崩溃后 streaming → interrupted，由用户手动继续。
+现有路径检查不能替代计划中的 canonical projectKey、所有 realpath/symlink 边界验收。Chat 直接启动 adapter 进程，不经过 Task command runner 的完整 execution_policy 门禁；不得将 Task 的逐命令策略宣称为 Chat 内部工具执行的保障。详细边界见 [安全策略](../security-policy.md)。
 
+前端 IPC 唯一封装为 `src/api/chatClient.ts`，具体信封见上表。推进 v2 时同步修改 producer、consumer 和契约样本；更新现状表后才能将目标标为完成。

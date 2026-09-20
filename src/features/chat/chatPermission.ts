@@ -56,11 +56,11 @@ export function permissionCliHint(
       return (write ? "CLI · --sandbox workspace-write" : "CLI · --sandbox read-only") + gateSuffix;
     case "claude_code_cli":
       return (
-        (write ? "CLI · --permission-mode acceptEdits" : "CLI · 默认只读（不传 permission-mode）") +
+        (write ? "CLI · --permission-mode acceptEdits" : "CLI · 默认权限（只读限制待验证）") +
         gateSuffix
       );
     default:
-      return (write ? "CLI · 可写 stage" : "CLI · 只读 stage") + gateSuffix;
+      return (write ? "CLI · 可写 stage" : "CLI · 请求只读（由工具配置决定）") + gateSuffix;
   }
 }
 

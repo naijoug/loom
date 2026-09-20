@@ -16,6 +16,10 @@
 - Credential 刚注入后：先按 `docs/release/notarized-dmg-gate.md` 重打新 DMG，再用本 checklist 汇总 pass / fail 证据。
 - 准备扩大邀请制 Beta 前：必须把本 checklist、notarized DMG gate、首次启动 smoke、诊断包 smoke 和反馈入口全部补齐。
 
+## 状态维护
+
+状态随真实证据更新，不固定历史 Wait/Hold。候选相关 gate 的 Pass 与 Invite-only 结论须提供同候选的复核记录，格式见 [发布证据约定](../guides/release-evidence.md)。历史记录和模板不代替当前证据；本次规则调整保持现有 Hold。
+
 ## Review 表
 
 | Gate | Required evidence | Current status | Stop rule |

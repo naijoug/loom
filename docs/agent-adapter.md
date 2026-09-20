@@ -2,7 +2,7 @@
 
 ## 目标
 
-Loom 的编排层只描述“在哪个项目、哪个阶段、用哪个 Agent、发送什么上下文”，不直接拼接特定 CLI 参数。所有本地 Agent 调用都必须先经过 Rust 后端的适配器层，得到统一的进程启动描述，再交给命令运行器执行和留痕。
+Loom 的编排层只描述“在哪个项目、哪个阶段、用哪个 Agent、发送什么上下文”，不直接拼接特定 CLI 参数。所有本地 Agent 调用都必须先经过 Rust 后端的适配器层，得到统一的进程启动描述，Task 调用再交给命令运行器；Chat 当前由自身 runtime 启动适配后的进程并接入 ProcessSupervisor。两者权限边界见 [安全策略](security-policy.md)。
 
 ## 阶段
 
@@ -17,7 +17,7 @@ Loom 的编排层只描述“在哪个项目、哪个阶段、用哪个 Agent、
 
 ## 输入契约
 
-统一输入包含：
+Task 的 `PrepareAgentInvocationInput` 包含：
 
 - `projectPath`：已打开项目的根目录。
 - `taskId`：用于生命周期门禁、运行记录和证据关联。
@@ -25,6 +25,8 @@ Loom 的编排层只描述“在哪个项目、哪个阶段、用哪个 Agent、
 - `stage`：当前调用阶段。
 - `prompt`：已由上下文构建器裁剪、脱敏并汇总的提示词。
 - `resumeCommand`：可选；仅内建且可安全解析的适配器允许恢复会话。
+
+Chat 使用内部 `AdapterInvocationRequest`，不需要领域 taskId；由 `chat_context.rs` 按 adapter 返回的 `resumed` 选择新增输入或有界历史。原生续聊失败不自动重跑。
 
 规划和 Review 的内部调用还可以提供 `promptFile`，让自定义 CLI 通过 `{promptFile}` 占位符读取长提示词。
 
@@ -36,8 +38,8 @@ Loom 的编排层只描述“在哪个项目、哪个阶段、用哪个 Agent、
 - `args`：适配器生成的参数列表，不经过 shell。
 - `cwd`：项目根目录。
 - `stdinPrompt`：是否需要通过 stdin 发送提示词。
-- `outputMode`：`plain`、`codex_json` 或 `claude_stream_json`。
-- `resumed`：是否恢复了既有会话。
+- `outputMode`：`plain`、`codex_json`、`claude_stream_json` 或 Grok 的 `streaming_json`。
+- `resumed`：是否准备了原生续聊调用；不代表远端会话已验证存在。
 
 调用者不得修改 `program` 或重新拼接特定 Agent 的参数。实施与调试入口还必须把 `agentId` 传给命令运行器，由后端再次核对命令、能力与权限。
 
@@ -67,6 +69,10 @@ Loom 的编排层只描述“在哪个项目、哪个阶段、用哪个 Agent、
 
 自定义 CLI 默认不支持会话恢复；如需恢复能力，应新增显式适配器并对恢复命令进行结构化解析，不能把任意字符串交给 shell。
 
+## 上下文与能力边界
+
+共享指引保持模型中立，不给所有 CLI 强制指定同一模型或 API 参数。记录实际 CLI 版本，未知模型/能力记 unknown；参数存在不等于真实协议验收。当前 Codex resume 分支不重传 sandbox，Claude 探索分支不传 permission-mode；这些行为不能作为权限一致性的验收证明。能力与结构化 resume 指纹的完善见 Chat 重构目标。
+
 ## 诊断与失败语义
 
 Agent 设置页通过后端诊断获取命令解析路径、版本探测结果、启用状态和详细说明。命令存在不等同于已经登录；认证状态在下一次真实调用中验证。调用失败需要记录退出码、超时、stderr 摘要、证据路径和可恢复会话信息。
@@ -78,5 +84,5 @@ Agent 设置页通过后端诊断获取命令解析路径、版本探测结果�
 1. 实现 `AgentAdapter::prepare`。
 2. 为阶段权限、参数映射、输出模式和恢复命令增加单元测试。
 3. 在适配器选择函数中注册新类型。
-4. 如输出不是现有三种模式之一，再扩展统一日志解析层。
+4. 如输出不是现有输出模式之一，再扩展统一日志解析层。
 5. 不得在 React 组件中添加该 Agent 的 CLI 参数分支。

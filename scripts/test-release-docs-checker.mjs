@@ -16,6 +16,10 @@ function makeFixture(name) {
   const fixtureReleaseDir = path.join(fixtureRoot, "docs", "release");
   fs.mkdirSync(path.dirname(fixtureReleaseDir), { recursive: true });
   fs.cpSync(sourceReleaseDir, fixtureReleaseDir, { recursive: true });
+  const guidesDir = path.join(fixtureRoot, "docs", "guides");
+  fs.mkdirSync(guidesDir, { recursive: true });
+  fs.copyFileSync(path.join(projectRoot, "docs", "guides", "release-evidence.md"),
+    path.join(guidesDir, "release-evidence.md"));
   return { fixtureRoot, fixtureReleaseDir };
 }
 
@@ -90,9 +94,85 @@ function writeChecklist(fixtureReleaseDir, text) {
   fs.writeFileSync(path.join(fixtureReleaseDir, "beta-release-review-checklist.md"), text);
 }
 
+function setGateStatus(directory, gate, status) {
+  writeChecklist(directory, readChecklist(directory).split("\n").map((line) => {
+    if (!line.startsWith(`| ${gate} |`)) return line;
+    const cells = line.split("|");
+    cells[3] = ` ${status} `;
+    return cells.join("|");
+  }).join("\n"));
+}
+
+function addPassEvidence(directory, gates) {
+  const sha256 = "a".repeat(64);
+  const candidate = { commit: "abcdef1234567", sha256, sizeBytes: 123,
+    buildCommand: "pnpm tauri build", artifact: "Loom-test.dmg" };
+  const evidence = { schemaVersion: 1, candidate, gates: {} };
+  const record = ["# Fixture only — no real release evidence", candidate.commit, sha256];
+  for (const gate of gates) {
+    setGateStatus(directory, gate, "Pass");
+    evidence.gates[gate] = { status: "Pass", candidateSha256: sha256,
+      reviewer: "Fixture reviewer", checkedAt: "2026-09-20T02:00:00Z", record: "candidate-record.md" };
+    record.push(`## ${gate}\nResult: Pass\nFixture command evidence.`);
+  }
+  fs.writeFileSync(path.join(directory, "candidate-record.md"), record.join("\n\n"));
+  fs.writeFileSync(path.join(directory, "release-evidence.json"), JSON.stringify(evidence));
+  return evidence;
+}
+
 try {
   assertDiagnosticSmokeScriptContract();
   expectPass("baseline");
+
+  expectPass("candidate-backed-status-can-progress", (directory) => {
+    addPassEvidence(directory, ["Credential preflight"]);
+  });
+  expectPass("status-can-report-new-failure", (directory) => {
+    setGateStatus(directory, "Developer ID identity", "Fail");
+  });
+  expectPass("invite-only-with-all-candidate-evidence", (directory) => {
+    const gates = readChecklist(directory).split("\n")
+      .filter((line) => line.startsWith("| ") && !line.startsWith("| Gate ") && !line.startsWith("| ---"))
+      .map((line) => line.split("|")[1].trim());
+    addPassEvidence(directory, gates);
+    writeChecklist(directory, readChecklist(directory).replace("**Distribution decision: Hold**", "**Distribution decision: Invite-only**"));
+  });
+  expectPass("smoke-record-can-progress-with-evidence", (directory) => {
+    addPassEvidence(directory, ["Diagnostic bundle smoke"]);
+    const recordPath = path.join(directory, "diagnostic-bundle-smoke-record.md");
+    fs.writeFileSync(recordPath, fs.readFileSync(recordPath, "utf8")
+      .replace("Diagnostic bundle beta gate: Hold", "Diagnostic bundle beta gate: Pass"));
+  });
+  expectFail("invalid-status", (directory) => {
+    setGateStatus(directory, "Artifact identity", "Ready-ish");
+  }, 'has invalid status "Ready-ish"');
+  expectFail("invite-only-cannot-use-historical-hold-evidence", (directory) => {
+    writeChecklist(directory, readChecklist(directory).replace("**Distribution decision: Hold**", "**Distribution decision: Invite-only**"));
+  }, "Invite-only requires gate");
+  expectFail("different-candidate-evidence", (directory) => {
+    const evidence = addPassEvidence(directory, ["Credential preflight"]);
+    evidence.gates["Credential preflight"].candidateSha256 = "b".repeat(64);
+    fs.writeFileSync(path.join(directory, "release-evidence.json"), JSON.stringify(evidence));
+  }, "requires a reviewed Pass record for the same candidate");
+  expectFail("missing-pass-evidence-record", (directory) => {
+    addPassEvidence(directory, ["Credential preflight"]);
+    fs.rmSync(path.join(directory, "candidate-record.md"));
+  }, "evidence record must exist inside docs/release");
+  expectFail("record-without-candidate-hash", (directory) => {
+    addPassEvidence(directory, ["Credential preflight"]);
+    fs.writeFileSync(path.join(directory, "candidate-record.md"), "Credential preflight\nResult: Pass");
+  }, "record missing candidate/result evidence");
+  expectFail("record-symlink-escape", (directory) => {
+    addPassEvidence(directory, ["Credential preflight"]);
+    const record = path.join(directory, "candidate-record.md");
+    const outside = path.join(directory, "..", "outside.md");
+    fs.renameSync(record, outside);
+    fs.symlinkSync(outside, record);
+  }, "evidence record must exist inside docs/release");
+  expectFail("invalid-evidence-json", (directory) => {
+    setGateStatus(directory, "Credential preflight", "Pass");
+    fs.writeFileSync(path.join(directory, "release-evidence.json"), "{broken");
+  }, "Pass requires valid release-evidence.json");
 
   expectFail(
     "wrong-checklist-status",
@@ -105,7 +185,7 @@ try {
         ),
       );
     },
-    'review table gate "Credential preflight" has status "Pass", expected "Hold"',
+    'gate "Credential preflight" Pass requires valid release-evidence.json',
   );
 
   expectFail(
@@ -226,7 +306,7 @@ try {
           .replace("Diagnostic bundle beta gate: Hold", "Diagnostic bundle beta gate: Pass"),
       );
     },
-    'missing record gate phrase "Diagnostic bundle beta gate: Hold"',
+    'gate "Diagnostic bundle smoke" Pass requires valid release-evidence.json',
   );
 
   expectFail(
@@ -242,7 +322,7 @@ try {
           .replace("下一份候选产物必须先解决签名 gate", "下一份候选产物继续复核签名 gate"),
       );
     },
-    'missing record gate phrase "Gatekeeper hold"',
+    'missing record gate phrase "不要求试用者绕过 Gatekeeper"',
   );
 
   expectFail(
@@ -264,7 +344,7 @@ try {
           ),
       );
     },
-    'missing record gate phrase "Signing / Gatekeeper assessment: **hold**"',
+    'missing record gate phrase "should **not** be promoted as a public Beta download"',
   );
 
   expectFail(
@@ -284,7 +364,7 @@ try {
           .replace("当前候选 DMG 仍保持 Gatekeeper hold", "当前候选 DMG 等待 Gatekeeper review"),
       );
     },
-    'missing record gate phrase "blocked until notarization credential is available"',
+    'missing record gate phrase "不要扩大 Beta 分发"',
   );
 
   expectFail(
@@ -330,7 +410,7 @@ try {
           .replace("在本记录出现至少一条 `Beta gate: pass` 前", "在后续通过前"),
       );
     },
-    'missing record gate phrase "record template ready; no real desktop export pass yet"',
+    'missing record gate phrase "在本记录出现至少一条 `Beta gate: pass` 前"',
   );
 
   expectFail(

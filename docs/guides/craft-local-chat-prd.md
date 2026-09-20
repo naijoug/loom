@@ -1,7 +1,7 @@
 # Craft 启发的本机 Agent Chat — PRD（Phase 1 / M0）
 
 - **Date**: 2026-09-17
-- **Status**: M0 契约冻结
+- **Status**: Phase 1/2 历史设计；2026-09-20 起以 [现行需求](../requirements.md) 和 [Chat 契约](../architecture/chat-contracts.md) 为当前范围与实现依据。
 - **Related plan**: [09:03-craft-inspired-local-agent-chat.md](../plans/2026-09-17/09:03-craft-inspired-local-agent-chat.md)
 - **IA**: [craft-local-chat-ia.md](./craft-local-chat-ia.md)
 - **Contracts**: [chat-contracts.md](../architecture/chat-contracts.md) · `src/domain/chat.ts` · `src-tauri/src/chat.rs`
@@ -48,7 +48,7 @@ Board / Planning / Testing = advanced，侧栏或菜单可达，**不是**默认
 - 不做云同步、会话分享、插件 / Agent 市场、团队账号、远程 headless server。
 - 不删除 Board / Planning；不迁移到 Electron / Bun。
 - 不完整复刻 Craft Sources（MCP/REST/OAuth）、Automations、Background Tasks、Multi-file Diff。
-- 不做 per-tool 审批弹窗（Ask 档 Phase 1 仅映射保守 CLI 权限，见冻结决策）。
+- 不做 per-tool 审批弹窗（当前 Ask 的回合授权定义见 Chat 契约）。
 - Beta 公证 / 公开分发另案；不依赖 Cursor Cloud Agents。
 
 ## 成功标准（产品）
@@ -68,25 +68,9 @@ Board / Planning / Testing = advanced，侧栏或菜单可达，**不是**默认
 
 其它沿用 chat-first 拍板：持久化仍项目级 `.loom/chat/`；升格 stub 不自动开跑。
 
-## 权限档位 → adapter 映射（附录）
+## 当前权限与迁移
 
-权威实现落在 `chat.rs` 的 `permission_to_stage` + 各 adapter 的 stage→CLI flag + Composer Ask 确认门。Phase 2 Ask 与 Auto 共用可写 CLI flags，但 UI 每回合确认。
-
-| Loom `ChatPermissionMode` | `AgentStage` | Codex CLI | Claude Code CLI | Grok CLI | 产品语义 |
-|---|---|---|---|---|---|
-| `explore` | `Planning` | `--sandbox read-only` | 不传 `--permission-mode`（默认只读倾向） | `--permission-mode plan` | 探索 / 只读 |
-| `ask` | `Debugging` | `--sandbox workspace-write` | `--permission-mode acceptEdits` | `--permission-mode acceptEdits` | 询问编辑；可写 CLI + **每回合发送前确认** |
-| `auto` | `Debugging` | `--sandbox workspace-write` | `--permission-mode acceptEdits` | `--permission-mode acceptEdits` | 自动可写（无确认；仍受 agent `can_write_files` / `can_run_commands` 与 execution_policy） |
-
-### 旧值迁移（向后兼容）
-
-| 磁盘上的旧值 | 规范化后 | 说明 |
-|---|---|---|
-| `read_only` | `explore` | 语义等价 |
-| `read_write` | `ask` | **偏安全**：旧「可写」会话加载后变为 Ask（可写但每回合确认）；选 `auto` 可去掉确认 |
-| 缺省 / 未知 | `explore` | 默认只读 |
-
-`schemaVersion` 仍为 `1`：加载时规范化字符串，不强制 bump；写回时使用新枚举字面量。
+当前 `ask` 是每回合发送前授权可写 CLI；逐工具审批尚未实现，须具备验收通过的双向协议后作为独立能力交付。参数、旧值迁移和实现限制统一维护在 [Chat 契约](../architecture/chat-contracts.md)，本历史 PRD 不再复制第二份权威映射表。
 
 ## ChatSession ≠ Task（重申）
 
@@ -98,8 +82,6 @@ Board / Planning / Testing = advanced，侧栏或菜单可达，**不是**默认
 | Agent | `prepare_invocation`，intent=chat | 按 stage |
 | 关系 | 可升格草稿 Task | 不反向吞并 Chat 历史（本期） |
 
-## 下一步
+## 继续实施
 
-M0 文档与类型冻结后进入 **M1**：拆分 Chat IA 壳（Inbox / Transcript / Composer / Header），仍可接现有 send 路径。
-
-> 2026-09-17：执行入口转为 `docs/plans/2026-09-17/10:15-local-agent-chat-rebuild.md`；Chat 验收不再要求四阶段任务闭环。
+执行入口为 [本机 Chat 重构计划](../plans/2026-09-17/10:15-local-agent-chat-rebuild.md)。以上 Phase 1 故事是历史设计；当前实现与未完成目标以 Chat 契约的状态表区分。

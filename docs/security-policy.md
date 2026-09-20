@@ -8,7 +8,7 @@
 
 ## 执行策略
 
-`execution_policy.rs` 对 command runner、PTY 与 Agent invocation 使用同一套检查：
+`execution_policy.rs` 对 Task 的 command runner、PTY 与接入该策略的 Agent invocation 使用同一套检查：
 
 1. canonicalize 项目根和 cwd，cwd 必须位于项目内。
 2. 校验 Agent 启用状态、阶段能力、可执行命令、`can_write_files` 和 `can_run_commands`。
@@ -26,9 +26,20 @@
 | production_external | 明确生产域名或部署命令 | 强制确认 |
 | path_escape | cwd 或证据路径越出项目 | 拒绝 |
 
+## 当前 Chat 边界
+
+当前 Chat 经过 adapter 的 Agent 启用、能力与配置权限检查，直接启动 CLI 并接入 ProcessSupervisor；没有经过 Task command runner 的完整 execution_policy，也不能拦截 CLI 内部每次工具调用。
+
+- `ask` 是 Composer 每回合授权；`auto` 不追加回合确认。UI 确认是交互约定，当前无 Rust 独立授权凭证校验，不得视为安全沙箱或逐工具审批。
+- `explore` 请求只读/plan 参数，但各 CLI 和 resume 的实际限制需在临时项目验收。Claude 不传 permission-mode、Codex resume 不重传 sandbox 均不等于已证明只读。
+- 换 Agent/权限后清理续聊句柄；活动回合拒绝配置变更。结构化句柄指纹、所有路径与 symlink 边界、能力驱动权限仍在重构计划中。
+- 后续逐工具审批必须具备双向协议、后端校验与真实拒绝/允许证据；提示词不能补足缺失的权限机制。
+
+当前/目标契约见 [chat-contracts.md](architecture/chat-contracts.md)。文档优化不会提升现有 CLI 的实际权限保障。
+
 ## 敏感信息
 
-- 命令、stdout/stderr、Planning/Review 输出、context 与 summary 在写盘前经过统一脱敏。
+- Task 命令、stdout/stderr、Planning/Review 输出、context 与 summary 在写盘前经过统一脱敏。Chat 的 CLI 输出经过脱敏，但用户输入和转录不是全面的凭据隔离边界，避免向对话输入秘密。
 - 常见 Authorization/Bearer、password、token、secret 和环境变量赋值会替换为 `[REDACTED]`。
 - Loom 不把完整环境变量写入 Task 或日志。summary 只引用验证日志路径，不复制原始日志正文。
 - 脱敏是最后一道防线；用户仍不应把长期凭据直接写入需求或文件名。

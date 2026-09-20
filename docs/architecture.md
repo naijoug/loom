@@ -2,7 +2,7 @@
 
 ## 目标与边界
 
-Loom 是本地优先的 Tauri 桌面开发工作台。React 负责流程展示和人工交互；Rust 负责所有有副作用的能力，包括文件访问、项目分析、Agent 调用、命令与 PTY 生命周期、安全策略、日志、任务状态和持久化。核心闭环不依赖云服务。
+Loom 是本地优先的 Tauri 桌面开发工作台。React 负责流程展示和人工交互；Rust 负责所有有副作用的能力，包括文件访问、项目分析、Agent 调用、命令与 PTY 生命周期、安全策略、日志、任务状态和持久化。Loom 编排与存储不依赖自建云服务；Agent CLI 仍可能访问远端模型。当前交付优先单 Agent Chat，高级 Task 工作流独立。
 
 ## 模块
 
@@ -19,7 +19,7 @@ Loom 是本地优先的 Tauri 桌面开发工作台。React 负责流程展示�
 | Persistence | `migrations.rs`, `storage.rs`, `.loom/` | 版本化 JSON 迁移、原子 JSON/文本写入、任务、日志、配置、附件和总结 |
 | Contract | `contracts/tauri-contract.json`, `src/api/` | command/event 名称、状态枚举、持久化 wire sample 与前端 typed client |
 
-## 关键数据流
+## 高级 Task 数据流
 
 1. 用户登记项目；Rust 分析栈、Git 和可用命令，并初始化 `.loom/`。
 2. 多个 Planning Agent 并行起草，随后交叉 Review 和合成；计划与原始证据落盘。
@@ -64,10 +64,10 @@ Task、Agent 配置、App Settings、终端槽位和项目 Agent 偏好均使用
 
 新增 Agent 时实现 adapter 的 prepare 映射，声明 output mode、阶段能力、文件/命令权限和可恢复 session 规则。核心 task、review 和 testing 流程只依赖 `PreparedAgentInvocation`，不依赖具体 CLI。详见 [Agent Adapter](agent-adapter.md)。
 
-## 本机 Agent Chat（Phase 1）
+## 当前 Chat 与后续重构
 
-Craft 启发的本机会话面已完成 M0–M5：默认冷启动进 Chat；会话收件箱（`active` / `needs_attention` 过滤 / `archived`）、三档权限（`explore`/`ask`/`auto`）、流式 Turn + best-effort `parts`、内联 Agent 诊断、可选右侧「上下文」空态（项目路径 / `.loom/chat` / 权限 / 诊断；**无 MCP 连接**）。升格为 Task 仅为草稿 stub，不自动推进状态机。
+当前 Chat 已有收件箱、会话元数据、文本与 best-effort 工具片段、流式发送/停止，以及 Task 草稿升格。权限值 `explore/ask/auto` 中 Ask 是 Composer 回合授权，无逐工具审批传输。Chat 直接运行 adapter 进程，经 `ProcessSupervisor` 记录兼容键 `task_id=chat:{sessionId}`，不创建领域 Task。
 
-进程：`ProcessSupervisor` + `ProcessKind::Chat`（`task_id=chat:{sessionId}`）。契约见 [chat-contracts.md](architecture/chat-contracts.md)；dogfood 清单见 [craft-chat-phase1-checklist.md](dogfood/craft-chat-phase1-checklist.md)。
+`chat_context.rs` 依据 adapter 的 `resumed` 决定仅发新输入或有界历史重放；换 Agent/权限后清理旧句柄，运行中拒绝配置变更。Chat 当前 v1 存储仍有整文件保存等限制，不能将 Task 的事务化/恢复保证套用到 Chat。
 
-**Phase 2+（明确推迟）**：Sources/MCP 连接、Ask 审批 UI、后台任务产品化、Inbox 五态对齐 Craft。
+独立 ProcessOwner、v2 journal、增量持久化、统一 seq 事件、能力驱动权限仍是重构目标。当前契约、具体预算和已知边界见 [chat-contracts.md](architecture/chat-contracts.md)，真实验收按 [testing.md](testing.md) 记录。Sources/MCP、逐工具审批、后台任务产品化和 Inbox 五态继续推迟。

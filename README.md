@@ -1,79 +1,41 @@
 # Loom
 
-Loom 是一个面向软件开发任务的桌面端编程助手工作台。它用于统一调度用户本机已安装的多种 Agent 工具，例如 Codex、Claude Code、OpenClaw、Hermes 等，并把需求讨论、计划完善、实施、Review、调试验收和自动修复组织成一个连续流程。
+Loom 是基于 Tauri、React 和 Rust 的本地编程 Agent 工作台。当前优先交付可靠的单 Agent Chat：选择项目、检测本机 CLI、建立会话、查看流式回复、停止和续聊。CLI 可以调用远端模型，“本机调用”不等于离线推理。
 
-## 核心流程
+## 当前交付范围
 
-1. 需求讨论  
-   多个 Agent 基于同一需求生成各自的计划、风险分析和测试建议，系统汇总共识与冲突，形成最终实施计划。
+- 至少一个真实本机 Agent 完整通过多轮、停止和重启验收；其他 Agent 按实际能力与证据展示支持状态。
+- ChatSession 与 Task 分离，普通聊天不要求多 Agent 讨论、计划确认或实施 Review。
+- 当前 Ask 是每回合发送前的写入授权；尚无逐工具审批传输。权限限制与现有缺口见 [Chat 契约](docs/architecture/chat-contracts.md)。
+- Chat 重构仍在进行。网页预览、fixture 或历史工作流验收不能代替当前真实桌面 Chat 验收。
 
-2. 实施与 Review  
-   用户选择一个主 Agent 负责实现，其它 Agent 参与 Review、补充测试建议和发现风险。
-
-3. 调试验收  
-   系统启动本地开发或验证命令，实时展示日志，自动识别错误。用户也可以在人工介入模式下补充问题、截图、日志和复现步骤。
-
-4. 修复循环  
-   当验收失败时，系统将错误摘要、日志和上下文交给主 Agent 修复，再继续运行验证，直到任务完成、用户停止或出现明确阻塞。
-
-## 目标能力
-
-- 管理多种本地 Agent 工具。
-- 为不同阶段选择不同 Agent 角色。
-- 并行生成和完善计划文档。
-- 执行本地命令并实时展示日志。
-- 自动分析测试失败、启动失败和运行时错误。
-- 支持自动修复与人工介入两种调试方式。
-- 保存任务全过程记录和最终验收总结。
-
-## 文档
-
-- [需求文档](docs/requirements.md)
-- [架构](docs/architecture.md)
-- [Agent Adapter](docs/agent-adapter.md)
-- [任务状态机](docs/task-state-machine.md)
-- [安全策略](docs/security-policy.md)
-- [完整版本需求审计](docs/requirements-audit.md)
-- [完整版本验收报告](docs/dogfood/complete-version-2026-07-24.md)
-- [用户测试指南](docs/testing.md)
-- [Beta 发布资料](docs/release/README.md)
-- [实施计划索引](docs/PLANS.md)
-
-## MVP 范围
-
-第一版目标是跑通完整开发闭环：
-
-- 打开本地项目。
-- 配置 Agent 命令。
-- 多 Agent 讨论并生成最终计划。
-- 选择主 Agent 实施。
-- 使用协作 Agent Review。
-- 启动本地调试或验证命令。
-- 实时查看日志。
-- 根据错误自动修复。
-- 支持用户人工反馈问题。
-- 生成任务总结。
-
-## 建议架构
-
-项目可以拆分为以下核心模块：
-
-- `UI`：桌面端界面、任务流程、日志面板、配置面板。
-- `Orchestrator`：任务状态机、多 Agent 调度、阶段推进。
-- `Agent Adapter`：适配 Codex、Claude Code、OpenClaw、Hermes 等工具。
-- `Command Runner`：本地命令执行、日志采集、进程管理。
-- `Project Analyzer`：识别项目类型、脚本和验证命令。
-- `Review Engine`：组织协作 Agent Review。
-- `Persistence`：保存任务、日志、计划和配置。
-
-## 当前状态
-
-仓库已实现第一版完整本地闭环：多 Agent 规划与互评、主 Agent Todo 实施、独立实施 Review 与 blocker 门禁、受策略保护的命令/PTY、自动与人工调试修复循环、结构化附件证据、重启恢复，以及基于 Git baseline 的 JSON/Markdown 交付总结。dummy Agent 仅用于测试 fixture，不会作为真实任务 Agent 展示。
-
-本地完整门禁：
+## 启动与验证
 
 ```bash
-pnpm check
+pnpm install
+scripts/debug.sh stop
+scripts/debug.sh desktop
+# 验证结束后
+scripts/debug.sh stop
 ```
 
-启动桌面端与测试步骤见 [用户测试指南](docs/testing.md)。
+仅浏览器预览使用 `scripts/debug.sh web`，固定端口 1420。开发检查按 [验证矩阵](docs/testing.md#开发变更验证矩阵) 选择；里程碑完整门禁为 `pnpm check`，桌面构建另跑 `pnpm tauri build --no-bundle`。
+
+## 高级 Task 工作流
+
+Task 保留需求讨论 → 实施与独立 Review → 调试验收 → 修复循环：多 Agent 起草与互评、主 Agent Todo 实施、blocker 门禁、日志与附件、Git baseline 归因和 JSON/Markdown 总结。这些能力有独立的历史验收记录，不是 Chat 使用前提。
+
+## 文档入口
+
+- [现行需求与 Chat 成功标准](docs/requirements.md)
+- [架构与模块边界](docs/architecture.md)
+- [Chat 当前契约与重构目标](docs/architecture/chat-contracts.md)
+- [Agent Adapter](docs/agent-adapter.md)
+- [高级 Task 状态机](docs/task-state-machine.md)
+- [安全策略](docs/security-policy.md)
+- [开发指南与计划规范](docs/development.md)
+- [测试与验收](docs/testing.md)
+- [Agent 行为验收案例](docs/guides/agent-behavior-evaluation.md)
+- [当前计划与历史索引](docs/PLANS.md)
+- [Beta 发布资料](docs/release/README.md)（仅发布准备时查阅）
+- [高级工作流历史需求审计](docs/requirements-audit.md)与[历史验收报告](docs/dogfood/complete-version-2026-07-24.md)

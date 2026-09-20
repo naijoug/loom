@@ -3,6 +3,7 @@ mod agent_diagnostics;
 mod agents;
 mod attachments;
 mod chat;
+mod chat_context;
 mod command_runner;
 pub mod context_builder;
 #[cfg(test)]

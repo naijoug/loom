@@ -1,5 +1,7 @@
 # Chat-first 信息架构（M0）
 
+> 历史设计参考。当前产品范围见 [需求文档](../requirements.md)，实现与重构目标见 [Chat 契约](../architecture/chat-contracts.md)；下文旧阶段声明不代表当前验收状态。
+
 - **Related**: [chat-first-prd.md](./chat-first-prd.md) · [chat-contracts.md](../architecture/chat-contracts.md)
 
 ## 路由表

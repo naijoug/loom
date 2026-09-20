@@ -9,7 +9,7 @@ pnpm install
 ./scripts/debug.sh
 ```
 
-`debug.sh` 默认启动 Tauri 桌面 App，固定使用 `http://localhost:1420` 作为 dev URL。支持通过 `PORT` 与 `HOST` 环境变量自定义端口与主机。
+`debug.sh` 默认启动 Tauri 桌面 App，使用固定端口 `1420`。常规任务不覆盖端口或主机。
 
 可用命令：
 
@@ -23,8 +23,10 @@ pnpm install
 ## 浏览器预览
 
 ```bash
-./scripts/preview.sh start
+./scripts/debug.sh web
 ```
+
+`debug.sh web` 统一清理旧桌面/预览进程，然后调用辅助脚本 `preview.sh`。
 
 默认地址：
 
@@ -49,23 +51,9 @@ http://127.0.0.1:1420/preview/planning?step=review
 PID:  /tmp/loom-preview-vite.pid
 ```
 
-可以通过环境变量覆盖：
+验证结束统一执行 `./scripts/debug.sh stop`。`preview.sh stop` 只清理 Web 辅助预览，不替代桌面进程清理。手工启动先确认本仓库无旧 Vite，使用 `pnpm dev --host 127.0.0.1 --port 1420 --strictPort`。
 
-```bash
-LOOM_PREVIEW_PORT=1421 ./scripts/preview.sh start
-LOOM_PREVIEW_HOST=0.0.0.0 ./scripts/preview.sh start
-LOOM_PREVIEW_LOG=/tmp/my-loom-preview.log ./scripts/preview.sh start
-```
-
-除非明确需要临时端口，否则不要改 `LOOM_PREVIEW_PORT`。常规开发和验证应统一使用 `1420`。
-
-## 自定义端口调试
-
-`debug.sh` 默认端口为 `1420`，如果需要隔离调试端口或避免端口冲突，可通过环境变量覆盖：
-
-```bash
-PORT=11420 HOST=127.0.0.1 ./scripts/debug.sh
-```
+脚本保留端口/主机环境变量供专门排障使用；常规 Agent 验证固定 `1420`，不得通过随机换端口绕过冲突。
 
 ## Release smoke 入口
 
@@ -102,9 +90,11 @@ pnpm docs:release:check
 pnpm docs:release:test
 ```
 
-`docs:release:check` 检查 `docs/release/` 目录本身、必备发布资料、相对 Markdown 链接、反引号中的 release 文档引用、本机绝对路径泄漏，以及 `beta-release-review-checklist.md` 是否仍保留关键分发 gate 语句与完整 review 表字段（Gate / Required evidence / Current status / Stop rule）；每条 Stop rule 还必须保留对应 gate 的关键阻断证据，例如 credential 缺失时的 `No Keychain password item found`，避免被改成泛泛的“继续等待”。它也固定安装 / 卸载、首次启动和诊断包 smoke 记录模板中的 hold gate 语句，避免模板被误改成分发 pass。`docs:release:test` 会在临时 fixture 中验证 checker 的负向分支，确保缺少 `docs/release/` 目录、缺必备 release 文档、缺 evidence、错误 status、过短或泛化 stop rule、记录模板 hold gate 被误删、本机绝对路径、Markdown 断链和反引号 release 文档断链都会失败。新增或改动 Beta release 文档时先跑这两个命令，再根据改动范围决定是否继续运行 `pnpm check`。
+`docs:release:check` 检查必备发布资料、相对链接、路径泄漏、状态枚举与分发约束。状态可以随证据推进，不冻结历史 Wait/Hold；候选相关 Pass 必须关联同一 artifact 的复核记录，Invite-only 要求所有 gate 都有同候选证据。格式见 [发布证据约定](../docs/guides/release-evidence.md)。检查器不能证明签名命令真实执行，维护者仍需复核。
 
-提交前运行统一检查：
+`docs:release:test` 在临时 fixture 中验证合法推进，以及无证据 Pass、候选不一致、记录越界/缺失、错误枚举、分发条件不足和安全约束丢失等拒绝路径。调整发布门禁时运行这两个命令。
+
+日常变更按 [验证矩阵](../docs/testing.md#开发变更验证矩阵) 选择相关检查；里程碑和发布候选运行完整检查：
 
 ```bash
 pnpm check
@@ -125,5 +115,5 @@ LOOM_E2E_RELEASE=1 pnpm e2e:complete  # 同时生成发布包
 
 - 启动 UI 预览前先停止上一轮预览，避免多个 `vite` 进程占用不同端口。
 - 常规本地使用优先执行 `./scripts/debug.sh`。
-- 常规浏览器预览优先执行 `./scripts/debug.sh web` 或 `./scripts/preview.sh start`。
+- 常规浏览器预览执行 `./scripts/debug.sh web`；`preview.sh` 是辅助入口。
 - 验证结束后执行 `./scripts/debug.sh stop`。

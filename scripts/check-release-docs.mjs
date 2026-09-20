@@ -46,55 +46,51 @@ const forbiddenLocalPathPatterns = [
 const requiredChecklistRows = [
   {
     gate: "Scope / safety",
-    status: "Pass",
     evidence: ["docs/release/beta-scope.md", "docs/release/beta-safety-notes.md"],
     stopRuleEvidence: ["安全边界"],
   },
   {
     gate: "Feedback path",
-    status: "Pass",
     evidence: ["docs/release/beta-feedback-template.md"],
     stopRuleEvidence: ["反馈", "证据"],
   },
   {
     gate: "Artifact identity",
-    status: "Wait",
+    requiresRecordedPass: true,
     evidence: ["commit", "SHA-256", "size", "build command"],
     stopRuleEvidence: ["checksum", "新候选"],
   },
   {
     gate: "Credential preflight",
-    status: "Hold",
+    requiresRecordedPass: true,
     evidence: ["xcrun notarytool history --keychain-profile loom-beta-notary"],
     stopRuleEvidence: ["No Keychain password item found"],
   },
   {
     gate: "Developer ID identity",
-    status: "Pass",
     evidence: ["security find-identity -v -p codesigning"],
     stopRuleEvidence: ["identity"],
   },
   {
     gate: "Notarized DMG gate",
-    status: "Wait",
+    requiresRecordedPass: true,
     evidence: ["hdiutil verify", "codesign", "spctl", "staple validate"],
     stopRuleEvidence: ["gate fail", "分发"],
   },
   {
     gate: "Maintainer local smoke",
-    status: "Pass",
     evidence: ["pnpm smoke:desktop"],
     stopRuleEvidence: ["不能替代 notarization", "Gatekeeper"],
   },
   {
     gate: "First-run beta smoke",
-    status: "Wait",
+    requiresRecordedPass: true,
     evidence: ["docs/release/beta-smoke.md", "docs/release/beta-first-run-smoke-record.md"],
     stopRuleEvidence: ["同一 artifact", "旧 artifact"],
   },
   {
     gate: "Diagnostic bundle smoke",
-    status: "Wait",
+    requiresRecordedPass: true,
     evidence: [
       "pnpm smoke:diagnostics",
       "docs/release/diagnostic-bundle-smoke.md",
@@ -104,7 +100,7 @@ const requiredChecklistRows = [
   },
   {
     gate: "Install / uninstall smoke",
-    status: "Wait",
+    requiresRecordedPass: true,
     evidence: [
       "docs/release/macos-install.md",
       "docs/release/local-data-and-uninstall.md",
@@ -114,7 +110,6 @@ const requiredChecklistRows = [
   },
   {
     gate: "Privacy / account boundary",
-    status: "Pass",
     evidence: ["docs/release/privacy-note.md", "docs/release/agent-account-boundary.md"],
     stopRuleEvidence: ["真实 Agent 账号", "外发数据"],
   },
@@ -131,7 +126,6 @@ const requiredRecordGatePhrases = [
   {
     file: "signing-gate-decision.md",
     phrases: [
-      "Gatekeeper hold",
       "不要求试用者绕过 Gatekeeper",
       "下一份候选产物必须先解决签名 gate",
     ],
@@ -139,7 +133,6 @@ const requiredRecordGatePhrases = [
   {
     file: "artifact-integrity-check.md",
     phrases: [
-      "Signing / Gatekeeper assessment: **hold**",
       "should **not** be promoted as a public Beta download",
       "Run `docs/release/beta-smoke.md` against the exact artifact",
     ],
@@ -147,26 +140,23 @@ const requiredRecordGatePhrases = [
   {
     file: "notarized-dmg-gate.md",
     phrases: [
-      "blocked until notarization credential is available",
       "不要扩大 Beta 分发",
       "严格 `codesign`、Gatekeeper assessment 和 staple validate 都通过",
-      "当前候选 DMG 仍保持 Gatekeeper hold",
     ],
   },
   {
     file: "beta-first-run-smoke-record.md",
+    passGate: "First-run beta smoke",
+    passPattern: /^(?:- )?(?:\*\*)?Beta gate: pass(?:\*\*)?\s*$/im,
     phrases: [
-      "Beta gate: hold",
       "不能替代本记录",
-      "邀请制 Beta 分发结论继续保持 hold",
     ],
   },
   {
     file: "diagnostic-bundle-smoke-record.md",
+    passGate: "Diagnostic bundle smoke",
+    passPattern: /^(?:- )?(?:\*\*)?Diagnostic bundle beta gate: Pass(?:\*\*)?\s*$/im,
     phrases: [
-      "record template ready; no real desktop export pass yet",
-      "Diagnostic bundle beta gate: Hold",
-      "尚未针对同一 Beta 候选 artifact 完成真实桌面",
       "在本记录出现至少一条 `Beta gate: pass` 前",
       "不能把诊断包 UI smoke 视为已满足邀请制 Beta 分发门禁",
       "这条门禁不能解除 `loom-beta-notary` credential",
@@ -174,8 +164,9 @@ const requiredRecordGatePhrases = [
   },
   {
     file: "install-uninstall-smoke-record.md",
+    passGate: "Install / uninstall smoke",
+    passPattern: /^(?:- )?(?:\*\*)?Install \/ uninstall beta gate: Pass(?:\*\*)?\s*$/im,
     phrases: [
-      "Install / uninstall beta gate: Hold",
       "不要求试用者绕过 Gatekeeper",
       "这份记录不能单独解锁邀请制 Beta 或公开分发",
     ],
@@ -307,7 +298,6 @@ function checkMarkdownFiles(markdownFiles) {
 
 function checkRequiredChecklistPhrases(checklistPath, checklist) {
   for (const phrase of [
-    "Distribution decision: Hold",
     "Credential preflight",
     "Notarized DMG gate",
     "Install / uninstall smoke",
@@ -325,19 +315,91 @@ function checkRequiredChecklistPhrases(checklistPath, checklist) {
   }
 }
 
+// Historical Hold/Wait snapshots are evidence, not permanent policy. A new
+// candidate may progress only with explicit, candidate-bound review records.
+function checkRecordedPass(sourcePath, gate) {
+  const manifestPath = path.join(releaseDir, "release-evidence.json");
+  let manifest;
+  try {
+    manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  } catch {
+    fail(sourcePath, `gate ${JSON.stringify(gate)} Pass requires valid release-evidence.json`);
+    return;
+  }
+  const candidate = manifest?.candidate;
+  if (manifest?.schemaVersion !== 1
+      || !/^[a-f0-9]{7,40}$/i.test(candidate?.commit ?? "")
+      || !/^[a-f0-9]{64}$/i.test(candidate?.sha256 ?? "")
+      || !Number.isSafeInteger(candidate?.sizeBytes) || candidate.sizeBytes <= 0
+      || typeof candidate?.buildCommand !== "string" || !candidate.buildCommand.trim()
+      || typeof candidate?.artifact !== "string" || !candidate.artifact.trim()) {
+    fail(sourcePath, "release evidence needs schemaVersion 1 and candidate commit/SHA-256/size/build command/artifact");
+    return;
+  }
+  const evidence = manifest.gates?.[gate];
+  if (evidence?.status !== "Pass" || evidence.candidateSha256 !== candidate.sha256
+      || typeof evidence.reviewer !== "string" || !evidence.reviewer.trim()
+      || typeof evidence.checkedAt !== "string" || !Number.isFinite(Date.parse(evidence.checkedAt))
+      || typeof evidence.record !== "string" || !evidence.record.endsWith(".md")) {
+    fail(sourcePath, `gate ${JSON.stringify(gate)} requires a reviewed Pass record for the same candidate`);
+    return;
+  }
+  const recordPath = path.resolve(releaseDir, evidence.record);
+  let record;
+  try {
+    const realRoot = fs.realpathSync(releaseDir);
+    const realRecord = fs.realpathSync(recordPath);
+    const relative = path.relative(realRoot, realRecord);
+    if (path.isAbsolute(evidence.record) || relative === ".." || relative.startsWith(`..${path.sep}`)
+        || path.isAbsolute(relative) || !fs.statSync(realRecord).isFile()) {
+      throw new Error("record outside release directory");
+    }
+    record = fs.readFileSync(realRecord, "utf8");
+  } catch {
+    fail(sourcePath, `gate ${JSON.stringify(gate)} evidence record must exist inside docs/release`);
+    return;
+  }
+  for (const expected of [gate, candidate.commit, candidate.sha256, "Result: Pass"]) {
+    if (!record.includes(expected)) {
+      fail(sourcePath, `gate ${JSON.stringify(gate)} record missing candidate/result evidence ${JSON.stringify(expected)}`);
+    }
+  }
+  // Apply link/path hygiene to nested records as well as top-level Markdown.
+  checkMarkdownFile(recordPath);
+  if (forbiddenLocalPathPatterns.some((pattern) => pattern.test(JSON.stringify(manifest)))) {
+    fail(manifestPath, "contains forbidden local absolute path in release evidence");
+  }
+}
+
+function checkDistributionDecision(checklistPath, checklist, rows) {
+  const decisions = [...checklist.matchAll(/^\*\*Distribution decision: ([^*\n]+)\*\*\s*$/gm)];
+  if (decisions.length !== 1 || !["Hold", "Invite-only"].includes(decisions[0][1])) {
+    fail(checklistPath, "expected one current Distribution decision: Hold or Invite-only; Public requires a separate release review");
+    return;
+  }
+  if (decisions[0][1] === "Invite-only") {
+    for (const required of requiredChecklistRows) {
+      if (rows.get(required.gate)?.status !== "Pass") {
+        fail(checklistPath, `Invite-only requires gate ${JSON.stringify(required.gate)} Pass`);
+      }
+      // Distribution needs fresh same-candidate review of every gate, including
+      // environment and document gates that can otherwise be checked separately.
+      checkRecordedPass(checklistPath, required.gate);
+    }
+  }
+}
+
 function checkChecklistRow(checklistPath, checklistRows, requiredRow) {
   const row = checklistRows.get(requiredRow.gate);
   if (!row) {
     fail(checklistPath, `missing review table gate ${JSON.stringify(requiredRow.gate)}`);
     return;
   }
-  if (row.status !== requiredRow.status) {
-    fail(
-      checklistPath,
-      `review table gate ${JSON.stringify(requiredRow.gate)} has status ${JSON.stringify(
-        row.status,
-      )}, expected ${JSON.stringify(requiredRow.status)}`,
-    );
+  if (!["Pass", "Wait", "Hold", "Fail", "Review"].includes(row.status)) {
+    fail(checklistPath, `review table gate ${JSON.stringify(requiredRow.gate)} has invalid status ${JSON.stringify(row.status)}`);
+  }
+  if (row.status === "Pass" && requiredRow.requiresRecordedPass) {
+    checkRecordedPass(checklistPath, requiredRow.gate);
   }
   for (const evidence of requiredRow.evidence) {
     if (!row.evidence.includes(evidence)) {
@@ -377,6 +439,7 @@ function checkChecklist() {
   for (const requiredRow of requiredChecklistRows) {
     checkChecklistRow(checklistPath, checklistRows, requiredRow);
   }
+  checkDistributionDecision(checklistPath, checklist, checklistRows);
 }
 
 function checkRecordGatePhrases() {
@@ -386,6 +449,9 @@ function checkRecordGatePhrases() {
       continue;
     }
     const text = fs.readFileSync(recordPath, "utf8");
+    if (recordGate.passPattern?.test(text)) {
+      checkRecordedPass(recordPath, recordGate.passGate);
+    }
     for (const phrase of recordGate.phrases) {
       if (!text.includes(phrase)) {
         fail(recordPath, `missing record gate phrase ${JSON.stringify(phrase)}`);

@@ -137,7 +137,6 @@ pub(super) fn is_default_agent_id(agent_id: &str) -> bool {
     )
 }
 
-
 /// Prefer an absolute path when PATH is thin (common for GUI-launched Tauri apps).
 /// Basename fallback keeps Settings editable when nothing is installed yet.
 pub(super) fn resolve_default_command(basename: &str) -> String {

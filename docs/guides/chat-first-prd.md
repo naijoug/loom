@@ -1,5 +1,7 @@
 # Chat-first PRD（M0）
 
+> 历史设计参考。当前产品范围见 [需求文档](../requirements.md)，实现与重构目标见 [Chat 契约](../architecture/chat-contracts.md)；下文旧阶段声明不代表当前验收状态。
+
 - **Date**: 2026-09-14
 - **Status**: draft / M0
 - **Related plan**: [20:06-chat-first-refactor.md](../plans/2026-09-14/20:06-chat-first-refactor.md)

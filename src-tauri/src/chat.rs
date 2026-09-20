@@ -1,6 +1,7 @@
 //! Chat-first sessions (M2). ChatSession ≠ Task — does not use task_state.
-use crate::agent_adapter::{self, AdapterInvocationRequest, AgentStage, PreparedAgentInvocation};
+use crate::agent_adapter::{AgentStage, PreparedAgentInvocation};
 use crate::agents::{self, load_agents};
+use crate::chat_context::{prepare_chat_invocation, update_execution_config};
 use crate::models::{now_ms, IdGenerator};
 use crate::process_supervisor::{self, ProcessKind, ProcessMetadata};
 use crate::session_capture;
@@ -20,7 +21,6 @@ const CHAT_SCHEMA_VERSION: u32 = 1;
 /// `ProcessSupervisor::request_stop(..., "chat_timeout")` so the session
 /// becomes sendable again with an aborted message.
 pub const CHAT_TURN_TIMEOUT_MS: u64 = 10 * 60 * 1000;
-
 
 const DEFAULT_PERMISSION_MODE: &str = "explore";
 const DEFAULT_SESSION_STATUS: &str = "active";
@@ -47,7 +47,6 @@ fn default_session_status() -> String {
 fn default_message_parts() -> Vec<ChatMessagePart> {
     Vec::new()
 }
-
 
 /// text | tool | error parts (M0 sketch). Flexible fields for forward-compat JSON.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -82,7 +81,10 @@ pub struct ChatMessage {
     pub created_at_ms: u128,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub error_summary: Option<String>,
-    #[serde(default = "default_message_parts", skip_serializing_if = "Vec::is_empty")]
+    #[serde(
+        default = "default_message_parts",
+        skip_serializing_if = "Vec::is_empty"
+    )]
     pub parts: Vec<ChatMessagePart>,
 }
 
@@ -257,8 +259,6 @@ fn save_session(root: &Path, session: &ChatSession) -> Result<(), String> {
         .map_err(|error| format!("failed to write chat session: {error}"))
 }
 
-
-
 /// Title from first user text: first non-empty line, collapse whitespace,
 /// truncate near `max_chars` on a word boundary (not a blind byte/char slice).
 pub fn title_from_user_message(text: &str, max_chars: usize) -> String {
@@ -301,7 +301,10 @@ fn session_needs_attention(session: &ChatSession) -> bool {
     if session.turn_status == "error" {
         return true;
     }
-    session.messages.iter().any(|message| message.status == "error")
+    session
+        .messages
+        .iter()
+        .any(|message| message.status == "error")
 }
 
 /// Lazy repair after app restart: streaming turns become aborted, partial text kept.
@@ -344,7 +347,6 @@ fn permission_to_stage(mode: &str) -> AgentStage {
     }
 }
 
-
 fn chat_task_id(session_id: &str) -> String {
     format!("chat:{session_id}")
 }
@@ -385,8 +387,18 @@ fn json_event_type(value: &serde_json::Value) -> Option<String> {
     value
         .get("type")
         .and_then(|v| v.as_str())
-        .or_else(|| value.get("msg").and_then(|msg| msg.get("type")).and_then(|v| v.as_str()))
-        .or_else(|| value.get("event").and_then(|event| event.get("type")).and_then(|v| v.as_str()))
+        .or_else(|| {
+            value
+                .get("msg")
+                .and_then(|msg| msg.get("type"))
+                .and_then(|v| v.as_str())
+        })
+        .or_else(|| {
+            value
+                .get("event")
+                .and_then(|event| event.get("type"))
+                .and_then(|v| v.as_str())
+        })
         .or_else(|| value.get("event").and_then(|v| v.as_str()))
         .map(str::to_string)
 }
@@ -418,7 +430,10 @@ fn summarize_json(value: &serde_json::Value, max_chars: usize) -> Option<String>
     if trimmed.chars().count() <= max_chars {
         Some(trimmed.to_string())
     } else {
-        Some(format!("{}…", trimmed.chars().take(max_chars).collect::<String>()))
+        Some(format!(
+            "{}…",
+            trimmed.chars().take(max_chars).collect::<String>()
+        ))
     }
 }
 
@@ -588,29 +603,6 @@ fn extract_tool_or_command_part(value: &serde_json::Value) -> Option<ChatMessage
     None
 }
 
-fn build_prompt(session: &ChatSession, user_text: &str) -> String {
-    let mut parts = Vec::new();
-    parts.push("You are a coding assistant running inside Loom Chat.".to_string());
-    parts.push("Answer helpfully. Prefer concise, actionable replies.".to_string());
-    parts.push(format!("Project path: {}", session.project_path));
-    if !session.messages.is_empty() {
-        parts.push("Conversation so far:".to_string());
-        for message in session
-            .messages
-            .iter()
-            .rev()
-            .take(12)
-            .collect::<Vec<_>>()
-            .into_iter()
-            .rev()
-        {
-            parts.push(format!("{}: {}", message.role, message.content));
-        }
-    }
-    parts.push(format!("User: {user_text}"));
-    parts.join("\n\n")
-}
-
 fn extract_assistant_text(output_mode: &str, raw: &str) -> String {
     let trimmed = raw.trim();
     if trimmed.is_empty() {
@@ -694,7 +686,7 @@ pub fn chat_list_sessions(project_path: String) -> Result<Vec<ChatSessionSummary
                 .messages
                 .last()
                 .map(|message| message.content.chars().take(80).collect::<String>());
-                        let needs_attention = session_needs_attention(&session);
+            let needs_attention = session_needs_attention(&session);
             let flagged = session.flagged;
             summaries.push(ChatSessionSummary {
                 id: session.id,
@@ -770,7 +762,7 @@ pub fn chat_set_agent(
 ) -> Result<ChatSession, String> {
     let root = ensure_chat_dirs(Path::new(&project_path))?;
     let mut session = load_session(&root, &session_id)?;
-    session.agent_id = agent_id;
+    update_execution_config(&mut session, Some(&agent_id), None)?;
     session.updated_at_ms = now_ms();
     save_session(&root, &session)?;
     Ok(session)
@@ -814,7 +806,7 @@ pub fn chat_update_meta(input: ChatUpdateMetaInput) -> Result<ChatSession, Strin
         }
     }
     if let Some(mode) = input.permission_mode {
-        session.permission_mode = normalize_permission_mode(&mode);
+        update_execution_config(&mut session, None, Some(&mode))?;
     }
     if let Some(status) = input.status {
         session.status = match status.as_str() {
@@ -934,7 +926,6 @@ pub fn chat_clear_resume(project_path: String, session_id: String) -> Result<Cha
     Ok(session)
 }
 
-
 const STOP_REASON_ABORT: &str = "chat_abort";
 const STOP_REASON_TIMEOUT: &str = "chat_timeout";
 
@@ -1021,7 +1012,7 @@ pub async fn chat_send(
     let root = ensure_chat_dirs(&project)?;
     let mut session = load_session(&root, &input.session_id)?;
     if let Some(mode) = input.permission_mode {
-        session.permission_mode = normalize_permission_mode(&mode);
+        update_execution_config(&mut session, None, Some(&mode))?;
     }
     if session.turn_status == "streaming" {
         return Err("a chat turn is already running for this session".to_string());
@@ -1034,18 +1025,7 @@ pub async fn chat_send(
         .ok_or_else(|| format!("agent '{}' was not found", session.agent_id))?;
 
     let stage = permission_to_stage(&session.permission_mode);
-    let prompt = build_prompt(&session, &text);
-    let prepared: PreparedAgentInvocation = agent_adapter::prepare_invocation(
-        &agent,
-        &AdapterInvocationRequest {
-            project_path: Path::new(&session.project_path),
-            prompt: &prompt,
-            prompt_file: None,
-            stage,
-            resume_command: session.resume_command.as_deref(),
-            embed_prompt: true,
-        },
-    )?;
+    let prepared = prepare_chat_invocation(&agent, &session, &text, stage)?;
     if prepared.stdin_prompt {
         return Err(format!(
             "agent '{}' requires stdin prompt transport, which chat does not support yet",
@@ -1578,7 +1558,6 @@ mod tests {
         }
     }
 
-
     #[test]
     fn title_from_user_message_truncates_on_word_boundary() {
         let title = super::title_from_user_message(
@@ -1666,8 +1645,10 @@ mod tests {
     #[test]
     fn chat_turn_timeout_constant_is_within_product_window() {
         // Plan: sensible default 5–10 minutes.
-        assert!(super::CHAT_TURN_TIMEOUT_MS >= 5 * 60 * 1000);
-        assert!(super::CHAT_TURN_TIMEOUT_MS <= 10 * 60 * 1000);
+        const {
+            assert!(super::CHAT_TURN_TIMEOUT_MS >= 5 * 60 * 1000);
+            assert!(super::CHAT_TURN_TIMEOUT_MS <= 10 * 60 * 1000);
+        }
     }
 
     #[test]
@@ -1689,7 +1670,11 @@ mod tests {
     fn chat_stop_outcome_marks_timeout_aborted_with_error() {
         let outcome = super::chat_stop_outcome(Some("chat_timeout"), String::new(), Vec::new());
         assert_eq!(outcome.status, "aborted");
-        assert!(outcome.error_summary.as_deref().unwrap_or("").contains("超时"));
+        assert!(outcome
+            .error_summary
+            .as_deref()
+            .unwrap_or("")
+            .contains("超时"));
         assert!(outcome.content.contains("超时"));
         assert!(matches!(
             outcome.parts.first(),
@@ -1704,5 +1689,4 @@ mod tests {
         assert!(outcome.error_summary.is_none());
         assert_eq!(outcome.content, "（已停止）");
     }
-
 }

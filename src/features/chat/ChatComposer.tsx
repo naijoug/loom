@@ -96,7 +96,7 @@ export function ChatComposer({
           <div className="chat-ask-confirm-body">
             <strong id="chat-ask-confirm-title">询问编辑 · 本回合授权</strong>
             <p>
-              当前档位会使用可写 CLI（acceptEdits / workspace-write）。确认后仅对本回合生效：
+              确认后允许本回合写入，不会逐项询问工具操作。具体执行限制由所选 Agent 管理：
               <span className="chat-ask-confirm-label"> {ASK_TURN_CONFIRM_LABEL}</span>
             </p>
           </div>

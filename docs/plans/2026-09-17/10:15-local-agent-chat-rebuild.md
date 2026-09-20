@@ -1,6 +1,7 @@
 # Loom 本机 Agent Chat 重构实施计划
 
 - 日期：2026-09-17 10:15（Asia/Shanghai）
+- 2026-09-20 约束修订：产品范围以 `docs/requirements.md` 为准；当前 Ask 保留回合授权，后续逐工具审批独立验收。现状见 `docs/architecture/chat-contracts.md`；本计划中的原始代码审查记录保留历史基线。
 - 状态：implementing；M0.0 IPC 信封已合入分支；M0 文档/探针/契约已补；Inbox 搜索/恢复与 chatStore 隔离已落地；M1 Rust 拆分改后续 PR（保持 chat.rs 可编译）。
 - 代码基线：Loom `b8e35c7` 加当前工作区；相对上次增量核对没有更新的提交，`src-tauri/src/chat.rs` 未提交变化仅为格式调整，本轮未修改业务代码。
 - Review 结论：原稿 `needs-rework`；已修正前置门禁、测试覆盖、任务顺序与交付范围，详见第 12 节。文档修订不表示代码缺陷已修复。
@@ -63,7 +64,7 @@
 | `src-tauri/src/process_supervisor.rs:29` | 有进程组管理；metadata 强制 taskId | 增加明确的 Task/Chat owner；保留 task 查询兼容层 |
 | `src/domain/chat.ts`、`src/api/contract.ts`、`src-tauri/src/contracts.rs:199` | Chat 类型/IPC 名称已有；契约测试硬编码读取 `chat.rs` | 拆模块时同步契约 fixture、源文件扫描和前端测试编译范围 |
 
-旧计划提出“原子写”和“统一 stream 解析”，但当前 Chat 路径未实现；不能据文档直接认定已具备。现有 Ask 实际映射 Planning，不提供交互审批；Claude 只读分支未显式指定只读策略，需 M0 实测后再标记能力。
+旧计划提出“原子写”和“统一 stream 解析”，但当前 Chat 路径未实现；不能据文档直接认定已具备。初始基线的 Ask 映射 Planning；2026-09-20 当前实现已为 Debugging + UI 回合授权，仍无逐工具审批；Claude 只读分支未显式指定只读策略，需 M0 实测后再标记能力。
 
 ## 4. Craft 参考与取舍
 
@@ -129,10 +130,10 @@ chat/commands → chat/service → chat/runtime → agent_adapter
 - stdout/stderr 并发读取，增量处理跨 chunk JSONL、UTF-8、超长行和未知事件；限制内存缓冲及日志体积。未知事件进入脱敏诊断，不把原始 JSON 当 assistant 正文。
 - 从 `agents/stream.rs` 提取可复用解析层；用各 CLI 的真实版本样本验证 delta、最终全文快照和工具结果，防止正文重复或混入工具输出。
 - 进程组接入 supervisor；取消先 TERM，超过 grace period 再 KILL，等待回收；应用正常退出先停止活动回合并 flush。启动时不按历史 PID 盲杀其他进程，异常残留只能依据可核验的运行归属处理并提示。
-- 原生 resume 有效时仅发送新消息；不支持 resume 的 adapter 使用明确标注的有限历史重放，给出字符预算和截断提示，不冒充原生连续上下文。
+- 原生 resume 有效时仅发送新消息；不支持 resume 的 adapter 使用明确标注的有限历史重放，给出字符预算和截断提示，不冒充原生连续上下文。2026-09-20 已由 `chat_context.rs` 落实传输切片；结构化句柄、权限指纹及真实 CLI 全量验收仍待本计划完成。
 - Agent、cwd 或权限指纹变化后不能复用不相容句柄；活动回合禁止变更执行配置。失效 resume 保留转录并提示“以历史上下文开启新会话”，由用户操作，不静默重试执行。
 - 首轮默认探索。`explore` 只有验证过限制写入/工具执行后才可用；`auto` 的实际能力由 adapter 声明，不能将 acceptEdits 等同于允许全部命令。新建与续聊必须套用同一有效限制。
-- `ask` 只有存在并验收双向审批协议才可启用；Phase 1 不开发通用审批传输。旧 ask 数据保留原值但显示“不支持交互审批，当前仅探索”，实际采用已验证的 explore；若 explore 也无法强制执行，则阻止调用该模式并解释原因。不得继续把 Ask 展示成可用审批。
+- 当前 `ask` 保留“每回合发送前授权可写 CLI”的兼容语义；该 UI 授权不等于后端强制审批。后续逐工具审批作为独立能力，仅在存在并验收双向协议后提供；不静默将旧 ask 数据降级或宣称已支持工具级审批。能力驱动权限与后端授权校验属于待实施工作，当前 CLI 限制不足时明确显示限制。
 - 沿用旧 PRD 的候选优先级 grok → codex → claude，但仅用于 M0 选择首条切片；“PATH 命中”不代表登录成功/协议正确。M0 以真实探针确定首个可用 Agent 和版本，并记录失败原因；已有用户默认选择优先。
 
 ### 5.4 存储与迁移
@@ -278,7 +279,7 @@ chat/commands → chat/service → chat/runtime → agent_adapter
 | 风险 | 概率 / 影响 | 缓解与触发条件 |
 |---|---|---|
 | CLI 协议/登录/权限随版本变化 | 高 / 高 | M0 固定版本和样本，未知能力禁用；版本升级跑 adapter 契约和真实 canary |
-| 只读/Ask 只是 UI 文案，resume 继承更宽权限 | 高 / 高 | 去掉 stage 借用，验证每次启动有效权限；无法限制则阻止模式；无双向协议不宣称 Ask |
+| 只读/Ask 只是 UI 文案，resume 继承更宽权限 | 高 / 高 | 去掉 stage 借用，验证每次启动有效权限；无法限制则阻止模式；无双向协议不宣称逐工具审批 |
 | stderr 阻塞、取消竞态、子进程残留 | 高 / 高 | 双路并发、starting 注册、精确 owner、TERM/KILL + reap、故障 CLI 验证 |
 | 事件早于订阅或完成早于落盘 | 高 / 高 | 先监听、持久化后发布、seq + snapshot 补流、终态幂等 |
 | 历史丢失或旧版无法读新数据 | 中 / 高 | v2 独立副本、幂等迁移、日志恢复、导出回滚，不原地破坏 v1 |
@@ -296,7 +297,7 @@ chat/commands → chat/service → chat/runtime → agent_adapter
 |---|---|---|
 | 首个真实验收 Agent？ | 保留旧 grok → codex → claude 候选顺序，以版本/认证/协议/权限探针决定；用户已有默认优先 | M0 结束 |
 | 首批需要几个 Agent？ | 单 Agent 完成 M0–M3/M5 即可交付；M4 可 deferred，只有真实验收通过者列“支持” | M0 确定发布范围 |
-| 是否需要第一版就有逐工具审批？ | 不作为 Chat MVP 门禁；无审批传输不开放 Ask，后续专门做交互审批 adapter | M0 契约 Review |
+| 是否需要第一版就有逐工具审批？ | 不作为 Chat MVP 门禁；当前 Ask 是回合授权，后续逐工具审批需专门的双向 adapter | M0 契约 Review |
 | 旧工作流最终是否删除？ | 本阶段移出主流程，保留高级入口及全部历史；后续另案决定删除/迁移 | Phase 2 |
 | 是否保留项目内 `.loom` 存储？ | 保留，v2 子目录；不额外引入数据库/云端存储 | M1 前 |
 

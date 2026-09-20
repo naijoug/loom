@@ -1019,8 +1019,6 @@ mod tests {
         assert!(prompt.content.contains("/tmp/project"));
         assert!(prompt.content.contains("Use real CLIs"));
         assert!(prompt.content.contains("do not modify files"));
-        assert!(prompt.content.contains("## Current State"));
-        assert!(prompt.content.contains("## File Impact"));
         assert!(prompt.content.contains("## Implementation Todo"));
         assert!(prompt
             .content

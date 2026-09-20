@@ -9,16 +9,33 @@ scripts/debug.sh desktop
 
 验证结束后运行 `scripts/debug.sh stop`，避免遗留 Vite/Tauri 开发进程。
 
-也可以直接运行本轮生成的本地发布版：
+发布候选的签名、公证、安装与分发结论必须针对具体 artifact 复核，仅在准备发布时阅读 [发布入口](release/README.md)。历史本机 smoke 通过不代表当前候选可分发。
 
-```text
-src-tauri/target/release/bundle/macos/Loom.app
-src-tauri/target/release/bundle/dmg/Loom_0.1.0_aarch64.dmg
-```
+## 开发变更验证矩阵
 
-当前产物没有 Apple Developer ID 签名与公证，适合本机开发验收，不应作为已公证的公开下载包分发；如要推进邀请制 Beta，先阅读 `docs/release/README.md`、`docs/release/beta-scope.md`、`docs/release/beta-safety-notes.md`、`docs/release/beta-feedback-template.md`、`docs/release/install-uninstall-smoke-record.md`、`docs/release/beta-first-run-smoke-record.md`、`docs/release/diagnostic-bundle-smoke-record.md` 和 `docs/release/beta-release-review-checklist.md`，并确认同一候选 artifact 的安装 / 卸载记录、首次启动记录、诊断包真实桌面导出记录与分发结论不再是 `Distribution decision: Hold`。
+| 变更范围 | 默认检查 | 扩大条件 |
+|---|---|---|
+| 文档 | 相对链接、Markdown、需求一致性；计划变更检查索引 | 发布资料运行 `pnpm docs:release:check` 与 `pnpm docs:release:test` |
+| 前端局部逻辑/样式 | `pnpm test -- tests/unit/<相关文件>.test.cjs`（逻辑变更）、`pnpm build`；视觉变化查看相关页面 | 共享状态/组件扩大前端回归；IPC 同时验证 Rust |
+| Rust 局部逻辑 | `cargo fmt --manifest-path src-tauri/Cargo.toml -- --check`、相关 `cargo test --manifest-path src-tauri/Cargo.toml <filter>`、适用 Clippy | 共享模块扩大 Rust 回归；影响桥接或桌面行为时补对应验证 |
+| IPC/权限/持久化/进程 | 两端生产路径契约测试、相关失败和恢复用例 | 对实际 CLI/OS 的保证需真实桌面/临时项目验收 |
+| 里程碑交付/发布候选 | `pnpm check`、`pnpm tauri build --no-bundle` | 按改动跑相关 Chat/Task 桌面验收；分发另过发布门禁 |
 
-## 建议验收路径
+通过相关检查后，仅因新改动、失败或未解决风险扩大或重复验证。新增测试应覆盖行为或回归，不复制实现；文案小改不强制新增测试。`pnpm check` 已包含前端测试/build、Rust fmt/clippy/test 和 release 文档检查，不重复逐项再跑。真实 Agent 调用可能消耗账户额度；已有授权范围内执行，缺登录或环境时记录限制。
+
+## 当前 Chat 验收路径
+
+1. 在可安全修改的临时项目检测至少一个本机 CLI，记录版本与登录/能力结果。
+2. 创建会话，观察真实流式输出及错误；连续三轮追问，并检查原生 resume 不重复注入历史。
+3. 生成中停止后再发，切换会话/项目，确认旧回合不会污染新会话。
+4. Ask 取消确认时不发送，确认后才发送；Auto 不增加回合确认。当前 Ask 是 UI 回合授权，不是逐工具审批。
+5. 在临时目录验证各 CLI 的真实只读/可写限制及 resume 一致性；仅看到 flag 不能标记安全验收通过。
+6. 重命名、归档/恢复、搜索，重启后读取转录；中断和失败保留可读状态。无原生 resume 的长历史应有预算/截断提示，最新请求完整。
+7. 记录 Loom commit、CLI 版本、权限、cwd、退出状态和证据。未实现目标记 failed/not tested，不用 fixture 填 passed。
+
+目标细节和现有缺口见 [Chat 契约](architecture/chat-contracts.md)；提示词行为比较见 [Agent 行为验收](guides/agent-behavior-evaluation.md)。单 Agent Chat 验收不要求下列高级 Task 流程。
+
+## 高级 Task 工作流验收路径
 
 1. 打开一个可安全修改的本地 Git 项目。
 2. 在 Settings → Agents 确认至少两个可用且已登录的不同 Agent；为 planning、implementation、review、debugging/testing 设置项目默认值。
@@ -31,15 +48,15 @@ src-tauri/target/release/bundle/dmg/Loom_0.1.0_aarch64.dmg
 9. 打开/定位 `summary.md`，分别导出 Markdown 与 JSON；重启 Loom 后确认 Task、历史日志和总结仍可读取。
 10. 在测试项目中保留一处实施前脏改动，确认总结将其标为 `pre_existing`。
 
-## 安全用例
+## 高级 Task 安全用例
 
 - 尝试在项目外 cwd 运行命令，应被拒绝。
-- 安装依赖、删除、`git reset/clean` 或生产部署应要求显式审批。
+- 安装依赖按用户确认设置处理；删除、破坏性 `git reset/clean` 或生产部署按安全策略要求审批。
 - 停止长时间 PTY，确认整个进程组退出。
 - 暂停/阻塞/取消运行中的任务，确认关联命令停止且原因进入时间线。
 
 ## 报告问题
 
-请附上：Loom 版本、操作系统、项目技术栈、任务 id、复现步骤、期望行为，以及 `.loom/logs/<task-id>/` 中相关 run 的脱敏日志。不要上传项目凭据或未脱敏的 `.env`。
+请附上：Loom 版本、操作系统、项目技术栈、会话/回合 id 或任务 id、复现步骤与期望行为。Task 附 `.loom/logs/<task-id>/` 中相关 run 的脱敏日志；Chat 附脱敏转录、错误信息与 CLI 版本，不假定已有 v2 独立日志文件。不要上传项目凭据或未脱敏的 `.env`。
 
 完整自动回归可运行 `pnpm e2e:complete`；加上 `LOOM_E2E_RELEASE=1` 会同时构建 Tauri 发布产物。
