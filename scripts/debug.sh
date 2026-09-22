@@ -24,17 +24,23 @@ USAGE
 
 stop_pid() {
   local pid="$1"
+  local original_command
 
   if [[ -z "${pid}" ]] || ! kill -0 "${pid}" 2>/dev/null; then
     return
   fi
 
+  original_command="$(ps -p "${pid}" -o command= 2>/dev/null || true)"
+  [[ -n "${original_command}" ]] || return 0
+
   kill "${pid}" 2>/dev/null || true
 
-  for _ in {1..30}; do
+  # The application has an eight-second graceful exit budget.
+  for _ in {1..100}; do
     if ! kill -0 "${pid}" 2>/dev/null; then
       return
     fi
+    [[ "$(ps -p "${pid}" -o command= 2>/dev/null || true)" == "${original_command}" ]] || return 0
     sleep 0.1
   done
 
@@ -51,17 +57,17 @@ process_cwd_in_root() {
 
 is_desktop_dev_command() {
   local command="$1"
-
-  [[ "${command}" == *"tauri"* && "${command}" == *"dev"* ]] ||
-    [[ "${command}" == *"target/debug/loom"* ]] ||
-    [[ "${command}" == *"src-tauri/target/debug/bundle/macos/Loom.app/Contents/MacOS/loom"* ]]
+  local dev_pattern='(^|[[:space:]])([^[:space:]]*/)?tauri(\.js)?[[:space:]]+dev([[:space:]]|$)'
+  # Match executable/argument boundaries. A rustc command also contains both
+  # "src-tauri" and "cfg(dev)" and must never be stopped as a dev launcher.
+  [[ "${command}" =~ ${dev_pattern} ]] ||
+    [[ "${command}" == "target/debug/loom" || "${command}" == "target/debug/loom "* ]] ||
+    [[ "${command}" == "${ROOT_DIR}/src-tauri/target/debug/loom" || "${command}" == "${ROOT_DIR}/src-tauri/target/debug/loom "* ]] ||
+    [[ "${command}" == "${ROOT_DIR}/src-tauri/target/debug/bundle/macos/Loom.app/Contents/MacOS/loom" || "${command}" == "${ROOT_DIR}/src-tauri/target/debug/bundle/macos/Loom.app/Contents/MacOS/loom "* ]]
 }
 
 stop_desktop_dev() {
-  if [[ -f "${DESKTOP_PID_FILE}" ]]; then
-    stop_pid "$(cat "${DESKTOP_PID_FILE}")"
-    rm -f "${DESKTOP_PID_FILE}"
-  fi
+  local app_pids=() wrapper_pids=()
 
   while IFS= read -r line; do
     local pid command
@@ -80,13 +86,29 @@ stop_desktop_dev() {
       continue
     fi
 
-    stop_pid "${pid}"
+    if [[ "${command}" == *"target/debug/loom"* || "${command}" == *"Loom.app/Contents/MacOS/loom"* ]]; then
+      app_pids+=("${pid}")
+    else
+      wrapper_pids+=("${pid}")
+    fi
   done < <(ps -axo pid=,command= 2>/dev/null | sed 's/^ *//' || true)
+
+  # Stop the app before its launcher/dev server can force it to disappear.
+  # macOS /bin/bash 3.2 treats empty arrays as unset under `set -u`.
+  for pid in ${app_pids[@]+"${app_pids[@]}"} ${wrapper_pids[@]+"${wrapper_pids[@]}"}; do
+    local command
+    command="$(ps -p "${pid}" -o command= 2>/dev/null || true)"
+    if is_desktop_dev_command "${command}" && { [[ "${command}" == *"${ROOT_DIR}"* ]] || process_cwd_in_root "${pid}"; }; then
+      stop_pid "${pid}"
+    fi
+  done
+  # A PID file is only a hint; never signal an unrelated recycled PID from it.
+  rm -f "${DESKTOP_PID_FILE}"
 }
 
 stop_all() {
-  "${ROOT_DIR}/scripts/preview.sh" stop >/dev/null 2>&1 || true
   stop_desktop_dev
+  "${ROOT_DIR}/scripts/preview.sh" stop >/dev/null 2>&1 || true
 }
 
 start_desktop() {
@@ -123,6 +145,7 @@ status() {
   fi
 }
 
+main() {
 case "${1:-desktop}" in
   desktop)
     start_desktop
@@ -146,3 +169,8 @@ case "${1:-desktop}" in
     exit 2
     ;;
 esac
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  main "$@"
+fi

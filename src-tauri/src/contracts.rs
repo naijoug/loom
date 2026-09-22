@@ -19,6 +19,9 @@ const COMMANDS: &[&str] = &[
     "chat_list_sessions",
     "chat_create",
     "chat_get",
+    "chat_read_events",
+    "chat_read_run_logs",
+    "chat_export",
     "chat_set_agent",
     "chat_update_meta",
     "chat_clear_resume",
@@ -85,8 +88,8 @@ const EVENTS: &[&str] = &[
     "loom://planning-agent-log",
     "loom://planning-agent-status",
     "loom://pty-output",
-    "loom://chat-stream",
-    "loom://chat-turn-finished",
+    "loom://chat-event",
+    "loom://chat-error",
 ];
 
 const TASK_STATUSES: &[&str] = &[
@@ -123,6 +126,7 @@ fn manifest() -> Value {
             "settings": SETTINGS_SCHEMA_VERSION,
             "terminalSlots": TERMINAL_STORE_SCHEMA_VERSION,
             "projectAgentPreferences": PROJECT_PREFERENCES_SCHEMA_VERSION,
+            "chat": crate::chat::CHAT_SCHEMA_VERSION,
         }
     })
 }
@@ -180,6 +184,24 @@ fn persisted_model_samples_round_trip_through_rust_types() {
     assert_model_sample::<ProjectAgentPreferences>(samples, "projectAgentPreferences");
     assert_model_sample::<CommandRun>(samples, "commandRun");
     assert_model_sample::<Task>(samples, "task");
+    assert_model_sample::<crate::chat::ChatSession>(samples, "chatSession");
+    assert_model_sample::<crate::chat::ChatEvent>(samples, "chatEvent");
+    assert_model_sample::<crate::chat::ChatSendInput>(samples, "chatSendInput");
+    assert_model_sample::<crate::chat::ChatSendReceipt>(samples, "chatSendReceipt");
+    assert_model_sample::<crate::chat::ChatResumeHandle>(samples, "chatResumeHandle");
+    assert_model_sample::<crate::chat::ChatTurn>(samples, "chatTurn");
+    assert_model_sample::<crate::chat::ChatLogPage>(samples, "chatLogPage");
+    assert_model_sample::<crate::chat::ChatExportInput>(samples, "chatExportInput");
+    assert_model_sample::<crate::chat::ChatExportResult>(samples, "chatExportResult");
+}
+
+#[test]
+fn chat_send_requires_a_client_request_identity() {
+    let fixture: Value =
+        serde_json::from_str(include_str!("../../contracts/tauri-contract.json")).unwrap();
+    let mut input = fixture["modelSamples"]["chatSendInput"].clone();
+    input.as_object_mut().unwrap().remove("clientRequestId");
+    assert!(serde_json::from_value::<crate::chat::ChatSendInput>(input).is_err());
 }
 
 #[test]
@@ -197,7 +219,8 @@ fn command_manifest_matches_tauri_registration() {
 fn event_manifest_matches_backend_emitters() {
     let sources = [
         include_str!("agents.rs"),
-        include_str!("chat.rs"),
+        include_str!("chat/mod.rs"),
+        include_str!("chat/service.rs"),
         include_str!("command_runner.rs"),
         include_str!("pty.rs"),
     ]

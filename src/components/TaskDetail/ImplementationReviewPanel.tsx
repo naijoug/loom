@@ -1,7 +1,7 @@
 import { CheckCircle2, RefreshCw, ShieldAlert, XCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { ImplementationReviewFinding, ProjectSummary, Task } from "../../domain";
-import { useAgentBridge } from "../../hooks/useAgentBridge";
+import { useAgentCatalog } from "../../hooks/useAgentCatalog";
 import { useCommandBridge } from "../../hooks/useCommandBridge";
 import { useImplementationReviewBridge } from "../../hooks/useImplementationReviewBridge";
 import { useTaskBridge } from "../../hooks/useTaskBridge";
@@ -17,7 +17,7 @@ interface ImplementationReviewPanelProps {
 
 export function ImplementationReviewPanel({ project, task, readOnly }: ImplementationReviewPanelProps) {
   const { state } = useAppState();
-  const { loadAgents, prepareAgentInvocation } = useAgentBridge();
+  const { loadAgents, prepareAgentInvocation } = useAgentCatalog();
   const { startCommandRun } = useCommandBridge();
   const { decideImplementationReviewFinding, runImplementationReviews } = useImplementationReviewBridge();
   const { appendFeedback, switchPrimaryAgent } = useTaskBridge();

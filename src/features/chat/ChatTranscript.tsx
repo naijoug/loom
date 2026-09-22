@@ -1,5 +1,6 @@
 import { useState } from "react";
-import type { ChatMessage, ChatMessagePart } from "../../domain";
+import type { ChatMessage, ChatMessagePart, ChatTurn } from "../../domain";
+import { ChatRunDetails } from "./ChatRunDetails";
 import { chatMessageErrorFallbackText } from "../../domain";
 
 function ToolActivityRow({ part }: { part: Extract<ChatMessagePart, { type: "tool" }> }) {
@@ -90,19 +91,22 @@ function MessageBody({ message }: { message: ChatMessage }) {
 export interface ChatTranscriptProps {
   messages: ChatMessage[];
   emptyHint?: string;
+  turns?: ChatTurn[];
+  projectPath?: string;
+  sessionId?: string;
 }
 
 /**
  * Layout mirrors craft-agents-oss ChatDisplay + TurnCard / UserMessageBubble:
  * user bubbles right-aligned; assistant turns as open cards with collapsible tool rows.
  */
-export function ChatTranscript({ messages, emptyHint }: ChatTranscriptProps) {
+export function ChatTranscript({ messages, emptyHint, turns, projectPath, sessionId }: ChatTranscriptProps) {
   if (messages.length === 0) {
     return (
       <div className="chat-transcript chat-transcript--empty" data-testid="chat-messages">
         <div className="chat-transcript-empty-card">
           {emptyHint ??
-            "发送第一条消息。权限三档：探索（只读）/ 询问编辑（可写，每回合确认）/ 自动（可写）。Shift+Tab 循环切换。"}
+            "发送第一条消息。权限模式由所选 Agent 执行；询问编辑会在发送前确认本回合授权。"}
         </div>
       </div>
     );
@@ -112,6 +116,7 @@ export function ChatTranscript({ messages, emptyHint }: ChatTranscriptProps) {
     <div className="chat-transcript" data-testid="chat-messages">
       <div className="chat-transcript-inner">
         {messages.map((message) => {
+          const turn = turns?.find((turn) => turn.assistantMessageId === message.id);
           if (message.role === "user") {
             return (
               <div key={message.id} className="chat-user-row">
@@ -139,6 +144,7 @@ export function ChatTranscript({ messages, emptyHint }: ChatTranscriptProps) {
               <div className="chat-turn-body">
                 <MessageBody message={message} />
               </div>
+              {turn && projectPath && sessionId && <ChatRunDetails key={JSON.stringify([projectPath, sessionId, turn.id])} projectPath={projectPath} sessionId={sessionId} turn={turn} />}
             </article>
           );
         })}

@@ -1,11 +1,11 @@
 import { Brand } from "./Brand";
 import { Navigation } from "./Navigation";
 
-export function Sidebar() {
+export function Sidebar({ showTasks = true }: { showTasks?: boolean }) {
   return (
     <>
       <Brand />
-      <Navigation />
+      <Navigation showTasks={showTasks} />
     </>
   );
 }

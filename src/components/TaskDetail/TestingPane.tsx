@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import type { CommandRun, ProjectSummary, Task, TerminalSlot } from "../../domain";
 import { taskStatusCopy } from "../../copy/workflow";
-import { useAgentBridge } from "../../hooks/useAgentBridge";
+import { useAgentCatalog } from "../../hooks/useAgentCatalog";
 import { useCommandBridge } from "../../hooks/useCommandBridge";
 import { usePtyBridge } from "../../hooks/usePtyBridge";
 import { useProjectPreferencesBridge } from "../../hooks/useProjectPreferencesBridge";
@@ -67,7 +67,7 @@ interface TestingPaneProps {
 
 export function TestingPane({ project, task, readOnly = false }: TestingPaneProps) {
   const { state } = useAppState();
-  const { loadAgents, prepareAgentInvocation } = useAgentBridge();
+  const { loadAgents, prepareAgentInvocation } = useAgentCatalog();
   const { startCommandRun, stopCommandRun, loadCommandRunLogs } = useCommandBridge();
   const { startPtyRun, stopPtyRun } = usePtyBridge();
   const { loadProjectAgentPreferences } = useProjectPreferencesBridge();

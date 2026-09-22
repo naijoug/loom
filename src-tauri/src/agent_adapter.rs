@@ -57,7 +57,18 @@ pub struct AdapterInvocationRequest<'a> {
     pub prompt_file: Option<&'a Path>,
     pub stage: AgentStage,
     pub resume_command: Option<&'a str>,
+    /// Chat permissions are independent of the advanced Task stage protocol.
+    pub chat_permission_mode: Option<&'a str>,
     pub embed_prompt: bool,
+}
+
+impl AdapterInvocationRequest<'_> {
+    fn needs_write_access(&self) -> bool {
+        self.chat_permission_mode.map_or_else(
+            || self.stage.needs_write_access(),
+            |mode| matches!(mode, "ask" | "auto"),
+        )
+    }
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -88,7 +99,19 @@ pub fn prepare_invocation(
     agent: &AgentConfig,
     request: &AdapterInvocationRequest<'_>,
 ) -> Result<PreparedAgentInvocation, String> {
-    validate_stage_permissions(agent, request.stage)?;
+    if let Some(mode) = request.chat_permission_mode {
+        if !matches!(mode, "explore" | "ask" | "auto") {
+            return Err("unsupported chat permission mode".into());
+        }
+        if !agent.enabled || !agent.available {
+            return Err("chat agent is disabled or unavailable".into());
+        }
+        if request.needs_write_access() && (!agent.can_write_files || !agent.can_run_commands) {
+            return Err("chat agent does not allow writable execution".into());
+        }
+    } else {
+        validate_stage_permissions(agent, request.stage)?;
+    }
     adapter_for(agent).prepare(agent, request)
 }
 
@@ -145,32 +168,12 @@ impl AgentAdapter for CodexAdapter {
         agent: &AgentConfig,
         request: &AdapterInvocationRequest<'_>,
     ) -> Result<PreparedAgentInvocation, String> {
-        if let Some(resume) = request.resume_command.and_then(parse_resume_command) {
-            if resume.program == agent.command
-                && resume.args.first().is_some_and(|arg| arg == "resume")
-            {
-                let session_id = resume
-                    .args
-                    .get(1)
-                    .ok_or_else(|| "Codex resume command has no session id".to_string())?;
-                return Ok(prepared(
-                    agent,
-                    vec![
-                        "exec".to_string(),
-                        "resume".to_string(),
-                        "--json".to_string(),
-                        session_id.clone(),
-                        request.prompt.to_string(),
-                    ],
-                    false,
-                    "codex_json",
-                    true,
-                    request.project_path,
-                ));
-            }
-        }
+        let resume_id = request
+            .resume_command
+            .map(|value| parse_resume_session_id(&agent.adapter_type, &agent.command, value))
+            .transpose()?;
 
-        let sandbox = if request.stage.needs_write_access() {
+        let sandbox = if request.needs_write_access() {
             "workspace-write"
         } else {
             "read-only"
@@ -183,18 +186,27 @@ impl AgentAdapter for CodexAdapter {
             "--sandbox".to_string(),
             sandbox.to_string(),
         ];
+        // Exec-level options precede the resume subcommand. Always reassert
+        // policy instead of inheriting a previous session's broader sandbox.
+        args.extend(["--config".into(), "approval_policy=\"never\"".into()]);
+        if let Some(id) = &resume_id {
+            args.extend(["resume".into(), "--json".into(), "--".into(), id.clone()]);
+        } else {
+            args.push("--".into());
+        }
         let stdin_prompt = !request.embed_prompt;
         args.push(if request.embed_prompt {
             request.prompt.to_string()
         } else {
-            "-".to_string()
+            "-".into()
         });
+
         Ok(prepared(
             agent,
             args,
             stdin_prompt,
             "codex_json",
-            false,
+            resume_id.is_some(),
             request.project_path,
         ))
     }
@@ -206,46 +218,35 @@ impl AgentAdapter for ClaudeAdapter {
         agent: &AgentConfig,
         request: &AdapterInvocationRequest<'_>,
     ) -> Result<PreparedAgentInvocation, String> {
-        let permission_mode = if request.stage.needs_write_access() {
+        let permission_mode = if request.needs_write_access() {
             Some("acceptEdits")
+        } else if request.chat_permission_mode.is_some() {
+            Some("plan")
         } else {
             None
-        };
-        let mut args = if let Some(resume) = request.resume_command.and_then(parse_resume_command) {
-            if resume.program == agent.command
-                && resume.args.first().is_some_and(|arg| arg == "--resume")
-            {
-                resume.args
-            } else {
-                Vec::new()
-            }
-        } else {
-            Vec::new()
-        };
-        let resumed = !args.is_empty();
-        if !args
-            .iter()
-            .any(|arg| matches!(arg.as_str(), "-p" | "--print"))
-        {
-            args.insert(0, "-p".to_string());
-        }
+        }; // Task planning captures printed prose, not ExitPlanMode output.
+        let resume_id = request
+            .resume_command
+            .map(|value| parse_resume_session_id(&agent.adapter_type, &agent.command, value))
+            .transpose()?;
+        let mut args = vec![
+            "-p".into(),
+            "--verbose".into(),
+            "--output-format".into(),
+            "stream-json".into(),
+            "--include-partial-messages".into(),
+        ];
         if let Some(mode) = permission_mode {
-            if !args.iter().any(|arg| arg == "--permission-mode") {
-                args.extend(["--permission-mode".to_string(), mode.to_string()]);
-            }
+            args.extend(["--permission-mode".into(), mode.into()]);
         }
-        if !args.iter().any(|arg| arg == "--verbose") {
-            args.push("--verbose".to_string());
-        }
-        if !args.iter().any(|arg| arg == "--output-format") {
-            args.extend(["--output-format".to_string(), "stream-json".to_string()]);
-        }
-        if !args.iter().any(|arg| arg == "--include-partial-messages") {
-            args.push("--include-partial-messages".to_string());
+        if let Some(id) = &resume_id {
+            args.extend(["--resume".into(), id.clone()]);
         }
         if request.embed_prompt {
-            args.push(request.prompt.to_string());
+            args.extend(["--".into(), request.prompt.to_string()]);
         }
+        let resumed = resume_id.is_some();
+
         Ok(prepared(
             agent,
             args,
@@ -264,34 +265,24 @@ impl AgentAdapter for GrokAdapter {
         request: &AdapterInvocationRequest<'_>,
     ) -> Result<PreparedAgentInvocation, String> {
         let mut args: Vec<String> = Vec::new();
-        let mut resumed = false;
-        if let Some(resume) = request.resume_command.and_then(parse_resume_command) {
-            if resume.program == agent.command {
-                // Accept: `grok --resume <id>` or `grok -r <id>`
-                let resume_idx = resume
-                    .args
-                    .iter()
-                    .position(|arg| arg == "--resume" || arg == "-r");
-                if let Some(idx) = resume_idx {
-                    let session_id = resume
-                        .args
-                        .get(idx + 1)
-                        .ok_or_else(|| "Grok resume command has no session id".to_string())?;
-                    args.extend(["--resume".to_string(), session_id.clone()]);
-                    resumed = true;
-                }
-            }
+        let resume_id = request
+            .resume_command
+            .map(|value| parse_resume_session_id(&agent.adapter_type, &agent.command, value))
+            .transpose()?;
+        if let Some(id) = &resume_id {
+            args.extend(["--resume".into(), id.clone()]);
         }
+        let resumed = resume_id.is_some();
 
         args.extend([
             "--cwd".to_string(),
             request.project_path.display().to_string(),
             "--output-format".to_string(),
-            "streaming-json".to_string(),
+            "streaming-messages-json".to_string(),
             "--include-partial-messages".to_string(),
         ]);
 
-        let permission_mode = if request.stage.needs_write_access() {
+        let permission_mode = if request.needs_write_access() {
             "acceptEdits"
         } else {
             "plan"
@@ -301,7 +292,12 @@ impl AgentAdapter for GrokAdapter {
         // Headless single-turn
         args.push("-p".to_string());
         if request.embed_prompt {
-            args.push(request.prompt.to_string());
+            if request.prompt.starts_with('-') {
+                args.pop(); // Use an attached option value for option-looking user text.
+                args.push(format!("--single={}", request.prompt));
+            } else {
+                args.push(request.prompt.to_string());
+            }
         } else if let Some(prompt_file) = request.prompt_file {
             args.extend([
                 "--prompt-file".to_string(),
@@ -401,18 +397,43 @@ fn prepared(
     }
 }
 
-struct ParsedCommand {
-    program: String,
-    args: Vec<String>,
+/// Resume strings are a legacy interchange format, never executable commands.
+/// Match the configured program as one literal prefix (including spaces), then
+/// accept exactly one known operation and one bounded identifier.
+pub(crate) fn parse_resume_session_id(
+    adapter: &str,
+    program: &str,
+    value: &str,
+) -> Result<String, String> {
+    let suffix = value
+        .strip_prefix(program.trim())
+        .and_then(|suffix| suffix.strip_prefix(' '))
+        .ok_or("resume command does not match the configured executable")?;
+    let fields: Vec<_> = suffix.split_whitespace().collect();
+    let operation = match adapter {
+        ADAPTER_CODEX => fields.first().is_some_and(|v| *v == "resume"),
+        ADAPTER_CLAUDE => fields.first().is_some_and(|v| *v == "--resume"),
+        ADAPTER_GROK => fields
+            .first()
+            .is_some_and(|v| matches!(*v, "--resume" | "-r")),
+        _ => false,
+    };
+    if fields.len() != 2 || !operation || !valid_session_id(fields[1]) {
+        return Err(
+            "invalid resume handle: expected only the adapter resume operation and session id"
+                .into(),
+        );
+    }
+    Ok(fields[1].to_string())
 }
 
-fn parse_resume_command(value: &str) -> Option<ParsedCommand> {
-    let mut parts = value.split_whitespace();
-    let program = parts.next()?.to_string();
-    Some(ParsedCommand {
-        program,
-        args: parts.map(str::to_string).collect(),
-    })
+pub(crate) fn valid_session_id(id: &str) -> bool {
+    !id.is_empty()
+        && id.len() <= 160
+        && id.as_bytes()[0].is_ascii_alphanumeric()
+        && id
+            .bytes()
+            .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, b'-' | b'_'))
 }
 
 #[cfg(test)]
@@ -458,6 +479,7 @@ mod tests {
                 prompt_file: None,
                 stage: AgentStage::Review,
                 resume_command: None,
+                chat_permission_mode: None,
                 embed_prompt: true,
             },
         )
@@ -475,6 +497,7 @@ mod tests {
                 prompt_file: None,
                 stage: AgentStage::Implementation,
                 resume_command: None,
+                chat_permission_mode: None,
                 embed_prompt: true,
             },
         )
@@ -518,6 +541,7 @@ mod tests {
                 prompt_file: None,
                 stage: AgentStage::Debugging,
                 resume_command: None,
+                chat_permission_mode: None,
                 embed_prompt: true,
             },
         )
@@ -540,6 +564,7 @@ mod tests {
                 prompt_file: None,
                 stage: AgentStage::Review,
                 resume_command: None,
+                chat_permission_mode: None,
                 embed_prompt: true,
             },
         )
@@ -559,15 +584,147 @@ mod tests {
                 prompt_file: None,
                 stage: AgentStage::Planning,
                 resume_command: None,
+                chat_permission_mode: None,
                 embed_prompt: true,
             },
         )
         .expect("grok prepare");
         assert_eq!(prepared.program, "grok");
         assert!(prepared.args.iter().any(|arg| arg == "-p"));
-        assert!(prepared.args.iter().any(|arg| arg == "streaming-json"));
+        assert!(prepared
+            .args
+            .iter()
+            .any(|arg| arg == "streaming-messages-json"));
         assert!(prepared.args.iter().any(|arg| arg == "plan"));
         assert_eq!(prepared.output_mode, "streaming_json");
         assert!(!prepared.stdin_prompt);
+    }
+
+    #[test]
+    fn native_resume_reasserts_current_policy_and_preserves_stdin() {
+        for adapter in [ADAPTER_CODEX, ADAPTER_CLAUDE, ADAPTER_GROK] {
+            let mut agent = agent(adapter);
+            agent.command = format!("/Applications/Agent Tools/{}", agent.command);
+            let command = crate::session_capture::resume_command_for_adapter(
+                adapter,
+                &agent.command,
+                "session-123",
+            )
+            .unwrap();
+            for stage in [AgentStage::Planning, AgentStage::Debugging] {
+                for embed_prompt in [false, true] {
+                    if adapter == ADAPTER_GROK && !embed_prompt {
+                        continue;
+                    }
+                    let request = AdapterInvocationRequest {
+                        project_path: Path::new("/project with spaces"),
+                        prompt: "--dangerously-skip-permissions",
+                        prompt_file: None,
+                        stage,
+                        resume_command: Some(&command),
+                        chat_permission_mode: Some(if stage.needs_write_access() {
+                            "auto"
+                        } else {
+                            "explore"
+                        }),
+                        embed_prompt,
+                    };
+                    let invocation = prepare_invocation(&agent, &request).unwrap();
+                    assert!(invocation.resumed);
+                    assert_eq!(invocation.program, agent.command);
+                    assert_eq!(invocation.cwd, "/project with spaces");
+                    if adapter == ADAPTER_CODEX {
+                        let expected = if stage.needs_write_access() {
+                            "workspace-write"
+                        } else {
+                            "read-only"
+                        };
+                        assert!(invocation
+                            .args
+                            .windows(2)
+                            .any(|p| p == ["--sandbox", expected]));
+                        assert!(
+                            invocation
+                                .args
+                                .iter()
+                                .position(|a| a == "--sandbox")
+                                .unwrap()
+                                < invocation.args.iter().position(|a| a == "resume").unwrap()
+                        );
+                        assert!(invocation
+                            .args
+                            .windows(2)
+                            .any(|p| p == ["--config", "approval_policy=\"never\""]));
+                        assert_eq!(invocation.stdin_prompt, !embed_prompt);
+                    } else {
+                        let expected = if stage.needs_write_access() {
+                            "acceptEdits"
+                        } else {
+                            "plan"
+                        };
+                        assert!(invocation
+                            .args
+                            .windows(2)
+                            .any(|p| p == ["--permission-mode", expected]));
+                    }
+                    if embed_prompt {
+                        if adapter == ADAPTER_GROK {
+                            assert_eq!(
+                                invocation.args.last().unwrap(),
+                                "--single=--dangerously-skip-permissions"
+                            );
+                        } else {
+                            let separator = invocation.args.iter().position(|a| a == "--").unwrap();
+                            let prompt = invocation
+                                .args
+                                .iter()
+                                .position(|a| a == request.prompt)
+                                .unwrap();
+                            assert!(separator < prompt, "user text became an option");
+                        }
+                    } else {
+                        assert!(!invocation.args.iter().any(|a| a == request.prompt));
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn resume_never_accepts_old_options_cross_programs_or_option_shaped_ids() {
+        for adapter in [ADAPTER_CODEX, ADAPTER_CLAUDE, ADAPTER_GROK] {
+            let agent = agent(adapter);
+            let good = crate::session_capture::resume_command_for_adapter(
+                adapter,
+                &agent.command,
+                "session-123",
+            )
+            .unwrap();
+            for command in [
+                format!("{good} --dangerously-skip-permissions"),
+                good.replace("session-123", "--last"),
+                good.replace("session-123", ""),
+                good.replace("session-123", "../other"),
+                format!("other-{good}"),
+                good.replace("session-123", &"x".repeat(161)),
+            ] {
+                assert!(
+                    prepare_invocation(
+                        &agent,
+                        &AdapterInvocationRequest {
+                            project_path: Path::new("/repo"),
+                            prompt: "new input",
+                            prompt_file: None,
+                            stage: AgentStage::Planning,
+                            resume_command: Some(&command),
+                            chat_permission_mode: None,
+                            embed_prompt: true,
+                        }
+                    )
+                    .is_err(),
+                    "accepted {command}"
+                );
+            }
+        }
     }
 }

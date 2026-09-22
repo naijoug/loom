@@ -77,8 +77,6 @@ struct PtySession {
     child: Arc<Mutex<Box<dyn portable_pty::Child + Send + Sync>>>,
     task_id: Option<String>,
     project_path: PathBuf,
-    #[cfg(unix)]
-    pid: Option<u32>,
 }
 
 trait PtyEventEmitter: Clone + Send + Sync + 'static {
@@ -169,13 +167,21 @@ fn start_pty_run_inner<E: PtyEventEmitter>(
         builder.env(key, value);
     }
 
+    let mut operation = process_supervisor::supervisor().begin_operation()?;
     let child = pair
         .slave
         .spawn_command(builder)
         .map_err(|error| format!("failed to start command: {error}"))?;
     let process_id = child.process_id();
-    #[cfg(unix)]
-    let pid = process_id;
+    if let Some(process_id) = process_id {
+        operation.register(ProcessMetadata::new(
+            &run_id,
+            &task_id,
+            ProcessKind::Pty,
+            process_id,
+            None,
+        ))?;
+    }
 
     let reader = pair
         .master
@@ -211,15 +217,6 @@ fn start_pty_run_inner<E: PtyEventEmitter>(
     tasks::add_command_run(&project_path, &task_id, run.clone())?;
 
     let child = Arc::new(Mutex::new(child));
-    if let Some(process_id) = process_id {
-        process_supervisor::supervisor().register(ProcessMetadata::new(
-            &run_id,
-            &task_id,
-            ProcessKind::Pty,
-            process_id,
-            None,
-        ))?;
-    }
     registry.sessions.lock().unwrap().insert(
         run_id.clone(),
         PtySession {
@@ -228,8 +225,6 @@ fn start_pty_run_inner<E: PtyEventEmitter>(
             child: child.clone(),
             task_id: Some(task_id.clone()),
             project_path: project_path.clone(),
-            #[cfg(unix)]
-            pid,
         },
     );
 
@@ -241,6 +236,7 @@ fn start_pty_run_inner<E: PtyEventEmitter>(
         project_path,
         task_id,
         run_id,
+        operation,
     );
 
     Ok(run)
@@ -298,6 +294,7 @@ fn stop_pty_run_inner(
     run_id: String,
     termination_reason: Option<String>,
 ) -> Result<CommandRunStopResult, String> {
+    let _operation = process_supervisor::supervisor().begin_control_operation(&run_id)?;
     let Some(session) = registry.sessions.lock().unwrap().remove(&run_id) else {
         return Ok(CommandRunStopResult {
             run_id,
@@ -309,13 +306,10 @@ fn stop_pty_run_inner(
     // Kill the whole process group so dev-server grandchildren (e.g. vite →
     // esbuild) don't leak; the child is its own session leader under the pty.
     let stop_reason = termination_reason.as_deref().unwrap_or("cancelled");
-    let supervised = process_supervisor::supervisor().request_stop(&run_id, stop_reason)?;
-    if !supervised {
-        #[cfg(unix)]
-        if let Some(pid) = session.pid {
-            let _ = process_supervisor::terminate_process_group(pid);
-        }
-    }
+    process_supervisor::supervisor().request_stop(&run_id, stop_reason)?;
+    // The monitor owns the child mutex while waiting. Kill the owned group
+    // before taking that mutex, including children that ignore TERM.
+    process_supervisor::supervisor().force_stop(&run_id)?;
 
     let exit_code = {
         let mut child = session.child.lock().unwrap();
@@ -399,17 +393,23 @@ fn spawn_pty_monitor<E: PtyEventEmitter>(
     project_path: PathBuf,
     task_id: String,
     run_id: String,
+    operation: process_supervisor::OperationGuard<'static>,
 ) {
     std::thread::spawn(move || {
+        let _operation = operation;
         let status = { child.lock().unwrap().wait() };
 
         // If `stop_pty_run` already removed the session, it owns the finish.
         if sessions.lock().unwrap().remove(&run_id).is_none() {
             return;
         }
+        let termination_reason = process_supervisor::supervisor()
+            .metadata(&run_id)
+            .and_then(|meta| meta.termination_reason);
+        let _ = process_supervisor::supervisor().force_stop(&run_id);
         process_supervisor::supervisor().complete(&run_id);
 
-        let (command_status, exit_code) = match status {
+        let (mut command_status, exit_code) = match status {
             Ok(status) if status.success() => {
                 (CommandRunStatus::Succeeded, Some(status.exit_code() as i32))
             }
@@ -417,6 +417,9 @@ fn spawn_pty_monitor<E: PtyEventEmitter>(
             Err(_) => (CommandRunStatus::Failed, None),
         };
 
+        if termination_reason.as_deref() == Some("app_shutdown") {
+            command_status = CommandRunStatus::Cancelled;
+        }
         let _ = tasks::finish_command_run(
             &project_path,
             &task_id,
@@ -427,7 +430,7 @@ fn spawn_pty_monitor<E: PtyEventEmitter>(
                 error_summary: None,
                 session_id: None,
                 resume_command: None,
-                termination_reason: None,
+                termination_reason: termination_reason.clone(),
             },
         );
         app.emit_finished(CommandFinishedEvent {
@@ -438,7 +441,7 @@ fn spawn_pty_monitor<E: PtyEventEmitter>(
             error_summary: None,
             session_id: None,
             resume_command: None,
-            termination_reason: None,
+            termination_reason: termination_reason.clone(),
             timestamp_ms: now_ms(),
         });
     });
@@ -591,7 +594,7 @@ mod tests {
             pty_spec(
                 &root,
                 &task.id,
-                "sleep 300 & printf 'GRANDCHILD=%s\\n' \"$!\"; wait",
+                "trap '' TERM; sleep 300 & printf 'GRANDCHILD=%s\\n' \"$!\"; wait",
             ),
         )
         .expect("pty run should start");
@@ -621,8 +624,18 @@ mod tests {
             "grandchild should be alive"
         );
 
-        let result =
-            stop_pty_run_inner(&registry, run.id.clone(), None).expect("stop should succeed");
+        let stop_id = run.id.clone();
+        let (sender, receiver) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let _ = sender.send(stop_pty_run_inner(&registry, stop_id, None));
+        });
+        let result = receiver
+            .recv_timeout(Duration::from_secs(3))
+            .unwrap_or_else(|error| {
+                let _ = process_supervisor::supervisor().force_stop(&run.id);
+                panic!("PTY stop blocked behind the waiting child mutex: {error}");
+            })
+            .expect("stop should succeed");
         assert!(result.stopped);
 
         // After a process-group kill, the grandchild is gone (kill(pid,0) → ESRCH).

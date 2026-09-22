@@ -227,6 +227,7 @@ pub fn prepare_agent_invocation(
             prompt_file: None,
             stage: input.stage,
             resume_command: input.resume_command.as_deref(),
+            chat_permission_mode: None,
             embed_prompt: true,
         },
     )?;

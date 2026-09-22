@@ -1,0 +1,23 @@
+   Compiling loom v0.1.0 (/Users/guojian/Workspace/naijoug/loom/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 18.41s
+     Running unittests src/lib.rs (src-tauri/target/debug/deps/loom_lib-3a99330ef42de64c)
+
+running 2 tests
+test chat::repository::tests::live_event_index_does_not_hide_replaced_corrupt_or_truncated_journals ... ok
+CHAT_INDEX history=10002 empty_polls=100 parsed_records=0 delta_records=1 page_records=3 elapsed_ms=2
+test chat::repository::tests::live_event_pages_read_only_requested_records_after_indexing_long_history ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 292 filtered out; finished in 0.90s
+
+     Running unittests src/main.rs (src-tauri/target/debug/deps/loom-72cb072fa074a43d)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/workflow_harness.rs (src-tauri/target/debug/deps/workflow_harness-90c47b451d8c3f6e)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+

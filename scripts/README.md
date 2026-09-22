@@ -55,6 +55,12 @@ PID:  /tmp/loom-preview-vite.pid
 
 脚本保留端口/主机环境变量供专门排障使用；常规 Agent 验证固定 `1420`，不得通过随机换端口绕过冲突。
 
+## Chat 进程与仓储 smoke
+
+`pnpm smoke:chat` 调用生产 Chat 仓储、上下文和 runtime 测试，包括 `tests/fixtures/chat/fake-agent.sh` 的真实本机子进程。覆盖双路排流、非零退出、TERM/KILL、子进程管道、stdin、UTF-8、输出限额和数据一致性，不请求模型、不需要账号。
+
+此脚本需要系统允许终止测试所创建的进程组。受限执行沙箱若拒绝该信号，应在获授权的普通本机环境复验，不得忽略失败。它不能替代真实 CLI 登录/权限、Tauri 交互或发布 artifact 验收。
+
 ## Release smoke 入口
 
 无需启动桌面保存对话框的发布 smoke：

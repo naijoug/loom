@@ -861,6 +861,22 @@
   font-weight: 600;
 }
 
+.chat-run-details { margin-top: 10px; font-size: 13px; line-height: 1.5; color: var(--text-2); }
+.chat-run-panel { padding: 12px; border: 1px solid var(--border); border-radius: 8px; margin-top: 8px; }
+.chat-run-panel dl { display: grid; grid-template-columns: minmax(72px, auto) minmax(0, 1fr); gap: 6px 12px; margin: 0 0 12px; }
+.chat-run-panel dt { color: var(--text-2); }
+.chat-run-panel dd { margin: 0; overflow-wrap: anywhere; }
+.chat-run-panel pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.chat-run-controls { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.chat-run-controls button, .chat-run-panel > button { color: var(--text-2); background: transparent; border: 1px solid var(--border); border-radius: 5px; padding: 4px 8px; cursor: pointer; }
+.chat-run-controls button[aria-pressed="true"] { color: var(--text); background: var(--hover); }
+.chat-run-log { max-height: 280px; overflow: auto; padding: 10px; background: var(--bg); border-radius: 5px; }
+
+.chat-export-notice { margin: 8px 20px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; color: var(--text-2); max-height: 200px; overflow: auto; flex-shrink: 0; }
+.chat-export-notice p { margin: 4px 0 8px; }
+.chat-export-notice code { overflow-wrap: anywhere; }
+.chat-export-notice ul { margin: 8px 0; padding-left: 20px; }
+
 .chat-messages-empty-actions {
   display: flex;
   flex-wrap: wrap;

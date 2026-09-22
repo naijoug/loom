@@ -9,6 +9,9 @@
     "chat_list_sessions",
     "chat_create",
     "chat_get",
+    "chat_read_events",
+    "chat_read_run_logs",
+    "chat_export",
     "chat_set_agent",
     "chat_update_meta",
     "chat_clear_resume",
@@ -74,8 +77,8 @@
     "loom://planning-agent-log",
     "loom://planning-agent-status",
     "loom://pty-output",
-    "loom://chat-stream",
-    "loom://chat-turn-finished"
+    "loom://chat-event",
+    "loom://chat-error"
   ],
   "taskStatuses": [
     "drafting_requirements",
@@ -109,7 +112,8 @@
     "agents": 1,
     "settings": 1,
     "terminalSlots": 1,
-    "projectAgentPreferences": 1
+    "projectAgentPreferences": 1,
+    "chat": 2
   },
   "modelSamples": {
     "appSettings": {
@@ -212,6 +216,166 @@
       "summary": null,
       "createdAtMs": 1,
       "updatedAtMs": 1
+    },
+    "chatSession": {
+      "id": "chat-contract",
+      "projectPath": "/project",
+      "agentId": "agent-contract",
+      "title": "Chat contract",
+      "permissionMode": "explore",
+      "messages": [
+        {
+          "id": "user-contract",
+          "role": "user",
+          "content": "hello",
+          "status": "complete",
+          "createdAtMs": 1
+        },
+        {
+          "id": "assistant-contract",
+          "role": "assistant",
+          "content": "world",
+          "status": "complete",
+          "createdAtMs": 1
+        }
+      ],
+      "createdAtMs": 1,
+      "updatedAtMs": 1,
+      "turnStatus": "idle",
+      "status": "active",
+      "flagged": false,
+      "schemaVersion": 2,
+      "lastSeq": 1,
+      "revision": 1,
+      "sendReceipts": [
+        {
+          "clientRequestId": "request-contract",
+          "turnId": "turn-contract",
+          "userMessageId": "user-contract",
+          "assistantMessageId": "assistant-contract",
+          "requestedPermissionMode": "explore"
+        }
+      ],
+      "resumeHandle": {
+        "version": 1,
+        "adapterType": "grok_cli",
+        "nativeSessionId": "native-contract",
+        "configFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "turns": [
+        {
+          "id": "turn-contract",
+          "clientRequestId": "request-contract",
+          "userMessageId": "user-contract",
+          "assistantMessageId": "assistant-contract",
+          "invocation": {
+            "agentId": "agent-contract",
+            "adapterType": "grok_cli",
+            "program": "grok",
+            "args": [
+              "-p",
+              "[PROMPT]"
+            ],
+            "cwd": "/project",
+            "permissionMode": "explore",
+            "stdinPrompt": false,
+            "outputMode": "streaming_json",
+            "configFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "status": "completed",
+          "acceptedAtMs": 1,
+          "startedAtMs": 2,
+          "finishedAtMs": 3,
+          "processId": 123,
+          "exitCode": 0,
+          "terminationReason": null,
+          "errorSummary": null,
+          "stdoutLogRef": "runs/turn-contract/stdout.log",
+          "stderrLogRef": "runs/turn-contract/stderr.log"
+        }
+      ]
+    },
+    "chatEvent": {
+      "schemaVersion": 2,
+      "projectKey": "/project",
+      "sessionId": "chat-contract",
+      "seq": 3,
+      "timestampMs": 1,
+      "kind": "stream",
+      "payload": {
+        "sessionId": "chat-contract",
+        "turnId": "turn-contract",
+        "messageId": "message-contract",
+        "delta": "hello",
+        "done": false
+      }
+    },
+    "chatSendInput": {
+      "projectPath": "/project",
+      "sessionId": "chat-contract",
+      "clientRequestId": "request-contract",
+      "text": "hello",
+      "permissionMode": "explore"
+    },
+    "chatSendReceipt": {
+      "clientRequestId": "request-contract",
+      "turnId": "turn-contract",
+      "userMessageId": "user-contract",
+      "assistantMessageId": "assistant-contract",
+      "requestedPermissionMode": "explore"
+    },
+    "chatResumeHandle": {
+      "version": 1,
+      "adapterType": "grok_cli",
+      "nativeSessionId": "native-contract",
+      "configFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "chatTurn": {
+      "id": "turn-contract",
+      "clientRequestId": "request-contract",
+      "userMessageId": "user-contract",
+      "assistantMessageId": "assistant-contract",
+      "invocation": {
+        "agentId": "agent-contract",
+        "adapterType": "grok_cli",
+        "program": "grok",
+        "args": [
+          "-p",
+          "[PROMPT]"
+        ],
+        "cwd": "/project",
+        "permissionMode": "explore",
+        "stdinPrompt": false,
+        "outputMode": "streaming_json",
+        "configFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "status": "completed",
+      "acceptedAtMs": 1,
+      "startedAtMs": 2,
+      "finishedAtMs": 3,
+      "processId": 123,
+      "exitCode": 0,
+      "terminationReason": null,
+      "errorSummary": null,
+      "stdoutLogRef": "runs/turn-contract/stdout.log",
+      "stderrLogRef": "runs/turn-contract/stderr.log"
+    },
+    "chatLogPage": {
+      "text": "hello\n",
+      "nextOffset": 6,
+      "hasMore": false
+    },
+    "chatExportInput": {
+      "projectPath": "/project",
+      "sessionId": "chat-contract"
+    },
+    "chatExportResult": {
+      "directory": "/project/.loom/chat/exports/export-contract",
+      "jsonPath": "/project/.loom/chat/exports/export-contract/session.json",
+      "markdownPath": "/project/.loom/chat/exports/export-contract/transcript.md",
+      "snapshotSeq": 3,
+      "inProgress": false,
+      "warnings": []
     }
   }
 }

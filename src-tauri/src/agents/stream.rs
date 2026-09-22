@@ -421,10 +421,30 @@ pub(super) async fn run_cli_profile<E: PlanningEventEmitter>(
 
     process_supervisor::configure_process_group(&mut command);
 
+    let mut operation = process_supervisor::supervisor().begin_operation()?;
     let mut child = command
         .spawn()
         .map_err(|error| format!("failed to start {}: {error}", profile.command))?;
 
+    let process_id = child.id();
+    let registered_run_id = if let Some(pid) = process_id {
+        let run_id = format!("agent-{pid}");
+        let metadata = if let Some(context) = log_context.as_ref() {
+            ProcessMetadata::new(
+                &run_id,
+                &context.task_id,
+                ProcessKind::Agent,
+                pid,
+                Some(PLANNING_TIMEOUT_MS),
+            )
+        } else {
+            ProcessMetadata::unscoped(&run_id, ProcessKind::Agent, pid, Some(PLANNING_TIMEOUT_MS))
+        };
+        operation.register(metadata)?;
+        Some(run_id)
+    } else {
+        None
+    };
     if profile.stdin_prompt {
         if let Some(mut stdin) = child.stdin.take() {
             let prompt = prompt.to_string();
@@ -443,21 +463,6 @@ pub(super) async fn run_cli_profile<E: PlanningEventEmitter>(
         .stderr
         .take()
         .ok_or_else(|| "failed to capture agent stderr".to_string())?;
-    let process_id = child.id();
-    let registered_run_id = match (process_id, log_context.as_ref()) {
-        (Some(process_id), Some(context)) => {
-            let run_id = format!("agent-{process_id}");
-            process_supervisor::supervisor().register(ProcessMetadata::new(
-                &run_id,
-                &context.task_id,
-                ProcessKind::Agent,
-                process_id,
-                Some(PLANNING_TIMEOUT_MS),
-            ))?;
-            Some(run_id)
-        }
-        _ => None,
-    };
     let stdout_task = tauri::async_runtime::spawn(read_planning_stream(
         emitter.clone(),
         log_context.clone(),
@@ -496,6 +501,7 @@ pub(super) async fn run_cli_profile<E: PlanningEventEmitter>(
         }
     };
     if let Some(run_id) = registered_run_id.as_deref() {
+        let _ = process_supervisor::supervisor().force_stop(run_id);
         process_supervisor::supervisor().complete(run_id);
     }
     let (status, timed_out) = wait_result?;

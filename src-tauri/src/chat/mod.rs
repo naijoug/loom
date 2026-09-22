@@ -1,263 +1,34 @@
-//! Chat-first sessions (M2). ChatSession ≠ Task — does not use task_state.
-use crate::agent_adapter::{AgentStage, PreparedAgentInvocation};
-use crate::agents::{self, load_agents};
+//! Chat sessions: independent of the advanced Task state machine.
+mod export;
+mod journal;
+mod logs;
+mod models;
+pub use models::*;
+#[cfg(test)]
+mod real_agent_tests;
+mod repository;
+pub(crate) mod resume;
+mod runtime;
+mod service;
+pub(crate) mod shutdown;
+pub(crate) mod turns;
+use crate::agent_adapter::AgentStage;
+use crate::agents::load_agents;
 use crate::chat_context::{prepare_chat_invocation, update_execution_config};
 use crate::models::{now_ms, IdGenerator};
-use crate::process_supervisor::{self, ProcessKind, ProcessMetadata};
-use crate::session_capture;
-use crate::storage;
+use crate::process_supervisor;
 use crate::tasks;
-use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
-use std::process::Stdio;
+use repository::ChatRepository;
+use service::{finish_chat_turn, require_idle};
+use std::path::Path;
 use tauri::{AppHandle, Emitter, State};
-use tokio::io::{AsyncBufReadExt, BufReader};
-use tokio::process::Command;
-use tokio::time::{sleep, Duration};
 
-const CHAT_SCHEMA_VERSION: u32 = 1;
+pub(crate) const CHAT_SCHEMA_VERSION: u32 = 2;
 
 /// Wall-clock budget for one chat turn. On expiry the turn is stopped via
 /// `ProcessSupervisor::request_stop(..., "chat_timeout")` so the session
 /// becomes sendable again with an aborted message.
 pub const CHAT_TURN_TIMEOUT_MS: u64 = 10 * 60 * 1000;
-
-const DEFAULT_PERMISSION_MODE: &str = "explore";
-const DEFAULT_SESSION_STATUS: &str = "active";
-
-/// Normalize chat permission strings for load/save compatibility.
-/// `read_only` → `explore`; `read_write` → `ask` (safer than auto).
-pub fn normalize_permission_mode(mode: &str) -> String {
-    match mode {
-        "explore" | "ask" | "auto" => mode.to_string(),
-        "read_only" => "explore".to_string(),
-        "read_write" => "ask".to_string(),
-        _ => DEFAULT_PERMISSION_MODE.to_string(),
-    }
-}
-
-fn default_permission_mode() -> String {
-    DEFAULT_PERMISSION_MODE.to_string()
-}
-
-fn default_session_status() -> String {
-    DEFAULT_SESSION_STATUS.to_string()
-}
-
-fn default_message_parts() -> Vec<ChatMessagePart> {
-    Vec::new()
-}
-
-/// text | tool | error parts (M0 sketch). Flexible fields for forward-compat JSON.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "camelCase")]
-pub enum ChatMessagePart {
-    Text {
-        text: String,
-    },
-    Tool {
-        name: String,
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        input_summary: Option<String>,
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        output_summary: Option<String>,
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        status: Option<String>,
-    },
-    Error {
-        message: String,
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        code: Option<String>,
-    },
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ChatMessage {
-    pub id: String,
-    pub role: String,
-    pub content: String,
-    pub status: String,
-    pub created_at_ms: u128,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub error_summary: Option<String>,
-    #[serde(
-        default = "default_message_parts",
-        skip_serializing_if = "Vec::is_empty"
-    )]
-    pub parts: Vec<ChatMessagePart>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ChatSession {
-    pub id: String,
-    pub project_path: String,
-    pub agent_id: String,
-    pub title: String,
-    #[serde(default = "default_permission_mode")]
-    pub permission_mode: String,
-    pub messages: Vec<ChatMessage>,
-    pub created_at_ms: u128,
-    pub updated_at_ms: u128,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub resume_command: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub active_turn_id: Option<String>,
-    pub turn_status: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub promoted_task_id: Option<String>,
-    /// Phase 1: `active` | `archived`. Default active for old sessions.
-    #[serde(default = "default_session_status")]
-    pub status: String,
-    /// User flag — contributes to needs_attention inbox filter.
-    #[serde(default)]
-    pub flagged: bool,
-    pub schema_version: u32,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ChatSessionSummary {
-    pub id: String,
-    pub title: String,
-    pub agent_id: String,
-    pub updated_at_ms: u128,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub preview: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub status: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub needs_attention: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub flagged: Option<bool>,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ChatCreateInput {
-    pub project_path: String,
-    pub agent_id: String,
-    #[serde(default)]
-    pub title: Option<String>,
-    #[serde(default)]
-    pub permission_mode: Option<String>,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ChatSendInput {
-    pub project_path: String,
-    pub session_id: String,
-    pub text: String,
-    #[serde(default)]
-    pub permission_mode: Option<String>,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ChatAbortInput {
-    pub project_path: String,
-    pub session_id: String,
-    #[serde(default)]
-    pub turn_id: Option<String>,
-}
-
-#[derive(Clone, Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ChatSendResult {
-    pub turn_id: String,
-    pub session: ChatSession,
-}
-
-#[derive(Clone, Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct ChatStreamEvent {
-    session_id: String,
-    turn_id: String,
-    message_id: String,
-    delta: String,
-    done: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    part: Option<ChatMessagePart>,
-}
-
-#[derive(Clone, Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct ChatTurnFinishedEvent {
-    session_id: String,
-    turn_id: String,
-    message_id: String,
-    status: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    error_summary: Option<String>,
-}
-
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct ChatIndex {
-    schema_version: u32,
-    session_ids: Vec<String>,
-}
-
-fn ensure_chat_dirs(project_path: &Path) -> Result<PathBuf, String> {
-    let root = storage::project_loom_dir(project_path).join("chat");
-    let sessions = root.join("sessions");
-    std::fs::create_dir_all(&sessions)
-        .map_err(|error| format!("failed to create chat dirs: {error}"))?;
-    Ok(root)
-}
-
-fn index_path(root: &Path) -> PathBuf {
-    root.join("index.json")
-}
-
-fn session_path(root: &Path, session_id: &str) -> PathBuf {
-    root.join("sessions").join(format!("{session_id}.json"))
-}
-
-fn load_index(root: &Path) -> Result<ChatIndex, String> {
-    let path = index_path(root);
-    if !path.exists() {
-        return Ok(ChatIndex {
-            schema_version: CHAT_SCHEMA_VERSION,
-            session_ids: Vec::new(),
-        });
-    }
-    let raw = std::fs::read_to_string(&path)
-        .map_err(|error| format!("failed to read chat index: {error}"))?;
-    serde_json::from_str(&raw).map_err(|error| format!("invalid chat index: {error}"))
-}
-
-fn save_index(root: &Path, index: &ChatIndex) -> Result<(), String> {
-    let raw = serde_json::to_string_pretty(index)
-        .map_err(|error| format!("failed to serialize chat index: {error}"))?;
-    std::fs::write(index_path(root), raw)
-        .map_err(|error| format!("failed to write chat index: {error}"))
-}
-
-fn load_session(root: &Path, session_id: &str) -> Result<ChatSession, String> {
-    let path = session_path(root, session_id);
-    let raw = std::fs::read_to_string(&path)
-        .map_err(|error| format!("failed to read chat session: {error}"))?;
-    let mut session: ChatSession =
-        serde_json::from_str(&raw).map_err(|error| format!("invalid chat session: {error}"))?;
-    session.permission_mode = normalize_permission_mode(&session.permission_mode);
-    if session.status != "active" && session.status != "archived" {
-        session.status = DEFAULT_SESSION_STATUS.to_string();
-    }
-    if reconcile_interrupted_session(&mut session) {
-        let _ = save_session(root, &session);
-    }
-    Ok(session)
-}
-
-fn save_session(root: &Path, session: &ChatSession) -> Result<(), String> {
-    let raw = serde_json::to_string_pretty(session)
-        .map_err(|error| format!("failed to serialize chat session: {error}"))?;
-    std::fs::write(session_path(root, &session.id), raw)
-        .map_err(|error| format!("failed to write chat session: {error}"))
-}
 
 /// Title from first user text: first non-empty line, collapse whitespace,
 /// truncate near `max_chars` on a word boundary (not a blind byte/char slice).
@@ -310,6 +81,15 @@ fn session_needs_attention(session: &ChatSession) -> bool {
 /// Lazy repair after app restart: streaming turns become aborted, partial text kept.
 fn reconcile_interrupted_session(session: &mut ChatSession) -> bool {
     let mut changed = false;
+    for turn in &mut session.turns {
+        if !turn.status.is_terminal() {
+            turn.status = ChatTurnStatus::Interrupted;
+            turn.finished_at_ms = Some(now_ms() as u64);
+            turn.termination_reason = Some("interrupted_by_restart".into());
+            turn.error_summary = Some("Loom exited before this turn completed".into());
+            changed = true;
+        }
+    }
     if session.turn_status == "streaming" {
         session.turn_status = "idle".to_string();
         session.active_turn_id = None;
@@ -347,15 +127,11 @@ fn permission_to_stage(mode: &str) -> AgentStage {
     }
 }
 
-fn chat_task_id(session_id: &str) -> String {
-    format!("chat:{session_id}")
-}
-
-/// Best-effort parse of one stdout line into text delta and/or a tool/command part.
+/// Parse all tool blocks in a stdout frame; providers may batch parallel results.
 #[derive(Debug, Default, PartialEq, Eq)]
 struct ParsedChatLine {
     delta: String,
-    part: Option<ChatMessagePart>,
+    parts: Vec<ChatMessagePart>,
 }
 
 fn parse_chat_stream_line(output_mode: &str, line: &str) -> ParsedChatLine {
@@ -365,22 +141,34 @@ fn parse_chat_stream_line(output_mode: &str, line: &str) -> ParsedChatLine {
     }
     if output_mode == "plain" {
         return ParsedChatLine {
-            delta: format!("{trimmed}\n"),
-            part: None,
+            delta: format!("{line}\n"),
+            parts: Vec::new(),
         };
     }
     let Ok(value) = serde_json::from_str::<serde_json::Value>(trimmed) else {
         if !trimmed.starts_with('{') {
             return ParsedChatLine {
                 delta: trimmed.to_string(),
-                part: None,
+                parts: Vec::new(),
             };
         }
         return ParsedChatLine::default();
     };
-    let part = extract_tool_or_command_part(&value);
+    let event = unwrap_stream_event(&value);
+    let parts = if let Some(blocks) = event
+        .pointer("/message/content")
+        .or_else(|| event.get("content"))
+        .and_then(|v| v.as_array())
+    {
+        blocks
+            .iter()
+            .filter_map(tool_part_from_content_item)
+            .collect()
+    } else {
+        extract_tool_or_command_part(&value).into_iter().collect()
+    };
     let delta = extract_assistant_text(output_mode, trimmed);
-    ParsedChatLine { delta, part }
+    ParsedChatLine { delta, parts }
 }
 
 fn json_event_type(value: &serde_json::Value) -> Option<String> {
@@ -482,7 +270,14 @@ fn tool_part_from_content_item(item: &serde_json::Value) -> Option<ChatMessagePa
             name,
             input_summary: None,
             output_summary: output.and_then(|v| summarize_json(v, 240)),
-            status: Some("done".to_string()),
+            status: Some(
+                if item.get("is_error").and_then(|v| v.as_bool()) == Some(true) {
+                    "error"
+                } else {
+                    "done"
+                }
+                .to_string(),
+            ),
         });
     }
     None
@@ -621,6 +416,13 @@ fn extract_assistant_text(output_mode: &str, raw: &str) -> String {
         }
         if let Ok(value) = serde_json::from_str::<serde_json::Value>(line) {
             let value = unwrap_stream_event(&value);
+            // Codex exec emits assistant text inside an agent_message item.
+            if value.pointer("/item/type").and_then(|v| v.as_str()) == Some("agent_message") {
+                if let Some(text) = value.pointer("/item/text").and_then(|v| v.as_str()) {
+                    chunks.push(text.to_string());
+                    continue;
+                }
+            }
             // Claude assistant message: collect every text block in content[].
             if let Some(parts) = value
                 .pointer("/message/content")
@@ -667,38 +469,124 @@ fn extract_assistant_text(output_mode: &str, raw: &str) -> String {
             chunks.push(line.to_string());
         }
     }
-    if chunks.is_empty() {
-        trimmed.to_string()
-    } else {
-        chunks.join("")
+    chunks.join("")
+}
+
+fn open_chat_repository(app: &AppHandle, project_path: &str) -> Result<ChatRepository, String> {
+    let project = crate::projects::canonical_project_path(project_path)?;
+    let registered = crate::storage::load_recent_projects(app)?;
+    if !registered
+        .iter()
+        .any(|item| Path::new(&item.path) == project)
+        && !ChatRepository::owns_active_project(&project)
+    {
+        return Err("open this project in Loom before accessing its chats".into());
     }
+    ChatRepository::open(&project)
+}
+
+fn publish_chat_session(
+    app: &AppHandle,
+    repository: &ChatRepository,
+    session: ChatSession,
+) -> Result<ChatSession, String> {
+    let event = repository.event_at(&session)?;
+    let _ = app.emit("loom://chat-event", event);
+    Ok(session)
 }
 
 #[tauri::command]
-pub fn chat_list_sessions(project_path: String) -> Result<Vec<ChatSessionSummary>, String> {
-    let project = PathBuf::from(&project_path);
-    let root = ensure_chat_dirs(&project)?;
-    let index = load_index(&root)?;
+pub async fn chat_export(
+    app: AppHandle,
+    ids: State<'_, IdGenerator>,
+    input: ChatExportInput,
+) -> Result<ChatExportResult, String> {
+    let operation = process_supervisor::supervisor().begin_operation()?;
+    let repository = open_chat_repository(&app, &input.project_path)?;
+    let export_id = ids.next("export");
+    tauri::async_runtime::spawn_blocking(move || {
+        let _operation = operation;
+        repository.export_session(&input.session_id, &export_id)
+    })
+    .await
+    .map_err(|error| format!("chat export worker failed: {error}"))?
+}
+
+#[tauri::command]
+pub fn chat_read_events(
+    app: AppHandle,
+    project_path: String,
+    session_id: String,
+    after_seq: u64,
+    limit: Option<usize>,
+) -> Result<ChatEventPage, String> {
+    open_chat_repository(&app, &project_path)?.read_events(
+        &session_id,
+        after_seq,
+        limit.unwrap_or(200),
+    )
+}
+
+#[tauri::command]
+pub fn chat_read_run_logs(
+    app: AppHandle,
+    project_path: String,
+    session_id: String,
+    turn_id: String,
+    stream: ChatLogStream,
+    offset: u64,
+    limit: Option<usize>,
+) -> Result<ChatLogPage, String> {
+    open_chat_repository(&app, &project_path)?.read_run_logs(
+        &session_id,
+        &turn_id,
+        stream,
+        offset,
+        limit.unwrap_or(32_768),
+    )
+}
+
+#[tauri::command]
+pub fn chat_list_sessions(
+    app: AppHandle,
+    project_path: String,
+) -> Result<Vec<ChatSessionSummary>, String> {
+    let repository = open_chat_repository(&app, &project_path)?;
     let mut summaries = Vec::new();
-    for session_id in index.session_ids {
-        if let Ok(session) = load_session(&root, &session_id) {
-            let preview = session
-                .messages
-                .last()
-                .map(|message| message.content.chars().take(80).collect::<String>());
-            let needs_attention = session_needs_attention(&session);
-            let flagged = session.flagged;
-            summaries.push(ChatSessionSummary {
-                id: session.id,
-                title: session.title,
-                agent_id: session.agent_id,
-                updated_at_ms: session.updated_at_ms,
-                preview,
-                status: Some(session.status),
-                needs_attention: Some(needs_attention),
-                flagged: Some(flagged),
-            });
-        }
+    for (id, entry) in repository.list_entries()? {
+        let session = match entry {
+            Ok(session) => session,
+            Err(error) => {
+                summaries.push(ChatSessionSummary {
+                    id,
+                    title: "无法读取的会话".into(),
+                    agent_id: String::new(),
+                    updated_at_ms: 0,
+                    preview: Some(error.clone()),
+                    status: Some("active".into()),
+                    needs_attention: Some(true),
+                    flagged: None,
+                    storage_error: Some(error),
+                });
+                continue;
+            }
+        };
+        let preview = session
+            .messages
+            .last()
+            .map(|message| message.content.chars().take(80).collect::<String>());
+        let needs_attention = session_needs_attention(&session);
+        summaries.push(ChatSessionSummary {
+            id: session.id,
+            title: session.title,
+            agent_id: session.agent_id,
+            updated_at_ms: session.updated_at_ms,
+            preview,
+            status: Some(session.status),
+            needs_attention: Some(needs_attention),
+            flagged: Some(session.flagged),
+            storage_error: None,
+        });
     }
     summaries.sort_by_key(|a| std::cmp::Reverse(a.updated_at_ms));
     Ok(summaries)
@@ -710,13 +598,12 @@ pub fn chat_create(
     ids: State<'_, IdGenerator>,
     input: ChatCreateInput,
 ) -> Result<ChatSession, String> {
-    let _ = app;
-    let project = PathBuf::from(&input.project_path);
-    let root = ensure_chat_dirs(&project)?;
+    let _operation = process_supervisor::supervisor().begin_operation()?;
+    let repository = open_chat_repository(&app, &input.project_path)?;
     let created_at_ms = now_ms();
     let session = ChatSession {
         id: ids.next("chat"),
-        project_path: input.project_path,
+        project_path: repository.project_path().to_string_lossy().into_owned(),
         agent_id: input.agent_id,
         title: input
             .title
@@ -730,111 +617,84 @@ pub fn chat_create(
         ),
         status: DEFAULT_SESSION_STATUS.to_string(),
         messages: Vec::new(),
+        send_receipts: Vec::new(),
+        turns: Vec::new(),
         created_at_ms,
         updated_at_ms: created_at_ms,
         resume_command: None,
+        resume_handle: None,
         active_turn_id: None,
         turn_status: "idle".to_string(),
         promoted_task_id: None,
         flagged: false,
         schema_version: CHAT_SCHEMA_VERSION,
+        last_seq: 0,
+        revision: 0,
     };
-    save_session(&root, &session)?;
-    let mut index = load_index(&root)?;
-    if !index.session_ids.iter().any(|id| id == &session.id) {
-        index.session_ids.push(session.id.clone());
-    }
-    save_index(&root, &index)?;
-    Ok(session)
+    repository.create(&session)?;
+    publish_chat_session(&app, &repository, repository.load(&session.id)?)
 }
 
 #[tauri::command]
-pub fn chat_get(project_path: String, session_id: String) -> Result<ChatSession, String> {
-    let root = ensure_chat_dirs(Path::new(&project_path))?;
-    load_session(&root, &session_id)
+pub fn chat_get(
+    app: AppHandle,
+    project_path: String,
+    session_id: String,
+) -> Result<ChatSession, String> {
+    open_chat_repository(&app, &project_path)?.load(&session_id)
 }
 
 #[tauri::command]
 pub fn chat_set_agent(
+    app: AppHandle,
     project_path: String,
     session_id: String,
     agent_id: String,
 ) -> Result<ChatSession, String> {
-    let root = ensure_chat_dirs(Path::new(&project_path))?;
-    let mut session = load_session(&root, &session_id)?;
-    update_execution_config(&mut session, Some(&agent_id), None)?;
-    session.updated_at_ms = now_ms();
-    save_session(&root, &session)?;
-    Ok(session)
-}
-
-#[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ChatUpdateMetaInput {
-    pub project_path: String,
-    pub session_id: String,
-    #[serde(default)]
-    pub title: Option<String>,
-    #[serde(default)]
-    pub permission_mode: Option<String>,
-    #[serde(default)]
-    pub status: Option<String>,
-    #[serde(default)]
-    pub flagged: Option<bool>,
-    /// When true, set title from the first user message (smart truncate).
-    #[serde(default)]
-    pub title_from_first_message: Option<bool>,
+    let _operation = process_supervisor::supervisor().begin_operation()?;
+    let repository = open_chat_repository(&app, &project_path)?;
+    let session = repository.update(&session_id, |session| {
+        update_execution_config(session, Some(&agent_id), None)
+    })?;
+    publish_chat_session(&app, &repository, session)
 }
 
 #[tauri::command]
-pub fn chat_update_meta(input: ChatUpdateMetaInput) -> Result<ChatSession, String> {
-    let root = ensure_chat_dirs(Path::new(&input.project_path))?;
-    let mut session = load_session(&root, &input.session_id)?;
-    if let Some(title) = input.title {
-        let trimmed = title.trim();
-        if !trimmed.is_empty() {
-            session.title = trimmed.to_string();
+pub fn chat_update_meta(app: AppHandle, input: ChatUpdateMetaInput) -> Result<ChatSession, String> {
+    let _operation = process_supervisor::supervisor().begin_operation()?;
+    let repository = open_chat_repository(&app, &input.project_path)?;
+    let session = repository.update(&input.session_id, |session| {
+        if let Some(title) = input.title {
+            let trimmed = title.trim();
+            if !trimmed.is_empty() {
+                session.title = trimmed.to_string();
+            }
         }
-    }
-    if input.title_from_first_message.unwrap_or(false) {
-        if let Some(first_user) = session
-            .messages
-            .iter()
-            .find(|message| message.role == "user")
-        {
-            session.title = title_from_user_message(&first_user.content, 48);
+        if input.title_from_first_message.unwrap_or(false) {
+            if let Some(first_user) = session
+                .messages
+                .iter()
+                .find(|message| message.role == "user")
+            {
+                session.title = title_from_user_message(&first_user.content, 48);
+            }
         }
-    }
-    if let Some(mode) = input.permission_mode {
-        update_execution_config(&mut session, None, Some(&mode))?;
-    }
-    if let Some(status) = input.status {
-        session.status = match status.as_str() {
-            "archived" => "archived".to_string(),
-            _ => DEFAULT_SESSION_STATUS.to_string(),
-        };
-    }
-    if let Some(flagged) = input.flagged {
-        session.flagged = flagged;
-    }
-    session.updated_at_ms = now_ms();
-    save_session(&root, &session)?;
-    Ok(session)
-}
-
-#[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ChatPromoteInput {
-    pub project_path: String,
-    pub session_id: String,
-}
-
-#[derive(Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ChatPromoteResult {
-    pub task_id: String,
-    pub task: crate::models::Task,
-    pub session: ChatSession,
+        if let Some(mode) = input.permission_mode {
+            update_execution_config(session, None, Some(&mode))?;
+        }
+        if let Some(status) = input.status {
+            require_idle(session)?;
+            session.status = match status.as_str() {
+                "archived" => "archived".to_string(),
+                _ => DEFAULT_SESSION_STATUS.to_string(),
+            };
+        }
+        if let Some(flagged) = input.flagged {
+            session.flagged = flagged;
+        }
+        Ok(())
+    })?;
+    publish_chat_session(&app, &repository, session)
 }
 
 fn promote_requirement_from_session(session: &ChatSession) -> (String, String) {
@@ -891,24 +751,29 @@ pub fn chat_promote_to_task(
     ids: State<'_, IdGenerator>,
     input: ChatPromoteInput,
 ) -> Result<ChatPromoteResult, String> {
-    let root = ensure_chat_dirs(Path::new(&input.project_path))?;
-    let mut session = load_session(&root, &input.session_id)?;
-    let (title, raw_requirement) = promote_requirement_from_session(&session);
-    // Stub: create a draft task only — do not advance the task state machine.
-    let task = tasks::create_task(
-        app,
-        ids,
-        crate::models::CreateTaskInput {
-            project_path: input.project_path.clone(),
-            title,
-            raw_requirement,
-            selected_planning_agent_ids: Vec::new(),
-            primary_agent_id: Some(session.agent_id.clone()),
-        },
-    )?;
-    session.promoted_task_id = Some(task.id.clone());
-    session.updated_at_ms = now_ms();
-    save_session(&root, &session)?;
+    let _operation = process_supervisor::supervisor().begin_operation()?;
+    let repository = open_chat_repository(&app, &input.project_path)?;
+    let mut promoted_task = None;
+    let session = repository.update(&input.session_id, |session| {
+        require_idle(session)?;
+        let (title, raw_requirement) = promote_requirement_from_session(session);
+        let task = tasks::create_task(
+            app.clone(),
+            ids,
+            crate::models::CreateTaskInput {
+                project_path: repository.project_path().to_string_lossy().into_owned(),
+                title,
+                raw_requirement,
+                selected_planning_agent_ids: Vec::new(),
+                primary_agent_id: Some(session.agent_id.clone()),
+            },
+        )?;
+        session.promoted_task_id = Some(task.id.clone());
+        promoted_task = Some(task);
+        Ok(())
+    })?;
+    let task = promoted_task.ok_or("failed to create task")?;
+    let session = publish_chat_session(&app, &repository, session)?;
     Ok(ChatPromoteResult {
         task_id: task.id.clone(),
         task,
@@ -917,29 +782,32 @@ pub fn chat_promote_to_task(
 }
 
 #[tauri::command]
-pub fn chat_clear_resume(project_path: String, session_id: String) -> Result<ChatSession, String> {
-    let root = ensure_chat_dirs(Path::new(&project_path))?;
-    let mut session = load_session(&root, &session_id)?;
-    session.resume_command = None;
-    session.updated_at_ms = now_ms();
-    save_session(&root, &session)?;
-    Ok(session)
+pub fn chat_clear_resume(
+    app: AppHandle,
+    project_path: String,
+    session_id: String,
+) -> Result<ChatSession, String> {
+    let _operation = process_supervisor::supervisor().begin_operation()?;
+    let repository = open_chat_repository(&app, &project_path)?;
+    let session = repository.update(&session_id, |session| {
+        require_idle(session)?;
+        session.resume_command = None;
+        session.resume_handle = None;
+        Ok(())
+    })?;
+    publish_chat_session(&app, &repository, session)
 }
 
 const STOP_REASON_ABORT: &str = "chat_abort";
 const STOP_REASON_TIMEOUT: &str = "chat_timeout";
-
-struct TimeoutWatchdog(tauri::async_runtime::JoinHandle<()>);
-
-impl Drop for TimeoutWatchdog {
-    fn drop(&mut self) {
-        self.0.abort();
-    }
-}
+const STOP_REASON_SHUTDOWN: &str = "app_shutdown";
 
 /// True when ProcessSupervisor recorded a cooperative stop (user abort or turn timeout).
 pub fn is_chat_stop_reason(reason: Option<&str>) -> bool {
-    matches!(reason, Some(STOP_REASON_ABORT) | Some(STOP_REASON_TIMEOUT))
+    matches!(
+        reason,
+        Some(STOP_REASON_ABORT) | Some(STOP_REASON_TIMEOUT) | Some(STOP_REASON_SHUTDOWN)
+    )
 }
 
 pub fn chat_timeout_summary() -> String {
@@ -979,22 +847,21 @@ fn chat_stop_outcome(
         resume_command: None,
         status: "aborted".to_string(),
         error_summary,
+        exit_code: None,
+        termination_reason: Some(reason.unwrap_or(STOP_REASON_ABORT).into()),
     }
 }
 
 #[tauri::command]
-pub async fn chat_abort(input: ChatAbortInput) -> Result<(), String> {
-    let _ = input.project_path;
-    let reason = STOP_REASON_ABORT;
-    if let Some(turn_id) = input.turn_id.as_deref().filter(|value| !value.is_empty()) {
-        let _ = process_supervisor::supervisor().request_stop(turn_id, reason)?;
-        return Ok(());
+pub async fn chat_abort(app: AppHandle, input: ChatAbortInput) -> Result<(), String> {
+    let repository = open_chat_repository(&app, &input.project_path)?;
+    if let Some(turn_id) = repository.cancel(&input.session_id, Some(&input.turn_id))? {
+        // Starting turns remember cancellation in the lease, before a PID exists.
+        process_supervisor::supervisor().request_stop(&turn_id, STOP_REASON_ABORT)?;
+        if let Ok(session) = repository.load(&input.session_id) {
+            let _ = publish_chat_session(&app, &repository, session);
+        }
     }
-    let _ = process_supervisor::supervisor().stop_task_runs(
-        &chat_task_id(&input.session_id),
-        &[ProcessKind::Chat],
-        reason,
-    )?;
     Ok(())
 }
 
@@ -1004,308 +871,105 @@ pub async fn chat_send(
     ids: State<'_, IdGenerator>,
     input: ChatSendInput,
 ) -> Result<ChatSendResult, String> {
-    let text = input.text.trim().to_string();
-    if text.is_empty() {
-        return Err("message text is required".to_string());
-    }
-    let project = PathBuf::from(&input.project_path);
-    let root = ensure_chat_dirs(&project)?;
-    let mut session = load_session(&root, &input.session_id)?;
-    if let Some(mode) = input.permission_mode {
-        update_execution_config(&mut session, None, Some(&mode))?;
-    }
-    if session.turn_status == "streaming" {
-        return Err("a chat turn is already running for this session".to_string());
-    }
-
-    let agents = load_agents(&app)?;
-    let agent = agents
-        .into_iter()
-        .find(|agent| agent.id == session.agent_id)
-        .ok_or_else(|| format!("agent '{}' was not found", session.agent_id))?;
-
-    let stage = permission_to_stage(&session.permission_mode);
-    let prepared = prepare_chat_invocation(&agent, &session, &text, stage)?;
-    if prepared.stdin_prompt {
-        return Err(format!(
-            "agent '{}' requires stdin prompt transport, which chat does not support yet",
-            agent.name
-        ));
-    }
-
-    let now = now_ms();
-    let user_message = ChatMessage {
-        id: ids.next("msg"),
-        role: "user".to_string(),
-        content: text.clone(),
-        status: "complete".to_string(),
-        created_at_ms: now,
-        error_summary: None,
-        parts: Vec::new(),
-    };
-    let assistant_id = ids.next("msg");
+    let operation = process_supervisor::supervisor().begin_operation()?;
+    let repository = open_chat_repository(&app, &input.project_path)?;
     let turn_id = ids.next("turn");
-    let assistant_message = ChatMessage {
-        id: assistant_id.clone(),
-        role: "assistant".to_string(),
-        content: String::new(),
-        status: "streaming".to_string(),
-        created_at_ms: now + 1,
-        error_summary: None,
-        parts: Vec::new(),
-    };
-    if session.messages.is_empty() && session.title == "新对话" {
-        session.title = title_from_user_message(&text, 48);
-    }
-    session.messages.push(user_message);
-    session.messages.push(assistant_message);
-    session.active_turn_id = Some(turn_id.clone());
-    session.turn_status = "streaming".to_string();
-    session.updated_at_ms = now + 1;
-    save_session(&root, &session)?;
-
-    let app_handle = app.clone();
-    let session_id = session.id.clone();
-    let project_path = session.project_path.clone();
-    let output_mode = prepared.output_mode.clone();
-
-    let turn_id_for_result = turn_id.clone();
-    tauri::async_runtime::spawn(async move {
-        let result = run_chat_turn(
-            app_handle.clone(),
-            session_id.clone(),
-            turn_id.clone(),
-            assistant_id.clone(),
-            prepared,
-            output_mode,
-        )
-        .await;
-        let root = match ensure_chat_dirs(Path::new(&project_path)) {
-            Ok(root) => root,
-            Err(_) => return,
-        };
-        let Ok(mut session) = load_session(&root, &session_id) else {
-            return;
-        };
-        if let Some(message) = session
-            .messages
-            .iter_mut()
-            .find(|message| message.id == assistant_id)
-        {
-            match result {
-                Ok(outcome) => {
-                    message.content = outcome.content;
-                    message.parts = outcome.parts;
-                    message.status = outcome.status.clone();
-                    message.error_summary = outcome.error_summary.clone();
-                    // Only adopt a new resume handle on a complete turn — never on abort/error.
-                    if outcome.status == "complete" {
-                        if let Some(resume) = outcome.resume_command {
-                            session.resume_command = Some(resume);
-                        }
-                    }
-                    // Flag hard errors and turn timeouts (timeout carries error_summary).
-                    if outcome.status == "error" || outcome.error_summary.is_some() {
-                        session.flagged = true;
-                    }
-                    let _ = app_handle.emit(
-                        "loom://chat-turn-finished",
-                        ChatTurnFinishedEvent {
-                            session_id: session_id.clone(),
-                            turn_id: turn_id.clone(),
-                            message_id: assistant_id.clone(),
-                            status: outcome.status,
-                            error_summary: outcome.error_summary,
-                        },
-                    );
-                }
-                Err(error) => {
-                    if message.content.trim().is_empty() {
-                        message.content = format!("（调用失败）{error}");
-                    }
-                    message.status = "error".to_string();
-                    message.error_summary = Some(error.clone());
-                    message.parts.push(ChatMessagePart::Error {
-                        message: error.clone(),
-                        code: None,
-                    });
-                    // Keep prior resume_command; a failed turn should not wipe a good handle.
-                    session.flagged = true;
-                    session.flagged = true;
-                    let _ = app_handle.emit(
-                        "loom://chat-turn-finished",
-                        ChatTurnFinishedEvent {
-                            session_id: session_id.clone(),
-                            turn_id: turn_id.clone(),
-                            message_id: assistant_id.clone(),
-                            status: "error".to_string(),
-                            error_summary: Some(error),
-                        },
-                    );
-                }
-            }
+    let assistant_id = ids.next("msg");
+    let accepted = repository.begin_once(&input, &turn_id, |session| {
+        let text = &input.text;
+        if let Some(mode) = &input.permission_mode {
+            update_execution_config(session, None, Some(mode))?;
         }
-        session.active_turn_id = None;
-        session.turn_status = "idle".to_string();
-        session.updated_at_ms = now_ms();
-        let _ = save_session(&root, &session);
-    });
-
-    Ok(ChatSendResult {
-        turn_id: turn_id_for_result,
-        session,
-    })
-}
-
-async fn run_chat_turn(
-    app: AppHandle,
-    session_id: String,
-    turn_id: String,
-    message_id: String,
-    prepared: PreparedAgentInvocation,
-    output_mode: String,
-) -> Result<ChatTurnOutcome, String> {
-    let program = prepared.program.clone();
-    let mut command = Command::new(&prepared.program);
-    command
-        .args(&prepared.args)
-        .current_dir(&prepared.cwd)
-        .kill_on_drop(true)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
-    process_supervisor::configure_process_group(&mut command);
-    let mut child = command
-        .spawn()
-        .map_err(|error| format!("failed to start agent: {error}"))?;
-    if let Some(pid) = child.id() {
-        process_supervisor::supervisor().register(ProcessMetadata::new(
+        let agents = load_agents(&app)?;
+        let agent = agents
+            .iter()
+            .find(|agent| agent.id == session.agent_id)
+            .ok_or_else(|| format!("agent '{}' was not found", session.agent_id))?;
+        let stage = permission_to_stage(&session.permission_mode);
+        let prepared = prepare_chat_invocation(agent, session, text, stage)?;
+        if session.messages.is_empty() && session.title == "新对话" {
+            session.title = title_from_user_message(text, 48);
+        }
+        let now = now_ms();
+        session.messages.push(ChatMessage {
+            id: ids.next("msg"),
+            role: "user".into(),
+            content: text.clone(),
+            status: "complete".into(),
+            created_at_ms: now,
+            error_summary: None,
+            parts: Vec::new(),
+        });
+        session.messages.push(ChatMessage {
+            id: assistant_id.clone(),
+            role: "assistant".into(),
+            content: String::new(),
+            status: "streaming".into(),
+            created_at_ms: now + 1,
+            error_summary: None,
+            parts: Vec::new(),
+        });
+        let user_id = session.messages[session.messages.len() - 2].id.clone();
+        session.turns.push(turns::new_turn(
             &turn_id,
-            chat_task_id(&session_id),
-            ProcessKind::Chat,
-            pid,
-            Some(CHAT_TURN_TIMEOUT_MS),
-        ))?;
-    }
-    let turn_id_for_timeout = turn_id.clone();
-    let timeout_watchdog = TimeoutWatchdog(tauri::async_runtime::spawn(async move {
-        sleep(Duration::from_millis(CHAT_TURN_TIMEOUT_MS)).await;
-        let _ = process_supervisor::supervisor()
-            .request_stop(&turn_id_for_timeout, STOP_REASON_TIMEOUT);
-    }));
-    let stdout = child
-        .stdout
-        .take()
-        .ok_or_else(|| "agent stdout missing".to_string())?;
-    let stderr = child.stderr.take();
-    let mut lines = BufReader::new(stdout).lines();
-    let mut raw = String::new();
-    let mut stdout_lines: Vec<String> = Vec::new();
-    let mut parts: Vec<ChatMessagePart> = Vec::new();
-    while let Ok(Some(line)) = lines.next_line().await {
-        let redacted = agents::redact_sensitive_text(&line);
-        stdout_lines.push(redacted.clone());
-        raw.push_str(&redacted);
-        raw.push('\n');
-        let parsed = parse_chat_stream_line(&output_mode, &redacted);
-        if let Some(part) = parsed.part.clone() {
-            parts.push(part.clone());
-            let _ = app.emit(
-                "loom://chat-stream",
-                ChatStreamEvent {
-                    session_id: session_id.clone(),
-                    turn_id: turn_id.clone(),
-                    message_id: message_id.clone(),
-                    delta: String::new(),
-                    done: false,
-                    part: Some(part),
-                },
-            );
-        }
-        if !parsed.delta.is_empty() {
-            let _ = app.emit(
-                "loom://chat-stream",
-                ChatStreamEvent {
-                    session_id: session_id.clone(),
-                    turn_id: turn_id.clone(),
-                    message_id: message_id.clone(),
-                    delta: parsed.delta,
-                    done: false,
-                    part: None,
-                },
-            );
-        }
-    }
-    let status = child
-        .wait()
-        .await
-        .map_err(|error| format!("failed waiting for agent: {error}"))?;
-    drop(timeout_watchdog);
-    let meta = process_supervisor::supervisor().complete(&turn_id);
-    let stop_reason = meta
-        .as_ref()
-        .and_then(|value| value.termination_reason.as_deref());
-    let aborted = is_chat_stop_reason(stop_reason);
-    let mut stderr_text = String::new();
-    if let Some(stderr) = stderr {
-        let mut err_lines = BufReader::new(stderr).lines();
-        while let Ok(Some(line)) = err_lines.next_line().await {
-            stderr_text.push_str(&agents::redact_sensitive_text(&line));
-            stderr_text.push('\n');
-        }
-    }
-    let content = extract_assistant_text(&output_mode, &raw);
-    let stderr_lines: Vec<String> = stderr_text.lines().map(str::to_string).collect();
-    let captured =
-        session_capture::capture_session_from_lines(&program, &stdout_lines, &stderr_lines);
-    let _ = app.emit(
-        "loom://chat-stream",
-        ChatStreamEvent {
-            session_id,
-            turn_id,
-            message_id,
-            delta: String::new(),
-            done: true,
-            part: None,
-        },
-    );
-
-    if aborted {
-        // Keep any prior resume handle outside this outcome; abort/timeout must not adopt a new one.
-        let _ = captured.resume_command;
-        return Ok(chat_stop_outcome(stop_reason, content, parts));
-    }
-
-    if !status.success() && content.trim().is_empty() {
-        return Err(format!(
-            "agent exited with status {status}; stderr: {}",
-            stderr_text.trim()
+            &input.client_request_id,
+            &user_id,
+            &assistant_id,
+            prepared.logged_invocation.clone(),
         ));
-    }
-    let content = if content.trim().is_empty() {
-        if stderr_text.trim().is_empty() {
-            "（Agent 没有返回可见文本）".to_string()
-        } else {
-            format!("（无结构化输出，stderr）\n{}", stderr_text.trim())
-        }
-    } else {
-        content
+        Ok(prepared)
+    })?;
+    let (session, prepared, lease) = match accepted {
+        repository::BeginTurn::Started(session, prepared, lease) => (session, prepared, lease),
+        repository::BeginTurn::Existing(result) => return Ok(result),
     };
-    Ok(ChatTurnOutcome {
-        content,
-        parts,
-        resume_command: captured.resume_command,
-        status: "complete".to_string(),
-        error_summary: None,
-    })
+    // Acceptance is already durable. A notification/read failure must not
+    // strand it between persistence and spawn; consumers can replay the log.
+    if let Ok(event) = repository.event_at(&session) {
+        let _ = app.emit("loom://chat-event", event);
+    }
+    tauri::async_runtime::spawn(async move {
+        let _operation = operation;
+        let resume_binding = prepared.resume_binding;
+        let request = runtime::Request {
+            project_key: repository.project_path().to_string_lossy().into_owned(),
+            session_id: lease.session_id.clone(),
+            turn_id: lease.turn_id.clone(),
+            message_id: assistant_id.clone(),
+            prepared: prepared.invocation,
+            stdin_text: prepared.stdin_text,
+            limits: runtime::Limits::default(),
+        };
+        let result = service::run_chat_turn(&repository, &lease, request, |event| {
+            let _ = app.emit("loom://chat-event", event);
+        })
+        .await;
+        let event = finish_chat_turn(
+            &repository,
+            &lease,
+            &assistant_id,
+            Some(&resume_binding),
+            result,
+        );
+        if let Some(persisted) = event.journal_event.clone() {
+            let _ = app.emit("loom://chat-event", persisted);
+        } else {
+            // Persistence failed; this is explicitly not a durable completion.
+            let _ = app.emit("loom://chat-error", event);
+        }
+    });
+    Ok(ChatSendResult { turn_id, session })
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct ChatTurnOutcome {
     content: String,
     parts: Vec<ChatMessagePart>,
     resume_command: Option<String>,
     status: String,
     error_summary: Option<String>,
+    exit_code: Option<i32>,
+    termination_reason: Option<String>,
 }
 
 #[cfg(test)]
@@ -1389,6 +1053,7 @@ mod tests {
                     prompt_file: None,
                     stage,
                     resume_command: None,
+                    chat_permission_mode: Some(mode),
                     embed_prompt: true,
                 },
             )
@@ -1412,6 +1077,7 @@ mod tests {
                     prompt_file: None,
                     stage,
                     resume_command: None,
+                    chat_permission_mode: Some(mode),
                     embed_prompt: true,
                 },
             )
@@ -1435,14 +1101,15 @@ mod tests {
                     prompt_file: None,
                     stage,
                     resume_command: None,
+                    chat_permission_mode: Some(mode),
                     embed_prompt: true,
                 },
             )
             .expect("claude");
             if mode == "explore" {
                 assert!(
-                    arg_pair(&claude.args, "--permission-mode").is_none(),
-                    "claude {mode} should omit permission-mode"
+                    arg_pair(&claude.args, "--permission-mode") == Some("plan"),
+                    "claude {mode} must explicitly select plan mode"
                 );
             } else {
                 assert_eq!(
@@ -1458,7 +1125,7 @@ mod tests {
     fn parses_grok_style_tool_use_part() {
         let line = r#"{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Bash","input":{"command":"ls -la"}}]}}"#;
         let parsed = parse_chat_stream_line("streaming_json", line);
-        match parsed.part {
+        match parsed.parts.into_iter().next() {
             Some(ChatMessagePart::Tool {
                 name,
                 input_summary,
@@ -1497,7 +1164,7 @@ mod tests {
     fn parse_falls_back_to_text_for_non_json() {
         let parsed = parse_chat_stream_line("streaming_json", "hello plain");
         assert_eq!(parsed.delta, "hello plain");
-        assert!(parsed.part.is_none());
+        assert!(parsed.parts.is_empty());
     }
 
     #[test]
@@ -1505,7 +1172,7 @@ mod tests {
         let line = r#"{"type":"assistant","message":{"id":"msg_1","role":"assistant","content":[{"type":"text","text":"Looking"},{"type":"tool_use","id":"toolu_1","name":"Read","input":{"path":"src/main.rs"}}]}}"#;
         let parsed = parse_chat_stream_line("claude_stream_json", line);
         assert!(parsed.delta.contains("Looking"), "delta={}", parsed.delta);
-        match parsed.part {
+        match parsed.parts.into_iter().next() {
             Some(ChatMessagePart::Tool {
                 name,
                 input_summary,
@@ -1524,7 +1191,7 @@ mod tests {
     fn parses_claude_stream_event_content_block_tool_use() {
         let line = r#"{"type":"stream_event","event":{"type":"content_block_start","index":1,"content_block":{"type":"tool_use","id":"toolu_2","name":"Bash","input":{"command":"ls -la"}}}}"#;
         let parsed = parse_chat_stream_line("claude_stream_json", line);
-        match parsed.part {
+        match parsed.parts.into_iter().next() {
             Some(ChatMessagePart::Tool {
                 name,
                 input_summary,
@@ -1543,7 +1210,7 @@ mod tests {
     fn parses_claude_tool_result_part() {
         let line = r#"{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_1","content":"fn main() {}"}]}}"#;
         let parsed = parse_chat_stream_line("claude_stream_json", line);
-        match parsed.part {
+        match parsed.parts.into_iter().next() {
             Some(ChatMessagePart::Tool {
                 name,
                 output_summary,
@@ -1578,15 +1245,20 @@ mod tests {
             title: "t".into(),
             permission_mode: "explore".into(),
             messages: vec![],
+            send_receipts: vec![],
+            turns: vec![],
             created_at_ms: 1,
             updated_at_ms: 1,
             resume_command: None,
+            resume_handle: None,
             active_turn_id: None,
             turn_status: "idle".into(),
             promoted_task_id: None,
             status: "active".into(),
             flagged: false,
-            schema_version: 1,
+            schema_version: 2,
+            last_seq: 0,
+            revision: 0,
         };
         assert!(!super::session_needs_attention(&session));
         session.flagged = true;
@@ -1623,15 +1295,20 @@ mod tests {
                 error_summary: None,
                 parts: vec![],
             }],
+            send_receipts: vec![],
+            turns: vec![],
             created_at_ms: 1,
             updated_at_ms: 1,
             resume_command: Some("resume-1".into()),
+            resume_handle: None,
             active_turn_id: Some("turn-1".into()),
             turn_status: "streaming".into(),
             promoted_task_id: None,
             status: "active".into(),
             flagged: false,
-            schema_version: 1,
+            schema_version: 2,
+            last_seq: 0,
+            revision: 0,
         };
         assert!(super::reconcile_interrupted_session(&mut session));
         assert_eq!(session.turn_status, "idle");

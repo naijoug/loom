@@ -62,7 +62,7 @@ fn health_check() -> HealthCheckResult {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(command_runner::CommandRegistry::default())
@@ -79,6 +79,9 @@ pub fn run() {
             chat::chat_list_sessions,
             chat::chat_create,
             chat::chat_get,
+            chat::chat_read_events,
+            chat::chat_read_run_logs,
+            chat::chat_export,
             chat::chat_set_agent,
             chat::chat_update_meta,
             chat::chat_clear_resume,
@@ -138,6 +141,8 @@ pub fn run() {
             task_summary::regenerate_task_summary,
             task_summary::export_task_summary
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application");
+    chat::shutdown::install_signal_handlers(app.handle());
+    app.run(chat::shutdown::handle_event);
 }

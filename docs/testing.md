@@ -25,6 +25,8 @@ scripts/debug.sh desktop
 
 ## 当前 Chat 验收路径
 
+先运行 `pnpm smoke:chat` 验证生产仓储/runtime 的真实本地 fixture 进程；该命令不请求模型。真实 Grok 三轮 headless canary 的显式 opt-in 命令与证据范围见 [Runtime 验证记录](dogfood/2026-09-20-chat-runtime.md)，不能替代下列桌面、权限与工具验收。
+
 1. 在可安全修改的临时项目检测至少一个本机 CLI，记录版本与登录/能力结果。
 2. 创建会话，观察真实流式输出及错误；连续三轮追问，并检查原生 resume 不重复注入历史。
 3. 生成中停止后再发，切换会话/项目，确认旧回合不会污染新会话。
@@ -57,6 +59,6 @@ scripts/debug.sh desktop
 
 ## 报告问题
 
-请附上：Loom 版本、操作系统、项目技术栈、会话/回合 id 或任务 id、复现步骤与期望行为。Task 附 `.loom/logs/<task-id>/` 中相关 run 的脱敏日志；Chat 附脱敏转录、错误信息与 CLI 版本，不假定已有 v2 独立日志文件。不要上传项目凭据或未脱敏的 `.env`。
+请附上：Loom 版本、操作系统、项目技术栈、会话/回合 id 或任务 id、复现步骤与期望行为。Task 附 `.loom/logs/<task-id>/` 中相关 run 的脱敏日志；Chat 可从回合“执行记录”查看 stdout/stderr，或从会话菜单导出 JSON/Markdown/manifest 和已有日志。v2 会话日志位于 `.loom/chat/v2/sessions/<id>/events.jsonl`，独立执行日志位于同目录的 `runs/<turnId>/stdout.log` 与 `stderr.log`。旧回合可能没有独立日志，缺失情况由导出 manifest 明示。转录包含对话内容，分享前必须检查并脱敏；不要上传项目凭据或未脱敏的 `.env`。
 
 完整自动回归可运行 `pnpm e2e:complete`；加上 `LOOM_E2E_RELEASE=1` 会同时构建 Tauri 发布产物。

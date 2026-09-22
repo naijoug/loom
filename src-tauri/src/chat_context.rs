@@ -25,8 +25,17 @@ pub(crate) fn update_execution_config(
         session.agent_id = agent_id;
         session.permission_mode = permission;
         session.resume_command = None;
+        session.resume_handle = None;
     }
     Ok(())
+}
+
+#[derive(Debug)]
+pub(crate) struct PreparedChatInvocation {
+    pub invocation: PreparedAgentInvocation,
+    pub stdin_text: Option<String>,
+    pub resume_binding: crate::chat::resume::ResumeBinding,
+    pub logged_invocation: crate::chat::ChatInvocationSnapshot,
 }
 
 pub(crate) fn prepare_chat_invocation(
@@ -34,35 +43,59 @@ pub(crate) fn prepare_chat_invocation(
     session: &ChatSession,
     user_text: &str,
     stage: AgentStage,
-) -> Result<PreparedAgentInvocation, String> {
+) -> Result<PreparedChatInvocation, String> {
     if user_text.chars().count() > USER_INPUT_CHARS {
         return Err(format!(
             "消息超过 {USER_INPUT_CHARS} 字符，请拆分后发送；内容未被截断。"
         ));
     }
+    let resume_binding = crate::chat::resume::binding(agent, session, stage);
+    let resume_command = crate::chat::resume::resolve(session, &resume_binding)?;
     let request = AdapterInvocationRequest {
         project_path: Path::new(&session.project_path),
         prompt: user_text,
         prompt_file: None,
         stage,
-        resume_command: session.resume_command.as_deref(),
-        embed_prompt: true,
+        resume_command: resume_command.as_deref(),
+        // These existing adapters explicitly support stdin transport. Custom
+        // positional templates and Grok retain their configured argv transport.
+        chat_permission_mode: Some(&session.permission_mode),
+        embed_prompt: !matches!(
+            agent.adapter_type.as_str(),
+            agent_adapter::ADAPTER_CODEX | agent_adapter::ADAPTER_CLAUDE
+        ),
     };
     // Preparing arguments has no side effects. Let the adapter decide whether
     // this handle is actually usable; an arbitrary stored string is not proof.
     let prepared = agent_adapter::prepare_invocation(agent, &request)?;
-    if prepared.resumed {
-        return Ok(prepared);
-    }
-    let prompt = build_prompt(session, user_text);
-    agent_adapter::prepare_invocation(
+    let (invocation, prompt) = if prepared.resumed {
+        (prepared, user_text.to_string())
+    } else {
+        let prompt = build_prompt(session, user_text);
+        let invocation = agent_adapter::prepare_invocation(
+            agent,
+            &AdapterInvocationRequest {
+                prompt: &prompt,
+                resume_command: None,
+                ..request
+            },
+        )?;
+        (invocation, prompt)
+    };
+    let logged_invocation = crate::chat::turns::snapshot(
         agent,
-        &AdapterInvocationRequest {
-            prompt: &prompt,
-            resume_command: None,
-            ..request
-        },
-    )
+        session,
+        &invocation,
+        &prompt,
+        &resume_binding.config_fingerprint,
+    );
+    let stdin_text = invocation.stdin_prompt.then_some(prompt);
+    Ok(PreparedChatInvocation {
+        invocation,
+        stdin_text,
+        resume_binding,
+        logged_invocation,
+    })
 }
 
 fn history_json(session: &ChatSession) -> (String, bool) {
@@ -181,6 +214,16 @@ mod tests {
             let mut session = session();
             session.messages.push(message("OLD_HISTORY_MARKER"));
             session.resume_command = (!resume.is_empty()).then(|| resume.into());
+            if !resume.is_empty() {
+                session.resume_handle = crate::chat::resume::capture(
+                    &crate::chat::resume::binding(
+                        &agent(adapter, command),
+                        &session,
+                        AgentStage::Planning,
+                    ),
+                    resume,
+                );
+            }
             let prepared = prepare_chat_invocation(
                 &agent(adapter, command),
                 &session,
@@ -188,22 +231,109 @@ mod tests {
                 AgentStage::Planning,
             )
             .unwrap();
-            assert!(prepared.resumed);
-            assert_eq!(prepared.args.last().unwrap(), "继续检查当前改动");
-            assert!(!prepared.args.join(" ").contains("OLD_HISTORY_MARKER"));
+            assert!(prepared.invocation.resumed);
+            let prompt = prepared
+                .stdin_text
+                .as_ref()
+                .unwrap_or_else(|| prepared.invocation.args.last().unwrap());
+            assert_eq!(prompt, "继续检查当前改动");
+            assert!(!prepared
+                .invocation
+                .args
+                .join(" ")
+                .contains("OLD_HISTORY_MARKER"));
         }
     }
 
     #[test]
-    fn invalid_or_unsupported_resume_replays_history_in_actual_adapter_request() {
+    fn structured_resume_binds_all_execution_settings_without_storing_them() {
+        let configured = agent(ADAPTER_GROK, "grok");
+        let mut session = session();
+        let binding = crate::chat::resume::binding(&configured, &session, AgentStage::Planning);
+        session.resume_handle = crate::chat::resume::capture(&binding, "grok --resume session-123");
+        session.resume_command = Some("untrusted diagnostic text --always-approve".into());
+        let ready =
+            prepare_chat_invocation(&configured, &session, "next", AgentStage::Planning).unwrap();
+        assert!(ready.invocation.resumed);
+        assert!(!ready
+            .invocation
+            .args
+            .iter()
+            .any(|a| a.contains("always-approve")));
+        assert_eq!(
+            session
+                .resume_handle
+                .as_ref()
+                .unwrap()
+                .config_fingerprint
+                .len(),
+            64
+        );
+        for changed in [
+            AgentConfig {
+                command: "/another/grok".into(),
+                ..configured.clone()
+            },
+            AgentConfig {
+                args: vec!["--model=changed".into()],
+                ..configured.clone()
+            },
+            AgentConfig {
+                can_run_commands: true,
+                ..configured.clone()
+            },
+            AgentConfig {
+                id: "different-agent".into(),
+                ..configured.clone()
+            },
+            AgentConfig {
+                adapter_type: ADAPTER_CLAUDE.into(),
+                ..configured.clone()
+            },
+        ] {
+            assert!(
+                prepare_chat_invocation(&changed, &session, "next", AgentStage::Planning)
+                    .unwrap_err()
+                    .contains("开新 CLI 会话")
+            );
+        }
+        for field in ["cwd", "permission", "version", "id"] {
+            let mut changed = session.clone();
+            match field {
+                "cwd" => changed.project_path = "/different".into(),
+                "permission" => changed.permission_mode = "auto".into(),
+                "version" => changed.resume_handle.as_mut().unwrap().version = 99,
+                _ => changed.resume_handle.as_mut().unwrap().native_session_id = "--last".into(),
+            }
+            assert!(
+                prepare_chat_invocation(&configured, &changed, "next", AgentStage::Planning)
+                    .is_err()
+            );
+        }
+        update_execution_config(&mut session, Some("another-agent"), None).unwrap();
+        assert!(session.resume_handle.is_none());
+        assert!(session.resume_command.is_none());
+    }
+
+    #[test]
+    fn legacy_resume_requires_explicit_reset_and_fallback_keeps_history() {
         for (adapter, command, resume) in [
-            (ADAPTER_CODEX, "codex", "claude --resume unrelated"),
+            (ADAPTER_CODEX, "codex", "codex resume session-123"),
             (ADAPTER_CODEX, "codex", "not a resume handle"),
-            ("cli", "custom-agent", ""),
+            ("cli", "custom-agent", "custom-agent resume ignored"),
         ] {
             let mut session = session();
             session.messages.push(message("OLD_HISTORY_MARKER"));
-            session.resume_command = (!resume.is_empty()).then(|| resume.into());
+            session.resume_command = Some(resume.into());
+            let error = prepare_chat_invocation(
+                &agent(adapter, command),
+                &session,
+                "新的限制",
+                AgentStage::Planning,
+            )
+            .unwrap_err();
+            assert!(error.contains("开新 CLI 会话"));
+            session.resume_command = None;
             let prepared = prepare_chat_invocation(
                 &agent(adapter, command),
                 &session,
@@ -211,8 +341,11 @@ mod tests {
                 AgentStage::Planning,
             )
             .unwrap();
-            assert!(!prepared.resumed);
-            let prompt = prepared.args.last().unwrap();
+            assert!(!prepared.invocation.resumed);
+            let prompt = prepared
+                .stdin_text
+                .as_ref()
+                .unwrap_or_else(|| prepared.invocation.args.last().unwrap());
             assert!(prompt.contains("OLD_HISTORY_MARKER"));
             assert!(prompt.ends_with("Latest user request:\n新的限制"));
         }
@@ -311,7 +444,7 @@ mod tests {
             AgentStage::Planning,
         )
         .unwrap_err();
-        assert!(error.contains("does not declare a safe resume protocol"));
+        assert!(error.contains("开新 CLI 会话"));
     }
 
     #[test]

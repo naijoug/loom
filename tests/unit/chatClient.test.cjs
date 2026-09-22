@@ -95,3 +95,32 @@ test("chatClient wrappers are exported", () => {
     assert.equal(typeof fn, "function");
   }
 });
+
+test("production Chat wrappers invoke the real transport with the correct envelopes and replay cursor", async () => {
+  const { chatReadEvents, chatReadRunLogs, chatExport } = require("../../.tmp/test-build/src/api/chatClient.js");
+  const previous = global.window;
+  const calls = [];
+  global.window = { __TAURI_INTERNALS__: { invoke: async (command, args) => { calls.push([command, JSON.parse(JSON.stringify(args))]); return {}; } } };
+  try {
+    await chatCreate({ projectPath: "/a", agentId: "g" });
+    await chatUpdateMeta({ projectPath: "/a", sessionId: "s", title: "new" });
+    await chatSend({ projectPath: "/a", sessionId: "s", clientRequestId: "req-1", text: "hi" });
+    await chatAbort({ projectPath: "/a", sessionId: "s", turnId: "t" });
+    await chatPromoteToTask({ projectPath: "/a", sessionId: "s" });
+    await chatGet("/a", "s");
+    await chatReadEvents("/a", "s", 17, 50);
+    await chatReadRunLogs("/a", "s", "t", "stderr", 21, 4096);
+    await chatExport({ projectPath: "/a", sessionId: "s" });
+    assert.deepEqual(calls, [
+      ["chat_create", { input: { projectPath: "/a", agentId: "g" } }],
+      ["chat_update_meta", { input: { projectPath: "/a", sessionId: "s", title: "new" } }],
+      ["chat_send", { input: { projectPath: "/a", sessionId: "s", clientRequestId: "req-1", text: "hi" } }],
+      ["chat_abort", { input: { projectPath: "/a", sessionId: "s", turnId: "t" } }],
+      ["chat_promote_to_task", { input: { projectPath: "/a", sessionId: "s" } }],
+      ["chat_get", { projectPath: "/a", sessionId: "s" }],
+      ["chat_read_events", { projectPath: "/a", sessionId: "s", afterSeq: 17, limit: 50 }],
+      ["chat_read_run_logs", { projectPath: "/a", sessionId: "s", turnId: "t", stream: "stderr", offset: 21, limit: 4096 }],
+      ["chat_export", { input: { projectPath: "/a", sessionId: "s" } }],
+    ]);
+  } finally { global.window = previous; }
+});

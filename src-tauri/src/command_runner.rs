@@ -35,7 +35,6 @@ struct ManagedCommandRun {
     child: Arc<Mutex<Child>>,
     task_id: Option<String>,
     project_path: PathBuf,
-    process_group_id: Option<i32>,
 }
 
 struct LogReaderContext {
@@ -58,8 +57,8 @@ struct CommandMonitorContext<E: CommandEventEmitter> {
     stdout_lines: Arc<Mutex<Vec<String>>>,
     stderr_lines: Arc<Mutex<Vec<String>>>,
     reader_tasks: Vec<tauri::async_runtime::JoinHandle<()>>,
-    process_group_id: Option<i32>,
     timeout_seconds: u64,
+    operation: process_supervisor::OperationGuard<'static>,
 }
 
 trait CommandEventEmitter: Clone + Send + Sync + 'static {
@@ -251,11 +250,20 @@ async fn start_command_run_inner<E: CommandEventEmitter>(
 
     process_supervisor::configure_process_group(&mut command);
 
+    let mut operation = process_supervisor::supervisor().begin_operation()?;
     let mut child = command
         .spawn()
         .map_err(|error| format!("failed to start command: {error}"))?;
     let pid = child.id();
-    let process_group_id = pid.map(|value| value as i32);
+    if let Some(process_id) = pid {
+        operation.register(ProcessMetadata::new(
+            &run_id,
+            &task_id,
+            ProcessKind::Command,
+            process_id,
+            (timeout_seconds > 0).then_some(timeout_seconds.saturating_mul(1_000)),
+        ))?;
+    }
     let stdout = child.stdout.take();
     let stderr = child.stderr.take();
     let stdout_lines = Arc::new(Mutex::new(Vec::new()));
@@ -315,22 +323,12 @@ async fn start_command_run_inner<E: CommandEventEmitter>(
     tasks::add_command_run(&project_path, &task_id, run.clone())?;
 
     let child = Arc::new(Mutex::new(child));
-    if let Some(process_id) = pid {
-        process_supervisor::supervisor().register(ProcessMetadata::new(
-            &run_id,
-            &task_id,
-            ProcessKind::Command,
-            process_id,
-            (timeout_seconds > 0).then_some(timeout_seconds.saturating_mul(1_000)),
-        ))?;
-    }
     registry.runs.lock().await.insert(
         run_id.clone(),
         ManagedCommandRun {
             child: child.clone(),
             task_id: Some(task_id),
             project_path: project_path.clone(),
-            process_group_id,
         },
     );
     spawn_command_monitor(CommandMonitorContext {
@@ -344,8 +342,8 @@ async fn start_command_run_inner<E: CommandEventEmitter>(
         stdout_lines,
         stderr_lines,
         reader_tasks,
-        process_group_id,
         timeout_seconds,
+        operation,
     });
 
     Ok(run)
@@ -365,6 +363,7 @@ async fn stop_command_run_inner(
     run_id: String,
     termination_reason: Option<String>,
 ) -> Result<CommandRunStopResult, String> {
+    let _operation = process_supervisor::supervisor().begin_control_operation(&run_id)?;
     let Some(managed) = registry.runs.lock().await.remove(&run_id) else {
         return Ok(CommandRunStopResult {
             run_id,
@@ -374,12 +373,8 @@ async fn stop_command_run_inner(
     };
 
     let stop_reason = termination_reason.as_deref().unwrap_or("cancelled");
-    let supervised = process_supervisor::supervisor().request_stop(&run_id, stop_reason)?;
-    if !supervised {
-        if let Some(process_group_id) = managed.process_group_id.filter(|id| *id > 0) {
-            let _ = process_supervisor::terminate_process_group(process_group_id as u32);
-        }
-    }
+    process_supervisor::supervisor().request_stop(&run_id, stop_reason)?;
+    process_supervisor::supervisor().force_stop(&run_id)?;
 
     let mut child = managed.child.lock().await;
     let _ = child.kill().await;
@@ -520,8 +515,8 @@ fn spawn_command_monitor<E: CommandEventEmitter>(context: CommandMonitorContext<
             stdout_lines,
             stderr_lines,
             reader_tasks,
-            process_group_id,
             timeout_seconds,
+            operation: _operation,
         } = context;
         let started = Instant::now();
         let mut timed_out = false;
@@ -531,15 +526,8 @@ fn spawn_command_monitor<E: CommandEventEmitter>(context: CommandMonitorContext<
                 && started.elapsed() >= Duration::from_secs(timeout_seconds)
             {
                 timed_out = true;
-                let supervised = process_supervisor::supervisor()
-                    .request_stop(&run_id, "timeout")
-                    .unwrap_or(false);
-                if !supervised {
-                    if let Some(process_group_id) = process_group_id.filter(|id| *id > 0) {
-                        let _ =
-                            process_supervisor::terminate_process_group(process_group_id as u32);
-                    }
-                }
+                let _ = process_supervisor::supervisor().request_stop(&run_id, "timeout");
+                let _ = process_supervisor::supervisor().force_stop(&run_id);
                 let mut child = child.lock().await;
                 let _ = child.kill().await;
             }
@@ -557,6 +545,10 @@ fn spawn_command_monitor<E: CommandEventEmitter>(context: CommandMonitorContext<
                 if runs.lock().await.remove(&run_id).is_none() {
                     break;
                 }
+                let recorded_reason = process_supervisor::supervisor()
+                    .metadata(&run_id)
+                    .and_then(|meta| meta.termination_reason);
+                let _ = process_supervisor::supervisor().force_stop(&run_id);
                 process_supervisor::supervisor().complete(&run_id);
                 for mut task in reader_tasks {
                     if timeout(Duration::from_secs(2), &mut task).await.is_err() {
@@ -564,12 +556,15 @@ fn spawn_command_monitor<E: CommandEventEmitter>(context: CommandMonitorContext<
                     }
                 }
                 let exit_code = status.code();
-                let command_status = if status.success() {
+                let command_status = if recorded_reason.as_deref() == Some("app_shutdown") {
+                    CommandRunStatus::Cancelled
+                } else if status.success() {
                     CommandRunStatus::Succeeded
                 } else {
                     CommandRunStatus::Failed
                 };
-                let termination_reason = timed_out.then(|| "timeout".to_string());
+                let termination_reason =
+                    recorded_reason.or_else(|| timed_out.then(|| "timeout".to_string()));
                 let stdout_lines = stdout_lines.lock().await.clone();
                 let stderr_lines = stderr_lines.lock().await.clone();
                 let analysis = analyze_output(exit_code, &stdout_lines, &stderr_lines);
@@ -1233,9 +1228,25 @@ mod tests {
         assert_eq!(run_status(&finished_task, &run.id), "succeeded");
 
         if let Ok(pid) = fs::read_to_string(root.join("bg.pid")) {
-            let _ = std::process::Command::new("/bin/kill")
-                .arg(pid.trim())
-                .status();
+            let deadline = Instant::now() + Duration::from_secs(2);
+            loop {
+                let alive = std::process::Command::new("/bin/kill")
+                    .args(["-0", pid.trim()])
+                    .output()
+                    .unwrap()
+                    .status
+                    .success();
+                if !alive {
+                    break;
+                }
+                if Instant::now() >= deadline {
+                    let _ = std::process::Command::new("/bin/kill")
+                        .arg(pid.trim())
+                        .output();
+                    panic!("command runner left its descendant alive");
+                }
+                sleep(Duration::from_millis(20)).await;
+            }
         }
         fs::remove_dir_all(root).expect("test project should be cleaned up");
     }
@@ -1264,6 +1275,76 @@ mod tests {
 
         assert!(!is_error_line("warning: not fatal yet"));
         assert!(!is_error_line("this line mentions error later"));
+    }
+
+    #[tokio::test]
+    async fn application_shutdown_finishes_task_command_before_exiting() {
+        const CHILD: &str = "LOOM_TASK_SHUTDOWN_TEST";
+        if std::env::var(CHILD).as_deref() != Ok("1") {
+            let output=std::process::Command::new(std::env::current_exe().unwrap())
+                .args(["--exact","command_runner::tests::application_shutdown_finishes_task_command_before_exiting","--nocapture"])
+                .env(CHILD,"1").output().unwrap();
+            assert!(
+                output.status.success(),
+                "{}\n{}",
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr)
+            );
+            return;
+        }
+        let root = std::env::temp_dir().join(IdGenerator::default().next("loom-task-shutdown"));
+        fs::create_dir_all(&root).unwrap();
+        let app = CapturingCommandEmitter::default();
+        let registry = CommandRegistry::default();
+        let ids = IdGenerator::default();
+        let task = command_smoke_task(&root);
+        tasks::save_task(&task).unwrap();
+        let run = start_command_run_inner(
+            app,
+            &registry,
+            &ids,
+            shell_spec(
+                &root,
+                &task.id,
+                "trap '' TERM; printf 'SHUTDOWN READY\\n'; while :; do sleep 0.05; done",
+            ),
+            0,
+        )
+        .await
+        .unwrap();
+        let result = crate::chat::shutdown::drain(crate::chat::shutdown::Budget {
+            force_after: Duration::from_millis(80),
+            deadline: Duration::from_secs(3),
+        })
+        .await;
+        if result.is_err() {
+            let _ = process_supervisor::supervisor().force_stop(&run.id);
+        }
+        result.unwrap();
+        let saved = tasks::load_task(&root, &task.id).unwrap();
+        let saved = saved
+            .command_runs
+            .iter()
+            .find(|item| item.id == run.id)
+            .unwrap();
+        assert_eq!(saved.status, CommandRunStatus::Cancelled);
+        assert_eq!(saved.termination_reason.as_deref(), Some("app_shutdown"));
+        assert!(saved.ended_at_ms.is_some());
+        assert!(process_supervisor::supervisor()
+            .shutdown_snapshot()
+            .unwrap()
+            .1
+            .is_empty());
+        assert!(start_command_run_inner(
+            CapturingCommandEmitter::default(),
+            &registry,
+            &ids,
+            shell_spec(&root, &task.id, "printf forbidden"),
+            0
+        )
+        .await
+        .is_err());
+        fs::remove_dir_all(root).unwrap();
     }
 
     #[test]

@@ -1,0 +1,73 @@
+
+> loom@0.1.0 tauri /Users/guojian/Workspace/naijoug/loom
+> tauri build --bundles app
+
+        Info Looking up installed tauri packages to check mismatched versions...
+     Running beforeBuildCommand `pnpm build`
+
+> loom@0.1.0 build /Users/guojian/Workspace/naijoug/loom
+> tsc && vite build
+
+vite v7.3.3 building client environment for production...
+transforming...
+✓ 1872 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                               0.48 kB │ gzip:   0.29 kB
+dist/plan-viewer.html                                         1.18 kB │ gzip:   0.55 kB
+dist/assets/inter-vietnamese-400-normal-DMkecbls.woff2        4.97 kB
+dist/assets/inter-greek-ext-400-normal-DGGRlc-M.woff2         5.26 kB
+dist/assets/geist-mono-cyrillic-400-normal-Ce5q_31Z.woff2     5.46 kB
+dist/assets/geist-mono-latin-ext-400-normal-Cgks_Qgx.woff2    6.42 kB
+dist/assets/inter-vietnamese-400-normal-Bbgyi5SW.woff         6.50 kB
+dist/assets/inter-greek-ext-400-normal-KugGGMne.woff          7.06 kB
+dist/assets/geist-mono-cyrillic-400-normal-BPBWmzPh.woff      7.16 kB
+dist/assets/inter-cyrillic-400-normal-obahsSVq.woff2          7.71 kB
+dist/assets/inter-greek-400-normal-B4URO6DV.woff2             7.78 kB
+dist/assets/geist-mono-latin-ext-400-normal-CxNRRMGd.woff     8.74 kB
+dist/assets/inter-cyrillic-400-normal-HOLc17fK.woff           9.78 kB
+dist/assets/inter-greek-400-normal-q2sYcFCs.woff              9.92 kB
+dist/assets/inter-cyrillic-ext-400-normal-BQZuk6qB.woff2     10.23 kB
+dist/assets/inter-cyrillic-ext-400-normal-DQukG94-.woff      13.34 kB
+dist/assets/geist-mono-latin-400-normal-LC9RFr9I.woff2       14.71 kB
+dist/assets/geist-mono-latin-400-normal-CoULgQGM.woff        19.17 kB
+dist/assets/inter-latin-400-normal-C38fXH4l.woff2            23.66 kB
+dist/assets/inter-latin-400-normal-CyCys3Eg.woff             30.70 kB
+dist/assets/geist-sans-latin-400-normal-gapTbOY8.woff2       33.40 kB
+dist/assets/inter-latin-ext-400-normal-C1nco2VV.woff2        35.00 kB
+dist/assets/geist-sans-latin-400-normal-BOaIZNA2.woff        38.91 kB
+dist/assets/inter-latin-ext-400-normal-77YHD8bZ.woff         47.56 kB
+dist/assets/NewTaskModal-CtblCIfC.css                         8.01 kB │ gzip:   1.84 kB
+dist/assets/main-BG7GFwHs.css                                 8.27 kB │ gzip:   2.32 kB
+dist/assets/index-LshtKATT.css                               12.95 kB │ gzip:   2.65 kB
+dist/assets/App-DnZA827Y.css                                 16.14 kB │ gzip:   3.48 kB
+dist/assets/index-JG4OJeOe.css                               22.23 kB │ gzip:   4.28 kB
+dist/assets/index-BQLRY-iK.css                               89.90 kB │ gzip:  13.52 kB
+dist/assets/play-DjI8TVTw.js                                  0.19 kB │ gzip:   0.18 kB
+dist/assets/modulepreload-polyfill-B5Qt9EMX.js                0.71 kB │ gzip:   0.40 kB
+dist/assets/iframeNavigation-CVFIKjEi.js                      0.79 kB │ gzip:   0.43 kB
+dist/assets/selectors-76zr890N.js                             0.90 kB │ gzip:   0.46 kB
+dist/assets/useProjectPreferencesBridge-D-1GKKyx.js           0.94 kB │ gzip:   0.52 kB
+dist/assets/plan-viewer-CwwG_Li8.js                           0.94 kB │ gzip:   0.60 kB
+dist/assets/WorkflowShell-DXYN0PvF.js                         1.19 kB │ gzip:   0.68 kB
+dist/assets/useAgentCatalog-DYmpEUkT.js                       1.86 kB │ gzip:   0.61 kB
+dist/assets/App-Ds2o0bPC.js                                   2.94 kB │ gzip:   1.29 kB
+dist/assets/terminalSlots-e7dx9mYl.js                         3.08 kB │ gzip:   1.43 kB
+dist/assets/tauriClient-GnwYOE7P.js                           4.13 kB │ gzip:   1.65 kB
+dist/assets/NewTaskModal-s2FbgcwK.js                          4.18 kB │ gzip:   1.82 kB
+dist/assets/Header-4rBsIWT_.js                                4.39 kB │ gzip:   1.89 kB
+dist/assets/index-O3t_xyo9.js                                 6.36 kB │ gzip:   2.51 kB
+dist/assets/PlanningPreviewApp-jdj-Hp0z.js                   18.96 kB │ gzip:   5.54 kB
+dist/assets/index-_Vw-dgOm.js                                26.32 kB │ gzip:   8.08 kB
+dist/assets/App-DNKRW6Zu.js                                  39.47 kB │ gzip:  11.04 kB
+dist/assets/index-Cglj7iLf.js                                44.64 kB │ gzip:  14.18 kB
+dist/assets/main-DqK0yaFw.js                                144.44 kB │ gzip:  46.93 kB
+dist/assets/index-mpaSAgSj.js                               400.45 kB │ gzip: 106.28 kB
+✓ built in 1.11s
+   Compiling loom v0.1.0 (/Users/guojian/Workspace/naijoug/loom/src-tauri)
+    Finished `release` profile [optimized] target(s) in 18.78s
+       Built application at: /Users/guojian/Workspace/naijoug/loom/src-tauri/target/release/loom
+    Bundling Loom.app (/Users/guojian/Workspace/naijoug/loom/src-tauri/target/release/bundle/macos/Loom.app)
+    Finished 1 bundle at:
+        /Users/guojian/Workspace/naijoug/loom/src-tauri/target/release/bundle/macos/Loom.app
+

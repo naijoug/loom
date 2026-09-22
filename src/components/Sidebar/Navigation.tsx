@@ -65,12 +65,13 @@ function contextMenuPosition(event: MouseEvent) {
   };
 }
 
-export function Navigation() {
+export function Navigation({ showTasks = true }: { showTasks?: boolean }) {
   const { state, dispatch } = useAppState();
   const { loadRecentProjects, removeRecentProject } = useProjectBridge();
   const { deleteTask } = useTaskBridge();
   const [addProjectOpen, setAddProjectOpen] = useState(false);
   const [autoOpenedAddProject, setAutoOpenedAddProject] = useState(false);
+  const [projectsHydrated, setProjectsHydrated] = useState(false);
   const [taskMenu, setTaskMenu] = useState<TaskMenuState | null>(null);
   const [projectMenu, setProjectMenu] = useState<ProjectMenuState | null>(null);
   const [confirmTaskId, setConfirmTaskId] = useState<string | null>(null);
@@ -103,17 +104,24 @@ export function Navigation() {
   }
 
   useEffect(() => {
-    void loadRecentProjects();
+    let disposed = false;
+    void loadRecentProjects().finally(() => {
+      if (!disposed) setProjectsHydrated(true);
+    });
+    return () => { disposed = true; };
   }, [loadRecentProjects]);
 
   useEffect(() => {
     if (autoOpenedAddProject) return;
+    if (!projectsHydrated || state.app.projectError) return;
     if (state.app.isLoadingProjects) return;
     if (state.projects.recent.length > 0 || state.projects.current) return;
     setAddProjectOpen(true);
     setAutoOpenedAddProject(true);
   }, [
     autoOpenedAddProject,
+    projectsHydrated,
+    state.app.projectError,
     state.app.isLoadingProjects,
     state.projects.recent.length,
     state.projects.current,
@@ -204,10 +212,10 @@ export function Navigation() {
   return (
     <div className="sidebar-nav-container">
       <nav className="sidebar-nav-section">
-        <div className="sidebar-search">
+        {showTasks && <div className="sidebar-search">
           <Search size={14} />
           <span>搜索任务…</span>
-        </div>
+        </div>}
         <button
           type="button"
           className="project-add-button"
@@ -226,12 +234,12 @@ export function Navigation() {
             // Source tasks are ordered by createdAtMs; the sidebar shows the
             // most recently touched task first. Copy before sorting so we never
             // mutate state.
-            const projectTasks = (cachedProjectTasks ?? (active ? state.tasks : []))
+            const projectTasks = (showTasks ? cachedProjectTasks ?? (active ? state.tasks : []) : [])
               .slice()
               .sort((left, right) => right.updatedAtMs - left.updatedAtMs);
             const hasTasks = projectTasks.length > 0;
             const hasLoadedTasks = cachedProjectTasks !== undefined || active;
-            const expanded = hasTasks && !collapsedIds.has(project.id);
+            const expanded = (hasTasks || active) && !collapsedIds.has(project.id);
 
             return (
               <li className="project-nav-item" key={`${project.id}:${project.path}`}>
@@ -264,14 +272,14 @@ export function Navigation() {
                     <ChevronRight
                       size={14}
                       className={`nav-disclosure${expanded ? " expanded" : ""}${
-                        active && !hasTasks ? " hidden" : ""
+                        !active && !hasTasks ? " hidden" : ""
                       }`}
                     />
                     <Folder size={16} className={`nav-icon${active ? " active-icon" : ""}`} />
                     <span>{project.name}</span>
-                    <span className="project-task-count">{hasLoadedTasks ? projectTasks.length : ""}</span>
+                    {showTasks && <span className="project-task-count">{hasLoadedTasks ? projectTasks.length : ""}</span>}
                   </button>
-                  <button
+                  {showTasks && <button
                     type="button"
                     className="project-inline-add"
                     aria-label={`在 ${project.name} 中新建任务`}
@@ -286,7 +294,7 @@ export function Navigation() {
                     }}
                   >
                     <Plus size={13} />
-                  </button>
+                  </button>}
                 </div>
                 {expanded && (
                   <div className="task-nav-collapse">

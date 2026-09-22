@@ -271,7 +271,7 @@ mod tests {
                 "run-running",
                 &task.id,
                 ProcessKind::Command,
-                u32::MAX - 1,
+                (i32::MAX as u32) - 1,
                 None,
             ))
             .unwrap();
@@ -280,7 +280,7 @@ mod tests {
                 "review-active",
                 &task.id,
                 ProcessKind::ImplementationReview,
-                u32::MAX,
+                i32::MAX as u32,
                 None,
             ))
             .unwrap();

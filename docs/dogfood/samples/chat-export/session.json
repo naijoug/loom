@@ -1,0 +1,78 @@
+{
+  "id": "chat-contract",
+  "projectPath": "/private/var/folders/wh/8gkvgk297s392p974p39b0s40000gp/T/loom-export-sample-1789889057115-1",
+  "agentId": "agent-contract",
+  "title": "中文导出 / 安全围栏",
+  "permissionMode": "explore",
+  "messages": [
+    {
+      "id": "user-contract",
+      "role": "user",
+      "content": "原始文本\n```\n<script>not executable</script>\n````\n中文与尾部空白  ",
+      "status": "complete",
+      "createdAtMs": 1
+    },
+    {
+      "id": "assistant-contract",
+      "role": "assistant",
+      "content": "world",
+      "status": "complete",
+      "createdAtMs": 1
+    }
+  ],
+  "sendReceipts": [
+    {
+      "clientRequestId": "request-contract",
+      "turnId": "turn-contract",
+      "userMessageId": "user-contract",
+      "assistantMessageId": "assistant-contract",
+      "requestedPermissionMode": "explore"
+    }
+  ],
+  "turns": [
+    {
+      "id": "turn-contract",
+      "clientRequestId": "request-contract",
+      "userMessageId": "user-contract",
+      "assistantMessageId": "assistant-contract",
+      "invocation": {
+        "agentId": "agent-contract",
+        "adapterType": "grok_cli",
+        "program": "grok",
+        "args": [
+          "-p",
+          "[PROMPT]"
+        ],
+        "cwd": "/project",
+        "permissionMode": "explore",
+        "stdinPrompt": false,
+        "outputMode": "streaming_json",
+        "configFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "status": "completed",
+      "acceptedAtMs": 1,
+      "startedAtMs": 2,
+      "finishedAtMs": 3,
+      "processId": 123,
+      "exitCode": 0,
+      "terminationReason": null,
+      "errorSummary": null,
+      "stdoutLogRef": "runs/turn-contract/stdout.log",
+      "stderrLogRef": "runs/turn-contract/stderr.log"
+    }
+  ],
+  "createdAtMs": 1,
+  "updatedAtMs": 1,
+  "resumeHandle": {
+    "version": 1,
+    "adapterType": "grok_cli",
+    "nativeSessionId": "native-contract",
+    "configFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "turnStatus": "idle",
+  "status": "archived",
+  "flagged": false,
+  "schemaVersion": 2,
+  "lastSeq": 1,
+  "revision": 1
+}

@@ -9,14 +9,15 @@ use std::{
 pub const CURRENT_SCHEMA_VERSION: u32 = 1;
 
 pub struct IdGenerator {
-    next_id: AtomicU64,
+    next_id: &'static AtomicU64,
 }
 
 impl Default for IdGenerator {
     fn default() -> Self {
-        Self {
-            next_id: AtomicU64::new(1),
-        }
+        // ProcessSupervisor is process-wide. Separate app/test registries must
+        // not generate the same run id when constructed in the same millisecond.
+        static NEXT_ID: AtomicU64 = AtomicU64::new(1);
+        Self { next_id: &NEXT_ID }
     }
 }
 
@@ -24,6 +25,23 @@ impl IdGenerator {
     pub fn next(&self, prefix: &str) -> String {
         let sequence = self.next_id.fetch_add(1, Ordering::Relaxed);
         format!("{prefix}-{}-{sequence}", now_ms())
+    }
+}
+
+#[cfg(test)]
+mod id_tests {
+    use super::*;
+
+    #[test]
+    fn independent_generators_never_reuse_a_process_registry_id() {
+        let mut seen = std::collections::HashSet::new();
+        for _ in 0..1024 {
+            let id = IdGenerator::default().next("run");
+            assert!(
+                seen.insert(id.clone()),
+                "duplicate process registry id: {id}"
+            );
+        }
     }
 }
 

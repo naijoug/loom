@@ -22,15 +22,33 @@ pub enum ProcessKind {
     Command,
     ImplementationReview,
     Pty,
-    /// Chat-first turns (not Task stage). task_id uses `chat:{sessionId}`.
+    /// Chat turns have their own project/session/turn owner, not a Task id.
     Chat,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(
+    tag = "type",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+pub enum ProcessOwner {
+    Unscoped,
+    Task {
+        task_id: String,
+    },
+    Chat {
+        project_key: String,
+        session_id: String,
+        turn_id: String,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProcessMetadata {
     pub run_id: String,
-    pub task_id: String,
+    pub owner: ProcessOwner,
     pub kind: ProcessKind,
     pub process_id: u32,
     pub started_at_ms: u128,
@@ -39,6 +57,22 @@ pub struct ProcessMetadata {
 }
 
 impl ProcessMetadata {
+    pub fn unscoped(
+        run_id: impl Into<String>,
+        kind: ProcessKind,
+        process_id: u32,
+        timeout_ms: Option<u64>,
+    ) -> Self {
+        Self {
+            run_id: run_id.into(),
+            owner: ProcessOwner::Unscoped,
+            kind,
+            process_id,
+            started_at_ms: now_ms(),
+            timeout_ms,
+            termination_reason: None,
+        }
+    }
     pub fn new(
         run_id: impl Into<String>,
         task_id: impl Into<String>,
@@ -48,11 +82,36 @@ impl ProcessMetadata {
     ) -> Self {
         Self {
             run_id: run_id.into(),
-            task_id: task_id.into(),
+            owner: ProcessOwner::Task {
+                task_id: task_id.into(),
+            },
             kind,
             process_id,
             started_at_ms: now_ms(),
             timeout_ms,
+            termination_reason: None,
+        }
+    }
+
+    pub fn chat(
+        run_id: impl Into<String>,
+        project_key: impl Into<String>,
+        session_id: impl Into<String>,
+        process_id: u32,
+        timeout_ms: u64,
+    ) -> Self {
+        let run_id = run_id.into();
+        Self {
+            owner: ProcessOwner::Chat {
+                project_key: project_key.into(),
+                session_id: session_id.into(),
+                turn_id: run_id.clone(),
+            },
+            run_id,
+            kind: ProcessKind::Chat,
+            process_id,
+            started_at_ms: now_ms(),
+            timeout_ms: Some(timeout_ms),
             termination_reason: None,
         }
     }
@@ -61,14 +120,133 @@ impl ProcessMetadata {
 #[derive(Default)]
 pub struct ProcessSupervisor {
     processes: Mutex<HashMap<String, ProcessMetadata>>,
+    lifecycle: Mutex<Lifecycle>,
+}
+
+#[derive(Default)]
+struct Lifecycle {
+    closing: bool,
+    operations: usize,
+}
+
+/// Admitted work remains visible across the spawn/register/final-save gaps.
+pub struct OperationGuard<'a> {
+    supervisor: &'a ProcessSupervisor,
+    run_id: Option<String>,
+}
+impl OperationGuard<'_> {
+    pub fn register(&mut self, metadata: ProcessMetadata) -> Result<(), String> {
+        if self.run_id.is_some() {
+            return Err("execution operation already owns a process".into());
+        }
+        let id = metadata.run_id.clone();
+        self.supervisor.register_inner(metadata, true)?;
+        self.run_id = Some(id);
+        Ok(())
+    }
+}
+impl Drop for OperationGuard<'_> {
+    fn drop(&mut self) {
+        if let Some(id) = &self.run_id {
+            // A completed registration is already absent: never signal its old PID.
+            if self.supervisor.force_stop(id).is_ok() {
+                self.supervisor.complete(id);
+            }
+        }
+        if let Ok(mut state) = self.supervisor.lifecycle.lock() {
+            state.operations = state.operations.saturating_sub(1);
+        }
+    }
 }
 
 impl ProcessSupervisor {
-    pub fn register(&self, metadata: ProcessMetadata) -> Result<(), String> {
-        self.processes
+    pub fn begin_operation(&self) -> Result<OperationGuard<'_>, String> {
+        let mut state = self
+            .lifecycle
             .lock()
-            .map_err(|_| "process supervisor registry is unavailable".to_string())?
-            .insert(metadata.run_id.clone(), metadata);
+            .map_err(|_| "process lifecycle unavailable")?;
+        if state.closing {
+            return Err("Loom 正在退出，无法开始新的执行操作。".into());
+        }
+        state.operations += 1;
+        Ok(OperationGuard {
+            supervisor: self,
+            run_id: None,
+        })
+    }
+    pub fn begin_shutdown(&self) -> Result<(), String> {
+        self.lifecycle
+            .lock()
+            .map_err(|_| "process lifecycle unavailable")?
+            .closing = true;
+        Ok(())
+    }
+
+    pub fn begin_control_operation(
+        &self,
+        run_id: &str,
+    ) -> Result<Option<OperationGuard<'_>>, String> {
+        let mut state = self
+            .lifecycle
+            .lock()
+            .map_err(|_| "process lifecycle unavailable")?;
+        let processes = self
+            .processes
+            .lock()
+            .map_err(|_| "process registry unavailable")?;
+        if !processes.contains_key(run_id) {
+            return Ok(None);
+        }
+        state.operations += 1;
+        Ok(Some(OperationGuard {
+            supervisor: self,
+            run_id: None,
+        }))
+    }
+    pub fn is_shutting_down(&self) -> bool {
+        self.lifecycle.lock().map_or(true, |state| state.closing)
+    }
+    pub fn shutdown_snapshot(&self) -> Result<(usize, Vec<ProcessMetadata>), String> {
+        let state = self
+            .lifecycle
+            .lock()
+            .map_err(|_| "process lifecycle unavailable")?;
+        let processes = self
+            .processes
+            .lock()
+            .map_err(|_| "process registry unavailable")?;
+        Ok((state.operations, processes.values().cloned().collect()))
+    }
+    pub fn register(&self, metadata: ProcessMetadata) -> Result<(), String> {
+        self.register_inner(metadata, false)
+    }
+    fn register_inner(&self, mut metadata: ProcessMetadata, admitted: bool) -> Result<(), String> {
+        if metadata.process_id <= 1 || metadata.process_id > i32::MAX as u32 {
+            return Err("invalid owned process group id".into());
+        }
+        let lifecycle = self
+            .lifecycle
+            .lock()
+            .map_err(|_| "process lifecycle unavailable")?;
+        if lifecycle.closing && !admitted {
+            return Err("Loom is shutting down".into());
+        }
+        if lifecycle.closing {
+            metadata
+                .termination_reason
+                .get_or_insert_with(|| "app_shutdown".into());
+        }
+        let mut processes = self
+            .processes
+            .lock()
+            .map_err(|_| "process supervisor registry is unavailable".to_string())?;
+        if processes.contains_key(&metadata.run_id) {
+            return Err(format!(
+                "process run id '{}' is already registered",
+                metadata.run_id
+            ));
+        }
+        processes.insert(metadata.run_id.clone(), metadata);
         Ok(())
     }
 
@@ -76,8 +254,7 @@ impl ProcessSupervisor {
         self.processes.lock().ok()?.remove(run_id)
     }
 
-    #[cfg(test)]
-    fn metadata(&self, run_id: &str) -> Option<ProcessMetadata> {
+    pub fn metadata(&self, run_id: &str) -> Option<ProcessMetadata> {
         self.processes.lock().ok()?.get(run_id).cloned()
     }
 
@@ -87,7 +264,7 @@ impl ProcessSupervisor {
             .map(|processes| {
                 processes
                     .values()
-                    .filter(|process| process.task_id == task_id && kinds.contains(&process.kind))
+                    .filter(|process| matches!(&process.owner, ProcessOwner::Task { task_id: owner } if owner == task_id) && kinds.contains(&process.kind))
                     .cloned()
                     .collect()
             })
@@ -95,18 +272,29 @@ impl ProcessSupervisor {
     }
 
     pub fn request_stop(&self, run_id: &str, reason: &str) -> Result<bool, String> {
-        let process_id = {
-            let mut processes = self
-                .processes
-                .lock()
-                .map_err(|_| "process supervisor registry is unavailable".to_string())?;
-            let Some(process) = processes.get_mut(run_id) else {
-                return Ok(false);
-            };
-            process.termination_reason = Some(reason.to_string());
-            process.process_id
+        let mut processes = self
+            .processes
+            .lock()
+            .map_err(|_| "process supervisor registry is unavailable".to_string())?;
+        let Some(process) = processes.get_mut(run_id) else {
+            return Ok(false);
         };
-        terminate_process_group(process_id)?;
+        process
+            .termination_reason
+            .get_or_insert_with(|| reason.to_string());
+        terminate_process_group(process.process_id)?;
+        Ok(true)
+    }
+
+    pub fn force_stop(&self, run_id: &str) -> Result<bool, String> {
+        let processes = self
+            .processes
+            .lock()
+            .map_err(|_| "process registry unavailable")?;
+        let Some(process) = processes.get(run_id) else {
+            return Ok(false);
+        };
+        force_terminate_process_group(process.process_id)?;
         Ok(true)
     }
 
@@ -143,9 +331,21 @@ pub fn configure_process_group(command: &mut TokioCommand) {
 }
 
 pub fn terminate_process_group(process_id: u32) -> Result<(), String> {
+    signal_process_group(process_id, false)
+}
+
+pub fn force_terminate_process_group(process_id: u32) -> Result<(), String> {
+    signal_process_group(process_id, true)
+}
+
+fn signal_process_group(process_id: u32, force: bool) -> Result<(), String> {
+    if process_id <= 1 || process_id > i32::MAX as u32 {
+        return Err("invalid process group id".into());
+    }
     #[cfg(unix)]
     unsafe {
-        if kill(-(process_id as i32), SIGTERM) != 0 {
+        let signal = if force { 9 } else { SIGTERM };
+        if kill(-(process_id as i32), signal) != 0 {
             let error = std::io::Error::last_os_error();
             if error.raw_os_error() != Some(3) {
                 return Err(format!(
@@ -157,6 +357,7 @@ pub fn terminate_process_group(process_id: u32) -> Result<(), String> {
 
     #[cfg(windows)]
     {
+        let _ = force;
         let status = std::process::Command::new("taskkill")
             .args(["/PID", &process_id.to_string(), "/T", "/F"])
             .status()
@@ -174,6 +375,118 @@ mod tests {
     use super::*;
 
     #[test]
+    fn chat_ownership_is_not_a_synthetic_task_and_duplicate_ids_do_not_overwrite() {
+        let registry = ProcessSupervisor::default();
+        let original = ProcessMetadata::chat("chat-run", "/project-a", "session-a", 42, 1000);
+        registry.register(original.clone()).unwrap();
+        assert!(registry
+            .task_runs("chat:session-a", &[ProcessKind::Chat])
+            .is_empty());
+        assert!(
+            matches!(registry.metadata("chat-run").unwrap().owner, ProcessOwner::Chat { project_key, session_id, turn_id } if project_key == "/project-a" && session_id == "session-a" && turn_id == "chat-run")
+        );
+        assert!(registry
+            .register(ProcessMetadata::new(
+                "chat-run",
+                "some-task",
+                ProcessKind::Command,
+                99,
+                None
+            ))
+            .is_err());
+        assert_eq!(registry.complete("chat-run"), Some(original));
+    }
+
+    #[test]
+    fn invalid_process_groups_are_rejected_before_signalling() {
+        for pid in [0, 1, u32::MAX] {
+            assert!(terminate_process_group(pid).is_err());
+            assert!(force_terminate_process_group(pid).is_err());
+        }
+    }
+
+    #[test]
+    fn closing_admission_tracks_non_process_work_and_rejects_new_operations() {
+        let registry = ProcessSupervisor::default();
+        let operation = registry.begin_operation().unwrap();
+        registry.begin_shutdown().unwrap();
+        assert!(registry.begin_operation().is_err());
+        assert!(registry
+            .register(ProcessMetadata::unscoped(
+                "unadmitted",
+                ProcessKind::Command,
+                42,
+                None
+            ))
+            .is_err());
+        assert_eq!(registry.shutdown_snapshot().unwrap().0, 1);
+        drop(operation);
+        assert_eq!(registry.shutdown_snapshot().unwrap().0, 0);
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn admitted_late_registration_and_guard_drop_cleanup_are_owned_and_bounded() {
+        let registry = ProcessSupervisor::default();
+        let mut operation = registry.begin_operation().unwrap();
+        registry.begin_shutdown().unwrap();
+        let mut command = TokioCommand::new("sh");
+        command.args(["-c", "sleep 30"]).kill_on_drop(true);
+        configure_process_group(&mut command);
+        let mut child = command.spawn().unwrap();
+        operation
+            .register(ProcessMetadata::unscoped(
+                "late",
+                ProcessKind::Command,
+                child.id().unwrap(),
+                None,
+            ))
+            .unwrap();
+        assert_eq!(
+            registry
+                .metadata("late")
+                .unwrap()
+                .termination_reason
+                .as_deref(),
+            Some("app_shutdown")
+        );
+        drop(operation);
+        let status = tokio::time::timeout(std::time::Duration::from_secs(2), child.wait())
+            .await
+            .unwrap()
+            .unwrap();
+        assert!(!status.success());
+        assert_eq!(registry.shutdown_snapshot().unwrap(), (0, Vec::new()));
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn completed_registration_is_not_signalled_again_when_guard_drops() {
+        let registry = ProcessSupervisor::default();
+        let mut operation = registry.begin_operation().unwrap();
+        let mut command = TokioCommand::new("sh");
+        command.args(["-c", "sleep 30"]).kill_on_drop(true);
+        configure_process_group(&mut command);
+        let mut child = command.spawn().unwrap();
+        operation
+            .register(ProcessMetadata::unscoped(
+                "released",
+                ProcessKind::Command,
+                child.id().unwrap(),
+                None,
+            ))
+            .unwrap();
+        registry.complete("released");
+        drop(operation);
+        assert!(
+            child.try_wait().unwrap().is_none(),
+            "an unregistered PID was signalled"
+        );
+        force_terminate_process_group(child.id().unwrap()).unwrap();
+        let _ = child.wait().await;
+    }
+
+    #[test]
     fn registry_tracks_task_kind_and_timeout_metadata() {
         let registry = ProcessSupervisor::default();
         registry
@@ -181,7 +494,7 @@ mod tests {
                 "run-contract",
                 "task-contract",
                 ProcessKind::Command,
-                u32::MAX,
+                i32::MAX as u32,
                 Some(5_000),
             ))
             .expect("register process");
@@ -208,7 +521,7 @@ mod tests {
                     run_id,
                     "task-contract",
                     kind,
-                    u32::MAX,
+                    i32::MAX as u32,
                     None,
                 ))
                 .expect("register process");

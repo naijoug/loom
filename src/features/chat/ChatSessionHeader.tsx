@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { ChatPermissionMode, ChatSession } from "../../domain";
+import { chatResumeLabel } from "../../domain/chat";
 import { permissionModeLabel } from "./chatPermission";
 
 export interface ChatSessionHeaderProps {
@@ -16,6 +17,8 @@ export interface ChatSessionHeaderProps {
   onTitleFromFirstMessage: () => void;
   onToggleFlag: () => void;
   onArchive: () => void;
+  onExport?: () => void;
+  exporting?: boolean;
 }
 
 export function ChatSessionHeader({
@@ -32,16 +35,20 @@ export function ChatSessionHeader({
   onTitleFromFirstMessage,
   onToggleFlag,
   onArchive,
+  onExport,
+  exporting = false,
 }: ChatSessionHeaderProps) {
   const mode = session.permissionMode as ChatPermissionMode;
   const [menuOpen, setMenuOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [draftTitle, setDraftTitle] = useState(session.title);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const renameCommitted = useRef(false);
+  const originalTitle = useRef(session.title);
 
   useEffect(() => {
-    setDraftTitle(session.title);
-  }, [session.title, session.id]);
+    if (!renaming) setDraftTitle(session.title);
+  }, [session.title, session.id, renaming]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -54,9 +61,18 @@ export function ChatSessionHeader({
     return () => document.removeEventListener("mousedown", onPointerDown);
   }, [menuOpen]);
 
-  function commitRename() {
-    const trimmed = draftTitle.trim();
-    if (trimmed && trimmed !== session.title) {
+  function beginRename() {
+    renameCommitted.current = false;
+    originalTitle.current = session.title;
+    setDraftTitle(session.title);
+    setRenaming(true);
+  }
+
+  function commitRename(value: string) {
+    if (renameCommitted.current) return;
+    renameCommitted.current = true;
+    const trimmed = value.trim();
+    if (trimmed && trimmed !== originalTitle.current) {
       onRename(trimmed);
     } else {
       setDraftTitle(session.title);
@@ -77,12 +93,14 @@ export function ChatSessionHeader({
             aria-label="会话标题"
             autoFocus
             onChange={(event) => setDraftTitle(event.target.value)}
-            onBlur={() => commitRename()}
+            onBlur={(event) => commitRename(event.currentTarget.value)}
             onKeyDown={(event) => {
+              if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
               if (event.key === "Enter") {
                 event.preventDefault();
-                commitRename();
+                commitRename(event.currentTarget.value);
               } else if (event.key === "Escape") {
+                renameCommitted.current = true;
                 setDraftTitle(session.title);
                 setRenaming(false);
               }
@@ -107,8 +125,8 @@ export function ChatSessionHeader({
             {elapsedHint ?? "生成中…"}
           </span>
         ) : null}
-        <span className="chat-hint" title={session.resumeCommand ?? undefined}>
-          {session.resumeCommand ? "可续聊" : "新 CLI 会话"}
+        <span className="chat-hint" title={session.resumeHandle?.nativeSessionId ?? (session.resumeCommand ? "请在会话菜单开新 CLI 会话，历史消息会保留" : undefined)}>
+          {chatResumeLabel(session)}
         </span>
         {onToggleContext ? (
           <button
@@ -138,7 +156,7 @@ export function ChatSessionHeader({
                 role="menuitem"
                 onClick={() => {
                   setMenuOpen(false);
-                  setRenaming(true);
+                  beginRename();
                 }}
               >
                 重命名
@@ -165,7 +183,10 @@ export function ChatSessionHeader({
                 {flagged ? "取消需关注" : "标记需关注"}
               </button>
               <hr />
-              {useBackend && session.resumeCommand ? (
+              {useBackend && onExport && <button type="button" role="menuitem" disabled={exporting} onClick={() => {setMenuOpen(false); onExport();}}>
+                {exporting ? "导出中…" : "导出会话（JSON + Markdown）"}
+              </button>}
+              {useBackend && (session.resumeHandle || session.resumeCommand) ? (
                 <button
                   type="button"
                   role="menuitem"

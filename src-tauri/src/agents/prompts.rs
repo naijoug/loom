@@ -200,6 +200,7 @@ pub(super) fn build_cli_profile(
             prompt_file: Some(prompt_path),
             stage,
             resume_command: None,
+            chat_permission_mode: None,
             embed_prompt: false,
         },
     )?;

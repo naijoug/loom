@@ -13,6 +13,7 @@ import { ChatAgentStatusPopover } from "./ChatAgentStatusPopover";
 export interface ChatComposerProps {
   draft: string;
   sending: boolean;
+  canSend?: boolean;
   /** Optional elapsed label while a turn is running. */
   elapsedHint?: string | null;
   error: string | null;
@@ -34,6 +35,7 @@ export interface ChatComposerProps {
 export function ChatComposer({
   draft,
   sending,
+  canSend = true,
   elapsedHint = null,
   error,
   useBackend,
@@ -64,7 +66,7 @@ export function ChatComposer({
   }, [needsAskConfirm, sending, permissionMode]);
 
   function requestSend() {
-    if (!draft.trim() || sending) return;
+    if (!draft.trim() || sending || !canSend) return;
     if (needsAskConfirm && !askConfirmOpen) {
       setAskConfirmOpen(true);
       return;
@@ -154,7 +156,7 @@ export function ChatComposer({
         <div
           className="chat-permission-tiers"
           role="radiogroup"
-          aria-label="权限档位（Shift+Tab 循环）"
+          aria-label="权限档位"
         >
           {CHAT_PERMISSION_CYCLE.map((mode) => (
             <button
@@ -176,11 +178,11 @@ export function ChatComposer({
       <textarea
         value={draft}
         onChange={(event) => onDraftChange(event.target.value)}
-        placeholder="输入消息…（Enter 发送，Shift+Enter 换行；Shift+Tab 切换权限）"
+        placeholder="输入消息…（Enter 发送，Shift+Enter 换行）"
         aria-label="消息输入"
         disabled={sending}
         onKeyDown={(event) => {
-          if (event.key === "Enter" && !event.shiftKey) {
+          if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing && event.nativeEvent.keyCode !== 229) {
             event.preventDefault();
             requestSend();
           }
@@ -205,7 +207,7 @@ export function ChatComposer({
               停止
             </Button>
           ) : null}
-          <Button type="button" onClick={requestSend} disabled={!draft.trim() || sending || agents.length === 0}>
+          <Button type="button" onClick={requestSend} disabled={!draft.trim() || sending || !canSend || agents.length === 0}>
             {needsAskConfirm ? "发送…" : "发送"}
           </Button>
         </div>

@@ -12,6 +12,7 @@
     "rootDir": "."
   },
   "include": [
+    "src/App.tsx",
     "src/api/**/*.ts",
     "src/domain/**/*.ts",
     "src/components/Planning/participantSelection.ts",
@@ -39,7 +40,17 @@
     "src/features/chat/mockStore.ts",
     "src/features/chat/ChatContextPanel.tsx",
     "src/features/chat/ChatInbox.tsx",
-    "src/features/chat/state/chatStore.ts"
+    "src/features/chat/state/chatStore.ts",
+    "src/features/chat/state/ChatProjection.ts",
+    "src/features/chat/state/ChatSendController.ts",
+    "src/features/chat/useChatBridge.ts",
+    "src/features/chat/ChatComposer.tsx",
+    "src/components/Sidebar/Navigation.tsx",
+    "src/components/Sidebar/AddProjectModal.tsx",
+    "src/features/chat/ChatSessionHeader.tsx",
+    "src/features/chat/ChatRunDetails.tsx",
+    "src/features/chat/useChatExport.ts",
+    "src/features/chat/ChatExportNotice.tsx"
   ],
   "references": []
 }

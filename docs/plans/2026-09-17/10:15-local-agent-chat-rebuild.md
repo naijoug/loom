@@ -2,8 +2,8 @@
 
 - 日期：2026-09-17 10:15（Asia/Shanghai）
 - 2026-09-20 约束修订：产品范围以 `docs/requirements.md` 为准；当前 Ask 保留回合授权，后续逐工具审批独立验收。现状见 `docs/architecture/chat-contracts.md`；本计划中的原始代码审查记录保留历史基线。
-- 状态：implementing；M0.0 IPC 信封已合入分支；M0 文档/探针/契约已补；Inbox 搜索/恢复与 chatStore 隔离已落地；M1 Rust 拆分改后续 PR（保持 chat.rs 可编译）。
-- 代码基线：Loom `b8e35c7` 加当前工作区；相对上次增量核对没有更新的提交，`src-tauri/src/chat.rs` 未提交变化仅为格式调整，本轮未修改业务代码。
+- 状态：implementing；v2 journal/迁移/补流、发送幂等、完整回合记录、独立日志和导出已接入。正常退出处理已有代码和本地进程回归；真实权限/工具/停止、原生桌面运行中退出与最终发布门禁仍待完成，构建名称保持 Loom。
+- 当前切片基线：Loom `0fe5f79` 加工作区；当前修复入口为 [2026-09-22 进展 Review 修复](../2026-09-22/14:29-chat-progress-review-fixes.md)，现状以该计划与 Chat 契约为准。第 12 节与第 13–20 节按时间保留历史证据，旧“下一步”清单不表示当前仍未实现。
 - Review 结论：原稿 `needs-rework`；已修正前置门禁、测试覆盖、任务顺序与交付范围，详见第 12 节。文档修订不表示代码缺陷已修复。
 - 参考基线：Craft Agents OSS `e8963854c3679edcceb105a42537a06749e6cb64`。
 - 替代关系：本计划接替 [09:03 Craft Phase 1 计划](./09:03-craft-inspired-local-agent-chat.md) 的未完成工作；保留其 M0/M1 历史和已有实现，不继续叠加旧 M2–M5。更早的 [chat-first 计划](../2026-09-14/20:06-chat-first-refactor.md) 作为背景。
@@ -140,7 +140,7 @@ chat/commands → chat/service → chat/runtime → agent_adapter
 
 - 新布局：`.loom/chat/v2/sessions/<id>/snapshot.json`、同目录 `events.jsonl`（会话级唯一权威事件日志）；`runs/<turnId>/` 存脱敏 stdout/stderr 和执行元数据。index 为可重建缓存，不再额外维护另一份权威回合事件日志。
 - 复用 `storage::atomic_write_json/atomic_write_text` 的同目录临时文件 + rename，并补所需错误清理。用户输入、turn 开始/结束必须完成文件写入/flush；流式批处理目标 250ms，写入后才发布 UI 事件。该目标是正常 I/O 下的处理延迟，不是断电损失上限；本阶段保证范围是进程崩溃恢复，不能把 rename/flush 当作 sync_all。硬断电持久性需要另行定义文件/父目录同步和验证。
-- 提交顺序：追加权威事件并 flush → 更新 snapshot.lastSeq/revision → 发布事件；快照落后从 journal 重放，不能先推进 lastSeq。存储失败停止后续调用、回收进程并显示非持久化 storage_error，不能假报“已保存”；重启从最后已提交记录恢复。
+- 提交顺序：追加权威事件并 flush → 更新内存投影及派生快照 → 发布事件；不能在日志提交前推进 lastSeq。2026-09-20 实施澄清：快照属于缓存，写入失败可从已提交 journal 重建，不撤销日志；权威日志失败才停止回合并显示非持久化 storage_error，不能假报已提交。未来版本/身份冲突不作为普通缓存损坏覆盖。
 - 仅修复末尾不完整记录；中间损坏隔离提示，不能任意跳过坏行。事件补流按会话 seq 分页、去重，重启从最大已提交序号继续。
 - 首次迁移只读解析旧 `.loom/chat/index.json` 和 `sessions/*.json`，生成 v2 副本；不要直接用可能原地升级源文件的 `migrations::read_versioned_json`。用迁移清单/完成标记区分“迁移一半”与完成，重跑续做缺失项，不能因 v2 目录存在就跳过。保留原文件，不移动/改写 Tasks、Review、反馈和验证证据。
 - 旧 resumeCommand 仅解析允许的 adapter 格式为句柄；无法验证的保留诊断文本但不执行。未知未来 schema 只读提示，不降级覆盖。
@@ -351,3 +351,106 @@ chat/commands → chat/service → chat/runtime → agent_adapter
 3. M2 通过真实聊天闭环后完善 M3，完成 M5 即交付单 Agent MVP；按需要继续 M4。
 
 没有新增必须由用户拍板的问题。首个 Agent、可验证权限与平台范围仍按第 10 节默认方案，通过探针决定；不将“可执行文件存在”当作已登录或已验收。
+
+## 13. 实施记录 — 2026-09-20 仓储与活动回合
+
+本轮先处理真实 Chat 的数据一致性缺口，为 v2 拆分提供可用底座；保留 v1 数据格式，未用 v1 加固替代本计划的 v2 交付目标。
+
+- 将 `chat.rs` 迁移至 `chat/mod.rs`，提取 `models.rs`、`repository.rs`、`service.rs`；更新 Tauri emitter 契约扫描，IPC command 名称和信封保持兼容。
+- 生产路径统一经过仓储：原子 JSON 写入、项目内 mutation 串行化、OS writer 锁。index 作为缓存，完整会话文件可以在 index 损坏后重新发现。
+- 启动进程前预留回合，避免 get/list 将活动回合误恢复；同会话拒绝重复发送，取消核对项目/session/turn，启动前取消写入回合归属并由进程启动边界检查。
+- 所有会话改动在共享写边界内完成，活动回合不能归档/换配置/清 resume；完成时读取最新元数据，落盘后才构建终态事件。旧回合不能清除新回合的活动记录。
+- 校验已登记/canonical 项目、单段 ID、磁盘 schema/id/cwd，拒绝静态 symlink 目录/文件；不覆盖未来版本或伪造项目的会话。尚未声称抗并发恶意路径替换。
+- 修正工具 parts 的 camelCase wire 字段，并兼容读取旧 snake_case；原始内容无破坏性迁移。
+- 使用 Rust 标准库文件锁，声明最低 Rust 1.89；本机 1.95.0 验证，不新增依赖。
+- 完整回归中补修独立 IdGenerator 同毫秒复用 run ID：计数器改为进程内共享，保持 ID 格式不变，避免共享进程登记互相覆盖；修复前有实际失败的生产函数回归。
+
+验证：`pnpm check` 最终通过（前端 143、Rust 单元 237/忽略 2、workflow 集成 2），最终代码 `pnpm tauri build --no-bundle` 通过。原始失败、修复过程和证据范围见 [2026-09-20 工程验证记录](../../dogfood/2026-09-20-chat-repository.md)。本轮没有真实模型/桌面交互验收。
+
+仍须继续：v2 journal 与迁移、独立 ProcessOwner、排流/强制停止/超时回收、真实 CLI 权限及续聊、桌面验收、同一候选产物的签名/公证/安装发布门禁。历史发布资料仍为 Hold，不能据旧 DMG 或旧 smoke 宣称本次可发布。
+
+## 14. 实施记录 — 2026-09-20 Runtime 与 Grok 真调用
+
+- 提取 `chat/runtime.rs` 并接入生产命令，stdout/stderr 并发排流、可选 stdin 并发写入并关闭；Codex/Claude 接入现有 adapter 的 stdin 能力，Grok/自定义模板保留 argv。
+- `ProcessMetadata.owner` 区分 Task 与 Chat，保留 Task 构造/query 兼容；不再使用伪 taskId。监督器拒绝重复 run id，不覆盖现有进程归属。
+- 停止和超时采用 TERM → KILL → 有界回收；处理父进程退出而子进程持管道、已关闭管道但仍存活的子进程、异步 future 被取消。删除旧独立 timeout watchdog，终止计时和 I/O 在同一循环内。
+- 加入字节/行长/行数/工具片段限额，处理 UTF-8 分片、输出消费错误和非零退出；非零退出保留 partial 但标 error。未知结构化事件不作为原始 JSON 正文；补 Codex agent_message 文本识别。
+- `tests/fixtures/chat/fake-agent.sh` 经生产 runtime 执行；11 项进程测试覆盖真实失败路径，其中父进程退出后子进程持管道场景连续 20 次验证。新增 `pnpm smoke:chat` 无账号回归入口。
+- 增加显式 opt-in 的 `real_agent_tests.rs`；`LOOM_REAL_CHAT=1` 且 `--ignored` 才请求真实模型。Grok 1.0.30 三轮各有流式文本、原生 resume、磁盘仓储重开，随机标记准确且不重复；当前仍是 headless 验收，不是 Tauri 交互证明。
+- 真实 canary 发现 Grok 旧输出格式 flag 不匹配；改为 `streaming-messages-json` 并更新 adapter 测试与探针文档。诊断保留 stderr 有界尾部，避免启动警告淹没真正错误。
+- 连续回归发现重复 KILL 的时序问题：已强制终止后的收口路径不再重复发 KILL；问题在普通本机权限下也出现，因此不归因于沙箱或跳过测试。
+
+本轮验证与失败过程见 [Runtime 工程与真实 canary 记录](../../dogfood/2026-09-20-chat-runtime.md)。接下来仍须完成 v2 journal/迁移/事件补流、CLI 权限与工具/停止实测、Tauri 桌面验收及同候选发布门禁。以上不替代原始完整目标。
+
+最终门禁：`pnpm check` 通过（前端 143；Rust 单元 250/忽略 3；集成 2）；`pnpm smoke:chat` 52/忽略 1 通过；`pnpm tauri build --no-bundle` 通过。真实 Grok 三轮 opt-in 测试另行运行通过，不计入默认忽略项的通过数量。
+
+## 15. 实施记录 — 2026-09-20 v2 日志与生产桌面接线
+
+- v1 文件只读复制到 v2；完整换行提交的 events.jsonl 为权威来源，snapshot 为派生缓存。字段/消息 patch 与 stream delta 避免逐 token 重写整个转录。
+- 补流 API、统一持久化事件与非持久化错误通知已经同轮接通 Rust/TS/fixture/真实 ChatPage；前端按 project/session/seq 缓冲、去重、补缺，拒绝陈旧响应。
+- 迁移中断重入、尾部修复、完整坏行/未来版本拒绝、坏会话可见隔离、writer 进程直接退出后 partial 恢复均有生产路径验证。
+- 元数据/状态采用 session_patch 编码，stream 包含 text/tool 增量；创建记录建立基线。完整 ChatTurn 生命周期语义仍待补，不能以当前 idle/streaming 兼容状态替代原目标。
+- 追加并 flush 日志是确认持久化的边界；缓存 checkpoint 失败时可以从日志重建，不撤销已经提交的事件。权威日志失败仍停止回合并报告，不伪装成功；没有硬断电保证。
+- 真实 QA App 通过 A/B 后台完成隔离、正常退出重启、B 连续三轮真实 Grok 记忆标记、重命名、归档/恢复、搜索；原生句柄在三次完成记录中一致。
+- 由真实 UI 验收补修启动误弹框、虚构/错目录检测结果、IME 标题提交和反向 Tab 改权限；迟到确认按原项目/会话清理已提交草稿。
+
+最终检查：前端 160、Rust 单元 258（忽略 3）、workflow 集成 2 通过；QA App 包构建与原生 UI 操作通过。详细证据、配置差异和范围见 [v2 验收记录](../../dogfood/2026-09-20-chat-v2.md)。
+
+下一实施优先级仍为：M1.3 clientRequestId/完整回合记录/导出，M2.1 结构化续聊与实际权限，独立执行日志与运行中退出恢复，再完成 M3 默认 Shell 分离和 M5 同候选发布门禁。当前 UI 验收不替代这些未完成项，也不把 QA 包认定为正式 release。
+
+## 16. M1.3 发送幂等实施切片（2026-09-20）
+
+本切片目标：发送回执丢失、完成后重试和重启后重试均不能再次启动同一请求。当前只有活动回合互斥，没有持久化请求标识。
+
+- `chat_send` 强制携带 `clientRequestId`；前端一次提交分配一个标识，失败重试复用，收到明确回执后新提交使用新标识。
+- 仓储在同一写锁内先查持久化回执，再校验活动/归档与准备执行；相同请求返回原 turn 和最新 session，不再次准备或 spawn。复用标识但改变正文或请求权限时报冲突。
+- 回执与用户/助手消息在同一 journal 记录落盘，包含请求标识、回合及消息关联；旧会话缺少回执时默认为空。重启只恢复中断状态，不重新执行已接收请求。
+- 同步 Rust/TS、IPC 样本和生产 wrapper；验证并发双发送、完成/归档/重开仓储后的重试、冲突、落盘失败、前端回执丢失以及项目/会话隔离。
+- 此切片不宣称完整 ChatTurn、运行日志、续聊权限和发布门禁已完成。测试/开发产物名称统一保持 `Loom`。
+
+实施结果：本切片已完成。`pnpm check` 前端 163、Rust 267（3 ignored）、集成 2 通过；默认 Loom.app 构建通过。增强真实 Grok canary 三轮及活动/完成重开后的去重通过，9 次接收调用仅产生 3 个回合；桌面保留用户当前操作，自动重复请求 UI 验收未计通过。详见 [发送幂等证据](../../dogfood/2026-09-20-chat-idempotency.md)。M1.3 的完整回合/日志/导出仍未完成。
+
+## 17. M2.1 续聊绑定与参数边界（2026-09-20）
+
+现状：Codex resume 分支未重设 sandbox/cwd 且绕过 stdin；Claude 会复制历史续聊字符串中的额外参数；空格路径解析失败；Chat 只保存原始 resumeCommand，无法辨认设置内的执行配置变化。
+
+实施步骤与验收：
+
+1. 依据本机 help 和官方 Codex CLI 文档统一首轮/续聊参数；Codex 在 exec 层明确 sandbox/cwd，stdin 保持一致。Claude 首轮/续聊显式重设 plan/acceptEdits。历史字符串仅允许确切程序路径、adapter 对应 resume 操作和单个有界 ID，绝不复制历史额外参数；拒绝缺失、选项式或跨程序 ID。
+2. Chat 保存版本化 `resumeHandle`（adapter、sessionId、执行配置 SHA-256），绑定 Loom 的 Agent/命令/参数/目录/权限配置。使用已在锁文件中的 sha2 0.10 作为直接依赖，避免将可能含凭据的配置原文写入指纹。句柄不匹配或旧记录无指纹时明确要求“开新 CLI 会话”，保留转录，再由用户操作后重放有预算的历史；不静默执行旧命令或重试。
+3. 完成时用该次 prepared 配置创建句柄，不能读可能已变化的 Agent 配置；换权限/Agent/清 resume 同时清除句柄。UI 区分可续聊与需重建的旧记录。
+4. 生产 adapter/context/仓储测试覆盖新建与 resume 权限一致、额外参数拒绝、路径含空格、前导连字符正文、配置变化和旧记录；实际 CLI 在合成目录验证三轮/重开续聊，文件权限探针单独记录，不以参数断言替代安全保证。
+
+全量工具权限矩阵、独立日志及应用退出仍按主计划继续，本切片不宣称完成全部 M2。
+
+实施记录：结构化句柄/指纹、独立 Chat 权限、参数边界已接生产；真实探针发现同帧多工具结果丢失并已修复。最终 `pnpm check` 前端 164/Rust 271（4 ignored）/集成 2、默认 `--no-bundle` 构建通过；Grok 三轮结构化续聊通过。文件探针整体仍 failed/not completed，修复后重跑因读取并可能外发私人 skill 内容被自动审批拒绝，已请求明确授权，未绕过。详见 [续聊与权限证据](../../dogfood/2026-09-20-chat-resume.md)。当前继续推进未受影响的回合/日志/导出等工作，不能据此标记 M2 或发布完成。
+
+## 18. M1.3/M2.3 回合记录与日志（2026-09-20）
+
+本轮不请求外部模型，真实 Grok 权限重跑继续等待明确授权。
+
+1. 在 ChatSession 投影增加 ChatTurn：请求/消息关联、不可修改的脱敏 invocation 配置、starting/running/cancelling 与 completed/failed/cancelled/timed_out/interrupted 状态、接收/启动/结束时间、退出码/原因、stdout/stderr 日志引用。旧会话缺省为空，不伪造旧回合运行证据。
+2. CLI spawn 前回合和配置随请求原子提交；runtime 观察启动和分离后的输出，逐行脱敏后写独立有界日志。失败必须可见；启动失败、取消、超时、非零退出及重启中断各自保存正确终态。终态和 invocation 不允许随后被改写。
+3. 新增 `chat_read_run_logs` 有界字节游标分页；项目登记、会话/回合归属、ID/路径/symlink 与 UTF-8 校验沿用仓储边界。不接受调用者提供任意日志路径。
+4. 转录每个已记录回合显示状态和日志入口；stdout/stderr 切换、分页/刷新、错误提示与项目/会话切换隔离。真实 CLI 失败不能变成“无日志”成功态。
+5. 用生产 runtime 的本地子进程 fixture 验证分流、脱敏、退出码、停止/超时/启动失败与磁盘恢复；生产 IPC/组件验证分页和迟到响应。通过后更新证据和索引。日志/回合不替代仍待完成的导出、退出清理与发布门禁。
+
+实施结果：回合状态/不可修改配置、独立脱敏日志与日志面板已接生产。最终 `pnpm check` 前端 166/Rust 277（4 ignored）/集成 2 及默认 `--no-bundle` 构建通过；本地子进程覆盖退出7、超时/取消/启动失败/恢复/日志写入失败，浏览器生产组件完成分页/切流与窄内容区检查。详见 [回合与日志证据](../../dogfood/2026-09-20-chat-turn-logs.md)。真实外部验收仍待先前请求的授权，本轮未调用模型；M1.3 导出及 M2 应用退出/真实矩阵、M3/M5 尚未完成。
+
+## 19. M1.3 导出与回滚（2026-09-20）
+
+1. 新增 `chat_export`，由 Rust 在项目 `.loom/chat/exports/<exportId>/` 生成独立目录，含完整 JSON 快照、可读 Markdown、manifest 及运行日志副本。不接收任意目标路径，不覆盖已有文件；先写 staging，全部成功后 rename 发布。
+2. 会话快照固定在已提交 seq；日志按捕获的完整换行前缀复制并记录字节界限。运行中导出标记 inProgress：快照与各日志边界分别标明，不伪装为最终结果；不持锁等待整个日志复制过程。缺失/损坏日志在 manifest 明示，不能默认为完整成功，转录仍可备份。
+3. Markdown 中用户/Agent/工具内容按字面代码块保留，动态围栏防止内容闭合；不把原文 HTML 当可执行内容。JSON 保留回合、回执、句柄和游标；正文可能包含用户输入的敏感信息，导出仅写本机，不自动外发。
+4. 会话菜单提供“导出会话（JSON + Markdown）”，显示目录和运行中/缺失证据说明，支持系统文件夹定位；失败/跨会话迟到结果不污染当前页。切换会话不会撤销已开始的本地导出。不宣称旧版本能导入 v2 JSON。
+5. 验证旧 v1 文件不变、已归档与活动回合快照、日志复制/缺失、Unicode/围栏、路径/symlink、重复导出不覆盖及 UI/IPC。补可操作的回滚指南：停止回合、导出并备份整个目录及 v2 存储，再使用旧版；新旧分支历史不自动合并。
+
+实施结果：JSON/Markdown/manifest/日志副本的目录导出、UI 入口及离线回滚样本已完成。`pnpm check` 前端 169/Rust 281（5 ignored）/集成 2、默认 `--no-bundle` 构建通过；离线样本生成器显式运行通过，已校验并保留输出。另补 staging 清理断言后导出回归 4 passed。见 [导出验收](../../dogfood/2026-09-20-chat-export.md) 与 [回滚指南](../../guides/chat-export-rollback.md)。浏览器组件检查不替代最终原生桌面导出/实际降级再升级门禁；继续应用退出、M3/M5 和待授权真实矩阵。
+
+## 20. M2.4 正常退出与活动操作收口（2026-09-20）
+
+1. 在 Tauri 2.11.1 的 ExitRequested 与主窗口关闭入口建立一次性退出流程：暂缓退出，停止接收新的执行操作，等待已有操作完成停止/持久化，再允许真正退出。退出失败保留应用并显示原因，可再次请求退出；不悄悄强退。
+2. ProcessSupervisor 增加跨启动/注册/收口的 operation guard，覆盖 Chat、Task CLI/command/review/PTY，以及 Chat 导出。退出期间已获准但尚未注册 PID 的操作仍计入等待；新操作拒绝。guard 在异常返回/取消时清理自己仍注册的进程组，不按历史 PID 操作。
+3. Chat 起始 lease 即可记录 app_shutdown 取消原因；runtime 沿既有 TERM→KILL/排流路径收口。退出驱动保留相关仓储与会话引用，确认回合不再活动且磁盘投影可读；终态保存失败时保留已提交 partial 并尝试明确恢复为 interrupted，无法保存则拒绝退出。
+4. 统一停止当前应用注册的进程，宽限期后按最新注册状态升级 KILL，有界等待进程/操作和 Chat 持久化。主窗口保留到收口结束，关闭独立计划查看窗口不触发全应用退出。无阻塞任务时快速退出。
+5. 使用隔离测试子进程验证全局关闭门闩，包含无 PID 起步、真实拒绝 TERM 的子进程、多会话/项目、退出期间新请求、导出/操作持有、保存失败重试、正常终态与 Task 兼容。不得停止用户当前 Loom 实例或调用待授权外部模型。SIGKILL/系统崩溃无法运行退出回调，异常孤儿与最终原生 UI 退出仍需单独验收，不以本轮测试冒充完成。

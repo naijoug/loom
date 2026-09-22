@@ -71,7 +71,7 @@ Chat 使用内部 `AdapterInvocationRequest`，不需要领域 taskId；由 `cha
 
 ## 上下文与能力边界
 
-共享指引保持模型中立，不给所有 CLI 强制指定同一模型或 API 参数。记录实际 CLI 版本，未知模型/能力记 unknown；参数存在不等于真实协议验收。当前 Codex resume 分支不重传 sandbox，Claude 探索分支不传 permission-mode；这些行为不能作为权限一致性的验收证明。能力与结构化 resume 指纹的完善见 Chat 重构目标。
+共享指引保持模型中立，不给所有 CLI 强制指定同一模型或 API 参数。记录实际 CLI 版本，未知模型/能力记 unknown；参数存在不等于真实协议验收。Chat 请求独立携带 `chat_permission_mode`，不再用 Task capability 作为聊天前提。Codex 新建/resume 均重传 sandbox/cwd，approval policy 为 never；Claude Chat explore 显式传 plan，Task 的规划输出协议保持原样。续聊字符串只接受程序字面路径、已知操作与单个 ID，拒绝额外选项；Chat 另用版本化 resumeHandle 绑定执行配置。边界详见 [Chat 契约](architecture/chat-contracts.md)。
 
 ## 诊断与失败语义
 

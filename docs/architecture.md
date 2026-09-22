@@ -9,7 +9,7 @@ Loom 是本地优先的 Tauri 桌面开发工作台。React 负责流程展示�
 | 层 | 主要模块 | 职责 |
 |---|---|---|
 | UI | `src/components`, `src/state`, `src/hooks` | 四阶段导航、表单、实时日志、Review、人工反馈、总结与设置 |
-| Chat | `src/features/chat/`, `src-tauri/src/chat.rs`, `docs/architecture/chat-contracts.md` | Craft 启发本机 Agent Chat（Inbox / Transcript / Composer / 权限三档 / 可选上下文空态）；经 `agent_adapter` + `ProcessSupervisor(Chat)`；**不等于** Task |
+| Chat | `src/features/chat/`, `src-tauri/src/chat/{mod,models,repository,journal,service,runtime}.rs`, `docs/architecture/chat-contracts.md` | 本机 Chat；v2 日志/只读迁移/序号补流、回合归属与 writer 锁；runtime 并发排流/限额/进程组回收；service 落盘后生成终态通知，独立于 Task |
 | Orchestrator | `task_state.rs`, `task_repository.rs`, `tasks/{lifecycle,testing}.rs`, `run_recovery.rs` | 权威状态转换、事务化任务 mutation、生命周期门禁、重启对账、任务事件 |
 | Agent Adapter | `agent_adapter.rs`, `agent_diagnostics.rs`, `agents/{config,orchestrator,prompts,stream,artifacts}.rs` | Codex、Claude、自定义 CLI 参数映射、能力/权限检查、输出解析、规划编排和 session |
 | Review Engine | `implementation_review.rs` | 独立 Reviewer 上下文、结构化 finding、决策、blocker gate 与重审 |
@@ -66,8 +66,10 @@ Task、Agent 配置、App Settings、终端槽位和项目 Agent 偏好均使用
 
 ## 当前 Chat 与后续重构
 
-当前 Chat 已有收件箱、会话元数据、文本与 best-effort 工具片段、流式发送/停止，以及 Task 草稿升格。权限值 `explore/ask/auto` 中 Ask 是 Composer 回合授权，无逐工具审批传输。Chat 直接运行 adapter 进程，经 `ProcessSupervisor` 记录兼容键 `task_id=chat:{sessionId}`，不创建领域 Task。
+当前 Chat 已有收件箱、会话元数据、文本与 best-effort 工具片段、流式发送/停止、回合执行日志、导出，以及 Task 草稿升格。权限值 `explore/ask/auto` 中 Ask 是 Composer 回合授权，无逐工具审批传输。Chat 直接运行 adapter 进程，经 `ProcessSupervisor` 的 `ProcessOwner::Chat { projectKey, sessionId, turnId }` 精确归属，不创建领域 Task。
 
-`chat_context.rs` 依据 adapter 的 `resumed` 决定仅发新输入或有界历史重放；换 Agent/权限后清理旧句柄，运行中拒绝配置变更。Chat 当前 v1 存储仍有整文件保存等限制，不能将 Task 的事务化/恢复保证套用到 Chat。
+`chat_context.rs` 依据 adapter 的 `resumed` 决定仅发新输入或有界历史重放；结构化 resume 绑定执行配置指纹，换 Agent/权限后清理旧句柄，运行中拒绝配置变更。当前存储为 v2 权威追加日志和可重建快照，v1 只读迁移；活动回合补流使用可失效的内存字节索引，重启仍完整校验。正常退出等待活动操作停止与持久化，真实权限和原生运行中退出矩阵仍需独立验收。
+
+`ChatShell` 只挂载 Chat 与项目导航；`WorkflowShell` 按高级路由加载任务并订阅 Planning。Agent 配置/诊断由无订阅的 `useAgentCatalog` 提供，避免 Chat/Settings 隐式参与旧工作流。
 
 独立 ProcessOwner、v2 journal、增量持久化、统一 seq 事件、能力驱动权限仍是重构目标。当前契约、具体预算和已知边界见 [chat-contracts.md](architecture/chat-contracts.md)，真实验收按 [testing.md](testing.md) 记录。Sources/MCP、逐工具审批、后台任务产品化和 Inbox 五态继续推迟。

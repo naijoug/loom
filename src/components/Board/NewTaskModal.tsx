@@ -7,7 +7,7 @@ import {
   type ProjectSummary,
   type Task,
 } from "../../domain";
-import { useAgentBridge } from "../../hooks/useAgentBridge";
+import { useAgentCatalog } from "../../hooks/useAgentCatalog";
 import { useProjectPreferencesBridge } from "../../hooks/useProjectPreferencesBridge";
 import { useTaskBridge } from "../../hooks/useTaskBridge";
 import { useAppState } from "../../state/AppStateContext";
@@ -41,7 +41,7 @@ function suggestedPrimaryAgent(agents: AgentConfig[]) {
 
 export function NewTaskModal({ project, onClose, onCreated }: NewTaskModalProps) {
   const { state, dispatch } = useAppState();
-  const { loadAgents } = useAgentBridge();
+  const { loadAgents } = useAgentCatalog();
   const { loadProjectAgentPreferences } = useProjectPreferencesBridge();
   const { createTask } = useTaskBridge();
   const suggested = useMemo(() => suggestedPrimaryAgent(state.agents), [state.agents]);

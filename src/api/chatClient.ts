@@ -1,5 +1,6 @@
 import type {
   ChatPermissionMode,
+  ChatEventPage,
   ChatSession,
   ChatSessionSummary,
   Task,
@@ -37,6 +38,7 @@ export type ChatUpdateMetaArgs = {
 export type ChatSendArgs = {
   projectPath: string;
   sessionId: string;
+  clientRequestId: string;
   text: string;
   permissionMode?: ChatPermissionMode;
 };
@@ -44,7 +46,7 @@ export type ChatSendArgs = {
 export type ChatAbortArgs = {
   projectPath: string;
   sessionId: string;
-  turnId?: string | null;
+  turnId: string;
 };
 
 export type ChatPromoteArgs = {
@@ -93,6 +95,18 @@ export function chatGet(projectPath: string, sessionId: string): Promise<ChatSes
   });
 }
 
+export function chatReadEvents(projectPath: string, sessionId: string, afterSeq: number, limit = 200): Promise<ChatEventPage> {
+  return invokeCommand<ChatEventPage>(TAURI_COMMANDS.chatReadEvents, { projectPath, sessionId, afterSeq, limit });
+}
+
+export function chatReadRunLogs(projectPath: string, sessionId: string, turnId: string, stream: "stdout" | "stderr", offset = 0, limit = 32_768): Promise<import("../domain/chat").ChatLogPage> {
+  return invokeCommand(TAURI_COMMANDS.chatReadRunLogs, { projectPath, sessionId, turnId, stream, offset, limit });
+}
+
+export function chatExport(args: import("../domain/chat").ChatExportInput): Promise<import("../domain/chat").ChatExportResult> {
+  return invokeCommand(TAURI_COMMANDS.chatExport, chatInputEnvelope({ projectPath: args.projectPath, sessionId: args.sessionId }));
+}
+
 export function chatSetAgent(
   projectPath: string,
   sessionId: string,
@@ -133,6 +147,7 @@ export function chatSend(args: ChatSendArgs): Promise<ChatSendResult> {
     chatInputEnvelope({
       projectPath: args.projectPath,
       sessionId: args.sessionId,
+      clientRequestId: args.clientRequestId,
       text: args.text,
       permissionMode: args.permissionMode,
     }),

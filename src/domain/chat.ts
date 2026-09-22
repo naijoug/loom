@@ -53,10 +53,14 @@ export interface ChatSession {
   title: string;
   permissionMode: ChatPermissionMode;
   messages: ChatMessage[];
+  /** Durable acceptance receipts; absent in sessions predating request IDs. */
+  sendReceipts?: ChatSendReceipt[];
+  turns?: ChatTurn[];
   createdAtMs: number;
   updatedAtMs: number;
   /** Safe resume handle from adapter when available */
   resumeCommand?: string;
+  resumeHandle?: ChatResumeHandle;
   activeTurnId?: string;
   turnStatus: ChatTurnStatus;
   /** Set only after promote-to-task stub */
@@ -65,7 +69,83 @@ export interface ChatSession {
   status?: ChatSessionStatus;
   /** User flag — contributes to needs_attention. */
   flagged?: boolean;
-  schemaVersion: 1;
+  schemaVersion: 1 | 2;
+  /** v2 durable event cursor; absent only in legacy/mock data. */
+  lastSeq?: number;
+  revision?: number;
+}
+
+export interface ChatResumeHandle {
+  version: 1;
+  adapterType: string;
+  nativeSessionId: string;
+  configFingerprint: string;
+}
+
+export type ChatRunStatus = "starting" | "running" | "cancelling" | "completed" | "failed" | "cancelled" | "timed_out" | "interrupted";
+export interface ChatInvocationSnapshot {
+  agentId: string; adapterType: string; program: string; args: string[]; cwd: string;
+  permissionMode: ChatPermissionMode; stdinPrompt: boolean; outputMode: string; configFingerprint: string;
+}
+export interface ChatTurn {
+  id: string; clientRequestId: string; userMessageId: string; assistantMessageId: string;
+  invocation: ChatInvocationSnapshot; status: ChatRunStatus; acceptedAtMs: number;
+  startedAtMs: number | null; finishedAtMs: number | null; processId: number | null;
+  exitCode: number | null; terminationReason: string | null; errorSummary: string | null;
+  stdoutLogRef: string; stderrLogRef: string;
+}
+export interface ChatLogPage { text: string; nextOffset: number; hasMore: boolean }
+
+export interface ChatExportInput { projectPath: string; sessionId: string }
+export interface ChatExportResult {
+  directory: string; jsonPath: string; markdownPath: string; snapshotSeq: number;
+  inProgress: boolean; warnings: string[];
+}
+
+export function chatResumeLabel(session: Pick<ChatSession, "resumeHandle" | "resumeCommand">): string {
+  return session.resumeHandle ? "可续聊" : session.resumeCommand ? "续聊需重建" : "新 CLI 会话";
+}
+
+export interface ChatStreamPayload {
+  sessionId: string;
+  turnId: string;
+  messageId: string;
+  delta: string;
+  done: boolean;
+  part?: ChatMessagePart;
+}
+
+export interface ChatSessionPatch {
+  fields: Record<string, unknown>;
+  changedMessages: ChatMessage[];
+  appendedMessages: ChatMessage[];
+}
+
+export type ChatEvent = {
+  schemaVersion: 2;
+  projectKey: string;
+  sessionId: string;
+  seq: number;
+  timestampMs: number;
+} & (
+  | { kind: "session_created"; payload: ChatSession }
+  | { kind: "session_patch"; payload: ChatSessionPatch }
+  | { kind: "stream"; payload: ChatStreamPayload }
+);
+
+export interface ChatEventPage {
+  events: ChatEvent[];
+  hasMore: boolean;
+  lastSeq: number;
+}
+
+export interface ChatRuntimeError {
+  projectKey: string;
+  sessionId: string;
+  turnId: string;
+  messageId: string;
+  status: "error";
+  errorSummary: string;
 }
 
 export interface ChatSessionSummary {
@@ -78,6 +158,7 @@ export interface ChatSessionSummary {
   /** True when flagged or last turn/message is error (active sessions). */
   needsAttention?: boolean;
   flagged?: boolean;
+  storageError?: string;
 }
 
 export interface ChatCreateInput {
@@ -90,8 +171,17 @@ export interface ChatCreateInput {
 export interface ChatSendInput {
   projectPath: string;
   sessionId: string;
+  clientRequestId: string;
   text: string;
   permissionMode?: ChatPermissionMode;
+}
+
+export interface ChatSendReceipt {
+  clientRequestId: string;
+  turnId: string;
+  userMessageId: string;
+  assistantMessageId: string;
+  requestedPermissionMode: string | null;
 }
 
 export const DEFAULT_CHAT_PERMISSION_MODE: ChatPermissionMode = "explore";

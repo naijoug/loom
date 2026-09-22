@@ -13,6 +13,7 @@
     "docs:release:test": "node scripts/test-release-docs-checker.mjs",
     "bench:local": "node scripts/bench-local.mjs",
     "smoke": "./scripts/smoke-flow.sh",
+    "smoke:chat": "./scripts/chat-smoke.sh",
     "smoke:interaction": "./scripts/interaction-smoke.sh",
     "smoke:diagnostics": "./scripts/diagnostic-bundle-smoke.sh",
     "smoke:visual": "./scripts/visual-smoke.sh",

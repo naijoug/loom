@@ -31,7 +31,7 @@ import {
   type ProjectAgentPreferences,
   type TerminalSlot,
 } from "../../domain";
-import { useAgentBridge } from "../../hooks/useAgentBridge";
+import { useAgentCatalog } from "../../hooks/useAgentCatalog";
 import { hasTauriRuntime } from "../../hooks/runtime";
 import { useSettingsBridge } from "../../hooks/useSettingsBridge";
 import { useProjectPreferencesBridge } from "../../hooks/useProjectPreferencesBridge";
@@ -103,7 +103,7 @@ function shortTimestamp(timestampMs?: number) {
 export function SettingsPage({ onBack, initialTab = "general" }: SettingsPageProps) {
   const { theme, themeMode, setThemeMode } = useTheme();
   const { state } = useAppState();
-  const { createAgent, deleteAgent, diagnoseAgents, loadAgents, setAgentEnabled, updateAgent } = useAgentBridge();
+  const { createAgent, deleteAgent, diagnoseAgents, loadAgents, setAgentEnabled, updateAgent } = useAgentCatalog();
   const { loadSettings, saveSettings } = useSettingsBridge();
   const { loadProjectAgentPreferences, saveProjectAgentPreferences } = useProjectPreferencesBridge();
   const { listTerminalSlots, saveTerminalSlots, suggestTerminalSlots } = useTerminalBridge();

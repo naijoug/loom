@@ -2,40 +2,39 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   AgentConfig,
   AgentDiagnostic,
-  ChatMessagePart,
   ChatPermissionMode,
   ChatSession,
   ChatSessionSummary,
 } from "../../domain";
 import { useAppState } from "../../state/AppStateContext";
-import { useAgentBridge } from "../../hooks/useAgentBridge";
+import { useAgentCatalog } from "../../hooks/useAgentCatalog";
 import { hasTauriRuntime } from "../../hooks/runtime";
-import { listenToEvent, TAURI_EVENTS } from "../../api";
+import { useChatBridge } from "./useChatBridge";
 import {
   chatAbort,
   chatClearResume,
   chatCreate,
-  chatGet,
   chatListSessions,
   chatPromoteToTask,
-  chatSend,
   chatSetAgent,
   chatUpdateMeta,
 } from "../../api/chatClient";
 import { mockChatStore } from "./mockStore";
+import { chatSendController } from "./state/ChatSendController";
 import { ChatInbox, type InboxFilter } from "./ChatInbox";
 import { ChatTranscript } from "./ChatTranscript";
 import { ChatComposer } from "./ChatComposer";
 import { ChatSessionHeader } from "./ChatSessionHeader";
 import { ChatContextPanel } from "./ChatContextPanel";
-import { cyclePermissionMode } from "./chatPermission";
+import { ChatExportNotice } from "./ChatExportNotice";
+import { useChatExport } from "./useChatExport";
 import {
-  CHAT_TURN_TIMEOUT_MS,
   isChatTurnRunning,
   turnRunningHint,
 } from "./chatTurn";
 import {
   chatStoreDraftFor,
+  chatStoreClearSubmittedDraft,
   chatStoreSelectProject,
   chatStoreSetDraft,
   createChatStoreSnapshot,
@@ -44,24 +43,6 @@ import {
 import { AddProjectModal } from "../../components/Sidebar/AddProjectModal";
 import { Button } from "../../components/common/Button";
 import "./ChatPage.css";
-
-interface ChatStreamEvent {
-  sessionId: string;
-  turnId: string;
-  messageId: string;
-  delta: string;
-  done: boolean;
-  part?: ChatMessagePart;
-}
-
-interface ChatTurnFinishedEvent {
-  sessionId: string;
-  turnId: string;
-  messageId: string;
-  status: string;
-  errorSummary?: string;
-}
-
 
 function enabledAgents(agents: AgentConfig[]) {
   return agents.filter((agent) => agent.enabled && agent.adapterType !== "dummy");
@@ -121,7 +102,7 @@ async function updateSessionMeta(input: {
 
 export function ChatPage() {
   const { state, dispatch } = useAppState();
-  const { loadAgents, diagnoseAgents } = useAgentBridge();
+  const { loadAgents, diagnoseAgents } = useAgentCatalog();
   const projectPath = state.projects.current?.path ?? null;
   const agents = useMemo(() => enabledAgents(state.agents), [state.agents]);
   const agentNameById = useMemo(() => {
@@ -134,19 +115,16 @@ export function ChatPage() {
   const useBackend = hasTauriRuntime();
 
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [session, setSession] = useState<ChatSession | null>(null);
   const [summaries, setSummaries] = useState<ChatSessionSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [sending, setSending] = useState(false);
-  const [turnStartedAtMs, setTurnStartedAtMs] = useState<number | null>(null);
+  const pending = useRef(new Set<string>());
+  const [pendingKeys, setPendingKeys] = useState(new Set<string>());
+  const pendingStops = useRef(new Set<string>());
+  const projectRef = useRef(projectPath);
+  const selectionRef = useRef(sessionId);
+  projectRef.current = projectPath;
+  selectionRef.current = sessionId;
   const [elapsedMs, setElapsedMs] = useState(0);
-  const turnTimeoutIdRef = useRef<number | null>(null);
-  const clearTurnTimeout = useCallback(() => {
-    if (turnTimeoutIdRef.current != null) {
-      window.clearTimeout(turnTimeoutIdRef.current);
-      turnTimeoutIdRef.current = null;
-    }
-  }, []);
   const [inboxFilter, setInboxFilter] = useState<InboxFilter>("active");
   const [inboxSearch, setInboxSearch] = useState("");
   const [addProjectOpen, setAddProjectOpen] = useState(false);
@@ -156,6 +134,9 @@ export function ChatPage() {
 
   useEffect(() => {
     setChatStore((prev) => chatStoreSelectProject(prev, projectPath));
+    setSessionId(null);
+    setSummaries([]);
+    setError(null);
   }, [projectPath]);
   const draft = chatStoreDraftFor(chatStore, sessionId);
   const setDraft = (value: string) => {
@@ -196,21 +177,31 @@ export function ChatPage() {
       return;
     }
     const listed = await chatListSessions(projectPath);
-    setSummaries(listed);
+    if (projectRef.current === projectPath) setSummaries(listed);
   }, [projectPath, useBackend]);
 
-  const loadSession = useCallback(
-    async (id: string) => {
-      if (!projectPath) return;
-      if (!useBackend) {
-        setSession(mockChatStore.get(id) ?? null);
-        return;
-      }
-      const next = await chatGet(projectPath, id);
-      setSession(next);
-    },
-    [projectPath, useBackend],
+  const { session, setSession, listenReady } = useChatBridge(
+    projectPath, sessionId, useBackend, setError, () => { void refreshSummaries().catch((err) => {
+      if (projectRef.current === projectPath) setError(String(err));
+    }); },
   );
+  const currentKey = JSON.stringify([projectPath, sessionId]);
+  const exportState = useChatExport(useBackend ? projectPath : null, useBackend ? session?.id ?? null : null);
+  const sending = pendingKeys.has(currentKey) || session?.turnStatus === "streaming";
+  const turnStartedAtMs = session?.turnStatus === "streaming"
+    ? [...session.messages].reverse().find((message) => message.role === "assistant")?.createdAtMs ?? null
+    : null;
+  const isCurrentView = () => projectRef.current === projectPath && selectionRef.current === sessionId;
+
+  useEffect(() => {
+    if (!session?.activeTurnId || !projectPath) return;
+    const key = JSON.stringify([projectPath, session.id]);
+    if (pendingStops.current.delete(key)) {
+      void chatAbort({ projectPath, sessionId: session.id, turnId: session.activeTurnId }).catch((err) => {
+        if (projectRef.current === projectPath && selectionRef.current === session.id) setError(String(err));
+      });
+    }
+  }, [session?.activeTurnId, session?.id, projectPath]);
 
   useEffect(() => {
     void loadAgents();
@@ -218,7 +209,6 @@ export function ChatPage() {
   }, [loadAgents, refreshDiagnostics]);
 
 
-  useEffect(() => () => clearTurnTimeout(), [clearTurnTimeout]);
 
   const turnRunning = isChatTurnRunning({
     sending,
@@ -237,179 +227,61 @@ export function ChatPage() {
   }, [turnRunning, turnStartedAtMs]);
 
   useEffect(() => {
-    void refreshSummaries();
-  }, [refreshSummaries]);
-
-  useEffect(() => {
-    if (!sessionId) {
-      setSession(null);
-      return;
-    }
-    void loadSession(sessionId).catch((err: unknown) => {
-      setError(err instanceof Error ? err.message : String(err));
+    void refreshSummaries().catch((err) => {
+      if (projectRef.current === projectPath) setError(String(err));
     });
-  }, [sessionId, loadSession]);
-
-  useEffect(() => {
-    if (!useBackend) return;
-    let disposed = false;
-    const unsubscribers: Array<() => void> = [];
-
-    void (async () => {
-      const unlistenStream = await listenToEvent<ChatStreamEvent>(TAURI_EVENTS.chatStream, (payload) => {
-        if (disposed) return;
-        setSession((current) => {
-          if (!current || current.id !== payload.sessionId) return current;
-          return {
-            ...current,
-            messages: current.messages.map((message) => {
-              if (message.id !== payload.messageId) return message;
-              const nextParts = [...(message.parts ?? [])];
-              if (payload.part) {
-                nextParts.push(payload.part);
-              }
-              return {
-                ...message,
-                content: payload.done
-                  ? message.content
-                  : payload.delta
-                    ? `${message.content}${payload.delta}`
-                    : message.content,
-                parts: nextParts.length > 0 ? nextParts : message.parts,
-                status: payload.done ? message.status : "streaming",
-              };
-            }),
-            turnStatus: payload.done ? current.turnStatus : "streaming",
-          };
-        });
-      });
-      const unlistenFinished = await listenToEvent<ChatTurnFinishedEvent>(
-        TAURI_EVENTS.chatTurnFinished,
-        (payload) => {
-          if (disposed) return;
-          setSending(false);
-          clearTurnTimeout();
-          setTurnStartedAtMs(null);
-          setSession((current) => {
-            if (!current || current.id !== payload.sessionId) return current;
-            return {
-              ...current,
-              turnStatus: "idle",
-              activeTurnId: undefined,
-              messages: current.messages.map((message) =>
-                message.id === payload.messageId
-                  ? {
-                      ...message,
-                      status:
-                        payload.status === "error"
-                          ? "error"
-                          : payload.status === "aborted"
-                            ? "aborted"
-                            : "complete",
-                      errorSummary: payload.errorSummary,
-                      content:
-                        payload.status === "error" && !message.content
-                          ? `（调用失败）${payload.errorSummary ?? "unknown error"}`
-                          : message.content,
-                    }
-                  : message,
-              ),
-            };
-          });
-          void loadSession(payload.sessionId).catch(() => undefined);
-          void refreshSummaries();
-        },
-      );
-      if (disposed) {
-        unlistenStream();
-        unlistenFinished();
-        return;
-      }
-      unsubscribers.push(unlistenStream, unlistenFinished);
-    })();
-
-    return () => {
-      disposed = true;
-      for (const unsubscribe of unsubscribers) unsubscribe();
-    };
-  }, [useBackend, refreshSummaries, loadSession]);
+  }, [refreshSummaries, projectPath]);
 
   async function handleCreate() {
-    if (!projectPath) {
-      setError("请先在侧栏选择或添加一个项目。");
-      return;
-    }
+    if (!projectPath) { setError("请先在侧栏选择或添加一个项目。"); return; }
     const agentId = preferredAgentId(agents);
-    if (!agentId) {
-      setError("还没有可用的 Agent。请先到设置里配置 Codex / Claude Code / CLI。");
-      return;
-    }
+    if (!agentId) { setError("还没有可用的 Agent，请先到设置里配置。"); return; }
     setError(null);
-    setInboxFilter("active");
-    if (!useBackend) {
-      const created = mockChatStore.create({ projectPath, agentId });
+    try {
+      const created = useBackend ? await chatCreate({ projectPath, agentId }) : mockChatStore.create({ projectPath, agentId });
+      if (!isCurrentView()) return;
+      setInboxFilter("active");
       setSessionId(created.id);
-      setSession(created);
-      setDraft("");
       await refreshSummaries();
-      return;
-    }
-    const created = await chatCreate({ projectPath, agentId });
-    setSessionId(created.id);
-    setSession(created);
-    setDraft("");
-    await refreshSummaries();
+    } catch (err) { if (isCurrentView()) setError(String(err)); }
   }
 
   async function handleSend() {
-    if (!session || !projectPath || !draft.trim() || sending) return;
+    if (!session || !projectPath || !draft.trim() || sending || !listenReady) return;
+    const key = JSON.stringify([projectPath, session.id]);
+    if (pending.current.has(key)) return;
+    pending.current.add(key);
+    setPendingKeys(new Set(pending.current));
     setError(null);
-    setSending(true);
     try {
+      let turnToAbort: string | undefined;
       if (!useBackend) {
-        const next = mockChatStore.send(session.id, draft);
-        setSession(next ?? null);
-        setDraft("");
-        setSending(false);
-        await refreshSummaries();
-        return;
+        setSession(mockChatStore.send(session.id, draft) ?? null);
+      } else {
+        const result = await chatSendController.send({ projectPath, sessionId: session.id, text: draft, permissionMode: session.permissionMode });
+        if (isCurrentView()) setSession(result.session);
+        if (pendingStops.current.delete(key)) turnToAbort = result.turnId;
       }
-      const result = await chatSend({
-        projectPath,
-        sessionId: session.id,
-        text: draft,
-        permissionMode: session.permissionMode,
-      });
-      setDraft("");
-      setSession(result.session);
-      await refreshSummaries();
-      setTurnStartedAtMs(Date.now());
-      clearTurnTimeout();
-      // Rust enforces CHAT_TURN_TIMEOUT_MS via ProcessSupervisor; UI mirrors it and
-      // aborts through the same chat_abort / request_stop path if the finished event is late.
-      turnTimeoutIdRef.current = window.setTimeout(() => {
-        void chatAbort({
-          projectPath,
-          sessionId: session.id,
-          turnId: session.activeTurnId,
-        }).catch(() => undefined);
-      }, CHAT_TURN_TIMEOUT_MS);
-    } catch (err) {
-      setSending(false);
-      setError(err instanceof Error ? err.message : String(err));
+      // A later abort/list failure must not leave accepted text ready to send again.
+      setChatStore((previous) => chatStoreClearSubmittedDraft(previous, projectPath, session.id, draft));
+      if (turnToAbort) await chatAbort({ projectPath, sessionId: session.id, turnId: turnToAbort });
+      if (projectRef.current === projectPath) await refreshSummaries();
+    } catch (err) { if (isCurrentView()) setError(String(err)); }
+    finally {
+      pending.current.delete(key);
+      pendingStops.current.delete(key);
+      setPendingKeys(new Set(pending.current));
     }
   }
 
   async function handleAbort() {
     if (!session || !projectPath || !useBackend) return;
-    await chatAbort({
-          projectPath,
-          sessionId: session.id,
-          turnId: session.activeTurnId,
-        });
-    setSending(false);
-    clearTurnTimeout();
-          setTurnStartedAtMs(null);
+    if (!session.activeTurnId) {
+      pendingStops.current.add(JSON.stringify([projectPath, session.id]));
+      return;
+    }
+    try { await chatAbort({ projectPath, sessionId: session.id, turnId: session.activeTurnId }); }
+    catch (err) { if (isCurrentView()) setError(String(err)); }
   }
 
   async function handlePermissionChange(mode: ChatPermissionMode) {
@@ -424,13 +296,8 @@ export function ChatPage() {
       setSession(next);
       await refreshSummaries();
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      if (isCurrentView()) setError(err instanceof Error ? err.message : String(err));
     }
-  }
-
-  async function handleCyclePermission() {
-    if (!session || sending) return;
-    await handlePermissionChange(cyclePermissionMode(session.permissionMode));
   }
 
   async function handleAgentChange(agentId: string) {
@@ -446,7 +313,7 @@ export function ChatPage() {
       setSession(next);
       await refreshSummaries();
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      if (isCurrentView()) setError(err instanceof Error ? err.message : String(err));
     }
   }
 
@@ -459,13 +326,13 @@ export function ChatPage() {
         sessionId: id,
         status: "archived",
       });
-      if (sessionId === id) {
+      if (isCurrentView() && sessionId === id) {
         setSessionId(null);
         setSession(null);
       }
       await refreshSummaries();
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      if (isCurrentView()) setError(err instanceof Error ? err.message : String(err));
     }
   }
 
@@ -479,12 +346,12 @@ export function ChatPage() {
         sessionId: id,
         status: "active",
       });
+      if (!isCurrentView()) return;
       setInboxFilter("active");
       setSessionId(id);
       await refreshSummaries();
-      await loadSession(id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      if (isCurrentView()) setError(err instanceof Error ? err.message : String(err));
     }
   }
 
@@ -500,7 +367,7 @@ export function ChatPage() {
       setSession(next);
       await refreshSummaries();
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      if (isCurrentView()) setError(err instanceof Error ? err.message : String(err));
     }
   }
 
@@ -516,7 +383,7 @@ export function ChatPage() {
       setSession(next);
       await refreshSummaries();
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      if (isCurrentView()) setError(err instanceof Error ? err.message : String(err));
     }
   }
 
@@ -532,7 +399,7 @@ export function ChatPage() {
       setSession(next);
       await refreshSummaries();
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      if (isCurrentView()) setError(err instanceof Error ? err.message : String(err));
     }
   }
 
@@ -542,7 +409,7 @@ async function handleClearResume() {
       const next = await chatClearResume(projectPath, session.id);
       setSession(next);
     } catch (err) {
-      setError(err instanceof Error ? err.message : `清除续聊失败：${String(err)}`);
+      if (isCurrentView()) setError(err instanceof Error ? err.message : `清除续聊失败：${String(err)}`);
     }
   }
 
@@ -553,11 +420,12 @@ async function handleClearResume() {
         projectPath,
         sessionId: session.id,
       });
+      if (!isCurrentView()) return;
       setSession(result.session);
       dispatch({ type: "tasks/upserted", task: result.task });
       dispatch({ type: "tasks/selected", taskId: result.taskId });
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      if (isCurrentView()) setError(err instanceof Error ? err.message : String(err));
     }
   }
 
@@ -599,13 +467,7 @@ async function handleClearResume() {
     <div
       className={`chat-page${contextOpen ? " chat-page--context-open" : ""}`}
       data-testid="chat-page"
-      onKeyDown={(event) => {
-        if (event.key !== "Tab" || !event.shiftKey || !session) return;
-        const target = event.target as HTMLElement | null;
-        if (!target?.closest(".chat-main")) return;
-        event.preventDefault();
-        void handleCyclePermission();
-      }}
+
     >
       <ChatInbox
         summaries={summaries}
@@ -626,6 +488,7 @@ async function handleClearResume() {
       />
 
       <section className="chat-main" aria-label="当前会话">
+        {!session && error ? <div className="chat-hint" role="alert">{error}</div> : null}
         {!session ? (
           <div className="chat-messages-empty">
             <h3 className="chat-messages-empty-title">还没有选中会话</h3>
@@ -666,18 +529,22 @@ async function handleClearResume() {
               onTitleFromFirstMessage={() => void handleTitleFromFirstMessage()}
               onToggleFlag={() => void handleToggleFlag()}
               onArchive={() => void handleArchive(session.id)}
+              onExport={() => void exportState.exportSession()}
+              exporting={exportState.busy}
             />
-            <ChatTranscript messages={session.messages} />
+            <ChatExportNotice key={`${currentKey}:${exportState.result?.directory ?? ""}`} busy={exportState.busy} error={exportState.error} result={exportState.result} />
+            <ChatTranscript messages={session.messages} turns={session.turns} projectPath={projectPath ?? undefined} sessionId={session.id} />
             <ChatComposer
               draft={draft}
               sending={turnRunning}
+              canSend={listenReady}
               elapsedHint={turnRunning ? turnRunningHint(elapsedMs) : null}
               error={error}
               useBackend={useBackend}
               agentId={session.agentId}
               agents={agents}
               permissionMode={session.permissionMode}
-              resumeHint={Boolean(session.resumeCommand)}
+              resumeHint={Boolean(session.resumeHandle)}
               diagnostics={diagnostics}
               diagnosticsLoading={diagnosticsLoading}
               onRefreshDiagnostics={() => void refreshDiagnostics()}

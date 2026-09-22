@@ -11,6 +11,7 @@ export type ChatStoreSnapshot = {
   summaries: ChatSessionSummary[];
   session: ChatSession | null;
   draftBySessionId: Record<string, string>;
+  draftsByProject: Record<string, Record<string, string>>;
   /** Monotonic generation; ignore stale async results from older generations. */
   generation: number;
   listenReady: boolean;
@@ -23,6 +24,7 @@ export function createChatStoreSnapshot(projectPath: string | null = null): Chat
     summaries: [],
     session: null,
     draftBySessionId: {},
+    draftsByProject: {},
     generation: 0,
     listenReady: false,
   };
@@ -33,9 +35,15 @@ export function chatStoreSelectProject(
   projectPath: string | null,
 ): ChatStoreSnapshot {
   if (state.projectPath === projectPath) return state;
+  const draftsByProject = {
+    ...state.draftsByProject,
+    ...(state.projectPath ? { [state.projectPath]: state.draftBySessionId } : {}),
+  };
   return {
     ...createChatStoreSnapshot(projectPath),
     generation: state.generation + 1,
+    draftsByProject,
+    draftBySessionId: projectPath ? draftsByProject[projectPath] ?? {} : {},
   };
 }
 
@@ -99,6 +107,16 @@ export function chatStoreDraftFor(
 ): string {
   if (!sessionId) return "";
   return state.draftBySessionId[sessionId] ?? "";
+}
+
+/** Clear only the acknowledged text, even if its project/session is now hidden. */
+export function chatStoreClearSubmittedDraft(
+  state: ChatStoreSnapshot, projectPath: string, sessionId: string, submitted: string,
+): ChatStoreSnapshot {
+  const drafts = state.projectPath === projectPath ? state.draftBySessionId : state.draftsByProject[projectPath] ?? {};
+  if (drafts[sessionId] !== submitted) return state;
+  if (state.projectPath === projectPath) return chatStoreSetDraft(state, sessionId, "");
+  return { ...state, draftsByProject: { ...state.draftsByProject, [projectPath]: { ...drafts, [sessionId]: "" } } };
 }
 
 export function chatStoreBumpGeneration(state: ChatStoreSnapshot): ChatStoreSnapshot {

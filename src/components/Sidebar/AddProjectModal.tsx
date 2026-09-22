@@ -25,14 +25,11 @@ export function AddProjectModal({ onClose }: AddProjectModalProps) {
   const detectedProject = useMemo(
     () =>
       state.projects.recent.find((project) => project.path === selectedPath) ??
-      state.projects.current ??
-      state.projects.recent[0] ??
+      (state.projects.current?.path === selectedPath ? state.projects.current : null) ??
       null,
     [selectedPath, state.projects.current, state.projects.recent],
   );
-  const detectedStacks = detectedProject?.detectedStacks.length
-    ? detectedProject.detectedStacks
-    : ["Vite + React", "Tauri", "Rust"];
+  const detectedStacks = detectedProject?.detectedStacks ?? [];
   const recentProjects = state.projects.recent.slice(0, 3);
 
   async function handleBrowse() {
@@ -82,7 +79,7 @@ export function AddProjectModal({ onClose }: AddProjectModalProps) {
             <div className="project-modal-label">打开本地目录</div>
             <div className="project-path-row">
               <div className={`project-path-field ${selectedPath ? "" : "empty"}`}>
-                {selectedPath ? displayPath(selectedPath) : "~/Workspace/naijoug/project"}
+                {selectedPath ? displayPath(selectedPath) : "请选择本地项目文件夹"}
               </div>
               <Button type="button" variant="ghost" onClick={handleBrowse}>
                 浏览…
@@ -113,20 +110,22 @@ export function AddProjectModal({ onClose }: AddProjectModalProps) {
           <section className="project-detected-card">
             <div className="project-detected-head">
               <span>检测结果</span>
-              <span className="project-detected-status">已分析</span>
+              <span className="project-detected-status">{detectedProject ? "已保存记录" : "待检测"}</span>
             </div>
-            <div className="project-stack-row">
+            {detectedProject ? <><div className="project-stack-row">
               {detectedStacks.slice(0, 4).map((stack) => (
                 <span className="project-stack-chip" key={stack}>
                   {stack}
                 </span>
               ))}
+              {detectedStacks.length === 0 ? <span>未识别到预设技术栈</span> : null}
             </div>
             <div className="project-meta-line">
-              <span>main</span>
-              <span>{detectedProject?.isGitRepository ? "Git 仓库" : "本地目录"}</span>
-              <span>{detectedProject?.suggestedCommands[0] ?? "pnpm dev"}</span>
+              {detectedProject.gitBranch ? <span>{detectedProject.gitBranch}</span> : null}
+              <span>{detectedProject.isGitRepository ? "Git 仓库" : "本地目录"}</span>
+              <span>{detectedProject.suggestedCommands[0] ?? "未检测到启动命令"}</span>
             </div>
+            </> : <p className="project-recent-empty">添加时将检测所选目录的技术栈、Git 状态和可用命令。</p>}
           </section>
 
           {state.app.projectError && <div className="project-modal-error">{state.app.projectError}</div>}

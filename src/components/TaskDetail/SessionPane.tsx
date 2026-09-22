@@ -17,7 +17,7 @@ import type {
   Task,
   TerminalSlot,
 } from "../../domain";
-import { useAgentBridge } from "../../hooks/useAgentBridge";
+import { useAgentCatalog } from "../../hooks/useAgentCatalog";
 import { useCommandBridge } from "../../hooks/useCommandBridge";
 import { useProjectPreferencesBridge } from "../../hooks/useProjectPreferencesBridge";
 import { useTaskBridge } from "../../hooks/useTaskBridge";
@@ -112,7 +112,7 @@ function matchesDebuggingStatus(status: Task["status"]) {
 
 export function SessionPane({ project, task, readOnly = false }: SessionPaneProps) {
   const { state } = useAppState();
-  const { loadAgents, prepareAgentInvocation } = useAgentBridge();
+  const { loadAgents, prepareAgentInvocation } = useAgentCatalog();
   const { startCommandRun, stopCommandRun } = useCommandBridge();
   const { loadProjectAgentPreferences } = useProjectPreferencesBridge();
   const {

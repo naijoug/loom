@@ -8,7 +8,7 @@
 
 | 用途 | 参数 |
 |---|---|
-| 单轮 headless | `grok -p <prompt> --cwd <project> --output-format streaming-json --include-partial-messages` |
+| 单轮 headless | `grok -p <prompt> --cwd <project> --output-format streaming-messages-json --include-partial-messages`（2026-09-20 按 1.0.30 help/真实调用修正旧 flag） |
 | 只读 | `--permission-mode plan` |
 | 可写 | `--permission-mode acceptEdits` |
 | 续聊 | `grok --resume <sessionId> …`（Loom 存为 resumeCommand） |

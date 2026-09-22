@@ -2,6 +2,8 @@
 
 本文件供编写计划、调整仓库指引或组织验证时查阅。产品范围见 [requirements.md](requirements.md)，检查选择见 [testing.md](testing.md#开发变更验证矩阵)。
 
+Rust 最低版本为 1.89（见 `src-tauri/Cargo.toml`）；Chat 仓储使用标准库文件锁实现跨进程 writer 排他，不额外引入文件锁依赖。本轮开发验证工具链为 1.95.0，最低版本尚未单独复验。
+
 ## 计划规范
 
 非平凡功能、重构或迁移使用正式计划；小型、局部、可逆修复可以直接实施。用户明确要求计划时按要求执行。
@@ -23,6 +25,8 @@
 - 提示词改动用 [行为验收案例](guides/agent-behavior-evaluation.md) 对照。离线测试验证传输和约束；真实模型是否减少停顿或成本需独立观测。
 
 ## 预览约定
+
+开发、验收与发布构建的应用名称和窗口标题均保持 `Loom`，使用默认应用标识 `com.naijoug.loom`。测试时通过明确的构建产物路径和合成项目目录区分版本，不覆盖名称为 `Loom QA`。
 
 启动前执行 `scripts/debug.sh stop`；桌面用 `scripts/debug.sh desktop`，仅 Web 用 `scripts/debug.sh web`。完成后执行 `scripts/debug.sh stop`，清理本仓库的 Vite/Tauri dev 进程。
 

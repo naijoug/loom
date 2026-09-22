@@ -31,8 +31,9 @@
 当前 Chat 经过 adapter 的 Agent 启用、能力与配置权限检查，直接启动 CLI 并接入 ProcessSupervisor；没有经过 Task command runner 的完整 execution_policy，也不能拦截 CLI 内部每次工具调用。
 
 - `ask` 是 Composer 每回合授权；`auto` 不追加回合确认。UI 确认是交互约定，当前无 Rust 独立授权凭证校验，不得视为安全沙箱或逐工具审批。
-- `explore` 请求只读/plan 参数，但各 CLI 和 resume 的实际限制需在临时项目验收。Claude 不传 permission-mode、Codex resume 不重传 sandbox 均不等于已证明只读。
-- 换 Agent/权限后清理续聊句柄；活动回合拒绝配置变更。结构化句柄指纹、所有路径与 symlink 边界、能力驱动权限仍在重构计划中。
+- `explore` 明确请求只读/plan 参数：Codex 首轮与 resume 都设置 sandbox 和禁止自动提权的 approval policy；Claude/Grok Chat 首轮与 resume 都显式设置 plan。参数一致不等于安全矩阵完成，各 CLI 的实际文件/命令/外部工具边界仍按临时项目证据验收。
+- 原生续聊只接受有界 session ID，绑定 Loom 执行配置 SHA-256；历史命令不能追加选项。缺少指纹的旧记录或配置不匹配时拒绝续聊，要求显式开新 CLI 会话并保留转录。指纹不覆盖 CLI 自有外部配置、登录身份或替换后的二进制，不能当作系统级沙箱证明。
+- 换 Agent/权限后清理续聊句柄；活动回合拒绝配置变更。完整路径与 symlink 边界、能力驱动权限仍在重构计划中。
 - 后续逐工具审批必须具备双向协议、后端校验与真实拒绝/允许证据；提示词不能补足缺失的权限机制。
 
 当前/目标契约见 [chat-contracts.md](architecture/chat-contracts.md)。文档优化不会提升现有 CLI 的实际权限保障。

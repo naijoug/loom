@@ -160,6 +160,7 @@ export function ChatInbox({
                   <button
                     type="button"
                     className="chat-inbox-archive"
+                    disabled={Boolean(item.storageError)}
                     aria-label={`归档 ${item.title}`}
                     title="归档"
                     onClick={(event) => {

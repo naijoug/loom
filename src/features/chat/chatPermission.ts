@@ -5,7 +5,7 @@ import {
   normalizeChatPermissionMode,
 } from "../../domain/chat";
 
-/** Cycle order for Shift+Tab / permission control. */
+/** Cycle order for permission controls. Shift+Tab retains native focus navigation. */
 export const CHAT_PERMISSION_CYCLE: readonly ChatPermissionMode[] = [
   "explore",
   "ask",
@@ -56,7 +56,7 @@ export function permissionCliHint(
       return (write ? "CLI · --sandbox workspace-write" : "CLI · --sandbox read-only") + gateSuffix;
     case "claude_code_cli":
       return (
-        (write ? "CLI · --permission-mode acceptEdits" : "CLI · 默认权限（只读限制待验证）") +
+        (write ? "CLI · --permission-mode acceptEdits" : "CLI · --permission-mode plan（限制待验证）") +
         gateSuffix
       );
     default:

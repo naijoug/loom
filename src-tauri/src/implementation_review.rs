@@ -229,13 +229,14 @@ async fn run_prepared_review(
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
     process_supervisor::configure_process_group(&mut command);
+    let mut operation = process_supervisor::supervisor().begin_operation()?;
     let child = command
         .spawn()
         .map_err(|error| format!("failed to start review Agent: {error}"))?;
     let process_id = child.id();
     let process_run_id = process_id.map(|process_id| format!("review-{process_id}"));
     if let (Some(process_id), Some(run_id)) = (process_id, process_run_id.as_deref()) {
-        process_supervisor::supervisor().register(ProcessMetadata::new(
+        operation.register(ProcessMetadata::new(
             run_id,
             task_id,
             ProcessKind::ImplementationReview,
@@ -251,12 +252,14 @@ async fn run_prepared_review(
     let output = match output_result {
         Ok(Ok(output)) => {
             if let Some(run_id) = process_run_id.as_deref() {
+                let _ = process_supervisor::supervisor().force_stop(run_id);
                 process_supervisor::supervisor().complete(run_id);
             }
             output
         }
         Ok(Err(error)) => {
             if let Some(run_id) = process_run_id.as_deref() {
+                let _ = process_supervisor::supervisor().force_stop(run_id);
                 process_supervisor::supervisor().complete(run_id);
             }
             return Err(format!("failed to wait for review Agent: {error}"));
@@ -264,6 +267,7 @@ async fn run_prepared_review(
         Err(_) => {
             if let Some(run_id) = process_run_id.as_deref() {
                 let _ = process_supervisor::supervisor().request_stop(run_id, "timeout");
+                let _ = process_supervisor::supervisor().force_stop(run_id);
                 process_supervisor::supervisor().complete(run_id);
             }
             return Err(format!(
@@ -347,6 +351,7 @@ pub async fn run_implementation_reviews(
                     prompt_file: Some(&context_path),
                     stage: AgentStage::Review,
                     resume_command: None,
+                    chat_permission_mode: None,
                     embed_prompt: true,
                 },
             )?;

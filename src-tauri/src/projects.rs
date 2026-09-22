@@ -50,7 +50,7 @@ pub fn register_project(
     Ok(summary)
 }
 
-fn canonical_project_path(path: &str) -> Result<PathBuf, String> {
+pub(crate) fn canonical_project_path(path: &str) -> Result<PathBuf, String> {
     if path.trim().is_empty() {
         return Err("project path is required".to_string());
     }
