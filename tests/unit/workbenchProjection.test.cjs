@@ -3,7 +3,8 @@ const {SessionReplica}=require('../../.tmp/test-build/src/workbench/projection.j
 const {SessionController}=require('../../.tmp/test-build/src/workbench/sessionController.js');
 const root=path.resolve(__dirname,'../..');
 // Produce events and expected snapshots from the real Rust core on every run.
-const fixture=JSON.parse(execFileSync('cargo',['run','--quiet','--offline','-p','loom-core','--example','projection_fixture'],{cwd:root,encoding:'utf8'}));
+// Fresh CI runners must be able to fetch the versions pinned by Cargo.lock.
+const fixture=JSON.parse(execFileSync('cargo',['run','--quiet','--locked','-p','loom-core','--example','projection_fixture'],{cwd:root,encoding:'utf8'}));
 const clone=value=>JSON.parse(JSON.stringify(value));
 const replica=()=>new SessionReplica(fixture.initial.metadata.key);
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return{promise,resolve,reject};};

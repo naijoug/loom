@@ -10,7 +10,8 @@ use loom_runtime::{
 use std::{
     path::PathBuf,
     sync::{
-        atomic::Ordering, {Arc, Mutex},
+        atomic::Ordering,
+        {Arc, Mutex},
     },
     time::Duration,
 };
@@ -25,11 +26,9 @@ impl ReaRunner {
             .map(PathBuf::from)
             .ok_or("REA 6.5.0 官方包路径未配置")?;
         let executable = loom_runtime::rea_executable(&root).map_err(|e| e.to_string())?;
-        let client = loom_runtime::ReaMcpClient::start(
-            &executable,
-            std::time::Duration::from_secs(30),
-        )
-        .map_err(|e| e.to_string())?;
+        let client =
+            loom_runtime::ReaMcpClient::start(&executable, std::time::Duration::from_secs(30))
+                .map_err(|e| e.to_string())?;
         Ok(Self {
             client: Mutex::new(Some(client)),
         })
@@ -52,11 +51,7 @@ impl loom_runtime::ExternalToolRunner for ReaRunner {
             ));
         };
         let action = loom_runtime::split_tool_name(name)?;
-        let mut result = client.call_tool(
-            action,
-            input,
-            std::time::Duration::from_secs(30),
-        )?;
+        let mut result = client.call_tool(action, input, std::time::Duration::from_secs(30))?;
         // Keep the model-facing result compact; the host Evidence repository can
         // later retain the complete record without expanding every context.
         if let Some(content) = result
@@ -242,46 +237,44 @@ impl SdkRuntime {
                     let credential = secret
                         .as_ref()
                         .map(|s| std::str::from_utf8(s).expect("validated UTF-8 credential"));
-                    let external_tools = if loom_runtime::rea_source_active(
-                        &view.metadata.enabled_sources,
-                    ) {
-                        match loom_runtime::rea_external_tools() {
-                            Ok(tools) => tools,
-                            Err(error) => {
-                                if let Err(failure) = host.core.settle_runtime_turn(
-                                    &lease,
-                                    FinishStatus::Failed,
-                                    Some(error.to_string()),
-                                ) {
-                                    host.fault(failure.to_string());
+                    let external_tools =
+                        if loom_runtime::rea_source_active(&view.metadata.enabled_sources) {
+                            match loom_runtime::rea_external_tools() {
+                                Ok(tools) => tools,
+                                Err(error) => {
+                                    if let Err(failure) = host.core.settle_runtime_turn(
+                                        &lease,
+                                        FinishStatus::Failed,
+                                        Some(error.to_string()),
+                                    ) {
+                                        host.fault(failure.to_string());
+                                    }
+                                    Self::release(host, key);
+                                    return;
                                 }
-                                Self::release(host, key);
-                                return;
                             }
-                        }
-                    } else {
-                        Vec::new()
-                    };
-                    let mut external_runner: Option<
-                        Box<dyn loom_runtime::ExternalToolRunner>,
-                    > = if external_tools.is_empty() {
-                        None
-                    } else {
-                        match ReaRunner::new() {
-                            Ok(runner) => Some(Box::new(runner)),
-                            Err(error) => {
-                                if let Err(failure) = host.core.settle_runtime_turn(
-                                    &lease,
-                                    FinishStatus::Failed,
-                                    Some(error),
-                                ) {
-                                    host.fault(failure.to_string());
+                        } else {
+                            Vec::new()
+                        };
+                    let mut external_runner: Option<Box<dyn loom_runtime::ExternalToolRunner>> =
+                        if external_tools.is_empty() {
+                            None
+                        } else {
+                            match ReaRunner::new() {
+                                Ok(runner) => Some(Box::new(runner)),
+                                Err(error) => {
+                                    if let Err(failure) = host.core.settle_runtime_turn(
+                                        &lease,
+                                        FinishStatus::Failed,
+                                        Some(error),
+                                    ) {
+                                        host.fault(failure.to_string());
+                                    }
+                                    Self::release(host, key);
+                                    return;
                                 }
-                                Self::release(host, key);
-                                return;
                             }
-                        }
-                    };
+                        };
                     let tools = match connection.config.provider {
                         ConnectionProvider::Claude => {
                             vec!["read", "write", "edit", "bash", "glob", "grep"]
@@ -305,7 +298,9 @@ impl SdkRuntime {
                         credential,
                         host.stopping.clone(),
                         &mut policy,
-                        external_runner.as_mut().map(|runner| &mut **runner as &mut dyn loom_runtime::ExternalToolRunner),
+                        external_runner.as_mut().map(|runner| {
+                            &mut **runner as &mut dyn loom_runtime::ExternalToolRunner
+                        }),
                     );
                     if result.is_err() && !Self::already_settled(&host.core, key, &turn) {
                         host.fault("SDK 回合终态未能保存，请检查执行记录".into());
@@ -959,7 +954,7 @@ with open('invocations','a') as f:f.write(case+'\n')
 def emit(kind,**fields):
  global seq
  seq+=1
- print(json.dumps(dict(protocolVersion=1,scope=scope,seq=seq,event=dict(kind=kind,**fields))),flush=True)
+ print(json.dumps(dict(protocolVersion=start['protocolVersion'],scope=scope,seq=seq,event=dict(kind=kind,**fields))),flush=True)
 emit('ready')
 if case=='fail':emit('failed',code='fixture',message='Synthetic worker failure');sys.exit(1)
 if case.startswith('write'):
