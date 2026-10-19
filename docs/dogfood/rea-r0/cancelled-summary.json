@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-15T11:19:00+08:00",
+  "command": "npm exec --yes --package rea-agents@6.5.0 -- rea analyze-javascript-application /private/tmp/loom-rea-r0-large-fixture --json --analysis-timeout-ms 30000",
+  "signal": "SIGINT",
+  "signalAfter": "about 2 seconds",
+  "exitCode": 130,
+  "error": {
+    "code": "cancelled",
+    "category": "cancelled",
+    "retryable": true,
+    "message": "JavaScript application analysis failed",
+    "partialEvidenceId": "ev_f917214e2edf709b48c31dee43b2842d86ae37ea6f74d375559c26237eb8f0b7"
+  },
+  "partialLimitations": [
+    "CommonJS and ESM binding relationships were recovered from inert syntax and resolved only within the inventoried artifact container.",
+    "Graph coverage is incomplete; unavailable facts remain explicit and must not be read as absence.",
+    "JavaScript and HTML were parsed as inert text; bundle bootstrap code was never executed.",
+    "Source analysis was interrupted: Analysis operation was cancelled: analyze_javascript_application",
+    "Static imports, entrypoints, workers, endpoints, and storage relationships do not prove runtime execution.",
+    "Static paths and relationships may remain unresolved when expressions are dynamic or obfuscated."
+  ],
+  "fullOutputBytes": 19421906,
+  "fullOutputSha256": "c8f451fe26507c36d40fedcd3925e41f3309847ecf900c7a1782dc62a0827bf0",
+  "fullOutputRetention": "temporary execution artifact; intentionally not committed"
+}

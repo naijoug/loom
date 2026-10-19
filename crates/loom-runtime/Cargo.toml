@@ -1,0 +1,28 @@
+[package]
+name = "loom-runtime"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[features]
+bindings = ["dep:ts-rs", "loom-core/bindings"]
+
+[dependencies]
+loom-core = { path = "../loom-core" }
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+zeroize = "=1.9.0"
+tree-sitter = "=0.25.10"
+tree-sitter-bash = "=0.25.1"
+fancy-regex = "=0.16.2"
+ts-rs = { version = "=12.0.1", optional = true, features = ["serde-json-impl", "no-serde-warnings"] }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[[bin]]
+name = "export-runtime-types"
+path = "src/bin/export-runtime-types.rs"
+required-features = ["bindings"]

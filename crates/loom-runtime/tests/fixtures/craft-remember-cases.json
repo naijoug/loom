@@ -1,0 +1,440 @@
+{
+  "upstreamSha": "73bd9c2a3573158bea880984eb8d5fdb41e0cac2",
+  "sourceSha256": "24b3f90e197b23f93c7f6fe7dfd36e8ff27f7747204b500958231c69820f9e9c",
+  "cases": [
+    {
+      "command": "mkdir dir",
+      "bashKey": "mkdir",
+      "hosts": null
+    },
+    {
+      "command": "touch file",
+      "bashKey": "touch",
+      "hosts": null
+    },
+    {
+      "command": "/usr/bin/touch file",
+      "bashKey": "/usr/bin/touch",
+      "hosts": null
+    },
+    {
+      "command": "open file",
+      "bashKey": "open",
+      "hosts": null
+    },
+    {
+      "command": "sleep 3",
+      "bashKey": "sleep",
+      "hosts": null
+    },
+    {
+      "command": "git commit -m hi",
+      "bashKey": "git commit",
+      "hosts": null
+    },
+    {
+      "command": "git -C dir commit",
+      "bashKey": null,
+      "hosts": null
+    },
+    {
+      "command": "git push origin main",
+      "bashKey": null,
+      "hosts": null
+    },
+    {
+      "command": "git reset --hard",
+      "bashKey": null,
+      "hosts": null
+    },
+    {
+      "command": "git worktree add path",
+      "bashKey": null,
+      "hosts": null
+    },
+    {
+      "command": "git status",
+      "bashKey": "git status",
+      "hosts": null
+    },
+    {
+      "command": "git add file",
+      "bashKey": "git add file",
+      "hosts": null
+    },
+    {
+      "command": "npm install lodash",
+      "bashKey": "npm install lodash",
+      "hosts": null
+    },
+    {
+      "command": "npm install --save pkg",
+      "bashKey": "npm install",
+      "hosts": null
+    },
+    {
+      "command": "npm run build",
+      "bashKey": "exact:[\"npm\",\"run\",\"build\"]",
+      "hosts": null
+    },
+    {
+      "command": "npm run build -- --delete-all",
+      "bashKey": "exact:[\"npm\",\"run\",\"build\",\"--\",\"--delete-all\"]",
+      "hosts": null
+    },
+    {
+      "command": "npx pkg --flag",
+      "bashKey": "exact:[\"npx\",\"pkg\",\"--flag\"]",
+      "hosts": null
+    },
+    {
+      "command": "docker run image rm file",
+      "bashKey": null,
+      "hosts": null
+    },
+    {
+      "command": "docker build -t tag .",
+      "bashKey": "docker build",
+      "hosts": null
+    },
+    {
+      "command": "aws s3 ls",
+      "bashKey": "aws s3 ls",
+      "hosts": null
+    },
+    {
+      "command": "aws s3 rb --recursive bucket",
+      "bashKey": null,
+      "hosts": null
+    },
+    {
+      "command": "aws ec2 terminate-instances --ids id",
+      "bashKey": null,
+      "hosts": null
+    },
+    {
+      "command": "gcloud compute instances delete id",
+      "bashKey": null,
+      "hosts": null
+    },
+    {
+      "command": "gcloud compute instances list",
+      "bashKey": "gcloud compute instances list",
+      "hosts": null
+    },
+    {
+      "command": "python script.py",
+      "bashKey": "exact:[\"python\",\"script.py\"]",
+      "hosts": null
+    },
+    {
+      "command": "python script.py --delete-all",
+      "bashKey": "exact:[\"python\",\"script.py\",\"--delete-all\"]",
+      "hosts": null
+    },
+    {
+      "command": "python SCRIPT.py",
+      "bashKey": "exact:[\"python\",\"SCRIPT.py\"]",
+      "hosts": null
+    },
+    {
+      "command": "tar -tf file",
+      "bashKey": "exact:[\"tar\",\"-tf\",\"file\"]",
+      "hosts": null
+    },
+    {
+      "command": "tar -xf file",
+      "bashKey": "exact:[\"tar\",\"-xf\",\"file\"]",
+      "hosts": null
+    },
+    {
+      "command": "psql -c \"SELECT 1\"",
+      "bashKey": "exact:[\"psql\",\"-c\",\"SELECT 1\"]",
+      "hosts": null
+    },
+    {
+      "command": "psql -c \"DELETE FROM x\"",
+      "bashKey": "exact:[\"psql\",\"-c\",\"DELETE FROM x\"]",
+      "hosts": null
+    },
+    {
+      "command": "gh pr merge 12",
+      "bashKey": "gh pr merge 12",
+      "hosts": null
+    },
+    {
+      "command": "gh api /repos",
+      "bashKey": null,
+      "hosts": null
+    },
+    {
+      "command": "curl https://example.com",
+      "bashKey": null,
+      "hosts": [
+        "example.com"
+      ]
+    },
+    {
+      "command": "wget https://example.com",
+      "bashKey": null,
+      "hosts": [
+        "example.com"
+      ]
+    },
+    {
+      "command": "sudo ls",
+      "bashKey": null,
+      "hosts": null
+    },
+    {
+      "command": "env FOO=bar ls",
+      "bashKey": null,
+      "hosts": null
+    },
+    {
+      "command": "xargs touch",
+      "bashKey": null,
+      "hosts": null
+    },
+    {
+      "command": "timeout 2 ls",
+      "bashKey": null,
+      "hosts": null
+    },
+    {
+      "command": "rm file",
+      "bashKey": null,
+      "hosts": null
+    },
+    {
+      "command": "cp a b",
+      "bashKey": null,
+      "hosts": null
+    },
+    {
+      "command": "chmod 777 file",
+      "bashKey": null,
+      "hosts": null
+    },
+    {
+      "command": "npm publish",
+      "bashKey": null,
+      "hosts": null
+    },
+    {
+      "command": "helm upgrade service",
+      "bashKey": null,
+      "hosts": null
+    },
+    {
+      "command": "terraform apply",
+      "bashKey": null,
+      "hosts": null
+    },
+    {
+      "command": "printf hello",
+      "bashKey": "exact:[\"printf\",\"hello\"]",
+      "hosts": null
+    },
+    {
+      "command": "mkdir a && touch b",
+      "bashKey": null,
+      "hosts": null
+    },
+    {
+      "command": "mkdir a | cat",
+      "bashKey": null,
+      "hosts": null
+    },
+    {
+      "command": "mkdir a >file",
+      "bashKey": null,
+      "hosts": null
+    },
+    {
+      "command": "FOO=1 mkdir dir",
+      "bashKey": null,
+      "hosts": null
+    },
+    {
+      "command": "mkdir $DIR",
+      "bashKey": null,
+      "hosts": null
+    },
+    {
+      "command": "touch $(date)",
+      "bashKey": null,
+      "hosts": null
+    },
+    {
+      "command": "touch \"two words\"",
+      "bashKey": "touch",
+      "hosts": null
+    },
+    {
+      "command": "git \"commit -m hi\"",
+      "bashKey": null,
+      "hosts": null
+    },
+    {
+      "command": "git commit \"private label\"",
+      "bashKey": null,
+      "hosts": null
+    },
+    {
+      "command": "git commit -m \"CASE\"",
+      "bashKey": "git commit",
+      "hosts": null
+    },
+    {
+      "command": "ls;",
+      "bashKey": "exact:[\"ls\"]",
+      "hosts": null
+    },
+    {
+      "command": "! touch file",
+      "bashKey": "touch",
+      "hosts": null
+    },
+    {
+      "command": "curl https://example.com",
+      "bashKey": null,
+      "hosts": [
+        "example.com"
+      ]
+    },
+    {
+      "command": "curl https://example.com https://other.example",
+      "bashKey": null,
+      "hosts": [
+        "example.com",
+        "other.example"
+      ]
+    },
+    {
+      "command": "curl https://USER:pass@example.com:443/path?q=1",
+      "bashKey": null,
+      "hosts": [
+        "example.com"
+      ]
+    },
+    {
+      "command": "curl https://evil.example#@allowed.example",
+      "bashKey": null,
+      "hosts": [
+        "evil.example"
+      ]
+    },
+    {
+      "command": "curl https://[::1]:443/path",
+      "bashKey": null,
+      "hosts": [
+        "[::1]"
+      ]
+    },
+    {
+      "command": "curl example.com/path",
+      "bashKey": null,
+      "hosts": [
+        "example.com"
+      ]
+    },
+    {
+      "command": "curl localhost/admin",
+      "bashKey": null,
+      "hosts": [
+        "localhost"
+      ]
+    },
+    {
+      "command": "curl -X POST https://example.com",
+      "bashKey": null,
+      "hosts": [
+        "example.com",
+        "post"
+      ]
+    },
+    {
+      "command": "curl -o out.json https://example.com",
+      "bashKey": null,
+      "hosts": [
+        "example.com",
+        "out.json"
+      ]
+    },
+    {
+      "command": "curl --config file https://example.com",
+      "bashKey": null,
+      "hosts": null
+    },
+    {
+      "command": "wget -i file https://example.com",
+      "bashKey": null,
+      "hosts": null
+    },
+    {
+      "command": "wget --execute=\"input=file\" https://example.com",
+      "bashKey": null,
+      "hosts": null
+    },
+    {
+      "command": "curl --url=https://example.com",
+      "bashKey": null,
+      "hosts": null
+    },
+    {
+      "command": "curl \"https://example.com/a b\"",
+      "bashKey": null,
+      "hosts": null
+    },
+    {
+      "command": "curl https://example.com && curl https://other.example",
+      "bashKey": null,
+      "hosts": null
+    },
+    {
+      "command": "curl \"$URL\"",
+      "bashKey": null,
+      "hosts": null
+    },
+    {
+      "command": "curl -Kfile https://example.com",
+      "bashKey": null,
+      "hosts": [
+        "example.com"
+      ],
+      "rejectHiddenTarget": true,
+      "reason": "Attached short-option values can load uninspected destinations"
+    },
+    {
+      "command": "wget -ifile https://example.com",
+      "bashKey": null,
+      "hosts": [
+        "example.com"
+      ],
+      "rejectHiddenTarget": true,
+      "reason": "Attached short-option values can load uninspected destinations"
+    },
+    {
+      "command": "wget -einput=file https://example.com",
+      "bashKey": null,
+      "hosts": [
+        "example.com"
+      ],
+      "rejectHiddenTarget": true,
+      "reason": "Attached short-option values can load uninspected destinations"
+    },
+    {
+      "command": "curl /tmp/file",
+      "bashKey": null,
+      "hosts": []
+    },
+    {
+      "command": "wget https://EXAMPLE.com https://example.com",
+      "bashKey": null,
+      "hosts": [
+        "example.com"
+      ]
+    }
+  ]
+}

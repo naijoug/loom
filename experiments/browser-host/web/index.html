@@ -1,0 +1,7 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Loom Browser Probe</title>
+<style>body{font:18px system-ui;margin:50px;background:#f3f5f9;color:#18202e}main{max-width:600px;margin:auto;background:white;border:1px solid #d9dfe8;border-radius:16px;padding:32px}label,input,button,output{display:block;margin:16px 0}input{padding:12px;font:inherit}button{background:#5d4ce6;color:white;border:0;border-radius:8px;padding:12px 24px;font:inherit}output{padding:14px;background:#f2f0ff;border-radius:8px}a{color:#5d4ce6}</style></head>
+<body><main><h1>Loom Browser Probe</h1><p>Local fixture for native Chromium, accessibility, input and storage verification.</p>
+<form id="form"><label for="name">Name</label><input id="name" autocomplete="off"><button type="submit">Submit</button></form><output id="result" aria-live="polite">Waiting for input</output>
+<p id="storage"></p><a href="/next.html">Next page</a>
+<script>document.querySelector('#form').addEventListener('submit',event=>{event.preventDefault();document.querySelector('#result').textContent='Hello '+document.querySelector('#name').value});document.querySelector('#storage').textContent='Saved: '+(localStorage.getItem('loom-probe')||'empty');</script></main></body></html>

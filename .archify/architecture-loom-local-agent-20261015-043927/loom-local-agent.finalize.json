@@ -1,0 +1,371 @@
+{
+  "schemaVersion": 1,
+  "ok": false,
+  "command": "finalize",
+  "status": "fail",
+  "type": "architecture",
+  "quality": "showcase",
+  "startedAt": "2026-10-15T11:45:47.116Z",
+  "specification": {
+    "path": "/Users/guojian/Workspace/naijoug/loom/.archify/architecture-loom-local-agent-20261015-043927/candidate.json",
+    "sha256": "a0a8472866cbbf7b38ed12b96783da56154adcef2b3c4026d9e5a0ac0210aca7",
+    "bytes": 3988
+  },
+  "artifact": {
+    "path": "/Users/guojian/Workspace/naijoug/loom/.archify/architecture-loom-local-agent-20261015-043927/loom-local-agent.html",
+    "sha256": "35fffe6144f08738f67e32841e290606228bb67154db09229532b1925d99a8d6",
+    "bytes": 819835
+  },
+  "stages": {
+    "validate": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": null,
+      "execution": "embedded-in-deliver",
+      "command": [
+        "/opt/homebrew/Cellar/node/26.11.0_1/bin/node",
+        "/Users/guojian/.config/magpie/library/skills/archify/bin/archify.mjs",
+        "deliver",
+        "architecture",
+        "/Users/guojian/Workspace/naijoug/loom/.archify/architecture-loom-local-agent-20261015-043927/candidate.json",
+        "/Users/guojian/Workspace/naijoug/loom/.archify/architecture-loom-local-agent-20261015-043927/loom-local-agent.html",
+        "--quality",
+        "showcase",
+        "--json"
+      ],
+      "receipt": {
+        "schemaVersion": 1,
+        "ok": true,
+        "command": "validate",
+        "specification": {
+          "sha256": "a0a8472866cbbf7b38ed12b96783da56154adcef2b3c4026d9e5a0ac0210aca7",
+          "bytes": 3988
+        },
+        "validation": {
+          "checksPassed": 9,
+          "checkCount": 9,
+          "compositionProfile": "showcase",
+          "compositionStatus": "pass",
+          "errors": 0,
+          "warnings": 0
+        }
+      }
+    },
+    "deliver": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": 276,
+      "command": [
+        "/opt/homebrew/Cellar/node/26.11.0_1/bin/node",
+        "/Users/guojian/.config/magpie/library/skills/archify/bin/archify.mjs",
+        "deliver",
+        "architecture",
+        "/Users/guojian/Workspace/naijoug/loom/.archify/architecture-loom-local-agent-20261015-043927/candidate.json",
+        "/Users/guojian/Workspace/naijoug/loom/.archify/architecture-loom-local-agent-20261015-043927/loom-local-agent.html",
+        "--quality",
+        "showcase",
+        "--json"
+      ],
+      "receipt": {
+        "schemaVersion": 1,
+        "receiptId": "e64fb593-9a3a-4429-b317-480463d8b6b2",
+        "ok": true,
+        "command": "deliver",
+        "type": "architecture",
+        "input": "/Users/guojian/Workspace/naijoug/loom/.archify/architecture-loom-local-agent-20261015-043927/candidate.json",
+        "output": "/Users/guojian/Workspace/naijoug/loom/.archify/architecture-loom-local-agent-20261015-043927/loom-local-agent.html",
+        "specification": {
+          "sha256": "a0a8472866cbbf7b38ed12b96783da56154adcef2b3c4026d9e5a0ac0210aca7",
+          "bytes": 3988
+        },
+        "artifact": {
+          "sha256": "35fffe6144f08738f67e32841e290606228bb67154db09229532b1925d99a8d6",
+          "bytes": 819835
+        },
+        "validation": {
+          "checksPassed": 9,
+          "checkCount": 9,
+          "compositionProfile": "showcase",
+          "compositionStatus": "pass",
+          "errors": 0,
+          "warnings": 0
+        },
+        "update": {
+          "status": "unavailable",
+          "installedVersion": null,
+          "availableVersion": null,
+          "releaseNotes": null,
+          "checkedAt": null,
+          "source": null,
+          "noticeRequired": false,
+          "noticeText": null,
+          "reason": "disabled"
+        }
+      }
+    },
+    "check": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": 146,
+      "command": [
+        "/opt/homebrew/Cellar/node/26.11.0_1/bin/node",
+        "/Users/guojian/.config/magpie/library/skills/archify/bin/archify.mjs",
+        "check",
+        "/Users/guojian/Workspace/naijoug/loom/.archify/architecture-loom-local-agent-20261015-043927/loom-local-agent.html",
+        "--require-provenance"
+      ],
+      "receipt": {
+        "ok": true,
+        "file": "/Users/guojian/Workspace/naijoug/loom/.archify/architecture-loom-local-agent-20261015-043927/loom-local-agent.html",
+        "artifact": {
+          "sha256": "35fffe6144f08738f67e32841e290606228bb67154db09229532b1925d99a8d6",
+          "bytes": 819835
+        },
+        "checks": [
+          {
+            "name": "single_svg",
+            "ok": true,
+            "details": [
+              "found 1 <svg> block(s)"
+            ]
+          },
+          {
+            "name": "finite_svg",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "orthogonal_arrows",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "label_route_clearance",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "relationship_crossings",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "relationship_corridors",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "container_border_runs",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "route_rhythm",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "legend_clearance",
+            "ok": true,
+            "details": []
+          }
+        ],
+        "composition": {
+          "schemaVersion": 1,
+          "profile": "showcase",
+          "status": "pass",
+          "summary": {
+            "errors": 0,
+            "warnings": 0
+          },
+          "metrics": {
+            "properCrossings": 0,
+            "resolvedCrossovers": 0,
+            "ambiguousCorridors": 0,
+            "arrowheadCollisions": 0,
+            "containerBorderRuns": 0,
+            "labelRouteClearanceIssues": 0,
+            "labelCanvasOverflowIssues": 0,
+            "minLabelRouteClearance": 17.2,
+            "desktopReadabilityIssues": 0,
+            "viewportHeightIssues": 0,
+            "minProjectedNodeTextPx": 7.5,
+            "maxBends": 0,
+            "routesOverSuggestedBends": 0,
+            "maxStretch": 1,
+            "routesOverSuggestedStretch": 0,
+            "minSegmentPx": 48,
+            "minInteriorSegmentPx": null,
+            "shortSegmentCount": 0,
+            "shortEndpointSegmentCount": 0,
+            "shortInteriorSegmentCount": 0,
+            "microSegmentCount": 0
+          },
+          "suggestedLimits": {
+            "bendsPerRelationship": 2,
+            "stretch": 1.35,
+            "segmentPx": 16,
+            "microSegmentPx": 8
+          },
+          "routeReview": {
+            "crossings": [],
+            "detours": []
+          },
+          "leadingSpace": {
+            "measured": true,
+            "emptyTopPx": 24,
+            "emptyTopRatio": 0.066,
+            "occupiedTop": 24,
+            "viewBoxTop": 0,
+            "canvasHeight": 362,
+            "typicalNodeHeight": 64,
+            "reviewSuggested": false
+          },
+          "desktopReadability": {
+            "budgetBasis": "recognized-declared-wide",
+            "readerContract": "declared-wide-v1",
+            "availableDiagramWidth": 1203.75,
+            "actualBudgetPx": 1203.75,
+            "actualReaderWidth": 1233.75,
+            "desiredReaderWidth": 1233.75,
+            "viewportCap": 1376,
+            "limit": "source-size",
+            "requestedTargetPx": 7.5,
+            "requestedTargetMet": true,
+            "hardFloorPx": 6,
+            "hardFloorMet": true,
+            "minimumOwner": {
+              "kind": "edge",
+              "id": "use-desktop",
+              "from": "user",
+              "to": "tauriShell"
+            },
+            "minimumSourceTextPx": 8,
+            "minimumProjectedTextPx": 7.5,
+            "semanticTextCount": 25
+          },
+          "issues": []
+        },
+        "provenance": "current",
+        "deliveryReceiptId": "e64fb593-9a3a-4429-b317-480463d8b6b2"
+      }
+    },
+    "browser-check": {
+      "status": "fail",
+      "exitCode": 1,
+      "durationMs": 88,
+      "command": [
+        "/opt/homebrew/Cellar/node/26.11.0_1/bin/node",
+        "/Users/guojian/.config/magpie/library/skills/archify/bin/archify.mjs",
+        "browser-check",
+        "/Users/guojian/Workspace/naijoug/loom/.archify/architecture-loom-local-agent-20261015-043927/loom-local-agent.html",
+        "--json",
+        "--require-provenance"
+      ],
+      "execution": "in-process",
+      "receipt": {
+        "schemaVersion": 1,
+        "ok": false,
+        "command": "browser-check",
+        "evidenceKind": "automated-browser",
+        "status": "fail",
+        "visualReview": "not-requested",
+        "provenance": "current",
+        "deliveryReceiptId": "e64fb593-9a3a-4429-b317-480463d8b6b2",
+        "artifact": {
+          "path": "/Users/guojian/Workspace/naijoug/loom/.archify/architecture-loom-local-agent-20261015-043927/loom-local-agent.html",
+          "sha256": "35fffe6144f08738f67e32841e290606228bb67154db09229532b1925d99a8d6",
+          "bytes": 819835
+        },
+        "state": {
+          "detail": "read",
+          "motion": "still"
+        },
+        "chrome": {
+          "status": "available",
+          "executable": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+        },
+        "diagnostics": [
+          {
+            "code": "viewer/browser-check-runtime",
+            "severity": "error",
+            "message": "browser-check could not complete its Chrome inspection.",
+            "subject": {
+              "artifact": "/Users/guojian/Workspace/naijoug/loom/.archify/architecture-loom-local-agent-20261015-043927/loom-local-agent.html"
+            },
+            "evidence": {
+              "reason": "Chrome DevTools read pipe failed: stream ended\nChrome process: still running.\nChrome transport: Node v26.11.0, libuv 1.53.0, darwin; pid=5977, exitCode=null, signalCode=null.\nChrome read pipe: readable=false, ended=true, destroyed=false, receivedBytes=0, messages=0, bufferedBytes=0.\nChrome write pipe: writable=true, ended=false, destroyed=false, completedWrites=1, writtenBytes=50, bufferedBytes=0."
+            },
+            "supportedFixes": [
+              "resolve the reported Chrome inspection error, then rerun browser-check"
+            ]
+          }
+        ],
+        "containment": {
+          "status": "fail",
+          "policy": "fit-or-reader-declared-readable-vertical-scroll",
+          "viewports": []
+        },
+        "themeStates": {
+          "status": "fail",
+          "viewports": []
+        },
+        "readability": {
+          "status": "fail",
+          "minimumProjectedNodeTextPx": 6,
+          "viewports": []
+        },
+        "viewerChrome": {
+          "status": "fail",
+          "viewports": []
+        },
+        "captures": {
+          "status": "not-requested",
+          "screenshots": [],
+          "contactSheet": null
+        },
+        "sidecars": {
+          "receipt": "loom-local-agent.browser-check.json",
+          "files": []
+        },
+        "error": "Chrome DevTools read pipe failed: stream ended\nChrome process: still running.\nChrome transport: Node v26.11.0, libuv 1.53.0, darwin; pid=5977, exitCode=null, signalCode=null.\nChrome read pipe: readable=false, ended=true, destroyed=false, receivedBytes=0, messages=0, bufferedBytes=0.\nChrome write pipe: writable=true, ended=false, destroyed=false, completedWrites=1, writtenBytes=50, bufferedBytes=0."
+      }
+    }
+  },
+  "diagnostics": [
+    {
+      "code": "viewer/browser-check-runtime",
+      "severity": "error",
+      "message": "browser-check could not complete its Chrome inspection.",
+      "subject": {
+        "artifact": "/Users/guojian/Workspace/naijoug/loom/.archify/architecture-loom-local-agent-20261015-043927/loom-local-agent.html"
+      },
+      "evidence": {
+        "reason": "Chrome DevTools read pipe failed: stream ended\nChrome process: still running.\nChrome transport: Node v26.11.0, libuv 1.53.0, darwin; pid=5977, exitCode=null, signalCode=null.\nChrome read pipe: readable=false, ended=true, destroyed=false, receivedBytes=0, messages=0, bufferedBytes=0.\nChrome write pipe: writable=true, ended=false, destroyed=false, completedWrites=1, writtenBytes=50, bufferedBytes=0."
+      },
+      "supportedFixes": [
+        "resolve the reported Chrome inspection error, then rerun browser-check"
+      ]
+    }
+  ],
+  "evidence": {
+    "receipt": "/Users/guojian/Workspace/naijoug/loom/.archify/architecture-loom-local-agent-20261015-043927/loom-local-agent.finalize.json",
+    "summaryReceipt": "/Users/guojian/Workspace/naijoug/loom/.archify/architecture-loom-local-agent-20261015-043927/loom-local-agent.finalize-summary.json",
+    "browserCheckReceipt": "/Users/guojian/Workspace/naijoug/loom/.archify/architecture-loom-local-agent-20261015-043927/loom-local-agent.browser-check.json"
+  },
+  "visualReview": "not-requested",
+  "failedStage": "browser-check",
+  "finishedAt": "2026-10-15T11:45:47.716Z",
+  "durationMs": 600,
+  "update": {
+    "status": "unavailable",
+    "installedVersion": null,
+    "availableVersion": null,
+    "releaseNotes": null,
+    "checkedAt": null,
+    "source": null,
+    "noticeRequired": false,
+    "noticeText": null,
+    "reason": "cache-unavailable"
+  }
+}

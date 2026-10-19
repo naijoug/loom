@@ -1,0 +1,1486 @@
+
+> loom@0.1.0 check /Users/guojian/Workspace/naijoug/loom
+> ./scripts/check.sh
+
+
+> loom@0.1.0 docs:release:check /Users/guojian/Workspace/naijoug/loom
+> node scripts/check-release-docs.mjs
+
+Release docs check passed (24 markdown files).
+
+> loom@0.1.0 docs:release:test /Users/guojian/Workspace/naijoug/loom
+> node scripts/test-release-docs-checker.mjs
+
+Release docs checker fixture tests passed.
+
+> loom@0.1.0 test /Users/guojian/Workspace/naijoug/loom
+> node scripts/run-tests.mjs
+
+TAP version 13
+# Subtest: formatQuotedFeedback returns just the note when nothing is quoted
+ok 1 - formatQuotedFeedback returns just the note when nothing is quoted
+  ---
+  duration_ms: 9.473
+  type: 'test'
+  ...
+# Subtest: formatQuotedFeedback fences the quoted log lines and attributes the command
+ok 2 - formatQuotedFeedback fences the quoted log lines and attributes the command
+  ---
+  duration_ms: 0.383625
+  type: 'test'
+  ...
+# Subtest: formatQuotedFeedback works with a quote and no note
+ok 3 - formatQuotedFeedback works with a quote and no note
+  ---
+  duration_ms: 0.205458
+  type: 'test'
+  ...
+# Subtest: buildRepairPrompt embeds repair context, note, quoted logs, and plan
+ok 4 - buildRepairPrompt embeds repair context, note, quoted logs, and plan
+  ---
+  duration_ms: 6.999667
+  type: 'test'
+  ...
+# Subtest: buildRepairPrompt degrades gracefully with no repair context or plan
+ok 5 - buildRepairPrompt degrades gracefully with no repair context or plan
+  ---
+  duration_ms: 0.152542
+  type: 'test'
+  ...
+# Subtest: buildAgentCommandArgs uses codex exec form with write sandbox
+ok 6 - buildAgentCommandArgs uses codex exec form with write sandbox
+  ---
+  duration_ms: 0.354542
+  type: 'test'
+  ...
+# Subtest: buildAgentCommandArgs uses claude stream-json form
+ok 7 - buildAgentCommandArgs uses claude stream-json form
+  ---
+  duration_ms: 0.116
+  type: 'test'
+  ...
+# Subtest: buildAgentCommandArgs substitutes placeholders in custom args
+ok 8 - buildAgentCommandArgs substitutes placeholders in custom args
+  ---
+  duration_ms: 0.108958
+  type: 'test'
+  ...
+# Subtest: buildAgentCommandArgs appends the prompt when custom args omit the placeholder
+ok 9 - buildAgentCommandArgs appends the prompt when custom args omit the placeholder
+  ---
+  duration_ms: 0.255542
+  type: 'test'
+  ...
+# Subtest: buildAgentCommandInvocation resumes codex sessions through headless exec
+ok 10 - buildAgentCommandInvocation resumes codex sessions through headless exec
+  ---
+  duration_ms: 0.388833
+  type: 'test'
+  ...
+# Subtest: buildAgentCommandInvocation resumes claude sessions in print mode
+ok 11 - buildAgentCommandInvocation resumes claude sessions in print mode
+  ---
+  duration_ms: 0.132167
+  type: 'test'
+  ...
+# Subtest: buildAgentCommandInvocation falls back when resume command is unsupported
+ok 12 - buildAgentCommandInvocation falls back when resume command is unsupported
+  ---
+  duration_ms: 0.0485
+  type: 'test'
+  ...
+# Subtest: buildImplementationPrompt embeds scoped todo, rules, and final plan
+ok 13 - buildImplementationPrompt embeds scoped todo, rules, and final plan
+  ---
+  duration_ms: 0.06725
+  type: 'test'
+  ...
+# Subtest: buildResumeRepairPrompt uses incremental context without embedding the full plan
+ok 14 - buildResumeRepairPrompt uses incremental context without embedding the full plan
+  ---
+  duration_ms: 0.047959
+  type: 'test'
+  ...
+# Subtest: production bridge waits for listeners and buffers events before get resolves
+ok 15 - production bridge waits for listeners and buffers events before get resolves
+  ---
+  duration_ms: 54.235167
+  type: 'test'
+  ...
+# Subtest: production bridge ignores late A loads/errors after selecting B and replays sequence gaps
+ok 16 - production bridge ignores late A loads/errors after selecting B and replays sequence gaps
+  ---
+  duration_ms: 8.003292
+  type: 'test'
+  ...
+# Subtest: production bridge catches a missed final event on focus
+ok 17 - production bridge catches a missed final event on focus
+  ---
+  duration_ms: 8.005458
+  type: 'test'
+  ...
+# TypeError: Cannot read properties of null (reading 'tag')
+#     at getNodeFromInstance (/Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:11617:12)
+#     at getInstIfValueChanged (/Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:7812:20)
+#     at getTargetInstForInputEventPolyfill (/Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:7911:12)
+#     at extractEvents$1 (/Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:7981:16)
+#     at extractEvents$5 (/Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:9025:5)
+#     at dispatchEventsForPlugins (/Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:9096:3)
+#     at /Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:9288:12
+#     at batchedUpdates$1 (/Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:26179:12)
+#     at batchedUpdates (/Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:3991:12)
+#     at dispatchEventForPluginEventSystem (/Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:9287:3)
+# TypeError: Cannot read properties of null (reading 'tag')
+#     at getNodeFromInstance (/Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:11617:12)
+#     at getInstIfValueChanged (/Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:7812:20)
+#     at getTargetInstForInputEventPolyfill (/Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:7911:12)
+#     at extractEvents$1 (/Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:7981:16)
+#     at extractEvents$5 (/Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:9025:5)
+#     at dispatchEventsForPlugins (/Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:9096:3)
+#     at /Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:9288:12
+#     at batchedUpdates$1 (/Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:26179:12)
+#     at batchedUpdates (/Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:3991:12)
+#     at dispatchEventForPluginEventSystem (/Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:9287:3)
+# TypeError: Cannot read properties of null (reading 'tag')
+#     at getNodeFromInstance (/Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:11617:12)
+#     at getInstIfValueChanged (/Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:7812:20)
+#     at getTargetInstForInputEventPolyfill (/Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:7911:12)
+#     at extractEvents$1 (/Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:7981:16)
+#     at extractEvents$5 (/Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:9025:5)
+#     at dispatchEventsForPlugins (/Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:9096:3)
+#     at /Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:9288:12
+#     at batchedUpdates$1 (/Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:26179:12)
+#     at batchedUpdates (/Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:3991:12)
+#     at dispatchEventForPluginEventSystem (/Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:9287:3)
+# Subtest: composer cannot send before listener readiness or while IME is composing
+ok 18 - composer cannot send before listener readiness or while IME is composing
+  ---
+  duration_ms: 24.788208
+  type: 'test'
+  ...
+# Subtest: Ask still requires the explicit per-turn confirmation after bridge integration
+ok 19 - Ask still requires the explicit per-turn confirmation after bridge integration
+  ---
+  duration_ms: 14.5765
+  type: 'test'
+  ...
+# TypeError: activeElement.attachEvent is not a function
+#     at startWatchingForValueChange (/Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:7846:17)
+#     at handleEventsForInputEventPolyfill (/Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:7892:5)
+#     at extractEvents$1 (/Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:7990:5)
+#     at extractEvents$5 (/Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:9025:5)
+#     at dispatchEventsForPlugins (/Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:9096:3)
+#     at /Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:9288:12
+#     at batchedUpdates$1 (/Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:26179:12)
+#     at batchedUpdates (/Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:3991:12)
+#     at dispatchEventForPluginEventSystem (/Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:9287:3)
+#     at dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay (/Users/guojian/Workspace/naijoug/loom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:6465:5)
+# Subtest: renaming reads the visible input, ignores IME confirmation and commits once
+ok 20 - renaming reads the visible input, ignores IME confirmation and commits once
+  ---
+  duration_ms: 13.460292
+  type: 'test'
+  ...
+# Subtest: legacy resume is labelled for reset; structured handles allow resume and the reset action
+ok 21 - legacy resume is labelled for reset; structured handles allow resume and the reset action
+  ---
+  duration_ms: 10.489458
+  type: 'test'
+  ...
+# Subtest: chatInputEnvelope wraps fields under input
+ok 22 - chatInputEnvelope wraps fields under input
+  ---
+  duration_ms: 0.883833
+  type: 'test'
+  ...
+# Subtest: five input-envelope chat commands use chat_* names and input wrapper shape
+ok 23 - five input-envelope chat commands use chat_* names and input wrapper shape
+  ---
+  duration_ms: 0.183375
+  type: 'test'
+  ...
+# Subtest: flat-arg chat commands stay flat (no input wrapper)
+ok 24 - flat-arg chat commands stay flat (no input wrapper)
+  ---
+  duration_ms: 0.0905
+  type: 'test'
+  ...
+# Subtest: chatClient wrappers are exported
+ok 25 - chatClient wrappers are exported
+  ---
+  duration_ms: 0.051458
+  type: 'test'
+  ...
+# Subtest: production Chat wrappers invoke the real transport with the correct envelopes and replay cursor
+ok 26 - production Chat wrappers invoke the real transport with the correct envelopes and replay cursor
+  ---
+  duration_ms: 0.978292
+  type: 'test'
+  ...
+# Subtest: ChatContextPanel empty-state defers MCP/Sources and shows loom/chat + diagnostics
+ok 27 - ChatContextPanel empty-state defers MCP/Sources and shows loom/chat + diagnostics
+  ---
+  duration_ms: 0.583709
+  type: 'test'
+  ...
+# Subtest: Session menu promote stub stresses draft-only no auto run
+ok 28 - Session menu promote stub stresses draft-only no auto run
+  ---
+  duration_ms: 0.118791
+  type: 'test'
+  ...
+# Subtest: export menu invokes production hook once and shows warnings plus an explicit folder action
+ok 29 - export menu invokes production hook once and shows warnings plus an explicit folder action
+  ---
+  duration_ms: 75.654833
+  type: 'test'
+  ...
+# Subtest: late export responses cannot overwrite a new session, and returning to the old session is not stuck busy
+ok 30 - late export responses cannot overwrite a new session, and returning to the old session is not stuck busy
+  ---
+  duration_ms: 11.157667
+  type: 'test'
+  ...
+# Subtest: export and folder errors stay visible and export can be retried
+ok 31 - export and folder errors stay visible and export can be retried
+  ---
+  duration_ms: 9.186584
+  type: 'test'
+  ...
+# Subtest: titleFromUserMessage truncates on word boundary
+ok 32 - titleFromUserMessage truncates on word boundary
+  ---
+  duration_ms: 0.621
+  type: 'test'
+  ...
+# Subtest: titleFromUserMessage uses first non-empty line
+ok 33 - titleFromUserMessage uses first non-empty line
+  ---
+  duration_ms: 0.127209
+  type: 'test'
+  ...
+# Subtest: needsAttention from flag or error, not archived
+ok 34 - needsAttention from flag or error, not archived
+  ---
+  duration_ms: 0.069083
+  type: 'test'
+  ...
+# Subtest: inbox filters active / needs_attention / archived
+ok 35 - inbox filters active / needs_attention / archived
+  ---
+  duration_ms: 0.331125
+  type: 'test'
+  ...
+# Subtest: inbox query filters title and preview without changing empty query order
+ok 36 - inbox query filters title and preview without changing empty query order
+  ---
+  duration_ms: 5.955625
+  type: 'test'
+  ...
+# Subtest: inbox query can include visible fallback metadata
+ok 37 - inbox query can include visible fallback metadata
+  ---
+  duration_ms: 0.461709
+  type: 'test'
+  ...
+# Subtest: inbox agent metadata search mirrors whether fallback text is visible
+ok 38 - inbox agent metadata search mirrors whether fallback text is visible
+  ---
+  duration_ms: 0.34425
+  type: 'test'
+  ...
+# Subtest: inbox search placeholder lists all searchable visible fields
+ok 39 - inbox search placeholder lists all searchable visible fields
+  ---
+  duration_ms: 0.140625
+  type: 'test'
+  ...
+# Subtest: inbox search accessible label lists all searchable visible fields
+ok 40 - inbox search accessible label lists all searchable visible fields
+  ---
+  duration_ms: 0.86925
+  type: 'test'
+  ...
+# Subtest: inbox empty copy distinguishes empty tabs from empty search results
+ok 41 - inbox empty copy distinguishes empty tabs from empty search results
+  ---
+  duration_ms: 0.3225
+  type: 'test'
+  ...
+# Subtest: message error fallback stays visible beside structured tool parts
+ok 42 - message error fallback stays visible beside structured tool parts
+  ---
+  duration_ms: 0.128042
+  type: 'test'
+  ...
+# Subtest: out-of-order and duplicate durable events are applied exactly once
+ok 43 - out-of-order and duplicate durable events are applied exactly once
+  ---
+  duration_ms: 0.522792
+  type: 'test'
+  ...
+# Subtest: events arriving during snapshot load survive and stale responses cannot erase them
+ok 44 - events arriving during snapshot load survive and stale responses cannot erase them
+  ---
+  duration_ms: 0.117042
+  type: 'test'
+  ...
+# Subtest: other projects/sessions and stale turn payloads cannot contaminate a selection
+ok 45 - other projects/sessions and stale turn payloads cannot contaminate a selection
+  ---
+  duration_ms: 0.075875
+  type: 'test'
+  ...
+# Subtest: patches persist terminal text, clear optional handles and reject identity mutation
+ok 46 - patches persist terminal text, clear optional handles and reject identity mutation
+  ---
+  duration_ms: 0.151792
+  type: 'test'
+  ...
+# Subtest: new sessions and restored snapshots establish the cursor without replaying old deltas
+ok 47 - new sessions and restored snapshots establish the cursor without replaying old deltas
+  ---
+  duration_ms: 0.074042
+  type: 'test'
+  ...
+# Subtest: drafts remain isolated and survive switching away from a project
+ok 48 - drafts remain isolated and survive switching away from a project
+  ---
+  duration_ms: 0.198875
+  type: 'test'
+  ...
+# Subtest: a late send acknowledgment clears only the submitted draft in its own project
+ok 49 - a late send acknowledgment clears only the submitted draft in its own project
+  ---
+  duration_ms: 0.100584
+  type: 'test'
+  ...
+# Subtest: MockChatStore create/list/send roundtrip
+ok 50 - MockChatStore create/list/send roundtrip
+  ---
+  duration_ms: 0.604042
+  type: 'test'
+  ...
+# Subtest: MockChatStore archive and title helpers
+ok 51 - MockChatStore archive and title helpers
+  ---
+  duration_ms: 0.091958
+  type: 'test'
+  ...
+# Subtest: normalizeChatPermissionMode maps legacy aliases
+ok 52 - normalizeChatPermissionMode maps legacy aliases
+  ---
+  duration_ms: 0.547666
+  type: 'test'
+  ...
+# Subtest: chatPermissionAllowsWrite: explore read-only; ask/auto writable
+ok 53 - chatPermissionAllowsWrite: explore read-only; ask/auto writable
+  ---
+  duration_ms: 0.110708
+  type: 'test'
+  ...
+# Subtest: cyclePermissionMode explore → ask → auto → explore
+ok 54 - cyclePermissionMode explore → ask → auto → explore
+  ---
+  duration_ms: 0.453
+  type: 'test'
+  ...
+# Subtest: askTurnRequiresConfirm only for ask
+ok 55 - askTurnRequiresConfirm only for ask
+  ---
+  duration_ms: 0.062958
+  type: 'test'
+  ...
+# Subtest: permissionCliHint stays truthful with write capability
+ok 56 - permissionCliHint stays truthful with write capability
+  ---
+  duration_ms: 0.188125
+  type: 'test'
+  ...
+# Subtest: production run viewer shows immutable invocation, exit reason, separate streams and paginated offsets
+ok 57 - production run viewer shows immutable invocation, exit reason, separate streams and paginated offsets
+  ---
+  duration_ms: 86.74775
+  type: 'test'
+  ...
+# Subtest: late log responses never replace a different stream/session and errors stay visible
+ok 58 - late log responses never replace a different stream/session and errors stay visible
+  ---
+  duration_ms: 12.17225
+  type: 'test'
+  ...
+# Subtest: ambiguous IPC failure retains request identity, success permits an intentional new submission
+ok 59 - ambiguous IPC failure retains request identity, success permits an intentional new submission
+  ---
+  duration_ms: 0.675042
+  type: 'test'
+  ...
+# Subtest: double submit shares the pending operation and project/session/content/permission are isolated
+ok 60 - double submit shares the pending operation and project/session/content/permission are isolated
+  ---
+  duration_ms: 0.255
+  type: 'test'
+  ...
+# Subtest: production controller and wrapper forward the same request ID through real IPC on retry
+ok 61 - production controller and wrapper forward the same request ID through real IPC on retry
+  ---
+  duration_ms: 1.232709
+  type: 'test'
+  ...
+# Subtest: production Chat → workflow → Chat/Settings routes isolate task loading and Planning listeners
+ok 62 - production Chat → workflow → Chat/Settings routes isolate task loading and Planning listeners
+  ---
+  duration_ms: 129.326709
+  type: 'test'
+  ...
+# Subtest: switching project bumps generation and clears selection
+ok 63 - switching project bumps generation and clears selection
+  ---
+  duration_ms: 0.511833
+  type: 'test'
+  ...
+# Subtest: stale generation cannot overwrite session or summaries
+ok 64 - stale generation cannot overwrite session or summaries
+  ---
+  duration_ms: 0.082125
+  type: 'test'
+  ...
+# Subtest: drafts are per session
+ok 65 - drafts are per session
+  ---
+  duration_ms: 0.092375
+  type: 'test'
+  ...
+# Subtest: CHAT_TURN_TIMEOUT_MS is 10 minutes
+ok 66 - CHAT_TURN_TIMEOUT_MS is 10 minutes
+  ---
+  duration_ms: 0.382
+  type: 'test'
+  ...
+# Subtest: isChatTurnRunning uses sending or streaming
+ok 67 - isChatTurnRunning uses sending or streaming
+  ---
+  duration_ms: 0.071917
+  type: 'test'
+  ...
+# Subtest: formatTurnElapsed and turnRunningHint
+ok 68 - formatTurnElapsed and turnRunningHint
+  ---
+  duration_ms: 0.24875
+  type: 'test'
+  ...
+# Subtest: parses program and simple args
+ok 69 - parses program and simple args
+  ---
+  duration_ms: 0.758708
+  type: 'test'
+  ...
+# Subtest: preserves quoted arguments and escaped spaces
+ok 70 - preserves quoted arguments and escaped spaces
+  ---
+  duration_ms: 0.108583
+  type: 'test'
+  ...
+# Subtest: single quotes keep backslashes literal
+ok 71 - single quotes keep backslashes literal
+  ---
+  duration_ms: 0.084125
+  type: 'test'
+  ...
+# Subtest: rejects unclosed quotes
+ok 72 - rejects unclosed quotes
+  ---
+  duration_ms: 0.156041
+  type: 'test'
+  ...
+# Subtest: empty command returns an empty program
+ok 73 - empty command returns an empty program
+  ---
+  duration_ms: 0.096417
+  type: 'test'
+  ...
+# Subtest: detects destructive and reset commands
+ok 74 - detects destructive and reset commands
+  ---
+  duration_ms: 0.621083
+  type: 'test'
+  ...
+# Subtest: detects dependency installs and package mutations
+ok 75 - detects dependency installs and package mutations
+  ---
+  duration_ms: 0.515042
+  type: 'test'
+  ...
+# Subtest: detects production-like targets
+ok 76 - detects production-like targets
+  ---
+  duration_ms: 0.196708
+  type: 'test'
+  ...
+# Subtest: does not flag ordinary validation commands
+ok 77 - does not flag ordinary validation commands
+  ---
+  duration_ms: 0.910916
+  type: 'test'
+  ...
+# Subtest: commandRunIntent treats absent intent as legacy
+ok 78 - commandRunIntent treats absent intent as legacy
+  ---
+  duration_ms: 0.358708
+  type: 'test'
+  ...
+# Subtest: validation intent wins even when command text is not configured
+ok 79 - validation intent wins even when command text is not configured
+  ---
+  duration_ms: 0.06325
+  type: 'test'
+  ...
+# Subtest: agent action failure does not count as validation failure
+ok 80 - agent action failure does not count as validation failure
+  ---
+  duration_ms: 0.050334
+  type: 'test'
+  ...
+# Subtest: legacy runs fall back to configured validation commands
+ok 81 - legacy runs fall back to configured validation commands
+  ---
+  duration_ms: 0.057291
+  type: 'test'
+  ...
+# Subtest: Settings toggle emits the next value and respects disabled state
+ok 82 - Settings toggle emits the next value and respects disabled state
+  ---
+  duration_ms: 68.521542
+  type: 'test'
+  ...
+# Subtest: Testing acceptance gate exposes the blocking reason and only fires when enabled
+ok 83 - Testing acceptance gate exposes the blocking reason and only fires when enabled
+  ---
+  duration_ms: 24.5915
+  type: 'test'
+  ...
+# Subtest: Testing acceptance gate keeps preview and unrelated task runs blocked
+ok 84 - Testing acceptance gate keeps preview and unrelated task runs blocked
+  ---
+  duration_ms: 10.072792
+  type: 'test'
+  ...
+# Subtest: Testing acceptance gate accepts explicit validation intent without configured command match
+ok 85 - Testing acceptance gate accepts explicit validation intent without configured command match
+  ---
+  duration_ms: 15.67275
+  type: 'test'
+  ...
+# Subtest: Testing acceptance gate waits for explicit custom validation runs after a prior pass
+ok 86 - Testing acceptance gate waits for explicit custom validation runs after a prior pass
+  ---
+  duration_ms: 6.40075
+  type: 'test'
+  ...
+# Subtest: Testing feedback composer disables empty repair requests and submits actionable feedback
+ok 87 - Testing feedback composer disables empty repair requests and submits actionable feedback
+  ---
+  duration_ms: 23.026417
+  type: 'test'
+  ...
+# Subtest: frontend command event and schema contract matches the canonical fixture
+ok 88 - frontend command event and schema contract matches the canonical fixture
+  ---
+  duration_ms: 0.841083
+  type: 'test'
+  ...
+# Subtest: Tauri core and event access stays behind the typed client
+ok 89 - Tauri core and event access stays behind the typed client
+  ---
+  duration_ms: 7.9535
+  type: 'test'
+  ...
+# Subtest: typed Tauri client forwards invoke payloads and unwraps event payloads
+ok 90 - typed Tauri client forwards invoke payloads and unwraps event payloads
+  ---
+  duration_ms: 0.186916
+  type: 'test'
+  ...
+# Subtest: debug stop recognizes dev executables, never build/compiler commands containing cfg(dev)
+ok 91 - debug stop recognizes dev executables, never build/compiler commands containing cfg(dev)
+  ---
+  duration_ms: 125.829542
+  type: 'test'
+  ...
+# Subtest: debug stop succeeds with no dev process and a PID disappearing before inspection
+ok 92 - debug stop succeeds with no dev process and a PID disappearing before inspection
+  ---
+  duration_ms: 27.940291
+  type: 'test'
+  ...
+# Subtest: approval prompt explains dependency changes as environment risk
+ok 93 - approval prompt explains dependency changes as environment risk
+  ---
+  duration_ms: 0.449583
+  type: 'test'
+  ...
+# Subtest: approval prompt labels destructive filesystem risk
+ok 94 - approval prompt labels destructive filesystem risk
+  ---
+  duration_ms: 0.066459
+  type: 'test'
+  ...
+# Subtest: implementation Review gate requires a completed run
+ok 95 - implementation Review gate requires a completed run
+  ---
+  duration_ms: 0.536792
+  type: 'test'
+  ...
+# Subtest: implementation Review gate rejects self-review and blockers
+ok 96 - implementation Review gate rejects self-review and blockers
+  ---
+  duration_ms: 0.089834
+  type: 'test'
+  ...
+# Subtest: implementation Review gate allows a different reviewer with accepted blockers
+ok 97 - implementation Review gate allows a different reviewer with accepted blockers
+  ---
+  duration_ms: 0.050375
+  type: 'test'
+  ...
+# Subtest: passes when the validation run succeeds
+ok 98 - passes when the validation run succeeds
+  ---
+  duration_ms: 1.120542
+  type: 'test'
+  ...
+# Subtest: repairs on the first failure within budget
+ok 99 - repairs on the first failure within budget
+  ---
+  duration_ms: 0.132458
+  type: 'test'
+  ...
+# Subtest: escalates after the max repair attempts are spent
+ok 100 - escalates after the max repair attempts are spent
+  ---
+  duration_ms: 0.054291
+  type: 'test'
+  ...
+# Subtest: escalates on repeated identical failures (no progress)
+ok 101 - escalates on repeated identical failures (no progress)
+  ---
+  duration_ms: 0.048333
+  type: 'test'
+  ...
+# Subtest: escalates when the wall-clock budget is exceeded (hung run)
+ok 102 - escalates when the wall-clock budget is exceeded (hung run)
+  ---
+  duration_ms: 0.096625
+  type: 'test'
+  ...
+# Subtest: decideAfterRepair re-validates on success and escalates on agent failure
+ok 103 - decideAfterRepair re-validates on success and escalates on agent failure
+  ---
+  duration_ms: 0.298667
+  type: 'test'
+  ...
+# Subtest: decideAfterRepair times out even when the agent run reports success
+ok 104 - decideAfterRepair times out even when the agent run reports success
+  ---
+  duration_ms: 5.54075
+  type: 'test'
+  ...
+# Subtest: failureFingerprint normalizes evidence and falls back to command+exit
+ok 105 - failureFingerprint normalizes evidence and falls back to command+exit
+  ---
+  duration_ms: 0.230209
+  type: 'test'
+  ...
+# Subtest: isTimedOut respects a disabled (zero) budget
+ok 106 - isTimedOut respects a disabled (zero) budget
+  ---
+  duration_ms: 0.357083
+  type: 'test'
+  ...
+# Subtest: mentions resolve aliases without silently adding other agents
+ok 107 - mentions resolve aliases without silently adding other agents
+  ---
+  duration_ms: 0.864166
+  type: 'test'
+  ...
+# Subtest: unknown mentions are explicit instead of falling back to every agent
+ok 108 - unknown mentions are explicit instead of falling back to every agent
+  ---
+  duration_ms: 0.081
+  type: 'test'
+  ...
+# Subtest: default selection preserves available project preferences
+ok 109 - default selection preserves available project preferences
+  ---
+  duration_ms: 0.070542
+  type: 'test'
+  ...
+# Subtest: project dialog never invents analysis or reuses a different directory's cached metadata
+ok 110 - project dialog never invents analysis or reuses a different directory's cached metadata
+  ---
+  duration_ms: 67.1205
+  type: 'test'
+  ...
+# Subtest: recent-project hydration does not show an empty-state modal before persisted projects arrive
+ok 111 - recent-project hydration does not show an empty-state modal before persisted projects arrive
+  ---
+  duration_ms: 22.770417
+  type: 'test'
+  ...
+# Subtest: a genuinely empty hydrated project list still opens onboarding without fake stacks
+ok 112 - a genuinely empty hydrated project list still opens onboarding without fake stacks
+  ---
+  duration_ms: 9.79
+  type: 'test'
+  ...
+# Subtest: command logs are bucketed by run id and starting another run does not clear existing logs
+ok 113 - command logs are bucketed by run id and starting another run does not clear existing logs
+  ---
+  duration_ms: 0.881417
+  type: 'test'
+  ...
+# Subtest: command log buckets are independently capped
+ok 114 - command log buckets are independently capped
+  ---
+  duration_ms: 1.914375
+  type: 'test'
+  ...
+# Subtest: loop command events stay visible on the loaded task timeline
+ok 115 - loop command events stay visible on the loaded task timeline
+  ---
+  duration_ms: 0.62375
+  type: 'test'
+  ...
+# Subtest: implementation loop validation failure keeps task in implementation stage
+ok 116 - implementation loop validation failure keeps task in implementation stage
+  ---
+  duration_ms: 0.124666
+  type: 'test'
+  ...
+# Subtest: selecting a task routes to task-detail and preserves a valid selected todo
+ok 117 - selecting a task routes to task-detail and preserves a valid selected todo
+  ---
+  duration_ms: 0.129125
+  type: 'test'
+  ...
+# Subtest: app/stageViewed sets and clears the viewed stage
+ok 118 - app/stageViewed sets and clears the viewed stage
+  ---
+  duration_ms: 0.070792
+  type: 'test'
+  ...
+# Subtest: selecting a task resets any stage being reviewed
+ok 119 - selecting a task resets any stage being reviewed
+  ---
+  duration_ms: 0.089208
+  type: 'test'
+  ...
+# Subtest: selecting another project resets the viewed stage
+ok 120 - selecting another project resets the viewed stage
+  ---
+  duration_ms: 0.106333
+  type: 'test'
+  ...
+# Subtest: loading tasks for another project caches them without replacing the current board
+ok 121 - loading tasks for another project caches them without replacing the current board
+  ---
+  duration_ms: 0.280833
+  type: 'test'
+  ...
+# Subtest: selecting a project restores its cached tasks
+ok 122 - selecting a project restores its cached tasks
+  ---
+  duration_ms: 0.329167
+  type: 'test'
+  ...
+# Subtest: removing an inactive project drops it from recent projects and cached tasks
+ok 123 - removing an inactive project drops it from recent projects and cached tasks
+  ---
+  duration_ms: 0.25
+  type: 'test'
+  ...
+# Subtest: removing the active project clears the selected workspace state
+ok 124 - removing the active project clears the selected workspace state
+  ---
+  duration_ms: 0.435417
+  type: 'test'
+  ...
+# Subtest: upserting the selected task preserves the viewed stage
+ok 125 - upserting the selected task preserves the viewed stage
+  ---
+  duration_ms: 0.121833
+  type: 'test'
+  ...
+# Subtest: upserting a different task resets the viewed stage
+ok 126 - upserting a different task resets the viewed stage
+  ---
+  duration_ms: 0.061667
+  type: 'test'
+  ...
+# Subtest: starting a new task drops into the empty planning composer
+ok 127 - starting a new task drops into the empty planning composer
+  ---
+  duration_ms: 0.041541
+  type: 'test'
+  ...
+# Subtest: a tasks reload while drafting keeps the composer empty
+ok 128 - a tasks reload while drafting keeps the composer empty
+  ---
+  duration_ms: 0.151625
+  type: 'test'
+  ...
+# Subtest: creating the task from a draft leaves draft mode and selects it
+ok 129 - creating the task from a draft leaves draft mode and selects it
+  ---
+  duration_ms: 0.050292
+  type: 'test'
+  ...
+# Subtest: removing the selected task drops it and returns to the board
+ok 130 - removing the selected task drops it and returns to the board
+  ---
+  duration_ms: 0.067833
+  type: 'test'
+  ...
+# Subtest: removing an unselected task keeps the current selection and view
+ok 131 - removing an unselected task keeps the current selection and view
+  ---
+  duration_ms: 0.03825
+  type: 'test'
+  ...
+# Subtest: completing all todos moves the optimistic task state to reviewing
+ok 132 - completing all todos moves the optimistic task state to reviewing
+  ---
+  duration_ms: 0.056584
+  type: 'test'
+  ...
+# Subtest: planning progress replaces queued entries with backend status events
+ok 133 - planning progress replaces queued entries with backend status events
+  ---
+  duration_ms: 0.1375
+  type: 'test'
+  ...
+# Subtest: planning progress tracks retry attempts and review pairs separately
+ok 134 - planning progress tracks retry attempts and review pairs separately
+  ---
+  duration_ms: 0.047542
+  type: 'test'
+  ...
+# Subtest: planning logs are bucketed by run phase agent and capped
+ok 135 - planning logs are bucketed by run phase agent and capped
+  ---
+  duration_ms: 1.317375
+  type: 'test'
+  ...
+# Subtest: planning progress queue clears prior planning logs for the same task
+ok 136 - planning progress queue clears prior planning logs for the same task
+  ---
+  duration_ms: 0.560708
+  type: 'test'
+  ...
+# Subtest: round summary surfaces failed drafts instead of hiding them behind zero successes
+ok 137 - round summary surfaces failed drafts instead of hiding them behind zero successes
+  ---
+  duration_ms: 0.4225
+  type: 'test'
+  ...
+# Subtest: round summary reports mixed draft outcomes
+ok 138 - round summary reports mixed draft outcomes
+  ---
+  duration_ms: 0.068209
+  type: 'test'
+  ...
+# Subtest: findTestsInDirectory recursively returns sorted .test.cjs files
+ok 139 - findTestsInDirectory recursively returns sorted .test.cjs files
+  ---
+  duration_ms: 5.238041
+  type: 'test'
+  ...
+# Subtest: resolveRequestedTestFiles defaults to tests/unit
+ok 140 - resolveRequestedTestFiles defaults to tests/unit
+  ---
+  duration_ms: 2.252334
+  type: 'test'
+  ...
+# Subtest: resolveRequestedTestFiles supports pnpm separator, files, directories, and absolute targets
+ok 141 - resolveRequestedTestFiles supports pnpm separator, files, directories, and absolute targets
+  ---
+  duration_ms: 2.458958
+  type: 'test'
+  ...
+# Subtest: resolveRequestedTestFiles rejects unsupported or empty targets
+ok 142 - resolveRequestedTestFiles rejects unsupported or empty targets
+  ---
+  duration_ms: 1.50375
+  type: 'test'
+  ...
+# Subtest: completed tasks show Done as the active stage
+ok 143 - completed tasks show Done as the active stage
+  ---
+  duration_ms: 0.615041
+  type: 'test'
+  ...
+# Subtest: verifying tasks remain in the running Testing stage before manual accept
+ok 144 - verifying tasks remain in the running Testing stage before manual accept
+  ---
+  duration_ms: 0.094917
+  type: 'test'
+  ...
+# Subtest: step labels stay stable and Chinese while status carries progress
+ok 145 - step labels stay stable and Chinese while status carries progress
+  ---
+  duration_ms: 0.060708
+  type: 'test'
+  ...
+# Subtest: a fully completed task keeps the same Chinese mini stepper labels
+ok 146 - a fully completed task keeps the same Chinese mini stepper labels
+  ---
+  duration_ms: 0.044625
+  type: 'test'
+  ...
+# Subtest: empty task state exposes the four planned stages
+ok 147 - empty task state exposes the four planned stages
+  ---
+  duration_ms: 0.375083
+  type: 'test'
+  ...
+# Subtest: stageOf folds task statuses into the four public workflow stages
+ok 148 - stageOf folds task statuses into the four public workflow stages
+  ---
+  duration_ms: 0.049667
+  type: 'test'
+  ...
+# Subtest: deriveTaskStages highlights the viewed stage and locks unreached stages
+ok 149 - deriveTaskStages highlights the viewed stage and locks unreached stages
+  ---
+  duration_ms: 0.347667
+  type: 'test'
+  ...
+# Subtest: deriveTaskStages without a viewed stage highlights the task's current stage
+ok 150 - deriveTaskStages without a viewed stage highlights the task's current stage
+  ---
+  duration_ms: 0.12975
+  type: 'test'
+  ...
+# Subtest: deriveTaskStages exposes testing as a stage id (not the legacy debugging id)
+ok 151 - deriveTaskStages exposes testing as a stage id (not the legacy debugging id)
+  ---
+  duration_ms: 0.681125
+  type: 'test'
+  ...
+# Subtest: default Agent draft is implementation-capable and safe to edit
+ok 152 - default Agent draft is implementation-capable and safe to edit
+  ---
+  duration_ms: 1.407834
+  type: 'test'
+  ...
+# Subtest: Agent draft round-trips editable fields
+ok 153 - Agent draft round-trips editable fields
+  ---
+  duration_ms: 0.381542
+  type: 'test'
+  ...
+# Subtest: buildTaskTimelineRows merges planning, loop trace, and task events by newest first
+ok 154 - buildTaskTimelineRows merges planning, loop trace, and task events by newest first
+  ---
+  duration_ms: 0.88225
+  type: 'test'
+  ...
+# Subtest: buildTaskTimelineRows omits command runs already represented by loop trace
+ok 155 - buildTaskTimelineRows omits command runs already represented by loop trace
+  ---
+  duration_ms: 0.150167
+  type: 'test'
+  ...
+# Subtest: buildTaskTimelineRows includes implementation review, feedback, and summary artifacts
+ok 156 - buildTaskTimelineRows includes implementation review, feedback, and summary artifacts
+  ---
+  duration_ms: 0.1145
+  type: 'test'
+  ...
+# Subtest: buildDefaultSlots prefers detected preview and validation commands
+ok 157 - buildDefaultSlots prefers detected preview and validation commands
+  ---
+  duration_ms: 3.373542
+  type: 'test'
+  ...
+# Subtest: buildDefaultSlots falls back from project stacks
+ok 158 - buildDefaultSlots falls back from project stacks
+  ---
+  duration_ms: 0.103417
+  type: 'test'
+  ...
+# Subtest: terminalSlotFromDraft trims values and rejects incomplete drafts
+ok 159 - terminalSlotFromDraft trims values and rejects incomplete drafts
+  ---
+  duration_ms: 0.899959
+  type: 'test'
+  ...
+# Subtest: applyTerminalSlotDraft updates or appends slots
+ok 160 - applyTerminalSlotDraft updates or appends slots
+  ---
+  duration_ms: 0.089875
+  type: 'test'
+  ...
+# Subtest: draftFromTerminalSlot and resolveTerminalSlotCwd share slot shape
+ok 161 - draftFromTerminalSlot and resolveTerminalSlotCwd share slot shape
+  ---
+  duration_ms: 0.121458
+  type: 'test'
+  ...
+# Subtest: validation evidence requires a passing run newer than the latest failure
+ok 162 - validation evidence requires a passing run newer than the latest failure
+  ---
+  duration_ms: 0.460167
+  type: 'test'
+  ...
+# Subtest: validation evidence ignores preview and unrelated task runs
+ok 163 - validation evidence ignores preview and unrelated task runs
+  ---
+  duration_ms: 0.068167
+  type: 'test'
+  ...
+# Subtest: explicit validation intent counts even when command text is not configured
+ok 164 - explicit validation intent counts even when command text is not configured
+  ---
+  duration_ms: 0.094125
+  type: 'test'
+  ...
+# Subtest: running validation evidence includes explicit custom commands
+ok 165 - running validation evidence includes explicit custom commands
+  ---
+  duration_ms: 0.055916
+  type: 'test'
+  ...
+# Subtest: gate status explains running and blocking conditions
+ok 166 - gate status explains running and blocking conditions
+  ---
+  duration_ms: 0.111125
+  type: 'test'
+  ...
+# Subtest: feedback conversation keeps structured evidence visible
+ok 167 - feedback conversation keeps structured evidence visible
+  ---
+  duration_ms: 0.191625
+  type: 'test'
+  ...
+# Subtest: resolveThemeMode prefers settings over the legacy localStorage theme
+ok 168 - resolveThemeMode prefers settings over the legacy localStorage theme
+  ---
+  duration_ms: 0.520709
+  type: 'test'
+  ...
+# Subtest: resolveThemeMode falls back to legacy light/dark and then system
+ok 169 - resolveThemeMode falls back to legacy light/dark and then system
+  ---
+  duration_ms: 0.172666
+  type: 'test'
+  ...
+# Subtest: effectiveThemeForMode maps system mode to the current system theme
+ok 170 - effectiveThemeForMode maps system mode to the current system theme
+  ---
+  duration_ms: 0.048
+  type: 'test'
+  ...
+# Subtest: isThemeMode accepts only supported theme modes
+ok 171 - isThemeMode accepts only supported theme modes
+  ---
+  duration_ms: 0.044542
+  type: 'test'
+  ...
+# Subtest: core workflow copy uses Chinese actions with stable domain terms
+ok 172 - core workflow copy uses Chinese actions with stable domain terms
+  ---
+  duration_ms: 0.607166
+  type: 'test'
+  ...
+1..172
+# tests 172
+# suites 0
+# pass 172
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 840.922709
+
+> loom@0.1.0 build /Users/guojian/Workspace/naijoug/loom
+> tsc && vite build
+
+vite v7.3.3 building client environment for production...
+transforming...
+✓ 1872 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                               0.48 kB │ gzip:   0.29 kB
+dist/plan-viewer.html                                         1.18 kB │ gzip:   0.55 kB
+dist/assets/inter-vietnamese-400-normal-DMkecbls.woff2        4.97 kB
+dist/assets/inter-greek-ext-400-normal-DGGRlc-M.woff2         5.26 kB
+dist/assets/geist-mono-cyrillic-400-normal-Ce5q_31Z.woff2     5.46 kB
+dist/assets/geist-mono-latin-ext-400-normal-Cgks_Qgx.woff2    6.42 kB
+dist/assets/inter-vietnamese-400-normal-Bbgyi5SW.woff         6.50 kB
+dist/assets/inter-greek-ext-400-normal-KugGGMne.woff          7.06 kB
+dist/assets/geist-mono-cyrillic-400-normal-BPBWmzPh.woff      7.16 kB
+dist/assets/inter-cyrillic-400-normal-obahsSVq.woff2          7.71 kB
+dist/assets/inter-greek-400-normal-B4URO6DV.woff2             7.78 kB
+dist/assets/geist-mono-latin-ext-400-normal-CxNRRMGd.woff     8.74 kB
+dist/assets/inter-cyrillic-400-normal-HOLc17fK.woff           9.78 kB
+dist/assets/inter-greek-400-normal-q2sYcFCs.woff              9.92 kB
+dist/assets/inter-cyrillic-ext-400-normal-BQZuk6qB.woff2     10.23 kB
+dist/assets/inter-cyrillic-ext-400-normal-DQukG94-.woff      13.34 kB
+dist/assets/geist-mono-latin-400-normal-LC9RFr9I.woff2       14.71 kB
+dist/assets/geist-mono-latin-400-normal-CoULgQGM.woff        19.17 kB
+dist/assets/inter-latin-400-normal-C38fXH4l.woff2            23.66 kB
+dist/assets/inter-latin-400-normal-CyCys3Eg.woff             30.70 kB
+dist/assets/geist-sans-latin-400-normal-gapTbOY8.woff2       33.40 kB
+dist/assets/inter-latin-ext-400-normal-C1nco2VV.woff2        35.00 kB
+dist/assets/geist-sans-latin-400-normal-BOaIZNA2.woff        38.91 kB
+dist/assets/inter-latin-ext-400-normal-77YHD8bZ.woff         47.56 kB
+dist/assets/NewTaskModal-CtblCIfC.css                         8.01 kB │ gzip:   1.84 kB
+dist/assets/main-BG7GFwHs.css                                 8.27 kB │ gzip:   2.32 kB
+dist/assets/index-LshtKATT.css                               12.95 kB │ gzip:   2.65 kB
+dist/assets/App-DnZA827Y.css                                 16.14 kB │ gzip:   3.48 kB
+dist/assets/index-JG4OJeOe.css                               22.23 kB │ gzip:   4.28 kB
+dist/assets/index-BQLRY-iK.css                               89.90 kB │ gzip:  13.52 kB
+dist/assets/play-DjI8TVTw.js                                  0.19 kB │ gzip:   0.18 kB
+dist/assets/modulepreload-polyfill-B5Qt9EMX.js                0.71 kB │ gzip:   0.40 kB
+dist/assets/iframeNavigation-CVFIKjEi.js                      0.79 kB │ gzip:   0.43 kB
+dist/assets/selectors-76zr890N.js                             0.90 kB │ gzip:   0.46 kB
+dist/assets/useProjectPreferencesBridge-D-1GKKyx.js           0.94 kB │ gzip:   0.52 kB
+dist/assets/plan-viewer-CwwG_Li8.js                           0.94 kB │ gzip:   0.60 kB
+dist/assets/WorkflowShell-DXYN0PvF.js                         1.19 kB │ gzip:   0.68 kB
+dist/assets/useAgentCatalog-DYmpEUkT.js                       1.86 kB │ gzip:   0.61 kB
+dist/assets/App-Ds2o0bPC.js                                   2.94 kB │ gzip:   1.29 kB
+dist/assets/terminalSlots-e7dx9mYl.js                         3.08 kB │ gzip:   1.43 kB
+dist/assets/tauriClient-GnwYOE7P.js                           4.13 kB │ gzip:   1.65 kB
+dist/assets/NewTaskModal-s2FbgcwK.js                          4.18 kB │ gzip:   1.82 kB
+dist/assets/Header-4rBsIWT_.js                                4.39 kB │ gzip:   1.89 kB
+dist/assets/index-O3t_xyo9.js                                 6.36 kB │ gzip:   2.51 kB
+dist/assets/PlanningPreviewApp-jdj-Hp0z.js                   18.96 kB │ gzip:   5.54 kB
+dist/assets/index-_Vw-dgOm.js                                26.32 kB │ gzip:   8.08 kB
+dist/assets/App-DNKRW6Zu.js                                  39.47 kB │ gzip:  11.04 kB
+dist/assets/index-Cglj7iLf.js                                44.64 kB │ gzip:  14.18 kB
+dist/assets/main-DqK0yaFw.js                                144.44 kB │ gzip:  46.93 kB
+dist/assets/index-mpaSAgSj.js                               400.45 kB │ gzip: 106.28 kB
+✓ built in 1.10s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.44s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.27s
+     Running unittests src/lib.rs (src-tauri/target/debug/deps/loom_lib-3a99330ef42de64c)
+
+running 294 tests
+test agents::tests::attempt_suffix_only_marks_retries ... ok
+test agent_diagnostics::tests::compact_version_uses_first_non_empty_line_and_limits_length ... ok
+test agent_adapter::tests::custom_adapter_rejects_shell_wrappers ... ok
+test agents::tests::classify_failure_detects_timeout_and_empty_output ... ok
+test agents::tests::classify_failure_detects_not_retryable_config_errors ... ok
+test agents::tests::classify_failure_returns_none_for_usable_success ... ok
+test agents::tests::candidate_plan_document_includes_frontmatter ... ok
+test agent_adapter::tests::stage_permissions_reject_missing_write_or_command_access ... ok
+test agents::tests::claude_planning_profile_avoids_plan_permission_mode ... ok
+test agents::tests::deletes_custom_agent_config ... ok
+test agent_adapter::tests::custom_adapter_expands_shared_placeholders ... ok
+test agents::tests::derive_plan_title_returns_none_without_successful_output ... ok
+test agents::tests::builds_codex_and_claude_profiles ... ok
+test agent_adapter::tests::grok_adapter_uses_single_turn_and_streaming_json ... ok
+test agent_adapter::tests::resume_never_accepts_old_options_cross_programs_or_option_shaped_ids ... ok
+test agents::tests::error_lines_ignore_hook_noise_and_keep_key_failures ... ok
+test agent_adapter::tests::codex_adapter_maps_stage_to_sandbox ... ok
+test agents::tests::derive_plan_title_falls_back_to_first_content_line ... ok
+test agents::tests::final_plan_embeds_full_successful_agent_proposals ... ok
+test agent_adapter::tests::native_resume_reasserts_current_policy_and_preserves_stdin ... ok
+test agents::tests::final_plan_deduplicates_agent_todos ... ok
+test agents::tests::final_plan_parses_chinese_agent_todo_sections ... ok
+test agents::tests::final_plan_uses_successful_agent_implementation_todos ... ok
+test agents::tests::implementation_agent_requires_capability_permissions_and_matching_command ... ok
+test agents::tests::empty_agent_request_uses_enabled_planning_agents ... ok
+test agents::tests::fallback_utc_date_and_time_format_plan_stamp_parts ... ok
+test agents::tests::derive_plan_title_handles_inline_goal_and_strips_markdown ... ok
+test agents::tests::derive_plan_title_uses_goal_heading_from_first_successful_agent ... ok
+test agent_diagnostics::tests::missing_command_has_no_resolved_path ... ok
+test agents::tests::latest_drafting_invocations_keeps_last_attempt_per_agent ... ok
+test agents::tests::plans_index_adds_missing_date_near_top ... ok
+test agents::tests::plans_index_allows_same_file_name_on_different_dates ... ok
+test agents::tests::next_project_plan_path_uses_date_directory_time_and_slug ... ok
+test agents::tests::plans_index_inserts_missing_older_date_after_newer_dates ... ok
+test agents::tests::plans_index_inserts_newest_plan_under_existing_date ... ok
+test agents::tests::plans_index_keeps_existing_date_entries_in_time_desc_order ... ok
+test agents::tests::plans_index_updates_duplicate_plan_file_summary_in_same_date_section ... ok
+test agents::tests::real_claude_planning_agent_produces_usable_plan_document ... ignored, requires a real local `claude` CLI with credentials; run explicitly
+test agents::tests::redacts_sensitive_tokens_from_planning_logs ... ok
+test agents::tests::renders_prompt_with_requirement_and_project_path ... ok
+test agents::tests::replaces_prompt_and_project_placeholders ... ok
+test agents::tests::requested_agents_do_not_fall_back_to_every_enabled_agent ... ok
+test agents::tests::parses_claude_stream_json_result_and_session ... ok
+test agents::tests::next_project_plan_path_suffixes_colliding_same_minute_plan ... ok
+test agents::tests::parses_codex_json_result_and_session ... ok
+test agents::tests::parses_codex_item_completed_agent_message ... ok
+test agents::tests::slugifies_plan_title_for_project_docs_plans_filename ... ok
+test agents::tests::review_and_synthesize_falls_back_when_all_agents_failed ... ok
+test agents::tests::review_and_synthesize_adopts_single_candidate_without_reviews ... ok
+test agents::tests::legacy_agent_store_is_migrated_on_load ... ok
+test agents::tests::synthesis_prompt_includes_cross_review_findings ... ok
+test agents::tests::synthesis_prompt_omits_review_section_without_findings ... ok
+test agents::tests::updates_custom_agent_config ... ok
+test agents::tests::task_stop_marker_prevents_agent_retries_until_an_explicit_new_run ... ok
+test agents::tests::failed_cli_profile_preserves_stderr_tail ... ok
+test agents::tests::cli_profile_emits_batched_planning_logs ... ok
+test agents::tests::cli_profile_redacts_stdout_and_stderr_before_storage ... ok
+test attachments::tests::rejects_attachments_over_the_per_file_limit ... ok
+test attachments::tests::copies_supported_attachment_into_task_store ... ok
+test chat::export::tests::generate_rollback_sample ... ignored, explicitly generates a local rollback sample; no network or agent calls
+test attachments::tests::rejects_unsupported_attachment_types ... ok
+test agents::tests::cross_reviews_cover_every_pair_and_run_in_parallel_workers ... ok
+test agents::tests::stderr_only_error_is_failed_even_with_zero_exit ... ok
+test chat::real_agent_tests::grok_file_permissions_in_new_and_resumed_chat ... ignored, requires LOOM_REAL_CHAT=1; real model file-tool probes in synthetic temporary projects
+test chat::real_agent_tests::grok_three_turns_resume_after_repository_reopen ... ignored, requires explicit LOOM_REAL_CHAT=1 and a configured Grok account; consumes model usage
+test chat::models::tests::tool_parts_emit_frontend_camel_case_and_read_legacy_snake_case ... ok
+test agents::tests::review_and_synthesize_runs_reviews_before_synthesis ... ok
+test agents::tests::runs_cli_profile_with_stdin_and_captures_stdout ... ok
+test chat::repository::tests::archived_sessions_require_restore_and_failed_prepare_has_no_side_effects ... ok
+test chat::repository::tests::abandoned_turn_recovers_partial_output_once_and_can_run_again ... ok
+test chat::repository::tests::active_config_changes_are_rejected_using_the_actual_command_helpers ... ok
+test agents::tests::planning_wrapper_retries_retryable_failures_once ... ok
+test chat::repository::tests::corrupt_sessions_remain_visible_as_errors_while_healthy_sessions_load ... ok
+test chat::repository::tests::cancel_is_scoped_to_project_session_and_turn_even_before_spawn ... ok
+test chat::repository::tests::concurrent_duplicate_sends_only_prepare_once ... ok
+test chat::export::tests::legacy_export_preserves_original_v1_bytes_and_does_not_invent_run_evidence ... ok
+test chat::repository::tests::cursor_pagination_and_stale_streams_do_not_duplicate_or_reorder_content ... ok
+test agents::tests::planning_wrapper_does_not_retry_config_errors ... ok
+test chat::repository::tests::failed_acceptance_does_not_leave_a_receipt_or_lease ... ok
+test chat::repository::tests::failed_completion_preserves_partial_text_and_prior_resume ... ok
+test chat::repository::tests::incomplete_tail_is_repaired_but_bad_committed_records_are_preserved_and_rejected ... ok
+test agents::tests::rejects_edit_and_delete_for_builtin_agents ... ok
+test chat::repository::tests::finish_preserves_concurrent_title_edits_and_stale_finish_cannot_end_next_turn ... ok
+test agents::tests::load_drops_retired_amp_agents ... ok
+test chat::export::tests::active_export_is_a_fixed_snapshot_and_does_not_capture_later_output ... ok
+test chat::repository::tests::interrupted_accepted_send_is_returned_and_never_rerun ... ok
+test chat::repository::tests::invalid_ids_forged_cwd_and_future_schema_are_rejected_without_overwriting ... ok
+test chat::repository::tests::journal_replays_streamed_text_and_tools_when_snapshot_is_missing ... ok
+test agents::tests::syncs_default_dummy_to_disabled_test_fixture ... ok
+test chat::repository::tests::journal_write_failure_cannot_acknowledge_or_reserve_a_request ... ok
+test chat::export::tests::exports_complete_portable_snapshot_literal_markdown_and_log_prefixes_without_overwrite ... ok
+test chat::repository::tests::live_event_index_does_not_hide_replaced_corrupt_or_truncated_journals ... ok
+test chat::repository::tests::missing_or_corrupt_index_does_not_hide_authoritative_sessions ... ok
+test chat::repository::tests::journal_recovers_after_writer_process_exits_without_running_destructors ... ok
+test chat::repository::tests::operating_system_writer_lock_releases_when_last_owner_exits ... ok
+test chat::repository::tests::newer_snapshot_or_missing_committed_history_is_not_overwritten_during_migration ... ok
+test chat::repository::tests::storage_failure_never_emits_a_successful_completion ... ok
+test chat::repository::tests::reading_and_listing_a_live_turn_do_not_reconcile_it_as_a_restart ... ok
+test chat::repository::tests::concurrent_create_and_updates_do_not_lose_sessions_or_mutations ... ok
+test chat::runtime::tests::cancellation_before_spawn_and_spawn_errors_leave_no_registry_entry ... ok
+test chat::repository::tests::send_request_conflicts_and_new_request_ids_do_not_bypass_active_turn_lock ... ok
+test chat::repository::tests::receipt_is_preserved_after_process_exit_without_destructors ... ok
+test chat::runtime::tests::batched_tool_results_all_reach_the_stream_and_final_transcript ... ok
+test chat::repository::tests::v1_migration_is_read_only_and_retries_an_incomplete_first_append ... ok
+test chat::export::tests::damaged_missing_and_symlink_logs_are_explicit_and_export_root_cannot_escape ... ok
+test chat::repository::tests::terminal_event_is_built_after_final_snapshot_is_readable ... ok
+test chat::repository::tests::request_ids_are_bounded_and_scoped_to_each_project ... ok
+test chat::repository::tests::send_receipt_survives_completion_archive_config_change_and_repository_reopen ... ok
+test chat::repository::tests::symlink_directories_and_files_are_rejected_without_touching_target ... ok
+test chat::runtime::tests::nonzero_exit_stays_failed_even_with_partial_output ... ok
+test chat::runtime::tests::dropping_runtime_future_kills_its_process_and_releases_ownership ... ok
+test chat::service::tests::recovery_keeps_logs_and_marks_unfinished_turn_interrupted_once ... ok
+test chat::runtime::tests::descendants_are_stopped_even_when_they_close_output_pipes ... ok
+test chat::shutdown::tests::exit_gate_defers_once_allows_only_after_ready_and_can_retry_failure ... ok
+test chat::runtime::tests::stderr_pressure_does_not_deadlock_stdout_and_owner_is_chat ... ok
+test chat::tests::chat_stop_outcome_marks_timeout_aborted_with_error ... ok
+test chat::tests::chat_stop_outcome_user_abort_keeps_simple_stopped_copy ... ok
+test chat::tests::chat_turn_timeout_constant_is_within_product_window ... ok
+test chat::tests::normalizes_legacy_permission_modes ... ok
+test chat::tests::parse_falls_back_to_text_for_non_json ... ok
+test chat::tests::parses_claude_assistant_tool_use_part ... ok
+test chat::tests::parses_claude_stream_event_content_block_tool_use ... ok
+test chat::tests::parses_claude_tool_result_part ... ok
+test chat::tests::parses_codex_style_command_part ... ok
+test chat::tests::parses_grok_style_tool_use_part ... ok
+test chat::tests::permission_modes_map_to_conservative_or_write_stages ... ok
+test chat::tests::permission_tiers_drive_prepare_invocation_cli_flags ... ok
+test chat::tests::reconcile_interrupted_marks_streaming_aborted ... ok
+test chat::tests::session_needs_attention_from_flag_or_error ... ok
+test chat::tests::stop_reason_covers_abort_and_timeout ... ok
+test chat::tests::timeout_summary_is_readable ... ok
+test chat::tests::title_from_user_message_truncates_on_word_boundary ... ok
+test chat::turns::tests::invocation_audit_masks_prompt_and_secret_options_without_changing_execution ... ok
+test chat_context::tests::bounded_history_is_valid_json_and_keeps_latest_request_and_transcript ... ok
+test chat_context::tests::escaped_controls_do_not_drop_the_newest_message ... ok
+test chat_context::tests::execution_changes_clear_resume_and_are_rejected_during_a_turn ... ok
+test chat_context::tests::legacy_resume_requires_explicit_reset_and_fallback_keeps_history ... ok
+test chat_context::tests::native_resume_transports_only_new_input_for_each_builtin_adapter ... ok
+test chat_context::tests::oversized_latest_input_is_rejected_instead_of_silently_truncated ... ok
+test chat_context::tests::recent_history_retains_roles_statuses_and_chronological_order ... ok
+test chat_context::tests::rejected_resume_protocol_is_not_silently_bypassed ... ok
+test chat_context::tests::structured_resume_binds_all_execution_settings_without_storing_them ... ok
+test command_runner::tests::analyzes_redacted_stderr_without_leaking_credentials ... ok
+test chat::runtime::tests::failed_log_observer_stops_the_process_and_releases_ownership ... ok
+test chat::service::tests::run_records_exit_configuration_and_separate_redacted_logs ... ok
+test chat::runtime::tests::stdin_is_written_concurrently_and_closed_at_end ... ok
+test chat::runtime::tests::utf8_across_reads_and_final_structured_messages_are_preserved ... ok
+test chat::runtime::tests::cancellation_escalates_past_ignored_term_and_keeps_partial ... ok
+test command_runner::tests::extracts_cross_stack_log_insights ... ok
+test command_runner::tests::keeps_stderr_tail_to_twenty_lines ... ok
+test command_runner::tests::matches_error_summary_prefixes_case_insensitively ... ok
+test command_runner::tests::records_non_failing_warnings_and_urls_as_findings ... ok
+test command_runner::tests::redacts_command_text_before_persistence ... ok
+test context_builder::tests::builds_budgeted_implementation_context ... ok
+test context_builder::tests::rejects_unknown_todo ... ok
+test context_builder::tests::truncates_large_plan_to_prompt_budget ... ok
+test contracts::canonical_contract_fixture_matches_backend_manifest ... ok
+test contracts::chat_send_requires_a_client_request_identity ... ok
+test contracts::command_manifest_matches_tauri_registration ... ok
+test contracts::event_manifest_matches_backend_emitters ... ok
+test contracts::persisted_model_samples_round_trip_through_rust_types ... ok
+test contracts::status_manifest_matches_rust_parsers ... ok
+test diagnostics::tests::diagnostic_bundle_file_harness_writes_minimal_no_task_json ... ok
+test diagnostics::tests::diagnostic_bundle_file_harness_writes_redacted_fake_log_tail_json ... ok
+test diagnostics::tests::diagnostic_bundle_ignores_logs_outside_project_log_dir ... ok
+test diagnostics::tests::diagnostic_bundle_invalid_recent_log_refs_do_not_starve_valid_logs ... ok
+test diagnostics::tests::diagnostic_bundle_omits_logs_unless_user_selects_them ... ok
+test diagnostics::tests::diagnostic_bundle_redacts_secrets_paths_and_log_tails ... ok
+test execution_policy::tests::allows_safe_commands_in_nested_project_directories ... ok
+test execution_policy::tests::approvals_are_single_use_and_bound_to_the_exact_command ... ok
+test execution_policy::tests::denies_working_directories_outside_the_project ... ok
+test execution_policy::tests::dependency_install_respects_confirmation_setting ... ok
+test execution_policy::tests::high_risk_commands_always_require_approval ... ok
+test execution_policy::tests::package_like_script_names_do_not_trigger_dependency_approval ... ok
+test execution_policy::tests::package_mutations_cover_common_lockfile_and_removal_commands ... ok
+test implementation_review::tests::parses_json_inside_a_markdown_fence ... ok
+test implementation_review::tests::prepared_review_process_captures_structured_output ... ok
+test implementation_review::tests::review_output_is_redacted_before_parsing_or_persistence ... ok
+test implementation_review::tests::severity_is_normalized_to_known_values ... ok
+test migrations::tests::current_document_is_read_without_rewriting ... ok
+test migrations::tests::future_document_is_preserved_and_backed_up ... ok
+test migrations::tests::invalid_payload_is_backed_up ... ok
+test migrations::tests::legacy_document_is_upgraded_to_versioned_envelope ... ok
+test models::id_tests::independent_generators_never_reuse_a_process_registry_id ... ok
+test plan_html::tests::render_plan_html_blocks_dangerous_links ... ok
+test plan_html::tests::render_plan_html_builds_toc_and_collapsible_sections ... ok
+test plan_html::tests::render_plan_html_escapes_raw_html ... ok
+test plan_html::tests::validate_plan_markdown_rejects_paths_outside_project ... ok
+test plan_html::tests::validate_planning_evidence_accepts_only_loom_planning_paths ... ok
+test process_supervisor::tests::admitted_late_registration_and_guard_drop_cleanup_are_owned_and_bounded ... ok
+test process_supervisor::tests::chat_ownership_is_not_a_synthetic_task_and_duplicate_ids_do_not_overwrite ... ok
+test process_supervisor::tests::closing_admission_tracks_non_process_work_and_rejects_new_operations ... ok
+test process_supervisor::tests::completed_registration_is_not_signalled_again_when_guard_drops ... ok
+test process_supervisor::tests::invalid_process_groups_are_rejected_before_signalling ... ok
+test process_supervisor::tests::registry_tracks_task_kind_and_timeout_metadata ... ok
+test process_supervisor::tests::stop_request_records_reason_and_terminates_the_process_group ... ok
+test process_supervisor::tests::task_run_queries_stay_scoped_by_process_kind ... ok
+test chat::repository::tests::streaming_uses_incremental_records_and_pages_have_a_byte_budget ... ok
+test project_preferences::tests::legacy_preferences_are_migrated_on_load ... ok
+test project_preferences::tests::missing_preferences_return_defaults ... ok
+test project_preferences::tests::normalization_prunes_duplicates_disabled_and_wrong_capabilities ... ok
+test chat::runtime::tests::output_budget_and_callback_failure_terminate_the_process ... ok
+test projects::tests::analyzes_python_go_flutter_and_electron_projects ... ok
+test projects::tests::benchmark_project_analysis ... ignored, local performance probe; run through pnpm bench:local
+test projects::tests::package_command_suggestions_use_declared_package_manager ... ok
+test projects::tests::package_command_suggestions_use_lockfile_package_manager ... ok
+test projects::tests::analyzes_current_loom_repository ... ok
+test project_git::tests::baseline_distinguishes_pre_existing_and_task_changes ... ok
+test run_recovery::tests::leaves_runs_registered_in_the_current_process_untouched ... ok
+test run_recovery::tests::marks_only_orphaned_running_commands_as_interrupted ... ok
+test run_recovery::tests::marks_orphaned_implementation_reviews_as_interrupted ... ok
+test session_capture::tests::captures_claude_session_and_resume_command ... ok
+test session_capture::tests::captures_codex_thread_session_and_resume_command ... ok
+test session_capture::tests::keeps_session_without_resume_for_unrecognized_command ... ok
+test session_capture::tests::renders_structured_claude_log_lines_for_display ... ok
+test session_capture::tests::renders_structured_codex_log_lines_for_display ... ok
+test settings::tests::invalid_settings_are_backed_up_and_reported ... ok
+test settings::tests::legacy_settings_are_migrated_on_read ... ok
+test settings::tests::missing_settings_returns_defaults ... ok
+test settings::tests::save_then_load_round_trips_and_clamps_timeout ... ok
+test storage::tests::backs_up_incompatible_project_schema ... ok
+test storage::tests::ensure_project_store_adds_loom_to_gitignore ... ok
+test storage::tests::ensure_project_store_appends_loom_to_existing_gitignore_once ... ok
+test storage::tests::ensure_project_store_reuses_existing_loom_gitignore_pattern ... ok
+test storage::tests::remove_recent_project_by_id_removes_only_matching_project ... ok
+test task_repository::tests::repository_releases_lock_after_save_update_and_delete ... ok
+test task_repository::tests::repository_releases_lock_when_mutation_fails ... ok
+test task_state::tests::happy_path_reaches_completed ... ok
+test task_state::tests::review_cannot_be_skipped ... ok
+test task_state::tests::terminal_tasks_reject_more_transitions ... ok
+test task_summary::tests::markdown_renderer_does_not_expose_token_values ... ok
+test tasks::tests::append_only_merge_finishes_only_the_matching_command_run ... ok
+test tasks::tests::blocked_task_resumes_to_its_exact_previous_status ... ok
+test tasks::tests::cancelling_a_task_is_terminal_and_clears_resume_state ... ok
+test tasks::tests::command_run_intent_policy_keeps_agent_and_preview_from_advancing_task ... ok
+test tasks::tests::command_run_intent_policy_preserves_validation_acceptance_flow ... ok
+test tasks::tests::command_run_old_json_defaults_to_legacy_intent ... ok
+test tasks::tests::complete_task_moves_verifying_task_to_completed_with_evidence ... ok
+test tasks::tests::complete_task_rejects_agent_actions_and_stale_validation_success ... ok
+test tasks::tests::complete_task_rejects_non_verifying_task ... ok
+test tasks::tests::complete_todo_marks_item_done_and_moves_all_done_tasks_to_review ... ok
+test tasks::tests::complete_todo_rejects_pending_scope_without_mutating_task ... ok
+test tasks::tests::concurrent_command_updates_preserve_every_run_and_event ... ok
+test tasks::tests::concurrent_lifecycle_and_run_completion_do_not_lose_scalar_or_evidence_updates ... ok
+test tasks::tests::delete_task_removes_file_and_is_idempotent ... ok
+test tasks::tests::extracts_implementation_todos_from_agent_bullet_variants ... ok
+test tasks::tests::extracts_implementation_todos_from_bilingual_and_descriptive_headings ... ok
+test tasks::tests::extracts_implementation_todos_from_chinese_task_sections ... ok
+test tasks::tests::extracts_implementation_todos_from_final_plan ... ok
+test tasks::tests::extracts_implementation_todos_from_formatted_headings ... ok
+test tasks::tests::extracts_implementation_todos_from_markdown_checklists_and_parentheses ... ok
+test tasks::tests::extracts_implementation_todos_from_plan_and_milestone_headings ... ok
+test tasks::tests::extracts_implementation_todos_from_steps_and_action_items_headings ... ok
+test tasks::tests::extracts_implementation_todos_from_subheadings ... ok
+test tasks::tests::formats_current_todo_context_for_repair_handoff ... ok
+test tasks::tests::formats_failed_run_context_with_replay_evidence ... ok
+test tasks::tests::formats_pending_todo_context_when_no_scope_is_started ... ok
+test tasks::tests::ignores_failed_plan_without_todos ... ok
+test tasks::tests::keeps_collecting_todos_inside_child_headings ... ok
+test tasks::tests::keeps_collecting_todos_inside_child_headings_for_subsection_todo_sections ... ok
+test tasks::tests::legacy_task_file_is_migrated_on_load ... ok
+test tasks::tests::loop_bound_command_runs_append_trace_entries ... ok
+test tasks::tests::loop_bound_validation_stays_in_implementation_until_it_passes ... ok
+test tasks::tests::mark_ready_for_testing_moves_reviewing_task_to_debugging ... ok
+test tasks::tests::mark_ready_for_testing_rejects_an_open_review_blocker ... ok
+test tasks::tests::mark_ready_for_testing_rejects_missing_independent_review ... ok
+test tasks::tests::mark_ready_for_testing_rejects_unfinished_todos ... ok
+test tasks::tests::mark_ready_for_testing_rejects_wrong_task_status ... ok
+test tasks::tests::pause_and_resume_preserve_the_workflow_stage_and_gate_mutations ... ok
+test tasks::tests::repair_context_keeps_loop_bound_implementation_stage ... ok
+test tasks::tests::start_todo_persists_scope_and_resets_previous_implementing_item ... ok
+test tasks::tests::start_todo_rejects_unknown_todo_without_mutating_task ... ok
+test tasks::tests::switching_primary_agent_requires_and_records_a_reason ... ok
+test tasks::tests::task_storage_rejects_path_traversal_ids ... ok
+test terminals::tests::legacy_terminal_slots_are_migrated_on_list ... ok
+test terminals::tests::list_returns_empty_before_anything_is_saved ... ok
+test terminals::tests::save_then_list_round_trips_slots ... ok
+test terminals::tests::suggest_detects_python_and_django_commands ... ok
+test terminals::tests::suggest_falls_back_to_empty_editable_slots ... ok
+test terminals::tests::suggest_finds_apps_nested_two_levels_deep ... ok
+test terminals::tests::suggest_scans_root_and_subdir_manifests_with_cwd ... ok
+test pty::tests::pty_run_records_command_and_finishes_successfully ... ok
+test pty::tests::stop_pty_run_kills_the_whole_process_group ... ok
+test chat::logs::tests::log_limits_utf8_cursors_and_no_overwrite_are_enforced ... ok
+test command_runner::tests::command_runner_finishes_when_descendant_keeps_stdout_open ... ok
+test command_runner::tests::application_shutdown_finishes_task_command_before_exiting ... ok
+test command_runner::tests::command_runner_persists_captured_session_metadata ... ok
+test chat::runtime::tests::timeout_escalates_past_ignored_term_and_cleans_registry ... ok
+test chat::service::tests::cancellation_timeout_spawn_failure_and_success_have_distinct_terminal_records ... ok
+test chat::shutdown::tests::shutdown_cases_in_isolated_processes ... ok
+test chat::repository::tests::live_event_pages_read_only_requested_records_after_indexing_long_history ... ok
+test command_runner::tests::command_runner_times_out_long_running_commands ... ok
+test command_runner::tests::command_runner_drives_two_repair_cycles_then_acceptance ... ok
+test chat::runtime::tests::exited_parent_with_inherited_pipes_does_not_hang_or_leave_child ... ok
+
+test result: ok. 289 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 3.77s
+
+     Running unittests src/main.rs (src-tauri/target/debug/deps/loom-72cb072fa074a43d)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/workflow_harness.rs (src-tauri/target/debug/deps/workflow_harness-90c47b451d8c3f6e)
+
+running 2 tests
+test blocker_and_pause_state_survive_repository_reload ... ok
+test four_stage_workflow_replays_two_repair_rounds_headlessly ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+   Doc-tests loom_lib
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

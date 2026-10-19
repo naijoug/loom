@@ -1,0 +1,25 @@
+Window: "Loom Browser Probe", App: Loom.
+0 standard window Loom Browser Probe, Secondary Actions: Raise
+	1 container (settable) Loom Browser Probe
+		2 scroll area
+			3 HTML content Loom Browser Probe, URL: 127.0.0.1:1420/
+				4 container
+					5 heading Loom Browser Probe, Value: 1
+						6 text Loom Browser Probe
+					7 text Local fixture for native Chromium, accessibility, input and storage verification.
+					8 text Name
+					9 text field (settable) Name, Value: 原生输入
+					10 button Submit
+					11 text Hello 原生输入 Saved: persisted
+					12 link Next page, Value: 127.0.0.1:1420/next.html
+	13 text Loom Browser Probe
+14 menu bar
+	15 loom-browser-host
+	16 File
+	17 Edit
+	18 Format
+	19 View
+	20 Window
+	21 Help
+
+The focused UI element is 9 text field (settable) Name, Value: 原生输入

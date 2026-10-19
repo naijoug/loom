@@ -1,0 +1,184 @@
+{
+  "recordedAt": "2026-09-30T16:59:58.850844+08:00",
+  "baseCommit": "959114c030a97b627ea82ee9c545de28457c18be",
+  "platform": "macOS-26.5.2-arm64-arm-64bit-Mach-O",
+  "fixture": ".tmp/legacy-import-desktop-2026-09-30",
+  "sourceBefore": {
+    "docs/old-plan.md": "a81ccfae74d0e347e23f7ddace439351b1ea3fb0df8e6e44e7dfce1cf06f2b5e",
+    ".loom/tasks/task.json": "a096e1de64b180f4d1c2661591f4d11108e93fabe0306610d5b37cbe57600787",
+    ".loom/tasks/broken.json": "b1a7b318508fee5849fc624a64a4549ed109374d59acc873023e50ce4108205e",
+    ".loom/chat/v2/sessions/chat/events.jsonl": "e39dbf6a635c7d2f3043b9e8c333e805bee83f3a77709049ad5cde7dfbcd755e",
+    ".loom/tasks/task/attachments/data.bin": "50caa30dd66cff1ae68eb7e3a7b65717280ebbb8ca31cab9607d35242ebc87e1"
+  },
+  "sourceAfter": {
+    "docs/old-plan.md": "a81ccfae74d0e347e23f7ddace439351b1ea3fb0df8e6e44e7dfce1cf06f2b5e",
+    ".loom/tasks/task.json": "a096e1de64b180f4d1c2661591f4d11108e93fabe0306610d5b37cbe57600787",
+    ".loom/tasks/broken.json": "b1a7b318508fee5849fc624a64a4549ed109374d59acc873023e50ce4108205e",
+    ".loom/chat/v2/sessions/chat/events.jsonl": "e39dbf6a635c7d2f3043b9e8c333e805bee83f3a77709049ad5cde7dfbcd755e",
+    ".loom/tasks/task/attachments/data.bin": "50caa30dd66cff1ae68eb7e3a7b65717280ebbb8ca31cab9607d35242ebc87e1"
+  },
+  "sourceUnchanged": true,
+  "sourceRestored": true,
+  "sourceOfflineReadback": [
+    {
+      "key": {
+        "workspaceId": "import-workspace",
+        "sessionId": "legacy-51fd583e02b6393779af9609ad4714580c8bd925adc96a180a931af65e4158ac"
+      },
+      "messageCount": 0,
+      "statuses": [],
+      "resources": [
+        {
+          "path": ".loom/tasks/task.json",
+          "sha256": "a096e1de64b180f4d1c2661591f4d11108e93fabe0306610d5b37cbe57600787",
+          "bytes": 522
+        },
+        {
+          "path": ".loom/tasks/task/attachments/data.bin",
+          "sha256": "50caa30dd66cff1ae68eb7e3a7b65717280ebbb8ca31cab9607d35242ebc87e1",
+          "bytes": 4
+        },
+        {
+          "path": "docs/old-plan.md",
+          "sha256": "a81ccfae74d0e347e23f7ddace439351b1ea3fb0df8e6e44e7dfce1cf06f2b5e",
+          "bytes": 52
+        },
+        {
+          "path": "reconstructed-record.json",
+          "sha256": "d5058ad85f571111846a489af169fa8b774e7197dcafd0c135ebe2ceddfcf442",
+          "bytes": 467
+        }
+      ]
+    },
+    {
+      "key": {
+        "workspaceId": "import-workspace",
+        "sessionId": "legacy-7f705632bea91a6adc651c6975278a4eb0281b0cbd75e229305dc78d97e9d311"
+      },
+      "messageCount": 2,
+      "statuses": [
+        "complete",
+        "interrupted"
+      ],
+      "resources": [
+        {
+          "path": ".loom/chat/v2/sessions/chat/events.jsonl",
+          "sha256": "e39dbf6a635c7d2f3043b9e8c333e805bee83f3a77709049ad5cde7dfbcd755e",
+          "bytes": 978
+        },
+        {
+          "path": "reconstructed-record.json",
+          "sha256": "b6c76e13ae9594cf0486389c8d1ac2992127f3ed0275ba492778a3856ade40ca",
+          "bytes": 693
+        }
+      ]
+    }
+  ],
+  "report": {
+    "planId": "import-e595b6f4404ddb3310d4b6d966b282e7cf6e2a11040f96f7c645f58d1f3a4407",
+    "workspaceId": "import-workspace",
+    "completedAtMs": 1790758656090,
+    "results": [
+      {
+        "kind": "chat",
+        "sourceId": "chat",
+        "sessionKey": {
+          "workspaceId": "import-workspace",
+          "sessionId": "legacy-7f705632bea91a6adc651c6975278a4eb0281b0cbd75e229305dc78d97e9d311"
+        },
+        "status": "already_imported",
+        "error": null,
+        "issues": [
+          {
+            "severity": "warning",
+            "code": "incomplete_tail",
+            "path": "events.jsonl",
+            "message": "未提交的末尾字节不参与回放；源文件保持原样"
+          },
+          {
+            "severity": "warning",
+            "code": "runtime_reset",
+            "path": ".loom/chat/v2/sessions/chat/events.jsonl",
+            "message": "导入不会继承旧进程、续聊句柄、凭据或权限授权"
+          }
+        ]
+      },
+      {
+        "kind": "task",
+        "sourceId": "broken",
+        "sessionKey": null,
+        "status": "skipped",
+        "error": null,
+        "issues": [
+          {
+            "severity": "error",
+            "code": "invalid_document",
+            "path": ".loom/tasks/broken.json",
+            "message": "invalid legacy JSON at line 1, column 1"
+          }
+        ]
+      },
+      {
+        "kind": "task",
+        "sourceId": "task",
+        "sessionKey": {
+          "workspaceId": "import-workspace",
+          "sessionId": "legacy-51fd583e02b6393779af9609ad4714580c8bd925adc96a180a931af65e4158ac"
+        },
+        "status": "already_imported",
+        "error": null,
+        "issues": [
+          {
+            "severity": "warning",
+            "code": "missing_resource",
+            "path": "missing.txt",
+            "message": "引用资源不存在；预检已记录缺失"
+          },
+          {
+            "severity": "warning",
+            "code": "historical_task",
+            "path": ".loom/tasks/task.json",
+            "message": "旧 Task 将保留为历史记录，不启动或映射为新 DAG"
+          }
+        ]
+      }
+    ]
+  },
+  "appSha256": "df530abe3b4995c19facf9d971b61d2c9d2efaa44d3be677d1b8a9b14398a7d7",
+  "sourceSha256": {
+    "crates/loom-core/src/api.rs": "67d1bb7fe010a341029070dce727a2ef36f5da0149d6ce3cd37571e6172f7c06",
+    "crates/loom-core/src/import_model.rs": "806b5c991ba0bebb4db58c9885c7d9750f2d9e38f6b3d42a9913b018d2a5febb",
+    "crates/loom-core/src/model.rs": "55fa068d0d0e3a36aed6d08cb47ba3fcb3d1f2819d3ea4e5b7365a059dbe4539",
+    "crates/loom-core/src/projection.rs": "e2a0c38d36d31484be71f94f1caf02b57584720131f00f0acc66f159ea5b44fa",
+    "crates/loom-core/src/repository/imports.rs": "b54e71797fa0cb9287002db0d4b05b2ed0697fc624db4e92481e8771173915ac",
+    "crates/loom-core/src/legacy/mod.rs": "003dbd134e20f387f2c63595f4ab8ac5ebcf495c6fbf602aae20165181137d31",
+    "crates/loom-core/src/legacy/source.rs": "df4ffd7524acc2b67288ef856dd0cb68f070382f33f721357be59f3f67cc9678",
+    "src/workbench/ImportedHistory.tsx": "f42ca5bf7bd5f5c4572d6220c9421210d228497b09394f8c51067c3f024c09b2",
+    "src/workbench/LegacyPreviewDialog.tsx": "46363c38dfe4e8730d48e1ea55e96dd4db2e4546403ba6e5f220cdf322efdbf0",
+    "src/workbench/WorkbenchApp.tsx": "52932d72282679c826e396350cf4cdda083b5f1f7e8f9197debace24f94df0c6",
+    "src/workbench/workbench.css": "30ecc1e6750287a4042d44c456a45a63ca8ccfb5697374a9d316ffa22316b9b9",
+    "packages/protocol/src/workbench.ts": "7812984281c0c34b2791c9dda6361fde6838cbc6c70998c39634a18292882d84"
+  },
+  "nativeChecks": [
+    "actual import: 2 imported, 1 corrupt skipped",
+    "retry: 0 added, 2 already imported",
+    "chat transcript and tool input/output visible",
+    "Explore reset and no active turn",
+    "Task appears in archive with independent resources",
+    "plan text preview with focus and Escape",
+    "restart with source moved offline: transcript and resource still readable",
+    "Cmd+Q and debug stop"
+  ],
+  "notTested": [
+    "real provider continuation with imported context",
+    "release signing/notarization",
+    "Windows and Linux runtime",
+    "binary rich viewer"
+  ],
+  "screenshots": [
+    "designs/workbench-m1/06-legacy-import-result.jpg",
+    "designs/workbench-m1/07-imported-chat.jpg",
+    "designs/workbench-m1/08-imported-resource.jpg",
+    "designs/workbench-m1/09-import-offline-restart.jpg"
+  ]
+}

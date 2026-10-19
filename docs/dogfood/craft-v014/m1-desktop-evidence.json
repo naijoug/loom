@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 1,
+  "status": "M1 desktop data/fixture slice verified; legacy migration and full parity incomplete",
+  "baseCommit": "d0b8337",
+  "recordedAt": "2026-09-30T16:25:35.890483+08:00",
+  "platform": {
+    "system": "Darwin",
+    "release": "25.5.0",
+    "arch": "arm64"
+  },
+  "artifact": {
+    "kind": "debug macOS app; not a release/distribution acceptance",
+    "relativePath": "src-tauri/target/debug/bundle/macos/Loom.app/Contents/MacOS/loom",
+    "sha256": "95dacd2ad41e5607a1ec41e1ad802ba5a9e7f1683de2d47f2590293639a836e4"
+  },
+  "checks": [
+    {
+      "command": "CARGO_NET_OFFLINE=true pnpm check",
+      "exitCode": 0,
+      "scope": "Before final early-watch reconnect and native Quit-menu refinements",
+      "frontendPassed": 194,
+      "tauriRustPassed": 295,
+      "tauriRustIgnored": 5,
+      "legacyIntegrationPassed": 2,
+      "corePassed": 27,
+      "log": "m1-desktop-project-check.txt"
+    },
+    {
+      "command": "pnpm test",
+      "exitCode": 0,
+      "frontendPassed": 195,
+      "log": "m1-desktop-frontend-check.txt"
+    },
+    {
+      "command": "targeted Workbench/frontend contract tests",
+      "exitCode": 0,
+      "passed": 14,
+      "log": "m1-desktop-ui-cases.txt"
+    },
+    {
+      "command": "cargo clippy --manifest-path src-tauri/Cargo.toml --offline --all-targets --all-features -- -D warnings",
+      "exitCode": 0,
+      "scope": "Final native menu code compiled without warnings"
+    },
+    {
+      "command": "cargo test --manifest-path src-tauri/Cargo.toml --offline contracts:: / shutdown::",
+      "exitCode": 0,
+      "logs": [
+        "m1-desktop-contract-check.txt",
+        "m1-desktop-exit-check.txt"
+      ]
+    },
+    {
+      "command": "VITE_LOOM_WORKBENCH=1 CARGO_NET_OFFLINE=true pnpm tauri build --debug --bundles app",
+      "exitCode": 0,
+      "log": "m1-desktop-build.txt"
+    }
+  ],
+  "nativeEvidence": {
+    "mode": "explicit local fixture; no real model account",
+    "screenshots": [
+      "designs/workbench-m1/01-stream-and-stop.ax.txt",
+      "designs/workbench-m1/01-stream-and-stop.jpg",
+      "designs/workbench-m1/02-archive-notes.ax.txt",
+      "designs/workbench-m1/02-archive-notes.jpg",
+      "designs/workbench-m1/03-restart-restored.ax.txt",
+      "designs/workbench-m1/03-restart-restored.jpg",
+      "designs/workbench-m1/04-background-unread.ax.txt",
+      "designs/workbench-m1/04-background-unread.jpg"
+    ],
+    "readback": "m1-desktop-readback.json",
+    "observations": [
+      "create workspace and session",
+      "streaming and stop",
+      "rename, notes, flag, archive and restore",
+      "restart metadata and transcript recovery",
+      "background completion unread notification without active draft pollution",
+      "dialog initial input focus",
+      "Cmd+Q during active fixture settles as cancelled after menu fix"
+    ],
+    "historicalFailure": "Default native Quit bypassed ExitRequested; first case became Interrupted and was not counted as passed."
+  },
+  "sourceSha256": {
+    "src/main.tsx": "4ee86a61bd5bf5ed0520a9289ea740f3f67e53c8648e87e26fc9a0bc78135076",
+    "src/api/tauriClient.ts": "f58c491e5fa52c620abc6bd02323bf65bd0ea935bdd3c296567980816fea027b",
+    "src/api/workbenchClient.ts": "6a7084733a81acbcdf64ad6249cc2e7bcdcd3c7d548cc323764febf17bb812a5",
+    "src/api/contract.ts": "8675b566d2a4bb2d8cae78afff083caa640cf65911921df0eb2a64592118ca7d",
+    "contracts/tauri-contract.json": "4c9cb5a9ef82d1d0f6c040080b18b29adf874bf48233a85e40fc5b3a44f4a97f",
+    "src-tauri/src/lib.rs": "a82149c14a67add478d4750e5dba625237a735f5589b2dce4ae8aedc83413481",
+    "src-tauri/src/desktop_menu.rs": "c6f4b71d9227988c9333601a672a286d1cdf121941ef398824c609a6b65cc5a9",
+    "src-tauri/Cargo.toml": "b9d55fd0953d8613b825ded2db95a1dfdf36c24976e92a410b1ce57f1ab8bb58",
+    "src-tauri/Cargo.lock": "e2af208346154ee23c57a7b24f18b9b3cbcd919e656b04dac39d98d0ae82b04b",
+    "packages/protocol/src/workbench.ts": "27f9866c0121e32de563156c4c2d089ed49aa3d01d457445b6a2ace14f18e852",
+    "scripts/debug.sh": "bc75bdd4eb47e623d994f1501dc0733c14c8448da84843a712d731411bf05430",
+    "src/workbench/WorkbenchApp.tsx": "23818e204a43c57681f62fdaa2252afa3ad7ccea85baaabcf0486b91468abe20",
+    "src/workbench/projection.ts": "80dc5171f76837485b7ce02f24243c356515a383ece6f7ab8e8e3d0f95b1d7af",
+    "src/workbench/sessionController.ts": "31c76c4471a5d8f2e6ae1b8d5383a0f6fc70adb9bb0b3749467b8f4c8c887f03",
+    "src/workbench/workbench.css": "0fe80ec8949f8ecaec4b3c403cfae0300550b903ebf493700067325cabea75cb",
+    "src-tauri/src/workbench/host.rs": "8a02dddb6908e168242b567d45f17aba4ab035ddcb2f8cb5ced905ed8349f63c",
+    "src-tauri/src/workbench/mod.rs": "2a59db898eee1e35ce593944a9b7ed708c8644bd61206d637dbeb281a8f53c6b",
+    "crates/loom-core/src/api.rs": "8dcd6fb2189c3bb4206c4b029ada75d1a5fdb851ece5789e4da5ab171378f336",
+    "crates/loom-core/src/bindings.rs": "4b8404a52a62c9eb9d2921f539573d8bd78427e242ef40d929cc7eb64ccb736e",
+    "crates/loom-core/src/error.rs": "c5696efa1a9adf1dcc5d9cb3cdc4c42fda485f8a68aced9aaa835308c1103b04",
+    "crates/loom-core/src/journal.rs": "ea81e9b3de0f7ce94f54b5337a022c2aec8a31779e80033bb2fc22fdfd828a44",
+    "crates/loom-core/src/lib.rs": "b481712fcbe48b2cfa9356196d077412f412edf66d71499038690faecc4f5fab",
+    "crates/loom-core/src/model.rs": "29ad9e2dd8a782bfb139bc774ff60f8718fa0e95cfea25b43a5e329a7ce2459e",
+    "crates/loom-core/src/projection.rs": "78f7eb5ecb97d3c7dccd18ad349f6d4388a81d870d8473310842a4566b110ddc",
+    "crates/loom-core/src/repository.rs": "be0324df08f9e2f87ef33150feac08ebcde0a87810ce361879263d186922b1a5",
+    "tests/unit/workbenchApp.test.cjs": "73f94fc25bc5b1d9c20a9bac7f658098d3ec0ac7c78fb2081a7498b6dd9e16b4",
+    "tests/unit/workbenchClient.test.cjs": "b643a48e8541bd39795bb6472c294065d2a54287cd8ee4da37c803564226df4d",
+    "tests/unit/workbenchProjection.test.cjs": "84705e347ddca1e07c87d4e6556944eae85a113ab100c22ef2cde56dc379e215",
+    "crates/loom-core/examples/projection_fixture.rs": "9b9fbef1d6c56a5c7f97421e8e4eda766d5e5a8d041ec0f3771a73f780522e31"
+  },
+  "notVerified": [
+    "Legacy read-only import/migration",
+    "Real model, SDK resume, tool permissions, credentials",
+    "Full Craft UI/content/keyboard/theme parity",
+    "Dock/system termination and Windows/Linux",
+    "Release signing/notarization/distribution"
+  ]
+}

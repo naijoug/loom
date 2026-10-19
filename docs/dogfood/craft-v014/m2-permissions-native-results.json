@@ -1,0 +1,70 @@
+{
+  "mode": "isolated-fixture-no-model",
+  "events": [
+    {
+      "scope": {
+        "kind": "workspace",
+        "workspaceId": "default-workspace"
+      },
+      "revision": 1,
+      "operationId": "68f85bec-d20a-4b88-b876-f8f0238d5a11",
+      "config": {
+        "allowedBashPatterns": [
+          {
+            "comment": "native-qa",
+            "pattern": "^ls\b"
+          }
+        ]
+      },
+      "updatedAtMs": 1791512238660
+    },
+    {
+      "scope": {
+        "kind": "workspace",
+        "workspaceId": "default-workspace"
+      },
+      "revision": 2,
+      "operationId": "365358a4-0018-4c6d-bc2f-02244dfb9b92",
+      "config": null,
+      "updatedAtMs": 1791512434713
+    },
+    {
+      "scope": {
+        "kind": "workspace",
+        "workspaceId": "default-workspace"
+      },
+      "revision": 3,
+      "operationId": "22a584fd-7112-40c6-af62-3be23f47c362",
+      "config": {
+        "allowedBashPatterns": [
+          {
+            "comment": "native-qa-exact",
+            "pattern": "^ls$"
+          }
+        ]
+      },
+      "updatedAtMs": 1791512628448
+    },
+    {
+      "scope": {
+        "kind": "workspace",
+        "workspaceId": "default-workspace"
+      },
+      "revision": 4,
+      "operationId": "a252f10e-7484-4fa0-9848-c51369fc7107",
+      "config": null,
+      "updatedAtMs": 1791512717894
+    }
+  ],
+  "nativeObservations": [
+    "Invalid regex displayed host validation error; no document saved",
+    "Valid rule saved as revision 1",
+    "Restart displayed persisted native-qa rule at revision 1",
+    "Reset displayed empty object and revision 2",
+    "Dialog width corrected and inspected at 1280x820",
+    "First valid fixture used a JSON backspace escape; repeated with unambiguous exact pattern ^ls$",
+    "Exact rule native-qa-exact saved at revision 3 and visibly restored after restart",
+    "Reset visibly confirmed revision 4 and empty rules"
+  ],
+  "previewStopped": true
+}

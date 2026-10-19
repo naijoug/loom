@@ -1,0 +1,28 @@
+{
+  "dist": {
+    "shasum": "7ea5e6f669bc18c45dbf5dba653edaa1ada07ab3",
+    "tarball": "https://registry.npmjs.org/rea-agents/-/rea-agents-6.5.0.tgz",
+    "fileCount": 1650,
+    "integrity": "sha512-C6BG7LyrAdR74mSjertM6PrxJkcNZ2bfQNOJornPo9erDEp2tyPRVYPnV5Yodr+1RqewCQla68WulXlVnveD+A==",
+    "signatures": [
+      {
+        "sig": "MEUCIQC+WSbHb08wlVXazqgNweVmLfW4otVGrvD4SXy7vcyVkwIgNQpeLXLIZ0D71gfq52FmpjWdQiLfEF9qeRz41rP3WvE=",
+        "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+      },
+      {
+        "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U",
+        "sig": "MEUCIQDI1k+WeOKKMl6Cr2Xqk3MOkEOaIiJw9BToWmv44nwrdgIgBTV01qfsprryFVlLqwkHtyUg4UNC7JL820baO0nh1/8="
+      }
+    ],
+    "attestations": {
+      "url": "https://registry.npmjs.org/-/npm/v1/attestations/rea-agents@6.5.0",
+      "provenance": {
+        "predicateType": "https://slsa.dev/provenance/v1"
+      }
+    },
+    "unpackedSize": 25564765
+  },
+  "engines": {
+    "node": "^22.19.0 || ^24.11.0 || >=26.0.0"
+  }
+}

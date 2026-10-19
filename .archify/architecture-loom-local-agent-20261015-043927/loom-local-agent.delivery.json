@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "0250b6c5-b848-4bc6-b279-ccc99faf8963",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "/Users/guojian/Workspace/naijoug/loom/.archify/architecture-loom-local-agent-20261015-043927/candidate.json",
+  "output": "/Users/guojian/Workspace/naijoug/loom/.archify/architecture-loom-local-agent-20261015-043927/loom-local-agent.html",
+  "specification": {
+    "sha256": "a0a8472866cbbf7b38ed12b96783da56154adcef2b3c4026d9e5a0ac0210aca7",
+    "bytes": 3988
+  },
+  "artifact": {
+    "sha256": "35fffe6144f08738f67e32841e290606228bb67154db09229532b1925d99a8d6",
+    "bytes": 819835
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "recordedAt": "2026-10-09T00:36:50.140357+08:00",
+  "baseCommit": "1ab2fe499ec2a9f5e707372cc7d7936c93d93ac3",
+  "platform": "macOS-26.5.2-arm64-arm-64bit-Mach-O",
+  "upstreamSha": "73bd9c2a3573158bea880984eb8d5fdb41e0cac2",
+  "checks": {
+    "workspaceTests": 95,
+    "newTestEntrypoints": 4,
+    "executedUpstreamCases": 141,
+    "documentedClassificationCorrections": 6,
+    "documentedArgvCorrections": 1,
+    "fmtClippyProtocol": "passed",
+    "sdkDesktopPolicyIntegration": "not-implemented",
+    "powershell": "not-implemented",
+    "realHttp": "not-run: earlier auto-review timeouts; explicit approval pending",
+    "nativeUI": "not-tested"
+  },
+  "sourceSha256": {
+    "Cargo.lock": "7ae251fbe2ecafb137d06066256f144ade62090b247166b815eaf1e2445a3bdd",
+    "crates/loom-runtime/Cargo.toml": "1f8a9e6e29ca3cd29ab0a8ac79ffccbf3c22bdadaf6f91b15c49c1324cb9a775",
+    "crates/loom-runtime/src/lib.rs": "2bcf074f11b24243ad151eda4eceff0e5febcafcde39d0e9421ebf9ea46ad83a",
+    "crates/loom-runtime/src/shell.rs": "cd49453973c4d8eddea17d6220d6ad5d54e825befde53f10a6bd16ecdd79bba4",
+    "crates/loom-runtime/src/shell/arguments.rs": "2ca76313624fc0ec2fa5d18d2add931f44e2684432c7e286e43fa6cca331d4c3",
+    "crates/loom-runtime/resources/craft-v014-permissions.json": "c3047aa9104a4e506a1dd1f22e9b141b7f8de2e597a2cea3f3479af6b975cf2f",
+    "crates/loom-runtime/tests/shell_policy.rs": "12ec5592a5ddbf100f7f478bdefd4566755280a129a3a2c329f2904e548a8aaf",
+    "crates/loom-runtime/tests/fixtures/craft-shell-cases.json": "ab2a51c331a1fcdc34949ceba6a4e750a1829f0f50edf353848dc125d46b7913",
+    "scripts/generate-craft-shell-cases.ts": "2d6cb2c6a0809bf76f34097bb5a13e9974b7ca70fa1b9f6283f7db5ae7dc93bf",
+    "third-party/craft-agents/LICENSE": "9a75ace1224f0f880ddfdd8442d14d5a0d865152c61a2fd363d8e2c351f94d2c",
+    "third-party/craft-agents/NOTICE": "caa334b760b4c7835957c91ac24c3d52e7abc7ac770050445027766b4ce4ce7f",
+    "third-party/craft-agents/README.md": "1e61a67d3ab979cc84638218de6719caf952db1b29a2ff10d87c7ee3c1ba501c"
+  },
+  "localLogSha256": {
+    ".tmp/shell-policy-validation/core-check.log": "8d9b45a25ee014c71bb1fb39f970764dad80c246d7a481b20dbc4aa892a3b9d0"
+  }
+}

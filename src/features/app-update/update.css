@@ -1,0 +1,20 @@
+.loom-update-button { display:inline-flex;align-items:center;justify-content:center;gap:7px;flex-shrink:0;border:0;border-radius:50%;width:26px;height:26px;background:transparent;color:inherit;cursor:pointer;app-region:no-drag;-webkit-app-region:no-drag; }
+.loom-update-button.has-update {background:#3478f6!important;color:white!important;}
+.loom-update-button.manual {border-radius:7px;width:auto;min-height:30px;padding:5px 10px;font:inherit;font-size:12px;}
+.loom-update-button:focus-visible,.loom-update-dialog button:focus-visible {outline:2px solid #69a4ff;outline-offset:3px;}
+.loom-update-dialog {width:min(440px,calc(100vw - 48px));max-height:80vh;overflow:auto;padding:24px;border:1px solid #ffffff20;border-radius:16px;background:#242426;color:#eee;box-shadow:0 24px 80px #0007;font:14px/1.6 system-ui,sans-serif;}
+.loom-update-dialog::backdrop {background:#0007;}
+.loom-update-dialog header {display:flex;align-items:center;gap:12px;}
+.loom-update-mark {display:grid;place-items:center;width:46px;height:46px;border-radius:13px;background:#3478f6;color:white;}
+.loom-update-dialog h2 {margin:0;font-size:18px;}
+.loom-update-dialog header p {margin:2px 0 0;color:#aaa;font-size:12px;}
+.loom-update-dialog header>button {margin-left:auto;padding:5px;display:grid;place-items:center;background:transparent;}
+.loom-update-status {margin:24px 0 12px;font-weight:600;}
+.loom-update-notes {white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto;background:#ffffff08;padding:14px;border-radius:8px;font-size:13px;}
+.loom-update-dialog progress {width:100%;accent-color:#3478f6;}
+.loom-update-hint {color:#b3b3b7;font-size:13px;}
+.loom-update-error {color:#ffb8b8;background:#ff676711;padding:10px;border-radius:8px;}
+.loom-update-dialog footer {display:flex;justify-content:flex-end;gap:10px;margin-top:24px;}
+.loom-update-dialog button {font:inherit;color:inherit;border:0;background:#ffffff12;padding:7px 14px;border-radius:7px;cursor:pointer;}
+.loom-update-dialog button.primary {background:#3478f6;color:white;}
+.loom-update-dialog button:disabled {opacity:.5;cursor:default;}

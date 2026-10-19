@@ -1,0 +1,68 @@
+Window: "Loom", App: Loom.
+0 standard window Loom, Secondary Actions: Raise
+	1 scroll area
+		2 HTML content Description: Loom, URL: tauri://localhost
+			3 container 旧数据预检
+				4 container
+					5 heading 旧数据预检, Value: 2
+						6 text 旧数据预检
+					7 button 关闭预检
+				8 text 合成旧项目
+				9 text /Users/guojian/Workspace/naijoug/loom/.tmp/legacy-preview-desktop-2026-09-30/project
+				10 text 检查旧会话、任务与引用资源。原文件保持不变；本次预检不会执行导入。
+				11 container
+					12 text 可读取  2  项 · 无法读取  1  项 · 已检查  4  个文件路径
+				13 container (expanded) Secondary Actions: Collapse
+					14 summary 会话 · broken 无法读取, Value: on
+						15 text 会话
+						16 text  · 
+						17 text broken
+						18 text 无法读取
+					19 text .loom/chat/v2/sessions/broken/events.jsonl
+					20 content list
+						21 container 注意：未提交的末尾字节不参与回放；源文件保持原样 events.jsonl
+							22 list marker •
+							23 text 注意 ： 未提交的末尾字节不参与回放；源文件保持原样
+							24 text events.jsonl
+						25 container 无法读取：legacy journal has no committed creation record .loom/chat/v2/sessions/broken/events.jsonl
+							26 list marker •
+							27 text 无法读取 ： legacy journal has no committed creation record
+							28 text .loom/chat/v2/sessions/broken/events.jsonl
+				29 summary 会话 · 中文历史会话 1 条消息, Value: off
+					30 text 会话
+					31 text  · 
+					32 text 中文历史会话
+					33 text 1 条消息
+				34 container (expanded) Secondary Actions: Collapse
+					35 summary 历史任务 · 带缺失附件的历史任务 可读取, Value: on
+						36 text 历史任务
+						37 text  · 
+						38 text 带缺失附件的历史任务
+						39 text 可读取
+					40 text .loom/tasks/history.json
+					41 content list
+						42 container 注意：引用资源不存在；预检已记录缺失 .loom/tasks/history/attachments/missing.png
+							43 list marker •
+							44 text 注意 ： 引用资源不存在；预检已记录缺失
+							45 text .loom/tasks/history/attachments/missing.png
+						46 container 注意：旧 Task 将保留为历史记录，不启动或映射为新 DAG .loom/tasks/history.json
+							47 list marker •
+							48 text 注意 ： 旧 Task 将保留为历史记录，不启动或映射为新 DAG
+							49 text .loom/tasks/history.json
+				50 summary 来源校验标识, Value: off
+					51 text 来源校验标识
+				52 container
+					53 button 重新检查
+					54 button 关闭
+	55 close button
+	56 full screen button Help: this button also has an action to zoom the window, Secondary Actions: zoom the window
+	57 minimize button
+58 menu bar
+	59 Loom
+	60 File
+	61 Edit
+	62 View
+	63 Window
+	64 Help
+
+The focused UI element is 35 summary 历史任务 · 带缺失附件的历史任务 可读取, Value: on

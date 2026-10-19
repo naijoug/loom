@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Loom Plan</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #111318;
+      }
+      #plan-viewer-root {
+        height: 100%;
+        display: flex;
+      }
+      #plan-viewer-root iframe {
+        flex: 1;
+        border: 0;
+        width: 100%;
+        height: 100%;
+      }
+      .plan-viewer-message {
+        margin: auto;
+        font: 14px ui-sans-serif, system-ui, sans-serif;
+        color: #aab3c2;
+        padding: 24px;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="plan-viewer-root">
+      <p class="plan-viewer-message">Loading plan…</p>
+    </div>
+    <script type="module" src="/src/viewer/plan-viewer.ts"></script>
+  </body>
+</html>

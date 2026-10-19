@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "status": "M1 core slice implemented; milestone and full rebuild incomplete",
+  "baseCommit": "6b37769",
+  "recordedAt": "2026-09-30T14:59:50.722127+08:00",
+  "platform": {
+    "system": "Darwin",
+    "release": "25.5.0",
+    "arch": "arm64"
+  },
+  "checks": [
+    {
+      "command": "CARGO_NET_OFFLINE=true pnpm check",
+      "exitCode": 0,
+      "scope": "Full project gate before final notes/cache refinements; existing frontend and src-tauri unchanged after this run",
+      "log": "m1-project-check.txt",
+      "frontendPassed": 184,
+      "legacyRustPassed": 290,
+      "legacyRustIgnored": 5,
+      "legacyIntegrationPassed": 2,
+      "newCorePassed": 24
+    },
+    {
+      "command": "CARGO_NET_OFFLINE=true scripts/check-core.sh",
+      "exitCode": 0,
+      "scope": "Final core/protocol sources; fmt, strict Clippy, 26 tests, generated declaration drift and TypeScript compilation",
+      "log": "m1-core-check.txt",
+      "newCorePassed": 26,
+      "note": "Includes one helper test entry invoked by the real process-crash scenario."
+    }
+  ],
+  "sourceSha256": {
+    "Cargo.toml": "5dd623025169abe213b87eb06323e780efe1aa584659ee36f6e95811d6cdeb53",
+    "Cargo.lock": "c512f75f51f729d44aefa9803120ae40250cb70de5bec9a97a6f35df3b1c10d7",
+    "scripts/check-core.sh": "395d7eaaa106839be1764638035d081d31d168c1b92106525f26db458ab59fdc",
+    "scripts/check.sh": "d702e4c68697e5f500266b19f3657c746f8ca3e45fa96533c70627c3db305bed",
+    "package.json": "39078c5997d08cc919f87940f66cb33e4add8f16879732e69e7b4cc13abb0476",
+    "crates/loom-core/src/api.rs": "8dcd6fb2189c3bb4206c4b029ada75d1a5fdb851ece5789e4da5ab171378f336",
+    "crates/loom-core/src/bin/export-workbench-types.rs": "c4c42186a98474055921ccf342f98741dc4714ceb9d7cfa7ec85bf423ba8d559",
+    "crates/loom-core/src/bin/loom-core-host.rs": "b28b3a7e1078af965e66c75fc8638a125ab1f4501122716be010d9f86afdbbde",
+    "crates/loom-core/src/bindings.rs": "6e3abbd318b384dab9df88c7f61faa07ba59594b66b5ab84beb31e0cab42245e",
+    "crates/loom-core/src/error.rs": "c5696efa1a9adf1dcc5d9cb3cdc4c42fda485f8a68aced9aaa835308c1103b04",
+    "crates/loom-core/src/journal.rs": "ea81e9b3de0f7ce94f54b5337a022c2aec8a31779e80033bb2fc22fdfd828a44",
+    "crates/loom-core/src/lib.rs": "0d653cd6236b41c520bf05a3add84e69f0ad6dae890970d449d0821a23f4d53c",
+    "crates/loom-core/src/model.rs": "fc4bba229be54e333531a2d68bfe8536386aa88bc50d36266f13a32d9f07f270",
+    "crates/loom-core/src/projection.rs": "78f7eb5ecb97d3c7dccd18ad349f6d4388a81d870d8473310842a4566b110ddc",
+    "crates/loom-core/src/repository.rs": "e7e09af4b33d87ead7091a9ba0017066cccd4db2c3f35167c6c0de1e4d40b59b",
+    "crates/loom-core/tests/core.rs": "c4f387d3a8afc9afba532ff641cea5972e1cc0b2ae1f781fa3dc44d6771e7428",
+    "crates/loom-core/Cargo.toml": "3fb5d92131cb605cbb4523fb3484eccf613aee31989f95e07848a6dfb8a533e6",
+    "packages/protocol/src/workbench.ts": "4591e6747bdecff5ed6590b203a80f08c32e0fa984afe68bc903961d8d112e8e",
+    "packages/protocol/tests/wire-types.ts": "f31bc648e87566e6ecfda5541655d0753860ffaca89b6979fdccdadae5f10545",
+    "packages/protocol/tsconfig.json": "9f53f633778eae5316fdd31472cbb9a0ecec093118c5502556786f83fc023096"
+  },
+  "notVerified": [
+    "New desktop Tauri bridge and UI",
+    "Legacy read-only migration",
+    "SDK/provider execution through the new core",
+    "Real model accounts, OAuth and OS permissions",
+    "Windows/Linux runtime",
+    "Complete M0-M8 parity and release artifacts"
+  ]
+}

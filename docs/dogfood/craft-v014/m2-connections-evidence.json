@@ -1,0 +1,73 @@
+{
+  "recordedAt": "2026-10-07T23:13:47.094029+08:00",
+  "baseCommit": "4d0574f66b825598941cede745cd0867e4c55073",
+  "platform": "macOS-26.5.2-arm64-arm-64bit-Mach-O",
+  "scope": "Connection metadata, frozen turn snapshots, credential storage boundary; no external model calls",
+  "tests": {
+    "core": {
+      "passed": 68,
+      "connectionCases": 8,
+      "formatClippyBindingsPassed": true
+    },
+    "frontend": {
+      "passed": 17,
+      "includesCanonicalContract": true
+    },
+    "host": {
+      "passed": 11,
+      "ignored": 1
+    },
+    "nativeKeychain": {
+      "passed": 1,
+      "explicitIgnoredTestRun": true,
+      "name": "native_keychain_roundtrip_and_catalog_contains_no_secret",
+      "syntheticCredentialOnly": true,
+      "createdReadDeleted": true
+    },
+    "rustContracts": {
+      "passed": 6
+    },
+    "debugScript": {
+      "passed": 3,
+      "processInspectionFailureReported": true
+    }
+  },
+  "nativeDesktop": {
+    "status": "not_verified",
+    "reason": "CUA reported Mac locked and automatic unlock failed; manual unlock requested",
+    "fixture": ".tmp/workbench-connections-2026-10-07/data",
+    "appStopped": true,
+    "cleanupVerifiedByProcessHandleExit": true
+  },
+  "appSha256": "8333f21df7d67edefb622b1f6ad725ab94d2bfab9cc8abfe5e9593bd43ecd3e6",
+  "sourceSha256": {
+    "Cargo.lock": "3dc56dd113114690ba0bb2a7f6de75bae556abdbb109d9b9f5f0bd5ff573e5d1",
+    "crates/loom-core/Cargo.toml": "70c09033f0ef5ce15cb81e9a535102bec39d3488ba7ae3f0cb45101aac273319",
+    "crates/loom-core/src/connection.rs": "56a88384643978dd95390d32b2a58183f8633980ad635098f9f98ad7302c47bc",
+    "crates/loom-core/src/model.rs": "c4f09084d45204652fae428f2c9963b5f6cb34b38bf3c37d55974cd42770bfa0",
+    "crates/loom-core/src/projection.rs": "28c68f2fce38abe4b3f9b990c8db8f15854e2a317699adf45cb5a8b19357bbbd",
+    "crates/loom-core/src/repository.rs": "f7cebf9f32f7dfa79e99eba999d9cec5205b88da9b631c30bb7c18a4e5c53bc1",
+    "crates/loom-core/src/repository/connections.rs": "0fb5ef5533e54a0d510be523ec1ef964f871b918491f18164facd862d9b9f743",
+    "crates/loom-core/src/api.rs": "687bc64e6c224175a6330c588fa7f3bb952451520c79486a153ec10bf546c1cb",
+    "src-tauri/Cargo.toml": "91c41b20969d726c66b06fd22c5a174666d0b2b537e1c1f10d18c73f126fae19",
+    "src-tauri/Cargo.lock": "5489f5307b90b6a170fb48ff493e113822afdee2e2dd378ad786b9a68c69629d",
+    "src-tauri/src/workbench/connections.rs": "3a61775c6fed2640ce4e339959c6a4070aa340ba936522ee228536abe928f498",
+    "src-tauri/src/workbench/host.rs": "b3eac08509cffaf097fcd07bfbf2d111657413b88e69a9d730050609152a3e3f",
+    "src-tauri/src/workbench/mod.rs": "a4f1393b1d004f03f9e380165077c4da0f2121931b6b25ebd52a0f81f70af432",
+    "src/workbench/ConnectionSettings.tsx": "327f66ff89e85ff2e6efe73682e930384dadd9ba82d640fe4fc6b4ea5cb84554",
+    "src/workbench/WorkbenchApp.tsx": "e8123f8ef298f35c9f75ba0ade114fc9b8815c00ecf0884c26654ed9929ff9f0",
+    "src/api/workbenchClient.ts": "822c67b6fe28fe90ee76740f7128f466878510f6f4893720009ccbc9e4417321",
+    "packages/protocol/src/workbench.ts": "8212b4c08ced5f4598696d1651a13abd5029cfba36601d3470f95819fa0959b7",
+    "scripts/debug.sh": "7dee75660a00b8b8ed1bbc0fabb9ba244dca4c993007f83016fba24fc967a07f",
+    "tests/unit/debugScript.test.cjs": "5788c5b4731263afa4690860ea7b9223faa42d942f3035059aa92f5c3ba9f8a1",
+    "tests/unit/workbenchConnectionSelection.test.cjs": "f59dcb11cbfa90f13dd3ed60bc68bc14802761981e8f647409bab886530873fd",
+    "tests/unit/connectionSettings.test.cjs": "18cb0eacbe23be31602a26b43da5d089e5bf42d0d6e8a21abdeb1fe636a3232a"
+  },
+  "remaining": [
+    "native configuration form and restart acceptance",
+    "production SDK host and actual connection verification",
+    "OAuth IAM service-account environment auth",
+    "cross-platform vault",
+    "connection deletion and old/orphan credential cleanup"
+  ]
+}

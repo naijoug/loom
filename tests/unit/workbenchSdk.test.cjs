@@ -1,0 +1,17 @@
+require.extensions['.css']=()=>undefined;
+const test=require('node:test');const assert=require('node:assert/strict');const{JSDOM}=require('jsdom');
+const dom=new JSDOM('<div id="root"></div>',{url:'http://localhost'});global.window=dom.window;global.document=dom.window.document;global.navigator=dom.window.navigator;global.IS_REACT_ACT_ENVIRONMENT=true;
+const React=require('react');const{act}=React;const{createRoot}=require('react-dom/client');const{workbenchClient:client}=require('../../.tmp/test-build/src/api/workbenchClient.js');const{WorkbenchApp}=require('../../.tmp/test-build/src/workbench/WorkbenchApp.js');
+test('SDK host enables connected sending and queue resume but cannot send without a model connection',async()=>{
+ const original={...client};const key={workspaceId:'w',sessionId:'s'};const c={id:'c',revision:1,config:{name:'Local connection',models:['model'],defaultModel:'model'}};
+ let resumed=0,sent=0;
+ for(const connected of [false,true]){
+  const view={metadata:{key,title:'Session',projectId:null,statusId:'todo',archived:false,flagged:false,labels:[],permissionMode:'ask',connection:{connectionId:connected?'c':null,model:null,thinking:null},enabledSources:[],createdAtMs:1,updatedAtMs:1,lastReadMessageId:null},notes:'',lastSeq:1,metadataRevision:1,messages:[],turns:connected?[{id:'queued',status:'queued',configuration:{connection:{connectionId:'c',model:null,thinking:null},permissionMode:'ask',resolvedConnection:c}}]:[],tools:{},approvals:{},activeTurnId:null};
+  client.capabilities=async()=>({protocolVersion:1,runtime:'sdk',credentialStore:'macos_keychain'});client.watchWorkspace=async()=>({close:async()=>{}});client.watch=async()=>({snapshot:view,close:async()=>{}});client.resume=async()=>{resumed++;};
+  client.request=async command=>{switch(command.method){case'list_workspaces':return[{id:'w',name:'Workspace',createdAtMs:1}];case'list_projects':return[];case'list_connections':return[c];case'get_session':return view;case'read_events':return{events:[],lastSeq:1,hasMore:false};case'list_sessions':return[{sessionId:'s',summary:{metadata:view.metadata,lastSeq:1,messageCount:0,preview:'',activeTurnId:null,queuedTurnCount:connected?1:0,hasUnread:false},error:null}];case'send_message':sent++;return{receipt:{},alreadyAccepted:false,lastSeq:1};default:throw new Error(command.method);}};
+  const root=createRoot(document.getElementById('root'));
+  try{await act(async()=>root.render(React.createElement(WorkbenchApp)));await act(async()=>document.querySelector('.wb-session-row').click());const composer=document.querySelector('[aria-label="消息"]');await act(async()=>{Object.getOwnPropertyDescriptor(dom.window.HTMLTextAreaElement.prototype,'value').set.call(composer,'hello');composer.dispatchEvent(new dom.window.Event('input',{bubbles:true}));});const button=document.querySelector('[aria-label="发送消息"]');assert.equal(button.disabled,!connected);if(connected){assert.ok(document.querySelector('.wb-model-label').textContent.includes('SDK 已就绪'));const resume=[...document.querySelectorAll('button')].find(b=>b.textContent==='继续等待中的消息');assert.ok(resume);await act(async()=>resume.click());await act(async()=>button.click());}else{await act(async()=>composer.dispatchEvent(new dom.window.KeyboardEvent('keydown',{bubbles:true,key:'Enter'})));assert.equal(sent,0);}}
+  finally{await act(async()=>root.unmount());Object.assign(client,original);}
+ }
+ assert.equal(sent,1);assert.equal(resumed,1);dom.window.close();
+});

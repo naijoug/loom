@@ -1,0 +1,30 @@
+Window: "Loom", App: Loom.
+0 standard window Loom, Secondary Actions: Raise
+	1 scroll area
+		2 HTML content Description: Loom, URL: tauri://localhost
+			3 container 历史资源
+				4 container
+					5 heading 历史资源, Value: 2
+						6 text 历史资源
+					7 button 关闭
+				8 text docs/old-plan.md
+				9 container
+					10 text 52  字节 · 校验后读取
+				11 text # 历史计划
+
+- 保留记录
+- 不重跑旧命令
+
+				12 button 关闭
+	13 close button
+	14 full screen button Help: this button also has an action to zoom the window, Secondary Actions: zoom the window
+	15 minimize button
+16 menu bar
+	17 Loom
+	18 File
+	19 Edit
+	20 View
+	21 Window
+	22 Help
+
+The focused UI element is 7 button 关闭

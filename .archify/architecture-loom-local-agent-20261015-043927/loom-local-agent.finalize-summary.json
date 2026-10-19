@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "ok": false,
+  "command": "finalize",
+  "status": "fail",
+  "type": "architecture",
+  "quality": "showcase",
+  "specification": {
+    "path": "/Users/guojian/Workspace/naijoug/loom/.archify/architecture-loom-local-agent-20261015-043927/candidate.json",
+    "sha256": "a0a8472866cbbf7b38ed12b96783da56154adcef2b3c4026d9e5a0ac0210aca7",
+    "bytes": 3988
+  },
+  "artifact": {
+    "path": "/Users/guojian/Workspace/naijoug/loom/.archify/architecture-loom-local-agent-20261015-043927/loom-local-agent.html",
+    "sha256": "35fffe6144f08738f67e32841e290606228bb67154db09229532b1925d99a8d6",
+    "bytes": 819835
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "fail"
+  },
+  "failedStage": "browser-check",
+  "diagnostics": [
+    {
+      "code": "viewer/browser-check-runtime",
+      "severity": "error",
+      "message": "browser-check could not complete its Chrome inspection.",
+      "subject": {
+        "artifact": "/Users/guojian/Workspace/naijoug/loom/.archify/architecture-loom-local-agent-20261015-043927/loom-local-agent.html"
+      },
+      "evidence": {
+        "reason": "Chrome DevTools read pipe failed: stream ended\nChrome process: still running.\nChrome transport: Node v26.11.0, libuv 1.53.0, darwin; pid=5977, exitCode=null, signalCode=null.\nChrome read pipe: readable=false, ended=true, destroyed=false, receivedBytes=0, messages=0, bufferedBytes=0.\nChrome write pipe: writable=true, ended=false, destroyed=false, completedWrites=1, writtenBytes=50, bufferedBytes=0."
+      },
+      "supportedFixes": [
+        "resolve the reported Chrome inspection error, then rerun browser-check"
+      ]
+    }
+  ],
+  "diagnosticSummary": {
+    "total": 1,
+    "shown": 1,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "/Users/guojian/Workspace/naijoug/loom/.archify/architecture-loom-local-agent-20261015-043927/loom-local-agent.finalize.json",
+    "summaryReceipt": "/Users/guojian/Workspace/naijoug/loom/.archify/architecture-loom-local-agent-20261015-043927/loom-local-agent.finalize-summary.json",
+    "browserCheckReceipt": "/Users/guojian/Workspace/naijoug/loom/.archify/architecture-loom-local-agent-20261015-043927/loom-local-agent.browser-check.json"
+  },
+  "visualReview": "not-requested",
+  "durationMs": 600
+}

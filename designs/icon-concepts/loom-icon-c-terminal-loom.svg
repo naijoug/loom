@@ -1,0 +1,22 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Loom icon concept C - terminal loom</title>
+  <defs>
+    <linearGradient id="bg" x1="144" y1="112" x2="880" y2="912" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2A2A2A"/>
+      <stop offset="1" stop-color="#080808"/>
+    </linearGradient>
+  </defs>
+  <rect x="96" y="96" width="832" height="832" rx="188" fill="url(#bg)"/>
+  <path d="M300 288V736" stroke="#EDEDED" stroke-width="58" stroke-linecap="round"/>
+  <path d="M724 288V736" stroke="#EDEDED" stroke-width="58" stroke-linecap="round"/>
+  <path d="M300 314H724" stroke="#EDEDED" stroke-width="58" stroke-linecap="round"/>
+  <path d="M300 710H724" stroke="#EDEDED" stroke-width="58" stroke-linecap="round"/>
+  <path d="M376 394H648" stroke="#EDF6F1" stroke-width="30" stroke-linecap="round"/>
+  <path d="M376 486H648" stroke="#A6A6A6" stroke-width="30" stroke-linecap="round"/>
+  <path d="M376 578H648" stroke="#EDF6F1" stroke-width="30" stroke-linecap="round"/>
+  <path d="M418 384V640" stroke="#A6A6A6" stroke-width="22" stroke-linecap="round" stroke-opacity=".9"/>
+  <path d="M512 384V640" stroke="#EDF6F1" stroke-width="22" stroke-linecap="round" stroke-opacity=".86"/>
+  <path d="M606 384V640" stroke="#A6A6A6" stroke-width="22" stroke-linecap="round" stroke-opacity=".9"/>
+  <path d="M416 660L512 540L416 420" stroke="#D8D8D8" stroke-width="54" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="558" y="620" width="112" height="44" rx="22" fill="#D8D8D8"/>
+</svg>

@@ -1,0 +1,633 @@
+{
+  "schemaVersion": 1,
+  "evidenceKind": "static-source-inventory",
+  "upstream": {
+    "repository": "https://github.com/craft-ai-agents/craft-agents-oss",
+    "sha": "73bd9c2a3573158bea880984eb8d5fdb41e0cac2",
+    "version": "0.14.0"
+  },
+  "scope": "Runtime behavior, screenshots, credentials and cross-platform parity require separate acceptance evidence.",
+  "features": [
+    {
+      "id": "F01",
+      "scope": "首次启动、连接选择、登录/重认证、引导",
+      "locations": "`renderer/components/onboarding/`",
+      "acceptance": "M2–3：空配置启动→连接测试→Workspace→首次会话；取消/失败可恢复。"
+    },
+    {
+      "id": "F02",
+      "scope": "Workspace 与 Project 管理，本地/远程切换、默认值",
+      "locations": "`shared/workspaces/`、`shared/projects/`",
+      "acceptance": "M1/M3/M7：可无 Project 聊天；切换不串配置、草稿和资源。"
+    },
+    {
+      "id": "F03",
+      "scope": "多列 Shell、导航历史、窗口/分栏、搜索与命令入口",
+      "locations": "`renderer/components/app-shell/`、`contexts/NavigationContext.tsx`",
+      "acceptance": "M3：分栏尺寸、前进后退、多窗口、空态、持久化与快捷键。"
+    },
+    {
+      "id": "F04",
+      "scope": "Inbox、会话状态、归档、旗标、标签/值、筛选、未读",
+      "locations": "`SessionList.tsx`、`shared/statuses/`、`shared/labels/`",
+      "acceptance": "M3：多窗口状态一致；后台结束出现未读；重启与过滤结果一致。"
+    },
+    {
+      "id": "F05",
+      "scope": "Composer、草稿、附件、来源/技能引用、模型/thinking",
+      "locations": "`input/FreeFormInput.tsx`",
+      "acceptance": "M3–4：拖放/粘贴/引用真实生效；IME、发送键、模式循环按参考测试。"
+    },
+    {
+      "id": "F06",
+      "scope": "流式文本/thinking/tool、停止、排队/steering、重试",
+      "locations": "`server/sessions/SessionManager.ts`、`shared/agent/backend/types.ts`",
+      "acceptance": "M2–3：三轮追问、工具卡片、生成中输入、停止后再发、会话切换。"
+    },
+    {
+      "id": "F07",
+      "scope": "历史、搜索、分支/压缩、笔记、导入导出、跨工作区转移",
+      "locations": "`shared/sessions/`、`server/handlers/rpc/{sessions,transfer}.ts`",
+      "acceptance": "M1/M3/M7：长历史冷启动、断线补流、分支隔离、导入幂等、损坏记录可诊断。"
+    },
+    {
+      "id": "F08",
+      "scope": "多 LLM connections、模型能力与账户、API/OAuth/自定义端点",
+      "locations": "`shared/config/llm-connections.ts`、`agent/backend/`、`shared/auth/`",
+      "acceptance": "M2/M7：Claude 与 Pi 家族均通过；每种基线认证/端点能力独立核验。"
+    },
+    {
+      "id": "F09",
+      "scope": "Explore/Ask/Execute、可选 Guarded、分层权限、记忆审批",
+      "locations": "`shared/agent/{mode-types,mode-manager,permissions-config}.ts`",
+      "acceptance": "M0/M2/M6：真实工具执行前允许/拒绝；过期/跨回合响应不能放行。"
+    },
+    {
+      "id": "F10",
+      "scope": "Sources：MCP stdio/HTTP/SSE、REST、本地文件、OAuth/续期",
+      "locations": "`shared/sources/`、`server/handlers/rpc/sources.ts`",
+      "acceptance": "M4：三种传输、凭据过期恢复、Source 级权限、启停与热更新。"
+    },
+    {
+      "id": "F11",
+      "scope": "Skills：多层发现、导入/创建、详情、requiredSources、显式调用",
+      "locations": "`shared/skills/`、`renderer/pages/SkillInfoPage.tsx`",
+      "acceptance": "M4：只配置必需上下文；同名覆盖按参考优先级；引用激活依赖 Source。"
+    },
+    {
+      "id": "F12",
+      "scope": "内置 session 工具、Agent 修改配置、认证/计划交互",
+      "locations": "`packages/session-tools-core/src/tool-defs.ts`",
+      "acceptance": "M2/M4–6：catalog 逐项映射；UI 和工具变更共用校验与持久化。"
+    },
+    {
+      "id": "F13",
+      "scope": "富内容与查看器：Markdown/代码/Mermaid/表格/图像/PDF/Office/HTML/diff",
+      "locations": "`packages/ui/src/components/overlay/`、`apps/electron/resources/`",
+      "acceptance": "M5：转换、缩放、复制、定位、差异展示；加载失败和不可信 HTML 隔离。"
+    },
+    {
+      "id": "F14",
+      "scope": "内置 Browser：窗口/标签、导航、登录态、AX/CDP、下载/网络",
+      "locations": "`apps/electron/src/main/browser-pane-manager.ts`、`browser-cdp.ts`",
+      "acceptance": "M0/M5：相同窗口操作、后台保留、切 Workspace 隔离、真实页面点击/填表。"
+    },
+    {
+      "id": "F15",
+      "scope": "Pages：创建/编辑、静态/交互/live、数据、定时刷新、授权",
+      "locations": "`shared/pages/`、`server/pages/`、`renderer/components/pages/`",
+      "acceptance": "M5–6：数据更新可见；内容变化使旧授权失效；刷新失败有记录。"
+    },
+    {
+      "id": "F16",
+      "scope": "后台任务、子会话、消息、父子关系、进度和输出",
+      "locations": "`server/sessions/`、`shared/agent/spawn-session-tool.ts`",
+      "acceptance": "M6：创建/结束/失败/孤儿恢复；父子权限不提升，跨会话消息精确送达。"
+    },
+    {
+      "id": "F17",
+      "scope": "Task 看板、task.yaml DAG、并发/依赖、暂停恢复、验证/修复",
+      "locations": "`server/tasks/TaskRunner.ts`、`shared/tasks/`、`app-shell/kanban/`",
+      "acceptance": "M6：有依赖的 DAG、失败节点重试、停止/重启；不执行上游仅预留节点。"
+    },
+    {
+      "id": "F18",
+      "scope": "Automations：时间/事件、prompt/script/webhook、历史/重试",
+      "locations": "`shared/automations/`",
+      "acceptance": "M6：时区/重复事件/超时/重启测试；触发来源与执行证据可追溯。"
+    },
+    {
+      "id": "F19",
+      "scope": "可选 Decision layer 与相关 AI 设置",
+      "locations": "`shared/decisions/`、`server/decisions/`",
+      "acceptance": "M6：开/关、不可用、低置信度回退；每项功能核对，不允许模型提升权限。"
+    },
+    {
+      "id": "F20",
+      "scope": "Remote/headless、Web UI、CLI、混合工作区和本地能力桥",
+      "locations": "`packages/server/`、`server/transport/`、`apps/{webui,cli}/`",
+      "acceptance": "M7：认证、断线重连、跨客户端事件、远程请求本机浏览器、能力缺失。"
+    },
+    {
+      "id": "F21",
+      "scope": "Messaging：Telegram/WhatsApp/Lark、pairing、绑定/准入/回传",
+      "locations": "`packages/messaging-gateway/`、`messaging-whatsapp-worker/`",
+      "acceptance": "M7：专用测试账户往返；未授权发送者被拒；去重/解绑/重启可靠。"
+    },
+    {
+      "id": "F22",
+      "scope": "会话/Page 分享、更新/撤销、Viewer、密码保护",
+      "locations": "`server/sessions/SessionManager.ts`、`shared/pages/publisher.ts`、`apps/viewer/`",
+      "acceptance": "M7：自己的服务端点上创建/读取/更新/撤销，离线导出不能替代。"
+    },
+    {
+      "id": "F23",
+      "scope": "所有设置域、主题/语言、快捷键、通知、深链、更新与打包",
+      "locations": "`renderer/pages/settings/`、`apps/electron/src/main/`",
+      "acceptance": "M3/M8：逐页功能矩阵；真实持久化、系统集成及三平台产物。"
+    }
+  ],
+  "tools": [
+    {
+      "name": "SubmitPlan",
+      "schema": "SubmitPlanSchema",
+      "executionMode": "registry",
+      "safeMode": "allow",
+      "readOnly": false,
+      "handler": "handleSubmitPlan",
+      "source": "packages/session-tools-core/src/tool-defs.ts"
+    },
+    {
+      "name": "config_validate",
+      "schema": "ConfigValidateSchema",
+      "executionMode": "registry",
+      "safeMode": "allow",
+      "readOnly": true,
+      "handler": "handleConfigValidate",
+      "source": "packages/session-tools-core/src/tool-defs.ts"
+    },
+    {
+      "name": "skill_validate",
+      "schema": "SkillValidateSchema",
+      "executionMode": "registry",
+      "safeMode": "allow",
+      "readOnly": true,
+      "handler": "handleSkillValidate",
+      "source": "packages/session-tools-core/src/tool-defs.ts"
+    },
+    {
+      "name": "mermaid_validate",
+      "schema": "MermaidValidateSchema",
+      "executionMode": "registry",
+      "safeMode": "allow",
+      "readOnly": true,
+      "handler": "handleMermaidValidate",
+      "source": "packages/session-tools-core/src/tool-defs.ts"
+    },
+    {
+      "name": "source_test",
+      "schema": "SourceTestSchema",
+      "executionMode": "registry",
+      "safeMode": "allow",
+      "readOnly": false,
+      "handler": "handleSourceTest",
+      "source": "packages/session-tools-core/src/tool-defs.ts"
+    },
+    {
+      "name": "source_oauth_trigger",
+      "schema": "SourceOAuthTriggerSchema",
+      "executionMode": "registry",
+      "safeMode": "block",
+      "readOnly": false,
+      "handler": "handleSourceOAuthTrigger",
+      "source": "packages/session-tools-core/src/tool-defs.ts"
+    },
+    {
+      "name": "source_google_oauth_trigger",
+      "schema": "SourceOAuthTriggerSchema",
+      "executionMode": "registry",
+      "safeMode": "block",
+      "readOnly": false,
+      "handler": "handleGoogleOAuthTrigger",
+      "source": "packages/session-tools-core/src/tool-defs.ts"
+    },
+    {
+      "name": "source_slack_oauth_trigger",
+      "schema": "SourceOAuthTriggerSchema",
+      "executionMode": "registry",
+      "safeMode": "block",
+      "readOnly": false,
+      "handler": "handleSlackOAuthTrigger",
+      "source": "packages/session-tools-core/src/tool-defs.ts"
+    },
+    {
+      "name": "source_microsoft_oauth_trigger",
+      "schema": "SourceOAuthTriggerSchema",
+      "executionMode": "registry",
+      "safeMode": "block",
+      "readOnly": false,
+      "handler": "handleMicrosoftOAuthTrigger",
+      "source": "packages/session-tools-core/src/tool-defs.ts"
+    },
+    {
+      "name": "source_credential_prompt",
+      "schema": "CredentialPromptSchema",
+      "executionMode": "registry",
+      "safeMode": "block",
+      "readOnly": false,
+      "handler": "handleCredentialPrompt",
+      "source": "packages/session-tools-core/src/tool-defs.ts"
+    },
+    {
+      "name": "update_user_preferences",
+      "schema": "UpdatePreferencesSchema",
+      "executionMode": "registry",
+      "safeMode": "block",
+      "readOnly": false,
+      "handler": "handleUpdatePreferences",
+      "source": "packages/session-tools-core/src/tool-defs.ts"
+    },
+    {
+      "name": "transform_data",
+      "schema": "TransformDataSchema",
+      "executionMode": "registry",
+      "safeMode": "allow",
+      "readOnly": false,
+      "handler": "handleTransformData",
+      "source": "packages/session-tools-core/src/tool-defs.ts"
+    },
+    {
+      "name": "script_sandbox",
+      "schema": "ScriptSandboxSchema",
+      "executionMode": "registry",
+      "safeMode": "allow",
+      "readOnly": false,
+      "handler": "handleScriptSandbox",
+      "source": "packages/session-tools-core/src/tool-defs.ts"
+    },
+    {
+      "name": "render_template",
+      "schema": "RenderTemplateSchema",
+      "executionMode": "registry",
+      "safeMode": "allow",
+      "readOnly": false,
+      "handler": "handleRenderTemplate",
+      "source": "packages/session-tools-core/src/tool-defs.ts"
+    },
+    {
+      "name": "send_developer_feedback",
+      "schema": "SendDeveloperFeedbackSchema",
+      "executionMode": "registry",
+      "safeMode": "allow",
+      "readOnly": false,
+      "handler": "handleSendDeveloperFeedback",
+      "source": "packages/session-tools-core/src/tool-defs.ts"
+    },
+    {
+      "name": "call_llm",
+      "schema": "CallLlmSchema",
+      "executionMode": "backend",
+      "safeMode": "allow",
+      "readOnly": true,
+      "handler": "null",
+      "source": "packages/session-tools-core/src/tool-defs.ts"
+    },
+    {
+      "name": "decide",
+      "schema": "DecideSchema",
+      "executionMode": "registry",
+      "safeMode": "allow",
+      "readOnly": true,
+      "handler": "handleDecide",
+      "source": "packages/session-tools-core/src/tool-defs.ts"
+    },
+    {
+      "name": "spawn_session",
+      "schema": "SpawnSessionSchema",
+      "executionMode": "backend",
+      "safeMode": "block",
+      "readOnly": false,
+      "handler": "null",
+      "source": "packages/session-tools-core/src/tool-defs.ts"
+    },
+    {
+      "name": "browser_tool",
+      "schema": "BrowserToolSchema",
+      "executionMode": "backend",
+      "safeMode": "allow",
+      "readOnly": false,
+      "handler": "null",
+      "source": "packages/session-tools-core/src/tool-defs.ts"
+    },
+    {
+      "name": "set_session_labels",
+      "schema": "SetSessionLabelsSchema",
+      "executionMode": "registry",
+      "safeMode": "block",
+      "readOnly": false,
+      "handler": "handleSetSessionLabels",
+      "source": "packages/session-tools-core/src/tool-defs.ts"
+    },
+    {
+      "name": "set_session_status",
+      "schema": "SetSessionStatusSchema",
+      "executionMode": "registry",
+      "safeMode": "block",
+      "readOnly": false,
+      "handler": "handleSetSessionStatus",
+      "source": "packages/session-tools-core/src/tool-defs.ts"
+    },
+    {
+      "name": "archive_session",
+      "schema": "ArchiveSessionSchema",
+      "executionMode": "registry",
+      "safeMode": "block",
+      "readOnly": false,
+      "handler": "handleArchiveSession",
+      "source": "packages/session-tools-core/src/tool-defs.ts"
+    },
+    {
+      "name": "create_task",
+      "schema": "CreateTaskSchema",
+      "executionMode": "registry",
+      "safeMode": "block",
+      "readOnly": false,
+      "handler": "handleCreateTask",
+      "source": "packages/session-tools-core/src/tool-defs.ts"
+    },
+    {
+      "name": "list_pages",
+      "schema": "ListPagesSchema",
+      "executionMode": "registry",
+      "safeMode": "allow",
+      "readOnly": true,
+      "handler": "handleListPages",
+      "source": "packages/session-tools-core/src/tool-defs.ts"
+    },
+    {
+      "name": "get_page",
+      "schema": "GetPageSchema",
+      "executionMode": "registry",
+      "safeMode": "allow",
+      "readOnly": true,
+      "handler": "handleGetPage",
+      "source": "packages/session-tools-core/src/tool-defs.ts"
+    },
+    {
+      "name": "create_page",
+      "schema": "CreatePageSchema",
+      "executionMode": "registry",
+      "safeMode": "block",
+      "readOnly": false,
+      "handler": "handleCreatePage",
+      "source": "packages/session-tools-core/src/tool-defs.ts"
+    },
+    {
+      "name": "update_page",
+      "schema": "UpdatePageSchema",
+      "executionMode": "registry",
+      "safeMode": "block",
+      "readOnly": false,
+      "handler": "handleUpdatePage",
+      "source": "packages/session-tools-core/src/tool-defs.ts"
+    },
+    {
+      "name": "write_page_data",
+      "schema": "WritePageDataSchema",
+      "executionMode": "registry",
+      "safeMode": "block",
+      "readOnly": false,
+      "handler": "handleWritePageData",
+      "source": "packages/session-tools-core/src/tool-defs.ts"
+    },
+    {
+      "name": "delete_page",
+      "schema": "DeletePageSchema",
+      "executionMode": "registry",
+      "safeMode": "block",
+      "readOnly": false,
+      "handler": "handleDeletePage",
+      "source": "packages/session-tools-core/src/tool-defs.ts"
+    },
+    {
+      "name": "get_session_info",
+      "schema": "GetSessionInfoSchema",
+      "executionMode": "registry",
+      "safeMode": "allow",
+      "readOnly": true,
+      "handler": "handleGetSessionInfo",
+      "source": "packages/session-tools-core/src/tool-defs.ts"
+    },
+    {
+      "name": "list_sessions",
+      "schema": "ListSessionsSchema",
+      "executionMode": "registry",
+      "safeMode": "allow",
+      "readOnly": true,
+      "handler": "handleListSessions",
+      "source": "packages/session-tools-core/src/tool-defs.ts"
+    },
+    {
+      "name": "list_background_tasks",
+      "schema": "ListBackgroundTasksSchema",
+      "executionMode": "registry",
+      "safeMode": "allow",
+      "readOnly": true,
+      "handler": "handleListBackgroundTasks",
+      "source": "packages/session-tools-core/src/tool-defs.ts"
+    },
+    {
+      "name": "send_agent_message",
+      "schema": "SendAgentMessageSchema",
+      "executionMode": "registry",
+      "safeMode": "block",
+      "readOnly": false,
+      "handler": "handleSendAgentMessage",
+      "source": "packages/session-tools-core/src/tool-defs.ts"
+    },
+    {
+      "name": "list_messaging_channels",
+      "schema": "ListMessagingChannelsSchema",
+      "executionMode": "registry",
+      "safeMode": "allow",
+      "readOnly": true,
+      "handler": "handleListMessagingChannels",
+      "source": "packages/session-tools-core/src/tool-defs.ts"
+    },
+    {
+      "name": "unbind_messaging_channel",
+      "schema": "UnbindMessagingChannelSchema",
+      "executionMode": "registry",
+      "safeMode": "block",
+      "readOnly": false,
+      "handler": "handleUnbindMessagingChannel",
+      "source": "packages/session-tools-core/src/tool-defs.ts"
+    }
+  ],
+  "settings": [
+    {
+      "id": "app",
+      "component": "AppSettingsPage",
+      "source": "apps/electron/src/renderer/pages/settings/settings-pages.ts"
+    },
+    {
+      "id": "ai",
+      "component": "AiSettingsPage",
+      "source": "apps/electron/src/renderer/pages/settings/settings-pages.ts"
+    },
+    {
+      "id": "appearance",
+      "component": "AppearanceSettingsPage",
+      "source": "apps/electron/src/renderer/pages/settings/settings-pages.ts"
+    },
+    {
+      "id": "input",
+      "component": "InputSettingsPage",
+      "source": "apps/electron/src/renderer/pages/settings/settings-pages.ts"
+    },
+    {
+      "id": "workspace",
+      "component": "WorkspaceSettingsPage",
+      "source": "apps/electron/src/renderer/pages/settings/settings-pages.ts"
+    },
+    {
+      "id": "permissions",
+      "component": "PermissionsSettingsPage",
+      "source": "apps/electron/src/renderer/pages/settings/settings-pages.ts"
+    },
+    {
+      "id": "labels",
+      "component": "LabelsSettingsPage",
+      "source": "apps/electron/src/renderer/pages/settings/settings-pages.ts"
+    },
+    {
+      "id": "messaging",
+      "component": "MessagingSettingsPage",
+      "source": "apps/electron/src/renderer/pages/settings/settings-pages.ts"
+    },
+    {
+      "id": "server",
+      "component": "ServerSettingsPage",
+      "source": "apps/electron/src/renderer/pages/settings/settings-pages.ts"
+    },
+    {
+      "id": "shortcuts",
+      "component": "ShortcutsPage",
+      "source": "apps/electron/src/renderer/pages/settings/settings-pages.ts"
+    },
+    {
+      "id": "preferences",
+      "component": "PreferencesPage",
+      "source": "apps/electron/src/renderer/pages/settings/settings-pages.ts"
+    }
+  ],
+  "providerTypes": [
+    "anthropic",
+    "pi",
+    "pi_compat"
+  ],
+  "authTypes": [
+    "api_key",
+    "api_key_with_endpoint",
+    "oauth",
+    "iam_credentials",
+    "bearer_token",
+    "service_account_file",
+    "environment",
+    "none"
+  ],
+  "permissionModes": [
+    "safe",
+    "ask",
+    "guarded",
+    "allow-all"
+  ],
+  "sdkVersions": {
+    "@anthropic-ai/claude-agent-sdk": "0.3.280",
+    "@earendil-works/pi-coding-agent": "0.87.1",
+    "@earendil-works/pi-ai": "0.87.1"
+  },
+  "rpcHandlers": [
+    "packages/server-core/src/handlers/rpc/auth.ts",
+    "packages/server-core/src/handlers/rpc/automations.ts",
+    "packages/server-core/src/handlers/rpc/decisions.ts",
+    "packages/server-core/src/handlers/rpc/files.ts",
+    "packages/server-core/src/handlers/rpc/index.ts",
+    "packages/server-core/src/handlers/rpc/labels.ts",
+    "packages/server-core/src/handlers/rpc/llm-connections.ts",
+    "packages/server-core/src/handlers/rpc/messaging.ts",
+    "packages/server-core/src/handlers/rpc/oauth.ts",
+    "packages/server-core/src/handlers/rpc/onboarding.ts",
+    "packages/server-core/src/handlers/rpc/pages.ts",
+    "packages/server-core/src/handlers/rpc/projects.ts",
+    "packages/server-core/src/handlers/rpc/resources.ts",
+    "packages/server-core/src/handlers/rpc/server.ts",
+    "packages/server-core/src/handlers/rpc/sessions.ts",
+    "packages/server-core/src/handlers/rpc/settings.ts",
+    "packages/server-core/src/handlers/rpc/skills.ts",
+    "packages/server-core/src/handlers/rpc/sources.ts",
+    "packages/server-core/src/handlers/rpc/statuses.ts",
+    "packages/server-core/src/handlers/rpc/system.open-url.test.ts",
+    "packages/server-core/src/handlers/rpc/system.ts",
+    "packages/server-core/src/handlers/rpc/tasks.ts",
+    "packages/server-core/src/handlers/rpc/transfer.test.ts",
+    "packages/server-core/src/handlers/rpc/transfer.ts",
+    "packages/server-core/src/handlers/rpc/workspace.ts"
+  ],
+  "contentViewers": [
+    "packages/ui/src/components/overlay/ActivityCardsOverlay.tsx",
+    "packages/ui/src/components/overlay/AnnotatableMarkdownDocument.tsx",
+    "packages/ui/src/components/overlay/CodePreviewOverlay.tsx",
+    "packages/ui/src/components/overlay/ContentFrame.tsx",
+    "packages/ui/src/components/overlay/CopyButton.tsx",
+    "packages/ui/src/components/overlay/DataTableOverlay.tsx",
+    "packages/ui/src/components/overlay/DocumentFormattedMarkdownOverlay.tsx",
+    "packages/ui/src/components/overlay/FullscreenOverlayBase.tsx",
+    "packages/ui/src/components/overlay/FullscreenOverlayBaseHeader.tsx",
+    "packages/ui/src/components/overlay/GenericOverlay.tsx",
+    "packages/ui/src/components/overlay/HTMLPreviewOverlay.tsx",
+    "packages/ui/src/components/overlay/ImagePreviewOverlay.tsx",
+    "packages/ui/src/components/overlay/ItemNavigator.tsx",
+    "packages/ui/src/components/overlay/JSONPreviewOverlay.tsx",
+    "packages/ui/src/components/overlay/MermaidPreviewOverlay.tsx",
+    "packages/ui/src/components/overlay/MultiDiffPreviewOverlay.tsx",
+    "packages/ui/src/components/overlay/OverlayErrorBanner.tsx",
+    "packages/ui/src/components/overlay/PDFPreviewOverlay.tsx",
+    "packages/ui/src/components/overlay/PreviewOverlay.tsx",
+    "packages/ui/src/components/overlay/TerminalPreviewOverlay.tsx",
+    "packages/ui/src/components/overlay/ZoomControls.tsx",
+    "packages/ui/src/components/overlay/index.ts",
+    "packages/ui/src/components/overlay/rich-block-interaction-spec.ts",
+    "packages/ui/src/components/overlay/useRichBlockInteractions.ts"
+  ],
+  "externalServiceSources": [
+    {
+      "source": "packages/shared/src/branding.ts",
+      "urls": [
+        "https://thecraftagents.com"
+      ]
+    },
+    {
+      "source": "packages/shared/src/pages/publisher.ts",
+      "urls": [
+        "https://thecraftagents.com/p/api"
+      ]
+    },
+    {
+      "source": "packages/shared/src/auth/oauth-relay.ts",
+      "urls": [
+        "https://thecraftagents.com/auth/callback"
+      ]
+    }
+  ],
+  "sourceHashes": {
+    "apps/electron/src/renderer/pages/settings/settings-pages.ts": "fee8ac80dd668106979ad416f611cac55cbbc6964f56a4bdaa83c17f7f0f54ff",
+    "package.json": "d0920805d62f7e701ee1fabc9c3f12b15320f4c69a7c080b5de7ff16678beaa2",
+    "packages/session-tools-core/src/tool-defs.ts": "02929f8e756bbde5cf65aa4efca22b675a9d9a7658e95321746c741728f8ff5f",
+    "packages/shared/src/agent/mode-types.ts": "352735d6157820b259216ad343f31474f0dd98823b15f33dd375234389670452",
+    "packages/shared/src/auth/oauth-relay.ts": "c2e479367e792a87115edca84bd0cb5db750cf3f79c4d564416f360cf0c13493",
+    "packages/shared/src/branding.ts": "5aba9fa5ffe45cf4a08df445f08801b402801f6ffbeb90056066e343894bba91",
+    "packages/shared/src/config/llm-connections.ts": "30e44160ab2d77590172f573a5952011ef094749fcbb71f1ecb0b53924cd5d20",
+    "packages/shared/src/pages/publisher.ts": "362aa905a7dfd59eb9e93bb450ec7824b71d3e01117d0cb25a0325b9f085efe0"
+  }
+}

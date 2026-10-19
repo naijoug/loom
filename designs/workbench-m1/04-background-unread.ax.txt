@@ -1,0 +1,65 @@
+Window: "Loom", App: Loom.
+0 standard window Loom, Secondary Actions: Raise
+	1 scroll area
+		2 HTML content Description: Loom, URL: tauri://localhost
+			3 container
+				4 button 切换侧栏
+				5 text L 隔
+				6 pop up button 工作区, Value: 隔离工作区
+				7 button 创建工作区
+				8 text 本地验证模式 · 测试回复 Loom
+			9 container
+				10 button 新会话 ⌘N
+				11 container 会话分类
+					12 button 所有会话 2
+					13 button 待整理
+					14 button 待办 2
+					15 button 进行中
+					16 button 待审阅
+					17 button 已完成
+					18 button 已取消
+					19 button 已标记
+					20 button 已归档
+				21 text 项目
+				22 button 登记项目文件夹
+				23 button 无项目会话
+				24 text L 本地工作区 会话保存在这台设备
+			25 container 会话列表
+				26 container
+					27 heading 所有会话, Value: 1
+						28 text 所有会话
+					29 button 新会话
+				30 text field (settable) 搜索会话
+				31 text 会话
+				32 button 后台通知修复验证 待办 未读
+				33 button 新会话 待办
+			34 container
+				35 button 新会话
+				36 button 标记会话
+				37 button 归档会话
+				38 button 会话信息
+				39 container 会话记录
+					40 text L
+					41 heading 今天想做些什么？, Value: 2
+						42 text 今天想做些什么？
+					43 text 围绕一个想法开始，让工作留在同一段对话里。
+				44 pop up button 权限模式, Value: Ask · 询问
+				45 text 待办
+				46 text entry area (settable) 消息, Value: 保留当前草稿, Placeholder: 想一起完成什么？
+					47 text (settable) 保留当前草稿
+				48 text 无项目
+				49 text 本地测试流
+				50 button 发送消息
+				51 text Enter 发送 · Shift+Enter 换行
+	52 close button
+	53 full screen button Help: this button also has an action to zoom the window, Secondary Actions: zoom the window
+	54 minimize button
+55 menu bar
+	56 Loom
+	57 File
+	58 Edit
+	59 View
+	60 Window
+	61 Help
+
+The focused UI element is 46 text entry area (settable) 消息, Value: 保留当前草稿, Placeholder: 想一起完成什么？

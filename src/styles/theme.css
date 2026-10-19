@@ -1,0 +1,233 @@
+@import "@fontsource/geist-sans";
+@import "@fontsource/inter";
+@import "@fontsource/geist-mono";
+
+:root,
+:root[data-theme="dark"],
+[data-theme="dark"] {
+  --bg: #181818;
+  --bg-2: #1F1F1F;
+  --sidebar: #272727;
+  --surface: #222222;
+  --surface-2: #2D2D2D;
+  --inset: #303030;
+  --selected: #3B3D41;
+  --hover: #2E2E2E;
+  --border: #2F2F2F;
+  --border-strong: #3A3A3C;
+
+  --text: #ECECEC;
+  --text-2: #A3A4A5;
+  --text-3: #6E6F70;
+
+  --accent: #97C9F8;
+  --accent-ink: #0B1F33;
+  --accent-fill: #2F6FB0;
+  --accent-soft: rgba(151, 201, 248, 0.14);
+
+  --green: #4FB477;
+  --green-soft: rgba(79, 180, 119, 0.16);
+  --amber: #D6A23C;
+  --amber-soft: rgba(214, 162, 60, 0.16);
+  --red: #E2645C;
+  --red-soft: rgba(226, 100, 92, 0.16);
+  --add: #4FB477;
+  --del: #E2645C;
+  --agent-codex: #10A37F;
+  --agent-claude: #D97757;
+  --agent-hermes: #7C5CFC;
+
+  --shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  --bg: #FFFFFF;
+  --bg-2: #FAFAFA;
+  --sidebar: #D7D7D7;
+  --surface: #FFFFFF;
+  --surface-2: #FFFFFF;
+  --inset: #EFEFEF;
+  --selected: #CECFD1;
+  --hover: #CFCFCF;
+  --border: #D4D4D5;
+  --border-strong: #C2C2C4;
+
+  --text: #1A1A1A;
+  --text-2: #6B6B6D;
+  --text-3: #9A9A9C;
+
+  --accent: #3485D1;
+  --accent-ink: #FFFFFF;
+  --accent-fill: #3485D1;
+  --accent-soft: rgba(52, 133, 209, 0.10);
+
+  --green: #2E9E5B;
+  --green-soft: rgba(46, 158, 91, 0.12);
+  --amber: #B5821C;
+  --amber-soft: rgba(181, 130, 28, 0.12);
+  --red: #CF463D;
+  --red-soft: rgba(207, 70, 61, 0.12);
+  --add: #2E9E5B;
+  --del: #CF463D;
+  --agent-codex: #10A37F;
+  --agent-claude: #D97757;
+  --agent-hermes: #7C5CFC;
+
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.10);
+  color-scheme: light;
+}
+
+:root {
+  --font: -apple-system, "SF Pro Text", "Segoe UI", Inter, system-ui, sans-serif;
+  --mono: "SF Mono", "JetBrains Mono", "Geist Mono", ui-monospace, Menlo, monospace;
+  --fs-title: 14px;
+  --fs-h: 16px;
+  --fs-body: 14px;
+  --fs-sm: 12.5px;
+  --fs-xs: 11.5px;
+  --fs-label: 11px;
+  --fs-mono: 13px;
+  --r-card: 10px;
+  --r-ctl: 8px;
+  --r-chip: 6px;
+
+  --font-headings: var(--font);
+  --font-body: var(--font);
+  --font-data: var(--mono);
+
+  --theme-bg-primary: var(--bg);
+  --theme-bg-secondary: var(--bg-2);
+  --theme-workspace: var(--bg);
+  --theme-text-primary: var(--text);
+  --theme-text-secondary: var(--text-2);
+  --theme-text-muted: var(--text-3);
+  --theme-accent: var(--accent);
+  --theme-success: var(--green);
+  --theme-warning: var(--amber);
+  --theme-border-subtle: var(--border);
+  --theme-border-strong: var(--border-strong);
+  --theme-error: var(--red);
+
+  --loom-bg: var(--bg);
+  --loom-bg-2: var(--bg-2);
+  --loom-sidebar: var(--sidebar);
+  --loom-surface: var(--surface);
+  --loom-surface-2: var(--surface-2);
+  --loom-inset: var(--inset);
+  --loom-selected: var(--selected);
+  --loom-hover: var(--hover);
+  --loom-border: var(--border);
+  --loom-border-strong: var(--border-strong);
+  --loom-text: var(--text);
+  --loom-text-2: var(--text-2);
+  --loom-text-3: var(--text-3);
+  --loom-accent: var(--accent);
+  --loom-accent-ink: var(--accent-ink);
+  --loom-accent-fill: var(--accent-fill);
+  --loom-accent-soft: var(--accent-soft);
+  --loom-green: var(--green);
+  --loom-green-soft: var(--green-soft);
+  --loom-amber: var(--amber);
+  --loom-amber-soft: var(--amber-soft);
+  --loom-red: var(--red);
+  --loom-red-soft: var(--red-soft);
+  --loom-add: var(--add);
+  --loom-del: var(--del);
+  --loom-agent-codex: var(--agent-codex);
+  --loom-agent-claude: var(--agent-claude);
+  --loom-agent-hermes: var(--agent-hermes);
+  --loom-shadow: var(--shadow);
+  --loom-font: var(--font);
+  --loom-mono: var(--mono);
+  --loom-fs-title: 15px;
+  --loom-fs-h: var(--fs-h);
+  --loom-fs-body: var(--fs-body);
+  --loom-fs-sm: var(--fs-sm);
+  --loom-fs-xs: var(--fs-xs);
+  --loom-fs-label: var(--fs-label);
+  --loom-fs-mono: var(--fs-mono);
+  --loom-r-card: var(--r-card);
+  --loom-r-ctl: var(--r-ctl);
+  --loom-r-chip: var(--r-chip);
+}
+
+html,
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: var(--fs-body);
+  line-height: 1.55;
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+#root {
+  height: 100%;
+  width: 100%;
+}
+
+.loom-mono {
+  font-family: var(--loom-mono);
+  font-size: var(--loom-fs-mono);
+  line-height: 1.6;
+}
+
+.loom-agent-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  border-radius: 6px;
+  color: #ffffff;
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0;
+}
+
+.loom-agent-avatar.codex {
+  background: var(--loom-agent-codex);
+}
+
+.loom-agent-avatar.claude {
+  background: var(--loom-agent-claude);
+}
+
+.loom-agent-avatar.hermes,
+.loom-agent-avatar.other {
+  background: var(--loom-agent-hermes);
+}
+
+.loom-agent-avatar.empty {
+  border: 1px dashed var(--loom-border-strong);
+  background: var(--loom-surface-2);
+  color: var(--loom-text-3);
+}
+
+.loom-status-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  border-radius: 999px;
+}
+:root .app-bootstrap-loading {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  background: var(--bg);
+  color: var(--text-2);
+  font-family: var(--font-body);
+}

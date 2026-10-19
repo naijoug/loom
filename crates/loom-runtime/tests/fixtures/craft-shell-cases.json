@@ -1,0 +1,1117 @@
+{
+  "upstreamSha": "73bd9c2a3573158bea880984eb8d5fdb41e0cac2",
+  "upstreamSource": "packages/shared/src/agent/bash-validator.ts",
+  "upstreamSourceSha256": "9bc50152ebe397554674b6efd6055848d2e68ca3711382a860c92716d4c689fd",
+  "defaultRulesSha256": "c3047aa9104a4e506a1dd1f22e9b141b7f8de2e597a2cea3f3479af6b975cf2f",
+  "cases": [
+    {
+      "command": "ls #comment\\\nrm forbidden",
+      "upstreamAllowed": false,
+      "upstreamPlain": null
+    },
+    {
+      "command": "echo a\\\n#word",
+      "loomPlain": [
+        "echo",
+        "a#word"
+      ],
+      "plainCorrection": "Bash continuation preserves # inside an existing word; verified with the Bash builtin printf",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "echo",
+        "a"
+      ]
+    },
+    {
+      "command": "ls \\#literal",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "ls",
+        "#literal"
+      ]
+    },
+    {
+      "command": "ls \\#literal; rm forbidden",
+      "upstreamAllowed": false,
+      "upstreamPlain": null
+    },
+    {
+      "command": "",
+      "upstreamAllowed": false,
+      "upstreamPlain": null
+    },
+    {
+      "command": " ",
+      "upstreamAllowed": false,
+      "upstreamPlain": null
+    },
+    {
+      "command": "# comment",
+      "upstreamAllowed": false,
+      "upstreamPlain": null
+    },
+    {
+      "command": "ls",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "ls"
+      ]
+    },
+    {
+      "command": "ls -la",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "ls",
+        "-la"
+      ]
+    },
+    {
+      "command": "ls;",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "ls"
+      ]
+    },
+    {
+      "command": "ls #comment",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "ls"
+      ]
+    },
+    {
+      "command": "ls a* ? [ab]",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "ls",
+        "a*",
+        "?",
+        "[ab]"
+      ]
+    },
+    {
+      "command": "ls /tmp/中文",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "ls",
+        "/tmp/中文"
+      ]
+    },
+    {
+      "command": "ls \"two words\"",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "ls",
+        "two words"
+      ]
+    },
+    {
+      "command": "git status",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "git",
+        "status"
+      ]
+    },
+    {
+      "command": "git diff --stat",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "git",
+        "diff",
+        "--stat"
+      ]
+    },
+    {
+      "command": "git log -5",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "git",
+        "log",
+        "-5"
+      ]
+    },
+    {
+      "command": "git checkout main",
+      "upstreamAllowed": false,
+      "upstreamPlain": [
+        "git",
+        "checkout",
+        "main"
+      ]
+    },
+    {
+      "command": "git push",
+      "upstreamAllowed": false,
+      "upstreamPlain": [
+        "git",
+        "push"
+      ]
+    },
+    {
+      "command": "printf test",
+      "upstreamAllowed": false,
+      "upstreamPlain": [
+        "printf",
+        "test"
+      ]
+    },
+    {
+      "command": "echo test",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "echo",
+        "test"
+      ]
+    },
+    {
+      "command": "echo \"hello world\"",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "echo",
+        "hello world"
+      ]
+    },
+    {
+      "command": "cat file",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "cat",
+        "file"
+      ]
+    },
+    {
+      "command": "cat \"a b\"",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "cat",
+        "a b"
+      ]
+    },
+    {
+      "command": "cat 'a b'",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "cat",
+        "a b"
+      ]
+    },
+    {
+      "command": "cat a\\ b",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "cat",
+        "a b"
+      ]
+    },
+    {
+      "command": "cat -- ./file",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "cat",
+        "--",
+        "./file"
+      ]
+    },
+    {
+      "command": "cat ./--file",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "cat",
+        "./--file"
+      ]
+    },
+    {
+      "command": "git status && git log",
+      "upstreamAllowed": true,
+      "upstreamPlain": null
+    },
+    {
+      "command": "git status || git log",
+      "upstreamAllowed": true,
+      "upstreamPlain": null
+    },
+    {
+      "command": "git status; git log",
+      "upstreamAllowed": true,
+      "upstreamPlain": null
+    },
+    {
+      "command": "git status\ngit log",
+      "upstreamAllowed": true,
+      "upstreamPlain": null
+    },
+    {
+      "command": "(git status; cat file) | head",
+      "upstreamAllowed": true,
+      "upstreamPlain": null
+    },
+    {
+      "command": "(ls && (pwd))",
+      "upstreamAllowed": true,
+      "upstreamPlain": null
+    },
+    {
+      "command": "ls &",
+      "upstreamAllowed": false,
+      "upstreamPlain": null
+    },
+    {
+      "command": "ls & pwd",
+      "upstreamAllowed": false,
+      "upstreamPlain": null
+    },
+    {
+      "command": "ls |& head",
+      "upstreamAllowed": false,
+      "upstreamPlain": null
+    },
+    {
+      "command": "ls && touch forbidden",
+      "upstreamAllowed": false,
+      "upstreamPlain": null
+    },
+    {
+      "command": "ls | touch forbidden",
+      "upstreamAllowed": false,
+      "upstreamPlain": null
+    },
+    {
+      "command": "ls; rm forbidden",
+      "upstreamAllowed": false,
+      "upstreamPlain": null
+    },
+    {
+      "command": "echo x > forbidden",
+      "upstreamAllowed": false,
+      "upstreamPlain": null
+    },
+    {
+      "command": ">/dev/null",
+      "upstreamAllowed": false,
+      "upstreamPlain": null
+    },
+    {
+      "command": "cat &>/dev/null",
+      "upstreamAllowed": false,
+      "upstreamPlain": null
+    },
+    {
+      "command": "cat &>forbidden",
+      "upstreamAllowed": false,
+      "upstreamPlain": null
+    },
+    {
+      "command": "cat 0<&0",
+      "upstreamAllowed": true,
+      "upstreamPlain": null
+    },
+    {
+      "command": "cat < input",
+      "upstreamAllowed": true,
+      "upstreamPlain": null
+    },
+    {
+      "command": "cat > /dev/null",
+      "upstreamAllowed": true,
+      "upstreamPlain": null
+    },
+    {
+      "command": "cat 2>&1",
+      "upstreamAllowed": true,
+      "upstreamPlain": null
+    },
+    {
+      "command": "cat >> /dev/null",
+      "upstreamAllowed": true,
+      "upstreamPlain": null
+    },
+    {
+      "command": "cat <> file",
+      "upstreamAllowed": false,
+      "upstreamPlain": null
+    },
+    {
+      "command": "cat <<EOF\nhello\nEOF",
+      "upstreamAllowed": false,
+      "upstreamPlain": null
+    },
+    {
+      "command": "cat <<<hello",
+      "upstreamAllowed": false,
+      "upstreamPlain": null
+    },
+    {
+      "command": ">file",
+      "upstreamAllowed": false,
+      "upstreamPlain": null
+    },
+    {
+      "command": "2>file ls",
+      "upstreamAllowed": false,
+      "upstreamPlain": null
+    },
+    {
+      "command": "ls 2>/dev/null",
+      "upstreamAllowed": true,
+      "upstreamPlain": null
+    },
+    {
+      "command": "cat <(touch forbidden)",
+      "upstreamAllowed": false,
+      "upstreamPlain": null
+    },
+    {
+      "command": "echo $(touch forbidden)",
+      "upstreamAllowed": false,
+      "upstreamPlain": null
+    },
+    {
+      "command": "echo `touch forbidden`",
+      "upstreamAllowed": false,
+      "upstreamPlain": null
+    },
+    {
+      "command": "cat \"$HOME/file\"",
+      "upstreamAllowed": false,
+      "upstreamPlain": null
+    },
+    {
+      "command": "cat ${HOME}/file",
+      "upstreamAllowed": false,
+      "upstreamPlain": null
+    },
+    {
+      "command": "echo '$(touch forbidden)'",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "echo",
+        "$(touch forbidden)"
+      ]
+    },
+    {
+      "command": "echo '$HOME'",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "echo",
+        "$HOME"
+      ]
+    },
+    {
+      "command": "echo \"$(touch forbidden)\"",
+      "upstreamAllowed": false,
+      "upstreamPlain": null
+    },
+    {
+      "command": "echo \"a\\q\"",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "echo",
+        "a\\q"
+      ]
+    },
+    {
+      "command": "echo a\\\nb",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "echo",
+        "ab"
+      ]
+    },
+    {
+      "command": "FOO=x ls",
+      "upstreamAllowed": false,
+      "upstreamPlain": null
+    },
+    {
+      "command": "PATH=/evil ls",
+      "upstreamAllowed": false,
+      "upstreamPlain": null
+    },
+    {
+      "command": "env ls",
+      "upstreamAllowed": false,
+      "upstreamPlain": [
+        "env",
+        "ls"
+      ]
+    },
+    {
+      "command": "command ls",
+      "upstreamAllowed": false,
+      "upstreamPlain": [
+        "command",
+        "ls"
+      ]
+    },
+    {
+      "command": "/bin/ls",
+      "upstreamAllowed": false,
+      "upstreamPlain": [
+        "/bin/ls"
+      ]
+    },
+    {
+      "command": "if true; then ls; fi",
+      "upstreamAllowed": false,
+      "upstreamPlain": null
+    },
+    {
+      "command": "for x in a; do ls; done",
+      "upstreamAllowed": false,
+      "upstreamPlain": null
+    },
+    {
+      "command": "while true; do ls; done",
+      "upstreamAllowed": false,
+      "upstreamPlain": null
+    },
+    {
+      "command": "f(){ ls; }; f",
+      "upstreamAllowed": false,
+      "upstreamPlain": null
+    },
+    {
+      "command": "{ ls; }",
+      "upstreamAllowed": true,
+      "upstreamPlain": null
+    },
+    {
+      "command": "! ls",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "ls"
+      ]
+    },
+    {
+      "command": "find . -name '*.rs'",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "find",
+        ".",
+        "-name",
+        "*.rs"
+      ]
+    },
+    {
+      "command": "find . -exec touch f \\;",
+      "upstreamAllowed": false,
+      "upstreamPlain": [
+        "find",
+        ".",
+        "-exec",
+        "touch",
+        "f",
+        ";"
+      ]
+    },
+    {
+      "command": "find . -delete",
+      "upstreamAllowed": false,
+      "upstreamPlain": [
+        "find",
+        ".",
+        "-delete"
+      ]
+    },
+    {
+      "command": "find . -ok rm {} \\;",
+      "upstreamAllowed": false,
+      "upstreamPlain": [
+        "find",
+        ".",
+        "-ok",
+        "rm",
+        "{}",
+        ";"
+      ]
+    },
+    {
+      "command": "awk '{print $1}' file",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "awk",
+        "{print $1}",
+        "file"
+      ]
+    },
+    {
+      "command": "awk 'BEGIN {system(\"touch f\")}'",
+      "upstreamAllowed": false,
+      "upstreamPlain": [
+        "awk",
+        "BEGIN {system(\"touch f\")}"
+      ]
+    },
+    {
+      "command": "awk 'BEGIN {\"cmd\" | getline}'",
+      "upstreamAllowed": false,
+      "upstreamPlain": [
+        "awk",
+        "BEGIN {\"cmd\" | getline}"
+      ]
+    },
+    {
+      "command": "awk 'BEGIN {print | \"cmd\"}'",
+      "upstreamAllowed": false,
+      "upstreamPlain": [
+        "awk",
+        "BEGIN {print | \"cmd\"}"
+      ]
+    },
+    {
+      "command": "sort file",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "sort",
+        "file"
+      ]
+    },
+    {
+      "command": "sort -n file",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "sort",
+        "-n",
+        "file"
+      ]
+    },
+    {
+      "command": "sort -oout file",
+      "upstreamAllowed": false,
+      "upstreamPlain": [
+        "sort",
+        "-oout",
+        "file"
+      ]
+    },
+    {
+      "command": "sort -ro out file",
+      "upstreamAllowed": false,
+      "upstreamPlain": [
+        "sort",
+        "-ro",
+        "out",
+        "file"
+      ]
+    },
+    {
+      "command": "sort --output=out file",
+      "upstreamAllowed": false,
+      "upstreamPlain": [
+        "sort",
+        "--output=out",
+        "file"
+      ]
+    },
+    {
+      "command": "sort --compress-program=cmd file",
+      "upstreamAllowed": false,
+      "upstreamPlain": [
+        "sort",
+        "--compress-program=cmd",
+        "file"
+      ]
+    },
+    {
+      "command": "sort -t o file",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "sort",
+        "-t",
+        "o",
+        "file"
+      ]
+    },
+    {
+      "command": "sort -k1,2 file",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "sort",
+        "-k1,2",
+        "file"
+      ]
+    },
+    {
+      "command": "sort -- -output",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "sort",
+        "--",
+        "-output"
+      ]
+    },
+    {
+      "command": "sed -n '1,5p' file",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "sed",
+        "-n",
+        "1,5p",
+        "file"
+      ]
+    },
+    {
+      "command": "sed -n '/foo/p' file",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "sed",
+        "-n",
+        "/foo/p",
+        "file"
+      ]
+    },
+    {
+      "command": "sed -n 's/foo/bar/p' file",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "sed",
+        "-n",
+        "s/foo/bar/p",
+        "file"
+      ]
+    },
+    {
+      "command": "sed -n 's#foo#bar#gp' file",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "sed",
+        "-n",
+        "s#foo#bar#gp",
+        "file"
+      ]
+    },
+    {
+      "command": "sed -n 'y/abc/xyz/;p' file",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "sed",
+        "-n",
+        "y/abc/xyz/;p",
+        "file"
+      ]
+    },
+    {
+      "command": "sed -n ':a;N;$!ba;p' file",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "sed",
+        "-n",
+        ":a;N;$!ba;p",
+        "file"
+      ]
+    },
+    {
+      "command": "sed -n -e '1p' -e '2p' file",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "sed",
+        "-n",
+        "-e",
+        "1p",
+        "-e",
+        "2p",
+        "file"
+      ]
+    },
+    {
+      "command": "sed -n -e'1p' file",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "sed",
+        "-n",
+        "-e1p",
+        "file"
+      ]
+    },
+    {
+      "command": "sed -n 's/x/y/w out' file",
+      "upstreamAllowed": false,
+      "upstreamPlain": [
+        "sed",
+        "-n",
+        "s/x/y/w out",
+        "file"
+      ]
+    },
+    {
+      "command": "sed -n 's/x/y/e' file",
+      "upstreamAllowed": false,
+      "upstreamPlain": [
+        "sed",
+        "-n",
+        "s/x/y/e",
+        "file"
+      ]
+    },
+    {
+      "command": "sed -n 'e cmd' file",
+      "upstreamAllowed": false,
+      "upstreamPlain": [
+        "sed",
+        "-n",
+        "e cmd",
+        "file"
+      ]
+    },
+    {
+      "command": "sed -n 'w out' file",
+      "upstreamAllowed": false,
+      "upstreamPlain": [
+        "sed",
+        "-n",
+        "w out",
+        "file"
+      ]
+    },
+    {
+      "command": "sed -n -i '' 'p' file",
+      "upstreamAllowed": false,
+      "upstreamPlain": [
+        "sed",
+        "-n",
+        "-i",
+        "",
+        "p",
+        "file"
+      ]
+    },
+    {
+      "command": "sed -ni 'p' file",
+      "upstreamAllowed": false,
+      "upstreamPlain": [
+        "sed",
+        "-ni",
+        "p",
+        "file"
+      ]
+    },
+    {
+      "command": "sed -n --file=script file",
+      "upstreamAllowed": false,
+      "upstreamPlain": [
+        "sed",
+        "-n",
+        "--file=script",
+        "file"
+      ]
+    },
+    {
+      "command": "sed -n 'r file' file",
+      "upstreamAllowed": false,
+      "upstreamPlain": [
+        "sed",
+        "-n",
+        "r file",
+        "file"
+      ]
+    },
+    {
+      "command": "sed -n 'p' file",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "sed",
+        "-n",
+        "p",
+        "file"
+      ]
+    },
+    {
+      "command": "sed -n -- '1p' file",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "sed",
+        "-n",
+        "--",
+        "1p",
+        "file"
+      ]
+    },
+    {
+      "command": "sed -n -l 80 p file",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "sed",
+        "-n",
+        "-l",
+        "80",
+        "p",
+        "file"
+      ]
+    },
+    {
+      "command": "gh api repos/owner/repo",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "gh",
+        "api",
+        "repos/owner/repo"
+      ]
+    },
+    {
+      "command": "gh api -XGET repos/owner/repo",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "gh",
+        "api",
+        "-XGET",
+        "repos/owner/repo"
+      ]
+    },
+    {
+      "command": "gh api -X DELETE repos/owner/repo",
+      "upstreamAllowed": false,
+      "upstreamPlain": [
+        "gh",
+        "api",
+        "-X",
+        "DELETE",
+        "repos/owner/repo"
+      ]
+    },
+    {
+      "command": "gh api -iXDELETE repos/owner/repo",
+      "upstreamAllowed": false,
+      "upstreamPlain": [
+        "gh",
+        "api",
+        "-iXDELETE",
+        "repos/owner/repo"
+      ]
+    },
+    {
+      "command": "gh api --method=POST repos/owner/repo",
+      "upstreamAllowed": false,
+      "upstreamPlain": [
+        "gh",
+        "api",
+        "--method=POST",
+        "repos/owner/repo"
+      ]
+    },
+    {
+      "command": "gh api -f key=value repos/owner/repo",
+      "upstreamAllowed": false,
+      "upstreamPlain": [
+        "gh",
+        "api",
+        "-f",
+        "key=value",
+        "repos/owner/repo"
+      ]
+    },
+    {
+      "command": "gh api -X GET -f key=value repos/owner/repo",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "gh",
+        "api",
+        "-X",
+        "GET",
+        "-f",
+        "key=value",
+        "repos/owner/repo"
+      ]
+    },
+    {
+      "command": "gh api --input body repos/owner/repo",
+      "upstreamAllowed": false,
+      "upstreamPlain": [
+        "gh",
+        "api",
+        "--input",
+        "body",
+        "repos/owner/repo"
+      ]
+    },
+    {
+      "command": "gh api -H 'X-HTTP-Method-Override: DELETE' repos/owner/repo",
+      "upstreamAllowed": false,
+      "upstreamPlain": [
+        "gh",
+        "api",
+        "-H",
+        "X-HTTP-Method-Override: DELETE",
+        "repos/owner/repo"
+      ]
+    },
+    {
+      "command": "gh api graphql -f 'query={ viewer { login } }'",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "gh",
+        "api",
+        "graphql",
+        "-f",
+        "query={ viewer { login } }"
+      ]
+    },
+    {
+      "command": "gh api graphql -f 'query=mutation { deleteThing }'",
+      "upstreamAllowed": false,
+      "upstreamPlain": [
+        "gh",
+        "api",
+        "graphql",
+        "-f",
+        "query=mutation { deleteThing }"
+      ]
+    },
+    {
+      "command": "gh api graphql -F query=@file",
+      "upstreamAllowed": false,
+      "upstreamPlain": [
+        "gh",
+        "api",
+        "graphql",
+        "-F",
+        "query=@file"
+      ]
+    },
+    {
+      "command": "gh api graphql --input file",
+      "upstreamAllowed": false,
+      "upstreamPlain": [
+        "gh",
+        "api",
+        "graphql",
+        "--input",
+        "file"
+      ]
+    },
+    {
+      "command": "npm --version",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "npm",
+        "--version"
+      ]
+    },
+    {
+      "command": "python -m json.tool file",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "python",
+        "-m",
+        "json.tool",
+        "file"
+      ]
+    },
+    {
+      "command": "jq . file",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "jq",
+        ".",
+        "file"
+      ]
+    },
+    {
+      "command": "rg needle .",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "rg",
+        "needle",
+        "."
+      ]
+    },
+    {
+      "command": "curl https://example.invalid",
+      "upstreamAllowed": false,
+      "upstreamPlain": [
+        "curl",
+        "https://example.invalid"
+      ]
+    },
+    {
+      "command": "ls \"unterminated",
+      "upstreamAllowed": false,
+      "upstreamPlain": null
+    },
+    {
+      "command": "echo \"a'$(touch f)'\"",
+      "upstreamAllowed": false,
+      "upstreamPlain": null
+    },
+    {
+      "command": "echo \"\"",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "echo",
+        ""
+      ]
+    },
+    {
+      "command": "echo ''",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "echo",
+        ""
+      ]
+    },
+    {
+      "command": "echo \"a\"'b'c",
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "echo",
+        "abc"
+      ]
+    },
+    {
+      "command": "cat 0<&$FD",
+      "reason": "Redirect expansions must not inherit an unchecked environment-dependent target",
+      "loomAllowed": false,
+      "upstreamAllowed": true,
+      "upstreamPlain": null
+    },
+    {
+      "command": "cat <$(touch forbidden)",
+      "reason": "Executable redirect expansion must be rejected before shell execution",
+      "loomAllowed": false,
+      "upstreamAllowed": true,
+      "upstreamPlain": null
+    },
+    {
+      "command": "cat <`touch forbidden`",
+      "reason": "Executable redirect expansion must be rejected before shell execution",
+      "loomAllowed": false,
+      "upstreamAllowed": true,
+      "upstreamPlain": null
+    },
+    {
+      "command": "find . -fprint forbidden",
+      "reason": "find file-output flags write files",
+      "loomAllowed": false,
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "find",
+        ".",
+        "-fprint",
+        "forbidden"
+      ]
+    },
+    {
+      "command": "awk 'BEGIN {print 1 > \"forbidden\"}'",
+      "reason": "awk output redirects write files",
+      "loomAllowed": false,
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "awk",
+        "BEGIN {print 1 > \"forbidden\"}"
+      ]
+    },
+    {
+      "command": "rg --pre 'touch forbidden' needle file",
+      "reason": "rg preprocessing executes a program",
+      "loomAllowed": false,
+      "upstreamAllowed": true,
+      "upstreamPlain": [
+        "rg",
+        "--pre",
+        "touch forbidden",
+        "needle",
+        "file"
+      ]
+    }
+  ]
+}

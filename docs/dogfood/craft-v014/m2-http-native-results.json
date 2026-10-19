@@ -1,0 +1,615 @@
+{
+  "supervisedRuntimeIntegration": true,
+  "coreApprovalIntegration": true,
+  "evidenceKind": "real-sdk-local-model-fixture",
+  "liveModelVerified": false,
+  "recordedAt": "2026-10-10T00:11:09.385099+08:00",
+  "platform": {
+    "system": "Darwin",
+    "release": "25.5.0",
+    "arch": "arm64"
+  },
+  "scope": "Single real SDK Write/write tool, local model fixture, Rust decision binding; no broad parity claim.",
+  "sourceSha256": {
+    "packages/provider-workers/src/runtime-worker.ts": "d99efb0687aa3625b2b61de2159b84e96d5ac36055adffa685a8f6d6969cf3c7",
+    "packages/provider-workers/bun.lock": "72adca0bf3eea6f8ab9e15f1d78ab526dc1333062399291067b1481854ac3c12",
+    "scripts/runtime-bridge-smoke.py": "0be506e40a42fce96dc01e6f13f59395d1097eb126e2ba036e7458bfaf5aa195",
+    "Cargo.lock": "7ae251fbe2ecafb137d06066256f144ade62090b247166b815eaf1e2445a3bdd",
+    "crates/loom-runtime/src/bin/export-runtime-types.rs": "c83dca0fbf858e84c0cf158634641b5c1ed02118b143612cc70fc3ef389bd39f",
+    "crates/loom-runtime/src/core_bridge.rs": "05ce4a3e636e6d1c876fce7cc5ca214895a1aa36eb9aa4a8db52023cc9d693ec",
+    "crates/loom-runtime/src/lib.rs": "bed1e20b6b41b9c0ea847fd2902299bb22711c0e571d62c0070443cbe8221b24",
+    "crates/loom-runtime/src/policy/config.rs": "1063b5e3cefa03b98d824cedbe553d9f2fd1b84d79ea8903410a2438beed3597",
+    "crates/loom-runtime/src/policy/mcp.rs": "05078f4830456d81ffeee61fd1d312334db895b6211aef223fac9b4d1003ab0b",
+    "crates/loom-runtime/src/policy/paths.rs": "5c9870748ef541cf0532930ace28b70514819f7874fef0ddedd8d01433ae00ed",
+    "crates/loom-runtime/src/policy/remember.rs": "712886205181cdc50f325959f2167ae5e75ebd786023cc7c35e81ade4e64f8a1",
+    "crates/loom-runtime/src/policy.rs": "94bf409a1ceacb3cb1b8add19488ac91bf79c80419111271e2aa9592277725b3",
+    "crates/loom-runtime/src/protocol.rs": "243f717dd99c68fce0393831547eeb4711ffaf50e434d9dc31c435f830f74867",
+    "crates/loom-runtime/src/shell/arguments.rs": "2ca76313624fc0ec2fa5d18d2add931f44e2684432c7e286e43fa6cca331d4c3",
+    "crates/loom-runtime/src/shell.rs": "33af0d536b6dd8851ffc9c41fa01c946927c79f5360a4bc80f8d1c0db21e2fd7",
+    "crates/loom-runtime/src/supervisor.rs": "82c45974daabbc9ebe2feffb35804993b24dd90c4f0f818db4c30f87b806206e",
+    "crates/loom-core/src/api.rs": "a2b3c248e83def09d61b2692109b17ed31efb5d26b72313a71995e075aa20bf6",
+    "crates/loom-core/src/approval.rs": "7d4498bf7251cff99e03d1daf645efa08a7efb5b03e39f7497408e16f054a550",
+    "crates/loom-core/src/bin/export-workbench-types.rs": "c4c42186a98474055921ccf342f98741dc4714ceb9d7cfa7ec85bf423ba8d559",
+    "crates/loom-core/src/bin/loom-core-host.rs": "b28b3a7e1078af965e66c75fc8638a125ab1f4501122716be010d9f86afdbbde",
+    "crates/loom-core/src/bindings.rs": "62efd04dd6cea2e827a59488e78d1529e6eacf019d380d1ed12b3a90dc9e1d98",
+    "crates/loom-core/src/connection.rs": "56a88384643978dd95390d32b2a58183f8633980ad635098f9f98ad7302c47bc",
+    "crates/loom-core/src/error.rs": "c5696efa1a9adf1dcc5d9cb3cdc4c42fda485f8a68aced9aaa835308c1103b04",
+    "crates/loom-core/src/import_model.rs": "806b5c991ba0bebb4db58c9885c7d9750f2d9e38f6b3d42a9913b018d2a5febb",
+    "crates/loom-core/src/journal.rs": "6f0bb0c54d940f13a2729a1361c3bb81a1b8730738328c4936654258a45da4b9",
+    "crates/loom-core/src/legacy/chat.rs": "7667b9aec06cad653114c52046ed9f01def5901f4dd4fd488229284f6a26298f",
+    "crates/loom-core/src/legacy/mod.rs": "003dbd134e20f387f2c63595f4ab8ac5ebcf495c6fbf602aae20165181137d31",
+    "crates/loom-core/src/legacy/source.rs": "df4ffd7524acc2b67288ef856dd0cb68f070382f33f721357be59f3f67cc9678",
+    "crates/loom-core/src/lib.rs": "807212d8fed621799c2ec9d415bdecc72496a277f36e1abb5f46b69796c01636",
+    "crates/loom-core/src/model.rs": "a13e395d7397ae156eee8d0e0b4abaf4820ddf2e9697792e7feb3b475bd79b36",
+    "crates/loom-core/src/permissions.rs": "952076df6f98b0632f2faccc62c1bc7405c727afb5b2cc792e01227ab0390bbe",
+    "crates/loom-core/src/projection.rs": "6e08546f7b98ec35751a87faf012b524ba4bacc34a9c2eb9b1439e82d4518437",
+    "crates/loom-core/src/remember.rs": "b36f26029885b99ee9b9702094e2d0720b1ab11bb4f6de3cfffcc229ed58174a",
+    "crates/loom-core/src/repository/approvals.rs": "b06d3eb0607779b2a3efd86ab16d9f5ae64100dd8b5ee9a36d51c1867408c7fa",
+    "crates/loom-core/src/repository/connections.rs": "0fb5ef5533e54a0d510be523ec1ef964f871b918491f18164facd862d9b9f743",
+    "crates/loom-core/src/repository/imports.rs": "b54e71797fa0cb9287002db0d4b05b2ed0697fc624db4e92481e8771173915ac",
+    "crates/loom-core/src/repository/permissions.rs": "2bd6e8717ecf03ba6b4da4bdb31c60d2c39d7da3cfd9266cc2bfa40b2cafb3ff",
+    "crates/loom-core/src/repository/remembered.rs": "796c302a8337f5a8ba742d4e1e3da8cd37c531f880a0b3a24f6f321540098e73",
+    "crates/loom-core/src/repository/runtime_context.rs": "9898a563691916b154b6abab7bc6fea1792bfad28d4be8b9fb67de63fc1fcb19",
+    "crates/loom-core/src/repository.rs": "f759eab5bc8507b4d2074d175264bf65c7d8ce2677448ad3ce9a6b7aed051731",
+    "crates/loom-runtime/examples/sdk_runtime_probe.rs": "38a33e7747991c49f1da0e0d6feb96a55af6fcd593e131b4e6585ccc77c2c91a"
+  },
+  "sdkVersions": {
+    "@anthropic-ai/claude-agent-sdk": "0.3.280",
+    "@earendil-works/pi-coding-agent": "0.87.1"
+  },
+  "results": [
+    {
+      "provider": "claude",
+      "scenario": "allow",
+      "transport": "supervised-runtime",
+      "passed": true,
+      "checks": {
+        "worker_exit_ok": true,
+        "real_sdk_requested_tool": true,
+        "observed_model_api": true,
+        "exact_side_effect": true,
+        "rust_decision_observed": true,
+        "stale_response_rejected": true,
+        "durable_core_approval": true,
+        "core_turn_settled": true
+      },
+      "requests": [
+        {
+          "path": "/v1/messages?beta=true",
+          "model": "claude-sonnet-4-6",
+          "stream": true
+        },
+        {
+          "path": "/v1/messages?beta=true",
+          "model": "claude-sonnet-4-6",
+          "stream": true
+        }
+      ],
+      "events": [
+        {
+          "bindingDigest": "d3a9cfb136be37566313be93c2f416df74e88f82ba4525cb52ea4f4e526c7a85",
+          "kind": "approvalRequested",
+          "requestId": "1cc56edd-55ba-4d25-b3ca-e57637631e44",
+          "toolCallId": "tool-8c79957f8c7799ffb27fd32d7392efcc64c9e4a592fe5f7ac712ccddea1ae883",
+          "toolName": "write"
+        },
+        {
+          "allowed": true,
+          "kind": "approvalSettled"
+        },
+        {
+          "activeTurnId": null,
+          "approvalStatuses": [
+            "consumed"
+          ],
+          "kind": "coreAudit",
+          "lastSeq": 15,
+          "toolCount": 1,
+          "turnStatus": "completed",
+          "usage": {
+            "inputTokens": 40,
+            "outputTokens": 40
+          }
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "provider": "claude",
+      "scenario": "deny",
+      "transport": "supervised-runtime",
+      "passed": true,
+      "checks": {
+        "worker_exit_ok": true,
+        "real_sdk_requested_tool": true,
+        "observed_model_api": true,
+        "exact_side_effect": true,
+        "rust_decision_observed": true,
+        "stale_response_rejected": true,
+        "durable_core_approval": true,
+        "core_turn_settled": true
+      },
+      "requests": [
+        {
+          "path": "/v1/messages?beta=true",
+          "model": "claude-sonnet-4-6",
+          "stream": true
+        },
+        {
+          "path": "/v1/messages?beta=true",
+          "model": "claude-sonnet-4-6",
+          "stream": true
+        }
+      ],
+      "events": [
+        {
+          "bindingDigest": "fd90a07efdb3582c943a287fb20838030adfb2071b5e52d4e48e6f9a1e289918",
+          "kind": "approvalRequested",
+          "requestId": "05b4e2a8-4398-4956-a214-fd97c749f22b",
+          "toolCallId": "tool-8c79957f8c7799ffb27fd32d7392efcc64c9e4a592fe5f7ac712ccddea1ae883",
+          "toolName": "write"
+        },
+        {
+          "allowed": false,
+          "kind": "approvalSettled"
+        },
+        {
+          "activeTurnId": null,
+          "approvalStatuses": [
+            "denied"
+          ],
+          "kind": "coreAudit",
+          "lastSeq": 13,
+          "toolCount": 0,
+          "turnStatus": "completed",
+          "usage": {
+            "inputTokens": 40,
+            "outputTokens": 40
+          }
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "provider": "claude",
+      "scenario": "cancel",
+      "transport": "supervised-runtime",
+      "passed": true,
+      "checks": {
+        "worker_exit_ok": true,
+        "real_sdk_requested_tool": true,
+        "observed_model_api": true,
+        "exact_side_effect": true,
+        "rust_decision_observed": true,
+        "stale_response_rejected": true,
+        "durable_core_approval": true,
+        "core_turn_settled": true
+      },
+      "requests": [
+        {
+          "path": "/v1/messages?beta=true",
+          "model": "claude-sonnet-4-6",
+          "stream": true
+        }
+      ],
+      "events": [
+        {
+          "bindingDigest": "9b1033418bbee5b34ad3ad08188efc180d2e331cb6d6db51e86b82f53af08ad6",
+          "kind": "approvalRequested",
+          "requestId": "728249f9-3018-4a4f-9a12-167ab19a857a",
+          "toolCallId": "tool-8c79957f8c7799ffb27fd32d7392efcc64c9e4a592fe5f7ac712ccddea1ae883",
+          "toolName": "write"
+        },
+        {
+          "allowed": false,
+          "kind": "approvalSettled"
+        },
+        {
+          "activeTurnId": null,
+          "approvalStatuses": [
+            "cancelled"
+          ],
+          "kind": "coreAudit",
+          "lastSeq": 11,
+          "toolCount": 0,
+          "turnStatus": "cancelled",
+          "usage": null
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "provider": "claude",
+      "scenario": "stale",
+      "transport": "supervised-runtime",
+      "passed": true,
+      "checks": {
+        "worker_exit_ok": true,
+        "real_sdk_requested_tool": true,
+        "observed_model_api": true,
+        "exact_side_effect": true,
+        "rust_decision_observed": true,
+        "stale_response_rejected": true,
+        "durable_core_approval": true,
+        "core_turn_settled": true
+      },
+      "requests": [
+        {
+          "path": "/v1/messages?beta=true",
+          "model": "claude-sonnet-4-6",
+          "stream": true
+        },
+        {
+          "path": "/v1/messages?beta=true",
+          "model": "claude-sonnet-4-6",
+          "stream": true
+        }
+      ],
+      "events": [
+        {
+          "bindingDigest": "135b5eee6d8d1170e48df5c7ffbdb72d11f269b5fa4110a20b1346d973211b3a",
+          "kind": "approvalRequested",
+          "requestId": "926f4432-9d0b-465e-81be-02dbb15b7bc4",
+          "toolCallId": "tool-8c79957f8c7799ffb27fd32d7392efcc64c9e4a592fe5f7ac712ccddea1ae883",
+          "toolName": "write"
+        },
+        {
+          "kind": "protocolError",
+          "message": "Core rejected stale approval binding"
+        },
+        {
+          "allowed": true,
+          "kind": "approvalSettled"
+        },
+        {
+          "activeTurnId": null,
+          "approvalStatuses": [
+            "consumed"
+          ],
+          "kind": "coreAudit",
+          "lastSeq": 15,
+          "toolCount": 1,
+          "turnStatus": "completed",
+          "usage": {
+            "inputTokens": 40,
+            "outputTokens": 40
+          }
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "provider": "claude",
+      "scenario": "disconnect",
+      "transport": "direct-worker-eof",
+      "passed": true,
+      "checks": {
+        "worker_exit_ok": true,
+        "real_sdk_requested_tool": true,
+        "observed_model_api": true,
+        "exact_side_effect": true,
+        "stale_response_rejected": true,
+        "worker_observed_eof": true
+      },
+      "requests": [
+        {
+          "path": "/v1/messages?beta=true",
+          "model": "claude-sonnet-4-6",
+          "stream": true
+        },
+        {
+          "path": "/v1/messages?beta=true",
+          "model": "claude-sonnet-4-6",
+          "stream": true
+        }
+      ],
+      "events": [
+        {
+          "kind": "ready"
+        },
+        {
+          "kind": "tool_request",
+          "requestId": "c223042f-181a-4d48-bdf5-7f68e260bc6d",
+          "toolCallId": "tool-3882484b54c3e9b15a87c83dc45968b03f5a12f07c3a6d7acdb811498afe096a",
+          "name": "write",
+          "input": {
+            "file_path": "$FIXTURE/probe.txt",
+            "content": "loom-sdk-probe\n"
+          }
+        },
+        {
+          "kind": "text",
+          "partId": "text-2-0",
+          "textKind": "text",
+          "delta": "Fixture tool result received."
+        },
+        {
+          "kind": "usage",
+          "inputTokens": 40,
+          "outputTokens": 40
+        },
+        {
+          "kind": "failed",
+          "code": "cancelled",
+          "message": "Operation aborted"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "provider": "pi",
+      "scenario": "allow",
+      "transport": "supervised-runtime",
+      "passed": true,
+      "checks": {
+        "worker_exit_ok": true,
+        "real_sdk_requested_tool": true,
+        "observed_model_api": true,
+        "exact_side_effect": true,
+        "rust_decision_observed": true,
+        "stale_response_rejected": true,
+        "durable_core_approval": true,
+        "core_turn_settled": true
+      },
+      "requests": [
+        {
+          "path": "/v1/chat/completions",
+          "model": "loom-fixture",
+          "stream": true
+        },
+        {
+          "path": "/v1/chat/completions",
+          "model": "loom-fixture",
+          "stream": true
+        }
+      ],
+      "events": [
+        {
+          "bindingDigest": "4d408f0b1ebd94d368e2bd387621019316e2ea0c02d09a91e5769cfe3c3cf957",
+          "kind": "approvalRequested",
+          "requestId": "49b64277-75c9-40b4-9f37-591f383b55d3",
+          "toolCallId": "tool-8c79957f8c7799ffb27fd32d7392efcc64c9e4a592fe5f7ac712ccddea1ae883",
+          "toolName": "write"
+        },
+        {
+          "allowed": true,
+          "kind": "approvalSettled"
+        },
+        {
+          "activeTurnId": null,
+          "approvalStatuses": [
+            "consumed"
+          ],
+          "kind": "coreAudit",
+          "lastSeq": 16,
+          "toolCount": 1,
+          "turnStatus": "completed",
+          "usage": {
+            "inputTokens": 0,
+            "outputTokens": 0
+          }
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "provider": "pi",
+      "scenario": "deny",
+      "transport": "supervised-runtime",
+      "passed": true,
+      "checks": {
+        "worker_exit_ok": true,
+        "real_sdk_requested_tool": true,
+        "observed_model_api": true,
+        "exact_side_effect": true,
+        "rust_decision_observed": true,
+        "stale_response_rejected": true,
+        "durable_core_approval": true,
+        "core_turn_settled": true
+      },
+      "requests": [
+        {
+          "path": "/v1/chat/completions",
+          "model": "loom-fixture",
+          "stream": true
+        },
+        {
+          "path": "/v1/chat/completions",
+          "model": "loom-fixture",
+          "stream": true
+        }
+      ],
+      "events": [
+        {
+          "bindingDigest": "2e4346724b68517d8109fb8dd8729b0ac6d188784968fe1b9169ba5f38c22079",
+          "kind": "approvalRequested",
+          "requestId": "49f4fe99-daba-4666-bbea-161f5942b482",
+          "toolCallId": "tool-8c79957f8c7799ffb27fd32d7392efcc64c9e4a592fe5f7ac712ccddea1ae883",
+          "toolName": "write"
+        },
+        {
+          "allowed": false,
+          "kind": "approvalSettled"
+        },
+        {
+          "activeTurnId": null,
+          "approvalStatuses": [
+            "denied"
+          ],
+          "kind": "coreAudit",
+          "lastSeq": 14,
+          "toolCount": 0,
+          "turnStatus": "completed",
+          "usage": {
+            "inputTokens": 0,
+            "outputTokens": 0
+          }
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "provider": "pi",
+      "scenario": "cancel",
+      "transport": "supervised-runtime",
+      "passed": true,
+      "checks": {
+        "worker_exit_ok": true,
+        "real_sdk_requested_tool": true,
+        "observed_model_api": true,
+        "exact_side_effect": true,
+        "rust_decision_observed": true,
+        "stale_response_rejected": true,
+        "durable_core_approval": true,
+        "core_turn_settled": true
+      },
+      "requests": [
+        {
+          "path": "/v1/chat/completions",
+          "model": "loom-fixture",
+          "stream": true
+        }
+      ],
+      "events": [
+        {
+          "bindingDigest": "787a70496085076da32332d7b5b1ed7027968401cddb182487fd385baa8a4fe2",
+          "kind": "approvalRequested",
+          "requestId": "a0c7e42f-c7a3-4935-89bb-87d2807c1276",
+          "toolCallId": "tool-8c79957f8c7799ffb27fd32d7392efcc64c9e4a592fe5f7ac712ccddea1ae883",
+          "toolName": "write"
+        },
+        {
+          "allowed": false,
+          "kind": "approvalSettled"
+        },
+        {
+          "activeTurnId": null,
+          "approvalStatuses": [
+            "cancelled"
+          ],
+          "kind": "coreAudit",
+          "lastSeq": 12,
+          "toolCount": 0,
+          "turnStatus": "cancelled",
+          "usage": {
+            "inputTokens": 0,
+            "outputTokens": 0
+          }
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "provider": "pi",
+      "scenario": "stale",
+      "transport": "supervised-runtime",
+      "passed": true,
+      "checks": {
+        "worker_exit_ok": true,
+        "real_sdk_requested_tool": true,
+        "observed_model_api": true,
+        "exact_side_effect": true,
+        "rust_decision_observed": true,
+        "stale_response_rejected": true,
+        "durable_core_approval": true,
+        "core_turn_settled": true
+      },
+      "requests": [
+        {
+          "path": "/v1/chat/completions",
+          "model": "loom-fixture",
+          "stream": true
+        },
+        {
+          "path": "/v1/chat/completions",
+          "model": "loom-fixture",
+          "stream": true
+        }
+      ],
+      "events": [
+        {
+          "bindingDigest": "0c4ae69f9e6e8d417e17f7c6741f0929eee018397197b3d4a0d0b5f644210a6d",
+          "kind": "approvalRequested",
+          "requestId": "6e014f36-6e3e-4042-86ec-6da019c0ac65",
+          "toolCallId": "tool-8c79957f8c7799ffb27fd32d7392efcc64c9e4a592fe5f7ac712ccddea1ae883",
+          "toolName": "write"
+        },
+        {
+          "kind": "protocolError",
+          "message": "Core rejected stale approval binding"
+        },
+        {
+          "allowed": true,
+          "kind": "approvalSettled"
+        },
+        {
+          "activeTurnId": null,
+          "approvalStatuses": [
+            "consumed"
+          ],
+          "kind": "coreAudit",
+          "lastSeq": 16,
+          "toolCount": 1,
+          "turnStatus": "completed",
+          "usage": {
+            "inputTokens": 0,
+            "outputTokens": 0
+          }
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "provider": "pi",
+      "scenario": "disconnect",
+      "transport": "direct-worker-eof",
+      "passed": true,
+      "checks": {
+        "worker_exit_ok": true,
+        "real_sdk_requested_tool": true,
+        "observed_model_api": true,
+        "exact_side_effect": true,
+        "stale_response_rejected": true,
+        "worker_observed_eof": true
+      },
+      "requests": [
+        {
+          "path": "/v1/chat/completions",
+          "model": "loom-fixture",
+          "stream": true
+        }
+      ],
+      "events": [
+        {
+          "kind": "ready"
+        },
+        {
+          "kind": "usage",
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        {
+          "kind": "tool_request",
+          "requestId": "e0a788bd-12f1-432b-813a-73a501817e06",
+          "toolCallId": "tool-3882484b54c3e9b15a87c83dc45968b03f5a12f07c3a6d7acdb811498afe096a",
+          "name": "write",
+          "input": {
+            "path": "$FIXTURE/probe.txt",
+            "content": "loom-sdk-probe\n"
+          }
+        },
+        {
+          "kind": "usage",
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        {
+          "kind": "failed",
+          "code": "cancelled",
+          "message": "The operation was aborted."
+        }
+      ],
+      "stderr": ""
+    }
+  ]
+}

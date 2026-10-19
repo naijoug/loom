@@ -1,0 +1,118 @@
+{
+  "project": {
+    "operation": "create",
+    "name": "Loom 多 Agent 编程工作台",
+    "designRead": "developer tool / power users who run multiple AI coding agents / calm technical authority / high density / avoid generic AI-gradient hero and toy-like pastels",
+    "designDials": { "layoutVariance": 2, "motionIntensity": 1, "visualDensity": 4 },
+    "styleDefinitionBrief": "Dark-first technical workbench, Linear/Claude Desktop vibe. Cool neutral surfaces, single sky-blue accent, monospace log/code emphasis, agent color coding. Restrained, professional, developer-native.",
+    "styleContinuityAnchors": {
+      "colorSystem": "Dark neutral surfaces #181818→#2D2D2D, single accent #97C9F8 sky-blue, semantic green/amber/red, agent identity colors codex #10A37F / claude #D97757 / hermes #7C5CFC",
+      "shapeSystem": "Cards 10px radius, controls 8px, chips 6px. Hard technical edges, no soft blobs.",
+      "typographySystem": "Inter for UI text (14px body / 12.5px sm / 11px label), Geist Mono / SF Mono for all terminal/log/code/diff (13px). Title 15-16px.",
+      "spacingSystem": "Compact developer density: 8/12/16/20px rhythm, tight list rows, dense toolbars.",
+      "componentLanguage": "Status dots, agent avatars (colored square with 2-letter initial), monospace terminal cards with line numbers, Linear-style task rows with ID + priority + agent badge, mini-stepper breadcrumbs.",
+      "surfaceAndDepth": "Border-led depth first. Surfaces layer by background value (#181818 base → #222 card → #2D2D2D elevated → #303030 inset/terminal). Shadows only for floating layers (modal/popover).",
+      "imageryAndIconography": "No photography. Lucide-style line icons only. Visual interest comes from data density, terminal output, diff highlighting, and agent activity — not decorative imagery.",
+      "interactionTone": "Precise and quiet. Hover states lift background to --hover. Active items get --selected. No bounce, no glow, no gradient sweeps."
+    },
+    "sharedProjectShellContract": {
+      "radiusScale": "card 10px / control 8px / chip 6px",
+      "surfaceDepthModel": "border-led static surfaces; floating layers may use shadow",
+      "typeScale": "title 15-16px / body 14px / sm 12.5px / label 11px / mono 13px",
+      "primaryColor": "#97C9F8 accent on #181818 base",
+      "ctaStyle": "primary = accent fill with dark ink; ghost = transparent with border; no gradient buttons",
+      "navTreatment": "Left sidebar #272727 with project tree + task list; top header #181818 with breadcrumb + mini-stepper"
+    },
+    "generationTree": {
+      "root": {
+        "nodeId": "gen-project-shell",
+        "kind": "project-shell",
+        "pageIds": ["page-planning-room", "page-task-board", "page-in-progress", "page-testing-cockpit", "page-delivery-summary"],
+        "output": "partials/project-shell.html",
+        "sharedRegions": ["app frame (sidebar + main + header)", "sidebar with logo/search/project-tree/settings", "header with sidebar-toggle + breadcrumb + mini-stepper + header-actions-slot", "global background, font stack, radius scale, border model"],
+        "privateRegions": [],
+        "mutableSlots": ["activeNavItem", "breadcrumbCurrent", "miniStepperState", "mainContent"],
+        "status": "planned",
+        "children": [
+          { "nodeId": "gen-page-planning-room", "kind": "page-leaf", "pageIds": ["page-planning-room"], "output": "pages/planning-room.html", "sharedRegions": [], "privateRegions": ["planning chat stream + agent discussion + right summary panel + composer input"], "mutableSlots": ["activeNavItem", "breadcrumbCurrent", "miniStepperState"], "status": "planned", "children": [] },
+          { "nodeId": "gen-page-task-board", "kind": "page-leaf", "pageIds": ["page-task-board"], "output": "pages/task-board.html", "sharedRegions": [], "privateRegions": ["task board with status groups + Linear-style task rows"], "mutableSlots": ["activeNavItem", "breadcrumbCurrent"], "status": "planned", "children": [] },
+          { "nodeId": "gen-page-in-progress", "kind": "page-leaf", "pageIds": ["page-in-progress"], "output": "pages/in-progress.html", "sharedRegions": [], "privateRegions": ["agent session view with thinking/tool-calls/diff + steer input"], "mutableSlots": ["activeNavItem", "breadcrumbCurrent", "miniStepperState"], "status": "planned", "children": [] },
+          { "nodeId": "gen-page-testing-cockpit", "kind": "page-leaf", "pageIds": ["page-testing-cockpit"], "output": "pages/testing-cockpit.html", "sharedRegions": [], "privateRegions": ["multi-terminal debug view + debug agent fix-loop + manual feedback"], "mutableSlots": ["activeNavItem", "breadcrumbCurrent", "miniStepperState"], "status": "planned", "children": [] },
+          { "nodeId": "gen-page-delivery-summary", "kind": "page-leaf", "pageIds": ["page-delivery-summary"], "output": "pages/delivery-summary.html", "sharedRegions": [], "privateRegions": ["delivery summary with completed items + changed files + verification + timeline"], "mutableSlots": ["activeNavItem", "breadcrumbCurrent", "miniStepperState"], "status": "planned", "children": [] }
+        ]
+      }
+    }
+  },
+  "designSource": {
+    "operatingMode": "free-explore",
+    "styleConstraints": {
+      "radiusMax": 10,
+      "staticShadowAlphaMax": 0.05
+    }
+  },
+  "pages": [
+    {
+      "nodeId": "page-planning-room",
+      "title": "规划讨论室",
+      "pageIndex": 1,
+      "visualNorthStar": "A Codex-app-style planning chat room where multiple agents discuss a requirement in a single stream, with @mention to invoke specific agents, a right panel summarizing consensus/conflicts/risks, and a prominent composer at the bottom.",
+      "compositionPattern": null,
+      "continuityAnchors": ["Dark sidebar with project tree", "Header breadcrumb + mini-stepper", "Agent avatar color coding", "Monospace for any code/plan snippets", "Status dot vocabulary"],
+      "pageType": "task-driven",
+      "imagePlan": []
+    },
+    {
+      "nodeId": "page-task-board",
+      "title": "任务看板",
+      "pageIndex": 2,
+      "visualNorthStar": "A Linear-style task board grouped by status (In Progress / Todo / Testing / Blocked / Done), each row showing status dot + task ID + priority bars + title + tags + Run button + agent badge.",
+      "compositionPattern": null,
+      "continuityAnchors": ["Dark sidebar with project tree", "Header breadcrumb", "Agent avatar color coding", "Status dot vocabulary", "Compact density"],
+      "pageType": "information-dense",
+      "imagePlan": []
+    },
+    {
+      "nodeId": "page-in-progress",
+      "title": "执行中",
+      "pageIndex": 3,
+      "visualNorthStar": "A Claude-Code/Codex-style agent session view: visible agent loop (thinking → Read/Edit/Run tool calls → diff output), with a steer/interrupt input at the bottom and file-change sidebar.",
+      "compositionPattern": null,
+      "continuityAnchors": ["Dark sidebar with project tree", "Header breadcrumb + mini-stepper", "Agent avatar color coding", "Monospace terminal/diff blocks", "Status dot vocabulary"],
+      "pageType": "information-dense",
+      "imagePlan": []
+    },
+    {
+      "nodeId": "page-testing-cockpit",
+      "title": "调试验收",
+      "pageIndex": 4,
+      "visualNorthStar": "A multi-terminal debugging cockpit: Frontend + Backend terminals streaming live logs side by side, a Debug agent panel observing logs and proposing fix diffs in a test-cycle loop, and a manual feedback input area.",
+      "compositionPattern": null,
+      "continuityAnchors": ["Dark sidebar with project tree", "Header breadcrumb + mini-stepper", "Agent avatar color coding", "Monospace terminal cards", "Status dot vocabulary"],
+      "pageType": "information-dense",
+      "imagePlan": []
+    },
+    {
+      "nodeId": "page-delivery-summary",
+      "title": "交付总结",
+      "pageIndex": 5,
+      "visualNorthStar": "A clean delivery summary: completed requirements checklist, changed-files diff stat, verification evidence (test pass/fail counts), key decisions, remaining risks, and a timeline of the task lifecycle.",
+      "compositionPattern": null,
+      "continuityAnchors": ["Dark sidebar with project tree", "Header breadcrumb + mini-stepper", "Agent avatar color coding", "Monospace for file paths/diff stats", "Status dot vocabulary"],
+      "pageType": "information-dense",
+      "imagePlan": []
+    }
+  ],
+  "assets": [],
+  "wiringPlan": [
+    "page-planning-room → page-task-board (cta-create-tasks, Create tasks from plan)",
+    "page-task-board → page-in-progress (cta-run-task, Run a ready task)",
+    "page-in-progress → page-testing-cockpit (cta-mark-testing, Mark ready for testing)",
+    "page-testing-cockpit → page-delivery-summary (cta-mark-done, All tests passed)"
+  ],
+  "hiddenInteractionPlan": [
+    "page-task-board → page-planning-room (back-planning, hideEdge=true, sidebar nav)",
+    "page-in-progress → page-task-board (back-board, hideEdge=true, breadcrumb)",
+    "page-testing-cockpit → page-in-progress (back-progress, hideEdge=true, breadcrumb)",
+    "page-delivery-summary → page-planning-room (cta-followup, hideEdge=true, Start follow-up returns to planning)"
+  ]
+}

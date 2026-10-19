@@ -1,0 +1,67 @@
+Window: "Loom", App: Loom.
+0 standard window Loom, Secondary Actions: Raise
+	1 scroll area
+		2 HTML content Description: Loom, URL: tauri://localhost
+			3 container 旧数据预检
+				4 container
+					5 heading 旧数据预检, Value: 2
+						6 text 旧数据预检
+					7 button 关闭预检
+				8 text 旧历史合成项目
+				9 text /Users/guojian/Workspace/naijoug/loom/.tmp/legacy-import-desktop-2026-09-30/project
+				10 text 检查旧会话、任务与引用资源。原文件保持不变；预检不会执行导入。选择导入后，将复制可读取记录与资源，缺失资源和损坏记录保留在报告中。
+				11 container 导入结果
+					12 heading 导入结果, Value: 3
+						13 text 导入结果
+					14 container
+						15 text 新增  2  项 · 已有  0  项 · 失败  0  项 · 跳过  1  项
+					16 container
+						17 text chat  ·  已导入
+						18 button 打开历史记录
+					19 container
+						20 text broken  ·  已跳过
+					21 container
+						22 text task  ·  已导入
+						23 button 打开历史记录
+				24 container
+					25 text 可读取  2  项 · 无法读取  1  项 · 已检查  7  个文件路径
+				26 summary 会话 · 迁入的中文对话 2 条消息, Value: off
+					27 text 会话
+					28 text  ·
+					29 text 迁入的中文对话
+					30 text 2 条消息
+				31 container (expanded) Secondary Actions: Collapse
+					32 summary 历史任务 · broken 无法读取, Value: on
+						33 text 历史任务
+						34 text  ·
+						35 text broken
+						36 text 无法读取
+					37 text .loom/tasks/broken.json
+					38 content list
+						39 container 无法读取：invalid legacy JSON at line 1, column 1 .loom/tasks/broken.json
+							40 list marker •
+							41 text 无法读取 ： invalid legacy JSON at line 1, column 1
+							42 text .loom/tasks/broken.json
+				43 summary 历史任务 · 迁入的旧计划与附件 可读取, Value: off
+					44 text 历史任务
+					45 text  ·
+					46 text 迁入的旧计划与附件
+					47 text 可读取
+				48 summary 来源校验标识, Value: off
+					49 text 来源校验标识
+				50 container
+					51 button 重新检查
+					52 button 重试导入
+					53 button 关闭
+	54 close button
+	55 full screen button Help: this button also has an action to zoom the window, Secondary Actions: zoom the window
+	56 minimize button
+57 menu bar
+	58 Loom
+	59 File
+	60 Edit
+	61 View
+	62 Window
+	63 Help
+
+The focused UI element is 3 container 旧数据预检

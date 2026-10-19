@@ -1,0 +1,174 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Loom 本地 Agent 工作台",
+    "locale": "zh-CN",
+    "output": ".archify/architecture-loom-local-agent-20261015-043927/loom-local-agent.html",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    {
+      "id": "user",
+      "type": "external",
+      "label": "用户",
+      "sublabel": "本机使用者",
+      "pos": [40, 48],
+      "size": [116, 64]
+    },
+    {
+      "id": "tauriShell",
+      "type": "frontend",
+      "label": "Tauri 桌面",
+      "sublabel": "本地壳",
+      "pos": [204, 48],
+      "size": [136, 64]
+    },
+    {
+      "id": "reactUi",
+      "type": "frontend",
+      "label": "React 界面",
+      "sublabel": "发起任务",
+      "pos": [392, 48],
+      "size": [146, 64]
+    },
+    {
+      "id": "rustCore",
+      "type": "backend",
+      "label": "Rust 核心",
+      "sublabel": "文件与持久化",
+      "pos": [628, 48],
+      "size": [150, 64]
+    },
+    {
+      "id": "localFiles",
+      "type": "backend",
+      "label": "本地文件",
+      "sublabel": "介质未说明",
+      "tag": "未说明",
+      "pos": [548, 210],
+      "size": [140, 64]
+    },
+    {
+      "id": "taskStore",
+      "type": "backend",
+      "label": "任务持久化",
+      "sublabel": "介质未说明",
+      "tag": "未说明",
+      "pos": [718, 210],
+      "size": [146, 64]
+    },
+    {
+      "id": "adapter",
+      "type": "backend",
+      "label": "Agent 适配器",
+      "sublabel": "本地出口",
+      "pos": [838, 48],
+      "size": [146, 64]
+    },
+    {
+      "id": "externalExec",
+      "type": "external",
+      "label": "外部执行",
+      "sublabel": "CLI／模型未拆分",
+      "tag": "未拆分",
+      "pos": [1072, 48],
+      "size": [156, 64]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "本机 Loom 工作台",
+      "wraps": ["tauriShell", "reactUi", "rustCore", "localFiles", "taskStore", "adapter"],
+      "pad": 20
+    },
+    {
+      "kind": "region",
+      "label": "外部依赖",
+      "wraps": ["externalExec"],
+      "pad": 16
+    }
+  ],
+  "connections": [
+    {
+      "id": "use-desktop",
+      "from": "user",
+      "to": "tauriShell",
+      "label": "使用",
+      "variant": "emphasis"
+    },
+    {
+      "id": "host-ui",
+      "from": "tauriShell",
+      "to": "reactUi",
+      "label": "承载",
+      "variant": "emphasis"
+    },
+    {
+      "id": "start-task",
+      "from": "reactUi",
+      "to": "rustCore",
+      "label": "发起任务",
+      "variant": "emphasis"
+    },
+    {
+      "id": "handle-files",
+      "from": "rustCore",
+      "to": "localFiles",
+      "label": "处理文件",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "persist-task",
+      "from": "rustCore",
+      "to": "taskStore",
+      "label": "持久化",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "hand-to-adapter",
+      "from": "rustCore",
+      "to": "adapter",
+      "label": "交给",
+      "variant": "emphasis"
+    },
+    {
+      "id": "call-external",
+      "from": "adapter",
+      "to": "externalExec",
+      "label": "调用",
+      "variant": "emphasis"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "amber",
+      "title": "主路径",
+      "items": [
+        "用户在 Tauri 桌面里通过 React 发起任务",
+        "Rust 处理文件与持久化后交给适配器",
+        "适配器再调用外部 CLI／模型；不画回程"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "描述未确定",
+      "items": [
+        "React 到 Rust 的调用通道未说明",
+        "文件与持久化的介质、是否同一处存储未说明",
+        "CLI 与模型未拆开：可能是一跳，也可能是两跳"
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "故意不画",
+      "items": [
+        "只保留这一条任务路径",
+        "权限校验、具体 CLI 和模型产品均未给出"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+Window: "Loom", App: Loom.
+0 standard window Loom, Secondary Actions: Raise
+	1 scroll area
+		2 HTML content Description: Loom, URL: tauri://localhost
+			3 container
+				4 button 切换侧栏
+				5 text L 工
+				6 pop up button 工作区, Value: 工具审批验收
+				7 button 创建工作区
+				8 text 本地验证模式 · 测试回复 Loom
+			9 container
+				10 button 新会话 ⌘N
+				11 container 会话分类
+					12 button 所有会话 3
+					13 button 待整理
+					14 button 待办 3
+					15 button 进行中
+					16 button 待审阅
+					17 button 已完成
+					18 button 已取消
+					19 button 已标记
+					20 button 已归档
+				21 text 项目
+				22 button 登记项目文件夹
+				23 button 无项目会话
+				24 text L 本地工作区 会话保存在这台设备
+			25 container 会话列表
+				26 container
+					27 heading 所有会话, Value: 1
+						28 text 所有会话
+					29 button 新会话
+				30 text field (settable) 搜索会话
+				31 text 会话
+				32 button 拒绝请求 待办
+				33 button 允许一次 待办
+				34 button 取消等待 待办
+			35 container
+				36 button 拒绝请求
+				37 button 标记会话
+				38 button 归档会话
+				39 button 会话信息
+				40 container 会话记录
+					41 container 你的消息
+						42 text deny fixture
+					43 container 助手消息
+						44 text L Loom
+						45 text 这是本地验证模式生成的测试回复。
+
+工作区、会话、流式事件和历史记录均由新的 Rust 内核保存；这段回复没有调用真实模型。
+						46 text 已完成
+				47 container 工具授权
+					48 container (expanded) Secondary Actions: Collapse
+						49 summary 工具授权记录（1）, Value: on
+							50 text 工具授权记录（
+							51 text 1
+							52 text ）
+						53 container
+							54 text FixtureApproval · 无副作用测试  ·  已拒绝
+				55 pop up button 权限模式, Value: Ask · 询问
+				56 text 待办
+				57 text entry area (settable) 消息, Placeholder: 想一起完成什么？
+					58 text 想一起完成什么？
+				59 text 无项目
+				60 text 本地测试流
+				61 button (disabled) 发送消息
+				62 text Enter 发送 · Shift+Enter 换行
+	63 close button
+	64 full screen button Help: this button also has an action to zoom the window, Secondary Actions: zoom the window
+	65 minimize button
+66 menu bar
+	67 Loom
+	68 File
+	69 Edit
+	70 View
+	71 Window
+	72 Help

@@ -1,0 +1,92 @@
+Window: "Loom", App: Loom.
+0 standard window Loom, Secondary Actions: Raise
+	1 scroll area
+		2 HTML content Description: Loom, URL: tauri://localhost
+			3 container
+				4 button 切换侧栏
+				5 text L 工
+				6 pop up button 工作区, Value: 工具审批验收
+				7 button 创建工作区
+				8 text 本地验证模式 · 测试回复 Loom
+			9 container
+				10 button 新会话 ⌘N
+				11 container 会话分类
+					12 button 所有会话 3
+					13 button 待整理
+					14 button 待办 3
+					15 button 进行中
+					16 button 待审阅
+					17 button 已完成
+					18 button 已取消
+					19 button 已标记
+					20 button 已归档
+				21 text 项目
+				22 button 登记项目文件夹
+				23 button 无项目会话
+				24 text L 本地工作区 会话保存在这台设备
+			25 container 会话列表
+				26 container
+					27 heading 所有会话, Value: 1
+						28 text 所有会话
+					29 button 新会话
+				30 text field (settable) 搜索会话
+				31 text 会话
+				32 button 允许一次 待办
+				33 button 取消等待 待办
+				34 button 拒绝请求 待办
+			35 container
+				36 button 允许一次
+				37 button 标记会话
+				38 button 归档会话
+				39 button 会话信息
+				40 container 会话记录
+					41 container 你的消息
+						42 text allow fixture
+					43 container 助手消息
+						44 text L Loom
+						45 summary FixtureApproval · 无副作用测试 succeeded, Value: off
+							46 text FixtureApproval · 无副作用测试
+							47 text succeeded
+						48 text 这是本地验证模式生成的测试回复。
+
+工作区、会话、流式事件和历史记录均由新的 Rust 内核保存；这段回复没有调用真实模型。
+						49 text 已完成
+					50 container 你的消息
+						51 text final approval fixture
+					52 container 助手消息
+						53 text L Loom
+						54 summary FixtureApproval · 无副作用测试 succeeded, Value: off
+							55 text FixtureApproval · 无副作用测试
+							56 text succeeded
+						57 text 这是本地验证模式生成的测试回复。
+
+工作区、会话、流式事件和历史记录均由新的 Rust 内核保存；这段回复没有调用真实模型。
+						58 text 已完成
+				59 container 工具授权
+					60 container (expanded) Secondary Actions: Collapse
+						61 summary 工具授权记录（2）, Value: on
+							62 text 工具授权记录（
+							63 text 2
+							64 text ）
+						65 container
+							66 text FixtureApproval · 无副作用测试  ·  授权已使用
+						67 container
+							68 text FixtureApproval · 无副作用测试  ·  授权已使用
+				69 pop up button 权限模式, Value: Ask · 询问
+				70 text 待办
+				71 text entry area (settable) 消息, Placeholder: 想一起完成什么？
+					72 text 想一起完成什么？
+				73 text 无项目
+				74 text 本地测试流
+				75 button (disabled) 发送消息
+				76 text Enter 发送 · Shift+Enter 换行
+	77 close button
+	78 full screen button Help: this button also has an action to zoom the window, Secondary Actions: zoom the window
+	79 minimize button
+80 menu bar
+	81 Loom
+	82 File
+	83 Edit
+	84 View
+	85 Window
+	86 Help

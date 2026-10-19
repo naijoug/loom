@@ -1,0 +1,135 @@
+{
+  "recordedAt": "2026-09-30T16:43:01.210717+08:00",
+  "baseCommit": "3972b0cd4b3521f32eda86f5fafe98cf64846ea0",
+  "platform": "macOS-26.5.2-arm64-arm-64bit-Mach-O",
+  "fixture": ".tmp/legacy-preview-desktop-2026-09-30",
+  "sourceBefore": {
+    ".loom/tasks/history.json": "f2d5d8829edffd5b15be715c1b9e1a6205ce13420f73dd5134f343a34c1be3e2",
+    ".loom/chat/sessions/readable.json": "c8c44353af2850da4d170c6dc45642d4b945524b531f84b751dc75965f2ea408",
+    ".loom/chat/v2/sessions/broken/events.jsonl": "86be840f0cd85084d5a2e20f776cbebc13f0225f23446f0baef2d9e97c3114d9"
+  },
+  "sourceAfter": {
+    ".loom/tasks/history.json": "f2d5d8829edffd5b15be715c1b9e1a6205ce13420f73dd5134f343a34c1be3e2",
+    ".loom/chat/sessions/readable.json": "c8c44353af2850da4d170c6dc45642d4b945524b531f84b751dc75965f2ea408",
+    ".loom/chat/v2/sessions/broken/events.jsonl": "86be840f0cd85084d5a2e20f776cbebc13f0225f23446f0baef2d9e97c3114d9"
+  },
+  "sourceUnchanged": true,
+  "createdSessions": 0,
+  "preview": {
+    "projectDirectory": "/Users/guojian/Workspace/naijoug/loom/.tmp/legacy-preview-desktop-2026-09-30/project",
+    "fingerprint": "f64a541b788384df68f248fab9fe2bcd882fd1410346abeae47f4bb6e2648110",
+    "items": [
+      {
+        "kind": "chat",
+        "sourceId": "broken",
+        "sourcePath": ".loom/chat/v2/sessions/broken/events.jsonl",
+        "sourceVersion": 2,
+        "title": null,
+        "messageCount": 0,
+        "contentHash": null,
+        "issues": [
+          {
+            "severity": "warning",
+            "code": "incomplete_tail",
+            "path": "events.jsonl",
+            "message": "未提交的末尾字节不参与回放；源文件保持原样"
+          },
+          {
+            "severity": "error",
+            "code": "invalid_document",
+            "path": ".loom/chat/v2/sessions/broken/events.jsonl",
+            "message": "legacy journal has no committed creation record"
+          }
+        ]
+      },
+      {
+        "kind": "chat",
+        "sourceId": "readable",
+        "sourcePath": ".loom/chat/sessions/readable.json",
+        "sourceVersion": 1,
+        "title": "中文历史会话",
+        "messageCount": 1,
+        "contentHash": "74ad5f79c152ca924b44bea5327eacf5c6d312befa69d85f971846ce7087cf83",
+        "issues": [
+          {
+            "severity": "warning",
+            "code": "runtime_reset",
+            "path": ".loom/chat/sessions/readable.json",
+            "message": "导入不会继承旧进程、续聊句柄、凭据或权限授权"
+          }
+        ]
+      },
+      {
+        "kind": "task",
+        "sourceId": "history",
+        "sourcePath": ".loom/tasks/history.json",
+        "sourceVersion": 1,
+        "title": "带缺失附件的历史任务",
+        "messageCount": 0,
+        "contentHash": "2647c02669016501d044d0ec86b3c5b8f17c1367d8d0a0c3ba9837cfe5c9ef27",
+        "issues": [
+          {
+            "severity": "warning",
+            "code": "missing_resource",
+            "path": ".loom/tasks/history/attachments/missing.png",
+            "message": "引用资源不存在；预检已记录缺失"
+          },
+          {
+            "severity": "warning",
+            "code": "historical_task",
+            "path": ".loom/tasks/history.json",
+            "message": "旧 Task 将保留为历史记录，不启动或映射为新 DAG"
+          }
+        ]
+      }
+    ],
+    "files": [
+      {
+        "path": ".loom/chat/sessions/readable.json",
+        "bytes": 412,
+        "sha256": "c8c44353af2850da4d170c6dc45642d4b945524b531f84b751dc75965f2ea408"
+      },
+      {
+        "path": ".loom/chat/v2/sessions/broken/events.jsonl",
+        "bytes": 39,
+        "sha256": "86be840f0cd85084d5a2e20f776cbebc13f0225f23446f0baef2d9e97c3114d9"
+      },
+      {
+        "path": ".loom/tasks/history.json",
+        "bytes": 386,
+        "sha256": "f2d5d8829edffd5b15be715c1b9e1a6205ce13420f73dd5134f343a34c1be3e2"
+      },
+      {
+        "path": ".loom/tasks/history/attachments/missing.png",
+        "bytes": 0,
+        "sha256": null
+      }
+    ],
+    "issues": []
+  },
+  "appSha256": "2b4d893cd64a1ff2086b762dbc8e939e7f26b2e12ce4f06b098a49d1dcd78df0",
+  "sourceSha256": {
+    "crates/loom-core/src/api.rs": "532a253c61153a447b55cbf3ef094e033678a73e3603c11cf91e2a6d4e4974bd",
+    "crates/loom-core/src/legacy/mod.rs": "67a88291fe86c1f5a009337957cddf988968b1d663a9cc3eb92951707f171d22",
+    "crates/loom-core/src/legacy/chat.rs": "7667b9aec06cad653114c52046ed9f01def5901f4dd4fd488229284f6a26298f",
+    "crates/loom-core/src/legacy/source.rs": "68af9d21c3350c099230292f953a5fbdb71e49fe42fb001efc45691b0c6c5951",
+    "src/workbench/WorkbenchApp.tsx": "de158c58afe451fd98ac1246ec018c2795a47e03e67da8dfd4a77aaca94f182a",
+    "src/workbench/LegacyPreviewDialog.tsx": "fa8afb81ceab86c59792d5f6df2b256701576d10011ee1d89e62727de3860de6",
+    "src/workbench/workbench.css": "982ecdb8fe85ffed4b8f47e65e38d8c324c5a71e33fc69ded075149716827208",
+    "packages/protocol/src/workbench.ts": "e17d75a45a32e5ee021f38f22c2fc633a9168d9a2701b36e3b4a6989ae138640"
+  },
+  "nativeChecks": [
+    "registered project selection",
+    "actual IPC preview: 2 readable, 1 invalid",
+    "missing attachment and incomplete tail diagnostics",
+    "close button focus",
+    "repeat preview",
+    "Escape closes",
+    "report height fixed and screenshot verified",
+    "Cmd+Q exit"
+  ],
+  "screenshots": [
+    "designs/workbench-m1/05-legacy-preview.jpg",
+    "designs/workbench-m1/05-legacy-preview.ax.txt"
+  ]
+}

@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loom · 任务看板</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style id="theme-vars">
+/* Loom — Dark Technical Workbench
+   设计令牌：深色优先，Linear/Claude 桌面端风格
+   等宽字体强调日志/代码，Agent 各自配色编码 */
+
+:root {
+  /* 品牌主色 — 冷调天蓝，用于链接/active/主操作 */
+  --loom-accent: #97C9F8;
+  --loom-accent-ink: #0B1F33;
+  --loom-accent-fill: #2F6FB0;
+  --loom-accent-soft: rgba(151, 201, 248, 0.14);
+
+  /* 背景层级 */
+  --loom-bg: #181818;
+  --loom-bg-2: #1F1F1F;
+  --loom-sidebar: #272727;
+  --loom-surface: #222222;
+  --loom-surface-2: #2D2D2D;
+  --loom-inset: #303030;
+  --loom-selected: #3B3D41;
+  --loom-hover: #2E2E2E;
+  --loom-border: #2F2F2F;
+  --loom-border-strong: #3A3A3C;
+
+  /* 文字层级 */
+  --loom-text: #ECECEC;
+  --loom-text-2: #A3A4A5;
+  --loom-text-3: #6E6F70;
+
+  /* 语义状态色 */
+  --loom-green: #4FB477;
+  --loom-green-soft: rgba(79, 180, 119, 0.16);
+  --loom-amber: #D6A23C;
+  --loom-amber-soft: rgba(214, 162, 60, 0.16);
+  --loom-red: #E2645C;
+  --loom-red-soft: rgba(226, 100, 92, 0.16);
+
+  /* Agent 配色编码 */
+  --loom-agent-codex: #10A37F;
+  --loom-agent-claude: #D97757;
+  --loom-agent-hermes: #7C5CFC;
+
+  /* 圆角 */
+  --loom-r-card: 10px;
+  --loom-r-ctl: 8px;
+  --loom-r-chip: 6px;
+
+  /* 字号 */
+  --loom-fs-title: 15px;
+  --loom-fs-h: 16px;
+  --loom-fs-body: 14px;
+  --loom-fs-sm: 12.5px;
+  --loom-fs-xs: 11.5px;
+  --loom-fs-label: 11px;
+  --loom-fs-mono: 13px;
+
+  /* 字体 */
+  --loom-font: "Inter", -apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+  --loom-mono: "Geist Mono", "SF Mono", "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+
+/* 等宽终端/代码区域 */
+.loom-mono {
+  font-family: var(--loom-mono);
+  font-size: var(--loom-fs-mono);
+  line-height: 1.6;
+}
+
+/* Agent 头像基础样式 */
+.loom-agent-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: 0.02em;
+}
+.loom-agent-avatar.codex { background: var(--loom-agent-codex); }
+.loom-agent-avatar.claude { background: var(--loom-agent-claude); }
+.loom-agent-avatar.hermes { background: var(--loom-agent-hermes); }
+.loom-agent-avatar.empty {
+  background: var(--loom-surface-2);
+  color: var(--loom-text-3);
+  border: 1px dashed var(--loom-border-strong);
+}
+
+/* 状态圆点 */
+.loom-status-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-accent: var(--loom-accent);
+    --color-border: var(--loom-border);
+    --color-sidebar: var(--loom-sidebar);
+  }
+  @layer base {
+    body { background: var(--loom-surface); color: var(--loom-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <main>
+      <!-- ===== Loom App Shell (shared fragment) ===== -->
+      <div class="loom-app">
+        <!-- ---------- 侧栏 ---------- -->
+        <aside class="loom-sidebar">
+          <div class="sb-logo">
+            <span class="sb-mark" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <path d="M4 3v18"/><path d="M20 3v18"/>
+                <path d="M4 7h16"/><path d="M4 17h16"/>
+              </svg>
+            </span>
+            <span class="sb-word">Loom</span>
+          </div>
+
+          <div class="sb-search">
+            <div class="sb-search-input">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>
+              </svg>
+              <span class="sb-search-ph">搜索任务…</span>
+            </div>
+            <button type="button" class="sb-add-project">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                <path d="M12 5v14M5 12h14"/>
+              </svg>
+              <span>添加项目</span>
+            </button>
+          </div>
+
+          <nav class="sb-tree" aria-label="项目导航">
+            <div class="sb-project is-expanded is-active" data-nav-key="loom">
+              <div class="sb-project-row">
+                <svg class="sb-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="m9 6 6 6-6 6"/>
+                </svg>
+                <svg class="sb-folder" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M4 7a2 2 0 0 1 2-2h3.2a2 2 0 0 1 1.4.6L12 6.8h6a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/>
+                </svg>
+                <span class="sb-project-name">loom</span>
+                <span class="sb-count">4</span>
+              </div>
+              <div class="sb-tasks">
+                <div class="sb-task is-active" data-nav-key="loom-add-log-search">
+                  <span class="loom-status-dot sb-dot sb-dot-progress" aria-label="进行中">
+                    <svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="none" stroke="var(--loom-accent)" stroke-width="1.6"/><path d="M7 1.5A5.5 5.5 0 0 1 7 12.5Z" fill="var(--loom-accent)"/></svg>
+                  </span>
+                  <span class="sb-task-title">Add log search &amp; filter</span>
+                  <span class="sb-task-time">3m</span>
+                </div>
+                <div class="sb-task" data-nav-key="loom-api-504">
+                  <span class="loom-status-dot sb-dot sb-dot-blocked" aria-label="阻塞">
+                    <svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="var(--loom-red)"/><path d="M7 4v3.5M7 9.6v.4" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/></svg>
+                  </span>
+                  <span class="sb-task-title">API 504 on /v1/assets</span>
+                  <span class="sb-task-time">5h</span>
+                </div>
+                <div class="sb-task" data-nav-key="loom-ios-ga">
+                  <span class="loom-status-dot sb-dot sb-dot-testing" aria-label="测试中">
+                    <svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="none" stroke="var(--loom-amber)" stroke-width="1.6"/><circle cx="7" cy="7" r="2.2" fill="var(--loom-amber)"/></svg>
+                  </span>
+                  <span class="sb-task-title">Fix iOS GA reporting</span>
+                  <span class="sb-task-time">2h</span>
+                </div>
+                <div class="sb-task" data-nav-key="loom-launch-screen">
+                  <span class="loom-status-dot sb-dot sb-dot-done" aria-label="已完成">
+                    <svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="var(--loom-green)"/><path d="m4.6 7 1.8 1.8 3-3.2" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </span>
+                  <span class="sb-task-title">Optimize launch screen</span>
+                  <span class="sb-task-time">1d</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="sb-project is-collapsed" data-nav-key="speaker">
+              <div class="sb-project-row">
+                <svg class="sb-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="m9 6 6 6-6 6"/>
+                </svg>
+                <svg class="sb-folder" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M4 7a2 2 0 0 1 2-2h3.2a2 2 0 0 1 1.4.6L12 6.8h6a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/>
+                </svg>
+                <span class="sb-project-name">speaker</span>
+                <span class="sb-count">2</span>
+              </div>
+            </div>
+          </nav>
+
+          <div class="sb-settings">
+            <button type="button" class="sb-settings-row" data-nav-key="settings">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/>
+              </svg>
+              <span>设置</span>
+            </button>
+          </div>
+        </aside>
+
+        <!-- ---------- 主区域 ---------- -->
+        <div class="loom-main">
+          <header class="loom-header">
+            <div class="hd-left">
+              <button type="button" class="hd-icon-btn" aria-label="收起侧栏" title="收起侧栏">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="3" y="4" width="18" height="16" rx="2"/>
+                  <path d="M9 4v16"/>
+                </svg>
+              </button>
+              <nav class="hd-breadcrumb" aria-label="面包屑">
+                <span class="hd-crumb hd-crumb-link">loom</span>
+                <span class="hd-crumb-sep" aria-hidden="true">›</span>
+                <!-- SLOT: breadcrumbCurrent — 已填充 -->
+                <span class="hd-crumb hd-crumb-current">任务看板</span>
+              </nav>
+            </div>
+
+            <div class="hd-spacer"></div>
+
+            <!-- SLOT: miniStepperState — 计划=ok（✓ 绿）、实施=on（● 蓝）、测试=off、完成=off -->
+            <div class="hd-stepper" id="loom-mini-stepper">
+              <span class="hd-step is-ok" data-stage="plan">
+                <svg class="hd-step-ico" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                  <circle cx="6" cy="6" r="5" fill="var(--loom-green)"/>
+                  <path d="M3.8 6.1l1.5 1.5 3-3.2" stroke="#fff" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                </svg>
+                <span>计划</span>
+              </span>
+              <span class="hd-step-sep" aria-hidden="true">·</span>
+              <span class="hd-step is-on" data-stage="implement">
+                <svg class="hd-step-ico" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                  <circle cx="6" cy="6" r="4.5" fill="none" stroke="var(--loom-accent)" stroke-width="1.4"/>
+                  <circle cx="6" cy="6" r="2.4" fill="var(--loom-accent)"/>
+                </svg>
+                <span>实施</span>
+              </span>
+              <span class="hd-step-sep" aria-hidden="true">·</span>
+              <span class="hd-step is-off" data-stage="test">
+                <svg class="hd-step-ico" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.4"/></svg>
+                <span>测试</span>
+              </span>
+              <span class="hd-step-sep" aria-hidden="true">·</span>
+              <span class="hd-step is-off" data-stage="done">
+                <svg class="hd-step-ico" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.4"/></svg>
+                <span>完成</span>
+              </span>
+            </div>
+
+            <div class="hd-actions" id="loom-header-actions">
+              <button type="button" class="hd-btn-filter" data-dom-id="cta-filter">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M3 6h18"/><path d="M7 12h10"/><path d="M11 18h2"/>
+                </svg>
+                <span>筛选</span>
+              </button>
+            </div>
+          </header>
+
+          <!-- 主内容区 —— 任务看板（已填充） -->
+          <div class="app-content">
+            <!-- ===== 任务看板：按状态分组的 Linear 风格任务列表 ===== -->
+            <div class="board">
+
+              <!-- —— 看板头部 —— -->
+              <div class="board-head">
+                <div class="board-head-left">
+                  <h1 class="board-title">任务看板</h1>
+                  <span class="board-sub">loom · 6 个任务</span>
+                </div>
+                <div class="board-head-right">
+                  <div class="board-agent-filter">
+                    <span class="loom-agent-avatar codex" aria-hidden="true" title="Codex">Co</span>
+                    <span class="loom-agent-avatar claude" aria-hidden="true" title="Claude Code">Cl</span>
+                    <span class="loom-agent-avatar hermes" aria-hidden="true" title="Hermes">He</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- —— 看板列表（可滚动） —— -->
+              <div class="board-list">
+
+                <!-- 分组：进行中 -->
+                <section class="board-group">
+                  <header class="bg-head">
+                    <span class="bg-dot bg-dot-progress" aria-hidden="true"></span>
+                    <span class="bg-name">进行中</span>
+                    <span class="bg-count">1</span>
+                  </header>
+                  <ul class="bg-rows">
+                    <!-- LOOM-13：可执行的主任务 -->
+                    <li class="task-row is-runnable" data-dom-id="task-loom-13">
+                      <span class="task-status-dot task-dot-progress" aria-label="进行中"></span>
+                      <span class="task-id">LOOM-13</span>
+                      <span class="task-priority" aria-label="高优先级">
+                        <i class="pp pp-on"></i><i class="pp pp-on"></i><i class="pp pp-on"></i>
+                      </span>
+                      <span class="task-title">Add regex toggle to SearchBar</span>
+                      <span class="task-tags">
+                        <span class="task-tag">frontend</span>
+                        <span class="task-tag">ux</span>
+                      </span>
+                      <span class="task-spacer"></span>
+                      <span class="task-agent loom-agent-avatar claude" aria-label="Claude Code" title="Claude Code">Cl</span>
+                      <button type="button" class="task-run" data-dom-id="cta-run-task">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 4l14 8-14 8V4z"/></svg>
+                        <span>Run</span>
+                      </button>
+                    </li>
+                  </ul>
+                </section>
+
+                <!-- 分组：待办 -->
+                <section class="board-group">
+                  <header class="bg-head">
+                    <span class="bg-dot bg-dot-todo" aria-hidden="true"></span>
+                    <span class="bg-name">待办</span>
+                    <span class="bg-count">2</span>
+                  </header>
+                  <ul class="bg-rows">
+                    <li class="task-row" data-dom-id="task-loom-14">
+                      <span class="task-status-dot task-dot-todo" aria-label="待办"></span>
+                      <span class="task-id">LOOM-14</span>
+                      <span class="task-priority" aria-label="中优先级">
+                        <i class="pp pp-on"></i><i class="pp pp-on"></i><i class="pp"></i>
+                      </span>
+                      <span class="task-title">Persist filter state across sessions</span>
+                      <span class="task-tags">
+                        <span class="task-tag">frontend</span>
+                        <span class="task-tag">state</span>
+                      </span>
+                      <span class="task-spacer"></span>
+                      <span class="task-agent loom-agent-avatar codex" aria-label="Codex" title="Codex">Co</span>
+                      <button type="button" class="task-run" disabled>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 4l14 8-14 8V4z"/></svg>
+                        <span>Run</span>
+                      </button>
+                    </li>
+                    <li class="task-row" data-dom-id="task-loom-15">
+                      <span class="task-status-dot task-dot-todo" aria-label="待办"></span>
+                      <span class="task-id">LOOM-15</span>
+                      <span class="task-priority" aria-label="低优先级">
+                        <i class="pp pp-on"></i><i class="pp"></i><i class="pp"></i>
+                      </span>
+                      <span class="task-title">Add highlight for matched query text</span>
+                      <span class="task-tags">
+                        <span class="task-tag">frontend</span>
+                        <span class="task-tag">perf</span>
+                      </span>
+                      <span class="task-spacer"></span>
+                      <span class="task-agent loom-agent-avatar hermes" aria-label="Hermes" title="Hermes">He</span>
+                      <button type="button" class="task-run" disabled>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 4l14 8-14 8V4z"/></svg>
+                        <span>Run</span>
+                      </button>
+                    </li>
+                  </ul>
+                </section>
+
+                <!-- 分组：测试中 -->
+                <section class="board-group">
+                  <header class="bg-head">
+                    <span class="bg-dot bg-dot-testing" aria-hidden="true"></span>
+                    <span class="bg-name">测试中</span>
+                    <span class="bg-count">1</span>
+                  </header>
+                  <ul class="bg-rows">
+                    <li class="task-row" data-dom-id="task-loom-12">
+                      <span class="task-status-dot task-dot-testing" aria-label="测试中"></span>
+                      <span class="task-id">LOOM-12</span>
+                      <span class="task-priority" aria-label="高优先级">
+                        <i class="pp pp-on"></i><i class="pp pp-on"></i><i class="pp pp-on"></i>
+                      </span>
+                      <span class="task-title">Fix iOS GA reporting on cold launch</span>
+                      <span class="task-tags">
+                        <span class="task-tag">mobile</span>
+                        <span class="task-tag">analytics</span>
+                      </span>
+                      <span class="task-spacer"></span>
+                      <span class="task-agent loom-agent-avatar codex" aria-label="Codex" title="Codex">Co</span>
+                      <span class="task-pending-pill">验证中</span>
+                    </li>
+                  </ul>
+                </section>
+
+                <!-- 分组：阻塞 -->
+                <section class="board-group">
+                  <header class="bg-head">
+                    <span class="bg-dot bg-dot-blocked" aria-hidden="true"></span>
+                    <span class="bg-name">阻塞</span>
+                    <span class="bg-count">1</span>
+                  </header>
+                  <ul class="bg-rows">
+                    <li class="task-row task-row-blocked" data-dom-id="task-loom-11">
+                      <span class="task-status-dot task-dot-blocked" aria-label="阻塞"></span>
+                      <span class="task-id">LOOM-11</span>
+                      <span class="task-priority" aria-label="高优先级">
+                        <i class="pp pp-on"></i><i class="pp pp-on"></i><i class="pp pp-on"></i>
+                      </span>
+                      <span class="task-title">API 504 on /v1/assets under load</span>
+                      <span class="task-tags">
+                        <span class="task-tag">backend</span>
+                        <span class="task-tag">infra</span>
+                      </span>
+                      <span class="task-spacer"></span>
+                      <span class="task-agent loom-agent-avatar hermes" aria-label="Hermes" title="Hermes">He</span>
+                      <span class="task-blocked-pill">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                        需人工介入
+                      </span>
+                    </li>
+                  </ul>
+                </section>
+
+                <!-- 分组：已完成 -->
+                <section class="board-group">
+                  <header class="bg-head">
+                    <span class="bg-dot bg-dot-done" aria-hidden="true"></span>
+                    <span class="bg-name">已完成</span>
+                    <span class="bg-count">1</span>
+                  </header>
+                  <ul class="bg-rows">
+                    <li class="task-row task-row-done" data-dom-id="task-loom-10">
+                      <span class="task-status-dot task-dot-done" aria-label="已完成"></span>
+                      <span class="task-id">LOOM-10</span>
+                      <span class="task-priority" aria-label="中优先级">
+                        <i class="pp pp-on"></i><i class="pp pp-on"></i><i class="pp"></i>
+                      </span>
+                      <span class="task-title task-title-done">Optimize launch screen rendering</span>
+                      <span class="task-tags">
+                        <span class="task-tag">perf</span>
+                      </span>
+                      <span class="task-spacer"></span>
+                      <span class="task-agent loom-agent-avatar codex" aria-label="Codex" title="Codex">Co</span>
+                      <span class="task-time-done">1d</span>
+                    </li>
+                  </ul>
+                </section>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== Shell 专属样式（与共享 shell 一致） ===== -->
+      <style>
+        html, body { height: 100%; }
+        body {
+          background: var(--loom-bg);
+          color: var(--loom-text);
+          font-family: var(--loom-font);
+          overflow: hidden;
+        }
+        .loom-app { display: flex; width: 100vw; height: 100vh; overflow: hidden; }
+
+        .loom-sidebar { width: 256px; flex-shrink: 0; background: var(--loom-sidebar); border-right: 1px solid var(--loom-border); display: flex; flex-direction: column; overflow: hidden; }
+        .sb-logo { display: flex; align-items: center; gap: 8px; padding: 16px 16px 12px; }
+        .sb-mark { color: var(--loom-accent); display: inline-flex; }
+        .sb-word { font-size: var(--loom-fs-title); font-weight: 600; color: var(--loom-text); letter-spacing: -0.01em; }
+        .sb-search { display: flex; flex-direction: column; gap: 8px; padding: 0 16px 12px; }
+        .sb-search-input { display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; background: var(--loom-surface); border: 1px solid var(--loom-border); border-radius: var(--loom-r-ctl); color: var(--loom-text-3); }
+        .sb-search-ph { font-size: var(--loom-fs-sm); color: var(--loom-text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .sb-add-project { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; height: 28px; background: transparent; border: 1px dashed var(--loom-border-strong); border-radius: var(--loom-r-ctl); color: var(--loom-text-2); font-size: var(--loom-fs-sm); cursor: pointer; transition: background-color 140ms cubic-bezier(.2,.8,.2,1), border-color 140ms cubic-bezier(.2,.8,.2,1); }
+        .sb-add-project:hover { background: var(--loom-hover); border-color: var(--loom-text-3); }
+        .sb-add-project:active { background: var(--loom-selected); }
+        .sb-tree { flex: 1; padding: 4px 8px 8px; overflow: hidden; }
+        .sb-project { margin-bottom: 2px; }
+        .sb-project-row { display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 8px; border-radius: var(--loom-r-chip); cursor: pointer; color: var(--loom-text-2); transition: background-color 140ms cubic-bezier(.2,.8,.2,1); }
+        .sb-project-row:hover { background: var(--loom-hover); }
+        .sb-chevron { color: var(--loom-text-3); flex-shrink: 0; transition: transform 160ms cubic-bezier(.2,.8,.2,1); }
+        .sb-folder { flex-shrink: 0; }
+        .sb-project-name { font-size: var(--loom-fs-body); font-weight: 500; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .sb-count { flex-shrink: 0; font-size: var(--loom-fs-label); color: var(--loom-text-3); background: var(--loom-surface); border-radius: var(--loom-r-chip); padding: 1px 6px; line-height: 1.4; font-variant-numeric: tabular-nums; }
+        .sb-project.is-active > .sb-project-row .sb-folder { color: var(--loom-accent); }
+        .sb-project.is-active > .sb-project-row .sb-project-name { color: var(--loom-text); }
+        .sb-project.is-active > .sb-project-row .sb-count { background: var(--loom-accent-soft); color: var(--loom-accent); }
+        .sb-project.is-expanded > .sb-project-row .sb-chevron { transform: rotate(90deg); }
+        .sb-project.is-collapsed > .sb-tasks { display: none; }
+        .sb-tasks { padding: 2px 0 6px; }
+        .sb-task { display: flex; align-items: center; gap: 8px; height: 28px; padding-left: 36px; padding-right: 8px; border-radius: var(--loom-r-chip); cursor: pointer; color: var(--loom-text-2); transition: background-color 140ms cubic-bezier(.2,.8,.2,1); }
+        .sb-task:hover { background: var(--loom-hover); }
+        .sb-task.is-active { background: var(--loom-selected); }
+        .sb-task .sb-dot { flex-shrink: 0; }
+        .sb-task-title { flex: 1; min-width: 0; font-size: var(--loom-fs-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--loom-text-2); }
+        .sb-task.is-active .sb-task-title { color: var(--loom-text); }
+        .sb-task-time { flex-shrink: 0; font-size: var(--loom-fs-label); color: var(--loom-text-3); font-variant-numeric: tabular-nums; font-family: var(--loom-mono); }
+        .sb-settings { margin-top: auto; padding: 8px 8px 12px; border-top: 1px solid var(--loom-border); }
+        .sb-settings-row { display: flex; align-items: center; gap: 10px; width: 100%; height: 30px; padding: 0 10px; background: transparent; border: none; border-radius: var(--loom-r-chip); color: var(--loom-text-2); font-size: 13px; cursor: pointer; transition: background-color 140ms cubic-bezier(.2,.8,.2,1); }
+        .sb-settings-row:hover { background: var(--loom-hover); }
+        .sb-settings-row.is-active { background: var(--loom-selected); color: var(--loom-text); }
+
+        .loom-main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+        .loom-header { height: 44px; flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: 0 16px; background: var(--loom-bg); border-bottom: 1px solid var(--loom-border); }
+        .hd-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+        .hd-icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: transparent; border: 1px solid transparent; border-radius: var(--loom-r-chip); color: var(--loom-text-2); cursor: pointer; flex-shrink: 0; transition: background-color 140ms cubic-bezier(.2,.8,.2,1), color 140ms cubic-bezier(.2,.8,.2,1); }
+        .hd-icon-btn:hover { background: var(--loom-hover); color: var(--loom-text); }
+        .hd-icon-btn:active { background: var(--loom-selected); }
+        .hd-breadcrumb { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+        .hd-crumb { font-size: var(--loom-fs-sm); white-space: nowrap; }
+        .hd-crumb-link { color: var(--loom-text-2); cursor: pointer; }
+        .hd-crumb-link:hover { color: var(--loom-text); }
+        .hd-crumb-sep { color: var(--loom-text-3); }
+        .hd-crumb-current { color: var(--loom-text); font-weight: 500; overflow: hidden; text-overflow: ellipsis; }
+        .hd-spacer { flex: 1; min-width: 0; }
+        .hd-stepper { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+        .hd-step { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 8px; border-radius: var(--loom-r-chip); font-size: var(--loom-fs-label); color: var(--loom-text-3); background: transparent; white-space: nowrap; font-weight: 500; }
+        .hd-step .hd-step-ico { flex-shrink: 0; }
+        .hd-step.is-ok { color: var(--loom-green); }
+        .hd-step.is-on { color: var(--loom-accent); background: var(--loom-accent-soft); }
+        .hd-step-sep { color: var(--loom-text-3); font-size: 10px; }
+        .hd-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+        .app-content { flex: 1; overflow: hidden; }
+        .loom-mono { font-family: var(--loom-mono); }
+        @media (prefers-reduced-motion: reduce) { * { transition-duration: 0.01ms !important; } }
+      </style>
+
+      <!-- ===== 任务看板专属样式 ===== -->
+      <style>
+        /* —— 看板容器 —— */
+        .board {
+          display: flex;
+          flex-direction: column;
+          width: 100%;
+          height: 100%;
+          background: var(--loom-bg);
+          overflow: hidden;
+        }
+
+        /* —— 看板头部 —— */
+        .board-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 16px 24px;
+          border-bottom: 1px solid var(--loom-border);
+          flex-shrink: 0;
+        }
+        .board-head-left { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+        .board-title { font-size: var(--loom-fs-h); font-weight: 600; color: var(--loom-text); letter-spacing: -0.01em; margin: 0; }
+        .board-sub { font-size: var(--loom-fs-sm); color: var(--loom-text-3); white-space: nowrap; }
+        .board-head-right { flex-shrink: 0; }
+        .board-agent-filter { display: flex; align-items: center; gap: 5px; }
+        .board-agent-filter .loom-agent-avatar { width: 24px; height: 24px; cursor: pointer; opacity: 0.75; transition: opacity 140ms cubic-bezier(.2,.8,.2,1); }
+        .board-agent-filter .loom-agent-avatar:hover { opacity: 1; }
+
+        /* —— 筛选按钮（顶栏动作） —— */
+        .hd-btn-filter {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          background: transparent;
+          border: 1px solid var(--loom-border-strong);
+          border-radius: var(--loom-r-ctl);
+          padding: 4px 10px;
+          font-size: var(--loom-fs-sm);
+          color: var(--loom-text-2);
+          cursor: pointer;
+          transition: background-color 140ms cubic-bezier(.2,.8,.2,1), border-color 140ms cubic-bezier(.2,.8,.2,1);
+        }
+        .hd-btn-filter:hover { background: var(--loom-hover); border-color: var(--loom-text-3); color: var(--loom-text); }
+
+        /* —— 看板列表（滚动区） —— */
+        .board-list {
+          flex: 1;
+          overflow-y: auto;
+          padding: 12px 24px 24px;
+          display: flex;
+          flex-direction: column;
+          gap: 18px;
+          scrollbar-width: thin;
+          scrollbar-color: var(--loom-border-strong) transparent;
+        }
+        .board-list::-webkit-scrollbar { width: 8px; }
+        .board-list::-webkit-scrollbar-track { background: transparent; }
+        .board-list::-webkit-scrollbar-thumb { background: var(--loom-border-strong); border-radius: 4px; }
+        .board-list::-webkit-scrollbar-thumb:hover { background: var(--loom-text-3); }
+
+        /* —— 分组标题 —— */
+        .bg-head {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding-bottom: 6px;
+        }
+        .bg-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .bg-dot-progress { background: var(--loom-accent); box-shadow: 0 0 0 3px var(--loom-accent-soft); }
+        .bg-dot-todo { background: var(--loom-text-3); }
+        .bg-dot-testing { background: var(--loom-amber); box-shadow: 0 0 0 3px var(--loom-amber-soft); }
+        .bg-dot-blocked { background: var(--loom-red); box-shadow: 0 0 0 3px var(--loom-red-soft); }
+        .bg-dot-done { background: var(--loom-green); box-shadow: 0 0 0 3px var(--loom-green-soft); }
+        .bg-name { font-size: var(--loom-fs-sm); font-weight: 600; color: var(--loom-text-2); text-transform: none; }
+        .bg-count { font-size: var(--loom-fs-label); color: var(--loom-text-3); font-family: var(--loom-mono); font-variant-numeric: tabular-nums; }
+
+        /* —— 任务行（Linear 风格） —— */
+        .bg-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+        .task-row {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          height: 38px;
+          padding: 0 12px;
+          border-radius: var(--loom-r-chip);
+          cursor: pointer;
+          transition: background-color 140ms cubic-bezier(.2,.8,.2,1);
+        }
+        .task-row:hover { background: var(--loom-hover); }
+        .task-row.is-runnable:hover { background: var(--loom-selected); }
+
+        /* —— 状态圆点（行内） —— */
+        .task-status-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+        .task-dot-progress { background: var(--loom-accent); box-shadow: 0 0 0 2.5px var(--loom-accent-soft); }
+        .task-dot-todo { background: transparent; border: 1.6px solid var(--loom-text-3); }
+        .task-dot-testing { background: var(--loom-amber); }
+        .task-dot-blocked { background: var(--loom-red); }
+        .task-dot-done { background: var(--loom-green); }
+
+        /* —— 任务 ID（等宽） —— */
+        .task-id {
+          font-family: var(--loom-mono);
+          font-size: var(--loom-fs-sm);
+          color: var(--loom-text-3);
+          flex-shrink: 0;
+          font-variant-numeric: tabular-nums;
+          min-width: 56px;
+        }
+
+        /* —— 优先级条（3 格） —— */
+        .task-priority { display: inline-flex; align-items: flex-end; gap: 2px; flex-shrink: 0; height: 12px; }
+        .pp { display: inline-block; width: 3px; border-radius: 1px; }
+        .pp:nth-child(1) { height: 6px; }
+        .pp:nth-child(2) { height: 9px; }
+        .pp:nth-child(3) { height: 12px; }
+        .pp-on { background: var(--loom-text-2); }
+        .pp { background: var(--loom-border-strong); }
+
+        /* —— 任务标题 —— */
+        .task-title {
+          font-size: var(--loom-fs-body);
+          color: var(--loom-text);
+          flex: 1;
+          min-width: 0;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .task-title-done { color: var(--loom-text-3); }
+
+        /* —— 标签 —— */
+        .task-tags { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; }
+        .task-tag {
+          font-size: var(--loom-fs-label);
+          color: var(--loom-text-3);
+          background: var(--loom-surface);
+          border-radius: 4px;
+          padding: 1px 7px;
+          white-space: nowrap;
+        }
+
+        .task-spacer { flex: 1; min-width: 0; }
+
+        /* —— Agent 徽章（行内小头像） —— */
+        .task-agent { width: 20px; height: 20px; font-size: 9.5px; flex-shrink: 0; }
+
+        /* —— Run 按钮（可执行任务） —— */
+        .task-run {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          background: var(--loom-accent-fill);
+          color: var(--loom-text);
+          border: none;
+          border-radius: var(--loom-r-chip);
+          padding: 4px 10px;
+          font-size: var(--loom-fs-label);
+          font-weight: 600;
+          cursor: pointer;
+          flex-shrink: 0;
+          transition: background-color 140ms cubic-bezier(.2,.8,.2,1), transform 140ms cubic-bezier(.2,.8,.2,1);
+        }
+        .task-run:hover { background: #3A7FC0; }
+        .task-run:active { transform: scale(0.96); }
+        .task-run:focus-visible { outline: 2px solid var(--loom-accent); outline-offset: 1px; }
+        .task-run:disabled {
+          background: transparent;
+          color: var(--loom-text-3);
+          cursor: not-allowed;
+          opacity: 0.5;
+        }
+        .task-run:disabled:hover { background: transparent; transform: none; }
+
+        /* —— 状态药丸 —— */
+        .task-pending-pill {
+          font-size: var(--loom-fs-label);
+          color: var(--loom-amber);
+          background: var(--loom-amber-soft);
+          border-radius: 4px;
+          padding: 2px 8px;
+          white-space: nowrap;
+          flex-shrink: 0;
+        }
+        .task-blocked-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          font-size: var(--loom-fs-label);
+          color: var(--loom-red);
+          background: var(--loom-red-soft);
+          border-radius: 4px;
+          padding: 2px 8px;
+          white-space: nowrap;
+          flex-shrink: 0;
+        }
+        .task-time-done {
+          font-size: var(--loom-fs-label);
+          color: var(--loom-text-3);
+          font-family: var(--loom-mono);
+          flex-shrink: 0;
+        }
+
+        /* —— 阻塞行整行弱红底 —— */
+        .task-row-blocked { background: rgba(226, 100, 92, 0.04); }
+        .task-row-blocked:hover { background: rgba(226, 100, 92, 0.08); }
+
+        @media (max-width: 880px) {
+          .task-tags { display: none; }
+        }
+      </style>
+    </main>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

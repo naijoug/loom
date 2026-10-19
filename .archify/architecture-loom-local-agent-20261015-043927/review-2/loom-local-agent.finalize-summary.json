@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "architecture",
+  "quality": "showcase",
+  "specification": {
+    "path": "/Users/guojian/Workspace/naijoug/loom/.archify/architecture-loom-local-agent-20261015-043927/candidate.json",
+    "sha256": "a0a8472866cbbf7b38ed12b96783da56154adcef2b3c4026d9e5a0ac0210aca7",
+    "bytes": 3988
+  },
+  "artifact": {
+    "path": "/Users/guojian/Workspace/naijoug/loom/.archify/architecture-loom-local-agent-20261015-043927/loom-local-agent.html",
+    "sha256": "35fffe6144f08738f67e32841e290606228bb67154db09229532b1925d99a8d6",
+    "bytes": 819835
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "pass"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "/Users/guojian/Workspace/naijoug/loom/.archify/architecture-loom-local-agent-20261015-043927/review-2/loom-local-agent.finalize.json",
+    "summaryReceipt": "/Users/guojian/Workspace/naijoug/loom/.archify/architecture-loom-local-agent-20261015-043927/review-2/loom-local-agent.finalize-summary.json",
+    "browserCheckReceipt": "/Users/guojian/Workspace/naijoug/loom/.archify/architecture-loom-local-agent-20261015-043927/review-2/loom-local-agent.browser-check.json"
+  },
+  "update": {
+    "status": "current",
+    "installedVersion": "3.1.0",
+    "availableVersion": "3.1.0",
+    "releaseNotes": null,
+    "checkedAt": "2026-10-15T11:46:34.043Z",
+    "source": "network",
+    "noticeRequired": false,
+    "noticeText": null
+  },
+  "visualReview": "not-requested",
+  "durationMs": 2210
+}

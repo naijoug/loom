@@ -1,0 +1,260 @@
+{
+  "mode": "isolated-no-side-effect-approval-fixture",
+  "source": ".tmp/remember-native-data/workspaces/default-workspace/sessions/ec189c2b-1b25-4017-90e4-ed198fe4d7b8/events.jsonl",
+  "observations": [
+    "First prompt displays offered scope and session lifetime",
+    "Remember answer admits first call",
+    "Second turn admits through remembered grant without another prompt",
+    "Clear action removes active grant",
+    "Third turn prompts again and can be remembered again",
+    "Restart shows revoked authorization history",
+    "New request after restart prompts again and is denied"
+  ],
+  "events": [
+    {
+      "schemaVersion": 1,
+      "seq": 4,
+      "stream": "session/default-workspace/ec189c2b-1b25-4017-90e4-ed198fe4d7b8",
+      "timestampMs": 1791520209241,
+      "previousChecksum": "aa6f867c2f12f2e47253b3947c8c0d29ffe97e8b3bc4a6d5140f666d70ef9049",
+      "payload": {
+        "kind": "tool_approval_requested",
+        "approval": {
+          "id": "approval-turn-67056ea4a99032a57705d0ce498b7e8a4cb53a6d37983d81e1c94a8c827b9731",
+          "turnId": "turn-67056ea4a99032a57705d0ce498b7e8a4cb53a6d37983d81e1c94a8c827b9731",
+          "toolCallId": "tool-turn-67056ea4a99032a57705d0ce498b7e8a4cb53a6d37983d81e1c94a8c827b9731",
+          "toolName": "FixtureApproval · 无副作用测试",
+          "preview": {
+            "api_key": "[content withheld; bound by digest]",
+            "operation": "仅验证允许/拒绝，不写文件、不执行命令"
+          },
+          "argumentsDigest": "9d8d25cc4aba62e472e5fba4005c6b6e8d4dd9ffdb0d975a0e63659d40b40402",
+          "bindingDigest": "b451bc6b7d6ed173b787b55770a0cb9e1e5f5026c1af6e401542eac64e0743b4",
+          "workingDirectory": null,
+          "permissionMode": "ask",
+          "policyVersion": 1,
+          "createdAtMs": 1791520209240,
+          "expiresAtMs": 1791520329240,
+          "resolvedAtMs": null,
+          "status": "pending",
+          "remember": {
+            "keys": [
+              {
+                "kind": "tool",
+                "digest": "52aef711a025ca435cd388fb3dc5ed833755e68ea61a526d72de16290ded6139",
+                "label": "无副作用测试的同类请求"
+              }
+            ]
+          }
+        }
+      },
+      "checksum": "645a7e4cb3495ab010c903ca1d8e1fec4cdf91ed77f3535c78bc38b86d26a90a"
+    },
+    {
+      "schemaVersion": 1,
+      "seq": 5,
+      "stream": "session/default-workspace/ec189c2b-1b25-4017-90e4-ed198fe4d7b8",
+      "timestampMs": 1791520217419,
+      "previousChecksum": "645a7e4cb3495ab010c903ca1d8e1fec4cdf91ed77f3535c78bc38b86d26a90a",
+      "payload": {
+        "kind": "tool_approval_resolved",
+        "requestId": "approval-turn-67056ea4a99032a57705d0ce498b7e8a4cb53a6d37983d81e1c94a8c827b9731",
+        "resolution": "allow_remember",
+        "rememberedGrant": {
+          "id": "approval-turn-67056ea4a99032a57705d0ce498b7e8a4cb53a6d37983d81e1c94a8c827b9731",
+          "offer": {
+            "keys": [
+              {
+                "kind": "tool",
+                "digest": "52aef711a025ca435cd388fb3dc5ed833755e68ea61a526d72de16290ded6139",
+                "label": "无副作用测试的同类请求"
+              }
+            ]
+          },
+          "contextDigest": "27ca9e09d40b7e77bf282d490130513f3686523faf7830a3576d00a47c162801",
+          "createdAtMs": 1791520217419,
+          "revokedAtMs": null
+        }
+      },
+      "checksum": "be0d01fe042e61739cf357f1155df3e8f8fa8cd61c5dfdd6d8b82adb7f9c2cdb"
+    },
+    {
+      "schemaVersion": 1,
+      "seq": 74,
+      "stream": "session/default-workspace/ec189c2b-1b25-4017-90e4-ed198fe4d7b8",
+      "timestampMs": 1791520227795,
+      "previousChecksum": "301d4c6d7c9d01b1cdf2b0e75e5b2fa7955d50186a0fc307775062eeb704e7df",
+      "payload": {
+        "kind": "runtime_applied",
+        "turnId": "turn-fafe59abc5115913bf1b54d8bdbb1c3cfef7f2d2ac9a802c16ec6a324ae9ccc3",
+        "inputId": "remembered-turn-fafe59abc5115913bf1b54d8bdbb1c3cfef7f2d2ac9a802c16ec6a324ae9ccc3",
+        "update": {
+          "kind": "tool_policy",
+          "toolCallId": "tool-turn-fafe59abc5115913bf1b54d8bdbb1c3cfef7f2d2ac9a802c16ec6a324ae9ccc3",
+          "name": "FixtureApproval · 无副作用测试",
+          "input": {
+            "api_key": "[content withheld; bound by digest]",
+            "operation": "仅验证允许/拒绝，不写文件、不执行命令"
+          },
+          "argumentsDigest": "9d8d25cc4aba62e472e5fba4005c6b6e8d4dd9ffdb0d975a0e63659d40b40402",
+          "allowed": true,
+          "reason": "Session remembered authorization",
+          "authorizationIds": [
+            "approval-turn-67056ea4a99032a57705d0ce498b7e8a4cb53a6d37983d81e1c94a8c827b9731"
+          ]
+        }
+      },
+      "checksum": "b8410a0e2c3849e389c5aa139724b32f3194a018c29a0864729aecea06c5f6cc"
+    },
+    {
+      "schemaVersion": 1,
+      "seq": 140,
+      "stream": "session/default-workspace/ec189c2b-1b25-4017-90e4-ed198fe4d7b8",
+      "timestampMs": 1791520245647,
+      "previousChecksum": "d2515009b222e477581db782e5d5ff201ca35d384b2735d8a5f2c24e9e2081ac",
+      "payload": {
+        "kind": "remembered_grants_revoked",
+        "grantIds": [
+          "approval-turn-67056ea4a99032a57705d0ce498b7e8a4cb53a6d37983d81e1c94a8c827b9731"
+        ],
+        "reason": "user"
+      },
+      "checksum": "c4e0645eda4d41ea44574d2deb07597f07d3d51121754346d5905f88149c6ac2"
+    },
+    {
+      "schemaVersion": 1,
+      "seq": 143,
+      "stream": "session/default-workspace/ec189c2b-1b25-4017-90e4-ed198fe4d7b8",
+      "timestampMs": 1791520261964,
+      "previousChecksum": "ab7a7e3474d6d698b27c7495cc5c78ef3e675d60a0c08ec90900c10a6fa37f0b",
+      "payload": {
+        "kind": "tool_approval_requested",
+        "approval": {
+          "id": "approval-turn-ae56b5664eef410a875b3321aa72b83c3ebb3c6cd269905ddc113d4dd36cb384",
+          "turnId": "turn-ae56b5664eef410a875b3321aa72b83c3ebb3c6cd269905ddc113d4dd36cb384",
+          "toolCallId": "tool-turn-ae56b5664eef410a875b3321aa72b83c3ebb3c6cd269905ddc113d4dd36cb384",
+          "toolName": "FixtureApproval · 无副作用测试",
+          "preview": {
+            "api_key": "[content withheld; bound by digest]",
+            "operation": "仅验证允许/拒绝，不写文件、不执行命令"
+          },
+          "argumentsDigest": "9d8d25cc4aba62e472e5fba4005c6b6e8d4dd9ffdb0d975a0e63659d40b40402",
+          "bindingDigest": "a719871aea3108e3d7a83139c40ca38f2c27dee99f9e4fa0d227a43d5896f07f",
+          "workingDirectory": null,
+          "permissionMode": "ask",
+          "policyVersion": 1,
+          "createdAtMs": 1791520261963,
+          "expiresAtMs": 1791520381963,
+          "resolvedAtMs": null,
+          "status": "pending",
+          "remember": {
+            "keys": [
+              {
+                "kind": "tool",
+                "digest": "52aef711a025ca435cd388fb3dc5ed833755e68ea61a526d72de16290ded6139",
+                "label": "无副作用测试的同类请求"
+              }
+            ]
+          }
+        }
+      },
+      "checksum": "a49c8a366090e3351d415bba73b25030630b106b37fef8dc7c0d40b58c381df8"
+    },
+    {
+      "schemaVersion": 1,
+      "seq": 144,
+      "stream": "session/default-workspace/ec189c2b-1b25-4017-90e4-ed198fe4d7b8",
+      "timestampMs": 1791520328696,
+      "previousChecksum": "a49c8a366090e3351d415bba73b25030630b106b37fef8dc7c0d40b58c381df8",
+      "payload": {
+        "kind": "tool_approval_resolved",
+        "requestId": "approval-turn-ae56b5664eef410a875b3321aa72b83c3ebb3c6cd269905ddc113d4dd36cb384",
+        "resolution": "allow_remember",
+        "rememberedGrant": {
+          "id": "approval-turn-ae56b5664eef410a875b3321aa72b83c3ebb3c6cd269905ddc113d4dd36cb384",
+          "offer": {
+            "keys": [
+              {
+                "kind": "tool",
+                "digest": "52aef711a025ca435cd388fb3dc5ed833755e68ea61a526d72de16290ded6139",
+                "label": "无副作用测试的同类请求"
+              }
+            ]
+          },
+          "contextDigest": "27ca9e09d40b7e77bf282d490130513f3686523faf7830a3576d00a47c162801",
+          "createdAtMs": 1791520328696,
+          "revokedAtMs": null
+        }
+      },
+      "checksum": "1f74fbc2f95ae7cbcbaf624da36442eaaa205b0aedad07b220dc599d0ddab242"
+    },
+    {
+      "schemaVersion": 1,
+      "seq": 211,
+      "stream": "session/default-workspace/ec189c2b-1b25-4017-90e4-ed198fe4d7b8",
+      "timestampMs": 1791520545286,
+      "previousChecksum": "fa370484b6b52d41fcd3b87fdc2970ff057e37e0931b9a0567ef952a49a6109a",
+      "payload": {
+        "kind": "remembered_grants_revoked",
+        "grantIds": [
+          "approval-turn-ae56b5664eef410a875b3321aa72b83c3ebb3c6cd269905ddc113d4dd36cb384"
+        ],
+        "reason": "runtime_ended"
+      },
+      "checksum": "3f141ff81d46b470b69f3a88f961c36801061a315d9cbf03ec71a6d392b8c72b"
+    },
+    {
+      "schemaVersion": 1,
+      "seq": 214,
+      "stream": "session/default-workspace/ec189c2b-1b25-4017-90e4-ed198fe4d7b8",
+      "timestampMs": 1791520564449,
+      "previousChecksum": "ff96ab8ee3c58af20be568c20a3a0bf8789d40ddb5da8fdfcb4aa29a60aef082",
+      "payload": {
+        "kind": "tool_approval_requested",
+        "approval": {
+          "id": "approval-turn-f7471a80a5de5798729e710250554fd170aaa330c1105d6dfa3c523424e6d18b",
+          "turnId": "turn-f7471a80a5de5798729e710250554fd170aaa330c1105d6dfa3c523424e6d18b",
+          "toolCallId": "tool-turn-f7471a80a5de5798729e710250554fd170aaa330c1105d6dfa3c523424e6d18b",
+          "toolName": "FixtureApproval · 无副作用测试",
+          "preview": {
+            "api_key": "[content withheld; bound by digest]",
+            "operation": "仅验证允许/拒绝，不写文件、不执行命令"
+          },
+          "argumentsDigest": "9d8d25cc4aba62e472e5fba4005c6b6e8d4dd9ffdb0d975a0e63659d40b40402",
+          "bindingDigest": "9a1ecbb85e512b59a4d76b4a826511ef408fea0cd168809b37165f8bb574b7a0",
+          "workingDirectory": null,
+          "permissionMode": "ask",
+          "policyVersion": 1,
+          "createdAtMs": 1791520564449,
+          "expiresAtMs": 1791520684449,
+          "resolvedAtMs": null,
+          "status": "pending",
+          "remember": {
+            "keys": [
+              {
+                "kind": "tool",
+                "digest": "52aef711a025ca435cd388fb3dc5ed833755e68ea61a526d72de16290ded6139",
+                "label": "无副作用测试的同类请求"
+              }
+            ]
+          }
+        }
+      },
+      "checksum": "e1c78aa1bc1f5afc0aafbdf8034e795ed221f97a3e5cca2a4d4b5760d031d464"
+    },
+    {
+      "schemaVersion": 1,
+      "seq": 215,
+      "stream": "session/default-workspace/ec189c2b-1b25-4017-90e4-ed198fe4d7b8",
+      "timestampMs": 1791520575343,
+      "previousChecksum": "e1c78aa1bc1f5afc0aafbdf8034e795ed221f97a3e5cca2a4d4b5760d031d464",
+      "payload": {
+        "kind": "tool_approval_resolved",
+        "requestId": "approval-turn-f7471a80a5de5798729e710250554fd170aaa330c1105d6dfa3c523424e6d18b",
+        "resolution": "deny"
+      },
+      "checksum": "3a624c7f234406dc3c969b1e300d36d8299459303b5666ec66f187891d232923"
+    }
+  ],
+  "previewStopped": true
+}

@@ -1,0 +1,55 @@
+{
+  "upstreamSHA": "73bd9c2a3573158bea880984eb8d5fdb41e0cac2",
+  "evidenceKind": "reference-desktop-observation",
+  "platform": "macOS arm64",
+  "theme": "dark",
+  "images": [
+    {
+      "file": "01-onboarding.jpg",
+      "width": 2800,
+      "height": 1800,
+      "sha256": "2bf09b6993de036ddff48b6f708b89ce3b65cf85ccb315b3088d8a706c2acc3f",
+      "needsFixedViewportRecapture": false
+    },
+    {
+      "file": "02-empty-inbox.jpg",
+      "width": 2800,
+      "height": 1800,
+      "sha256": "9947ebe3ca10cfa53d0afc3c2c44167be82df19b64c9d07058cf8fa61f55944a",
+      "needsFixedViewportRecapture": false
+    },
+    {
+      "file": "03-new-chat.jpg",
+      "width": 866,
+      "height": 556,
+      "sha256": "996490aa8e1705d7518592a990bfed6660cd5673106438472ea487b3d0cc75a1",
+      "needsFixedViewportRecapture": true
+    },
+    {
+      "file": "04-app-settings.jpg",
+      "width": 2800,
+      "height": 1800,
+      "sha256": "c9362847e03ebb07d6a42f9d39e738d24bda9d17f77236cfefb036461c37bd0b",
+      "needsFixedViewportRecapture": false
+    },
+    {
+      "file": "05-ai-settings.jpg",
+      "width": 2800,
+      "height": 1800,
+      "sha256": "9886c12c237a09f77582bf03004d9e5f58239056ec60f4e5340f8ec8d923b097",
+      "needsFixedViewportRecapture": false
+    },
+    {
+      "file": "06-sources.jpg",
+      "width": 2800,
+      "height": 1800,
+      "sha256": "a954a2cd03738e3bfafc61c85a9b0a624811c6802e243671fc86074f09cffa97",
+      "needsFixedViewportRecapture": false
+    }
+  ],
+  "limitations": [
+    "Initial observations only; not the complete fixed-viewport golden set.",
+    "No live model/provider credentials were configured.",
+    "Reference discovers global skills; no skill contents were sent to models."
+  ]
+}

@@ -1,0 +1,586 @@
+{
+  "kind": "real-pi-sdk-injected-fetch",
+  "realHttpVerified": false,
+  "sourceSha256": {
+    "packages/provider-workers/src/runtime-worker.ts": "d99efb0687aa3625b2b61de2159b84e96d5ac36055adffa685a8f6d6969cf3c7",
+    "packages/provider-workers/tests/pi-fetch-fixture.ts": "e18940fb66cbc1bc828e733da5ce4b7feebc96e6f629a35282c3ab472eac7994",
+    "crates/loom-runtime/src/supervisor.rs": "82c45974daabbc9ebe2feffb35804993b24dd90c4f0f818db4c30f87b806206e",
+    "crates/loom-runtime/src/core_bridge.rs": "81baf33ddfcf49f1b8227eaa09be8e4f9e34a65b6bc3d25adcc075f784d84bf8",
+    "crates/loom-core/src/repository/runtime_context.rs": "9898a563691916b154b6abab7bc6fea1792bfad28d4be8b9fb67de63fc1fcb19",
+    "crates/loom-core/src/repository/approvals.rs": "574d6230f62871f1f88e18aaed227a4d65f1e1f3a3aea5c9ff6122b2aaf1ea9e",
+    "crates/loom-runtime/src/protocol.rs": "243f717dd99c68fce0393831547eeb4711ffaf50e434d9dc31c435f830f74867",
+    "crates/loom-runtime/src/policy.rs": "adc061e7e2ec09d49d27ca870d018d85ec5a456d729c6c1d245761edb9e45b39",
+    "crates/loom-runtime/src/policy/config.rs": "1063b5e3cefa03b98d824cedbe553d9f2fd1b84d79ea8903410a2438beed3597",
+    "crates/loom-runtime/src/policy/paths.rs": "b973bb862a1cfb2c69525f48e217767819c0a5870a4656dc4a960b16bf297b83",
+    "crates/loom-runtime/src/policy/mcp.rs": "05078f4830456d81ffeee61fd1d312334db895b6211aef223fac9b4d1003ab0b",
+    "crates/loom-runtime/examples/sdk_runtime_probe.rs": "a657fe3e88ca84457ad00ee0fd4e673d63d7963878bee72cf762fcc173e12caa",
+    "scripts/runtime-fetch-smoke.py": "516242d1ff64832f3d00c3f5419158f04c09c9a574fe23f23b85604786d27e5a"
+  },
+  "results": [
+    {
+      "scenario": "allow",
+      "auth": "key",
+      "anonymous": false,
+      "passed": true,
+      "checks": {
+        "exit": true,
+        "actualSdkTool": true,
+        "sideEffect": true,
+        "coreTerminal": true,
+        "requestObserved": true,
+        "noAuthHeaders": true,
+        "credentialNotExecuted": true,
+        "frozenContext": true,
+        "usagePersisted": true,
+        "credentialLiteral": true
+      },
+      "events": [
+        {
+          "bindingDigest": "4dad87559f6bfbdff4798a8b0be41a844f691872646f7918e9fa29572f104cac",
+          "kind": "approvalRequested",
+          "requestId": "56207089-c91a-43b4-bc02-81f25dcf228e",
+          "toolCallId": "tool-5989f0ce0521f38b06f071421c274e7df0082a897c492431cd02f3d072fab992",
+          "toolName": "write"
+        },
+        {
+          "allowed": true,
+          "kind": "approvalSettled"
+        },
+        {
+          "activeTurnId": null,
+          "approvalStatuses": [
+            "consumed"
+          ],
+          "kind": "coreAudit",
+          "lastSeq": 16,
+          "toolCount": 1,
+          "turnStatus": "completed",
+          "usage": {
+            "inputTokens": 0,
+            "outputTokens": 0
+          }
+        }
+      ],
+      "requests": [
+        {
+          "authorizationPresent": true,
+          "authorizationDigest": "bb27d2507fa339e92bc01f77b8c5768ac40ee4e2b8020c2adc515b2d25ef2e8d",
+          "apiKeyPresent": false,
+          "model": "loom-fixture",
+          "historyUserPresent": true,
+          "historyAnswerPresent": true,
+          "futureInputPresent": false
+        },
+        {
+          "authorizationPresent": true,
+          "authorizationDigest": "bb27d2507fa339e92bc01f77b8c5768ac40ee4e2b8020c2adc515b2d25ef2e8d",
+          "apiKeyPresent": false,
+          "model": "loom-fixture",
+          "historyUserPresent": true,
+          "historyAnswerPresent": true,
+          "futureInputPresent": false
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "scenario": "deny",
+      "auth": "key",
+      "anonymous": false,
+      "passed": true,
+      "checks": {
+        "exit": true,
+        "actualSdkTool": true,
+        "sideEffect": true,
+        "coreTerminal": true,
+        "requestObserved": true,
+        "noAuthHeaders": true,
+        "credentialNotExecuted": true,
+        "frozenContext": true,
+        "usagePersisted": true,
+        "credentialLiteral": true
+      },
+      "events": [
+        {
+          "bindingDigest": "f59fa60e3087588a46a5764cae5996e4898cb78ab225831b7f9904bf24ec1f09",
+          "kind": "approvalRequested",
+          "requestId": "ef72e481-e75d-4cef-b13d-eb37d3aeebeb",
+          "toolCallId": "tool-5989f0ce0521f38b06f071421c274e7df0082a897c492431cd02f3d072fab992",
+          "toolName": "write"
+        },
+        {
+          "allowed": false,
+          "kind": "approvalSettled"
+        },
+        {
+          "activeTurnId": null,
+          "approvalStatuses": [
+            "denied"
+          ],
+          "kind": "coreAudit",
+          "lastSeq": 14,
+          "toolCount": 0,
+          "turnStatus": "completed",
+          "usage": {
+            "inputTokens": 0,
+            "outputTokens": 0
+          }
+        }
+      ],
+      "requests": [
+        {
+          "authorizationPresent": true,
+          "authorizationDigest": "bb27d2507fa339e92bc01f77b8c5768ac40ee4e2b8020c2adc515b2d25ef2e8d",
+          "apiKeyPresent": false,
+          "model": "loom-fixture",
+          "historyUserPresent": true,
+          "historyAnswerPresent": true,
+          "futureInputPresent": false
+        },
+        {
+          "authorizationPresent": true,
+          "authorizationDigest": "bb27d2507fa339e92bc01f77b8c5768ac40ee4e2b8020c2adc515b2d25ef2e8d",
+          "apiKeyPresent": false,
+          "model": "loom-fixture",
+          "historyUserPresent": true,
+          "historyAnswerPresent": true,
+          "futureInputPresent": false
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "scenario": "cancel",
+      "auth": "key",
+      "anonymous": false,
+      "passed": true,
+      "checks": {
+        "exit": true,
+        "actualSdkTool": true,
+        "sideEffect": true,
+        "coreTerminal": true,
+        "requestObserved": true,
+        "noAuthHeaders": true,
+        "credentialNotExecuted": true,
+        "frozenContext": true,
+        "usagePersisted": true,
+        "credentialLiteral": true
+      },
+      "events": [
+        {
+          "bindingDigest": "e22d9f3bda44771aff480d6ce61e7eaa997757b4a8641a1a5404a348b311b378",
+          "kind": "approvalRequested",
+          "requestId": "afeaee34-9018-4024-bf51-95fae3c83ad1",
+          "toolCallId": "tool-5989f0ce0521f38b06f071421c274e7df0082a897c492431cd02f3d072fab992",
+          "toolName": "write"
+        },
+        {
+          "allowed": false,
+          "kind": "approvalSettled"
+        },
+        {
+          "activeTurnId": null,
+          "approvalStatuses": [
+            "cancelled"
+          ],
+          "kind": "coreAudit",
+          "lastSeq": 12,
+          "toolCount": 0,
+          "turnStatus": "cancelled",
+          "usage": {
+            "inputTokens": 0,
+            "outputTokens": 0
+          }
+        }
+      ],
+      "requests": [
+        {
+          "authorizationPresent": true,
+          "authorizationDigest": "bb27d2507fa339e92bc01f77b8c5768ac40ee4e2b8020c2adc515b2d25ef2e8d",
+          "apiKeyPresent": false,
+          "model": "loom-fixture",
+          "historyUserPresent": true,
+          "historyAnswerPresent": true,
+          "futureInputPresent": false
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "scenario": "stale",
+      "auth": "key",
+      "anonymous": false,
+      "passed": true,
+      "checks": {
+        "exit": true,
+        "actualSdkTool": true,
+        "sideEffect": true,
+        "coreTerminal": true,
+        "requestObserved": true,
+        "noAuthHeaders": true,
+        "credentialNotExecuted": true,
+        "frozenContext": true,
+        "usagePersisted": true,
+        "credentialLiteral": true
+      },
+      "events": [
+        {
+          "bindingDigest": "57025412f2bf6791d8526a368623cb330db05a76ca6e75ccfde807714de7e2ff",
+          "kind": "approvalRequested",
+          "requestId": "e6d3b2db-08da-4b9f-bc0e-74d2130c07f0",
+          "toolCallId": "tool-5989f0ce0521f38b06f071421c274e7df0082a897c492431cd02f3d072fab992",
+          "toolName": "write"
+        },
+        {
+          "kind": "protocolError",
+          "message": "Core rejected stale approval binding"
+        },
+        {
+          "allowed": true,
+          "kind": "approvalSettled"
+        },
+        {
+          "activeTurnId": null,
+          "approvalStatuses": [
+            "consumed"
+          ],
+          "kind": "coreAudit",
+          "lastSeq": 16,
+          "toolCount": 1,
+          "turnStatus": "completed",
+          "usage": {
+            "inputTokens": 0,
+            "outputTokens": 0
+          }
+        }
+      ],
+      "requests": [
+        {
+          "authorizationPresent": true,
+          "authorizationDigest": "bb27d2507fa339e92bc01f77b8c5768ac40ee4e2b8020c2adc515b2d25ef2e8d",
+          "apiKeyPresent": false,
+          "model": "loom-fixture",
+          "historyUserPresent": true,
+          "historyAnswerPresent": true,
+          "futureInputPresent": false
+        },
+        {
+          "authorizationPresent": true,
+          "authorizationDigest": "bb27d2507fa339e92bc01f77b8c5768ac40ee4e2b8020c2adc515b2d25ef2e8d",
+          "apiKeyPresent": false,
+          "model": "loom-fixture",
+          "historyUserPresent": true,
+          "historyAnswerPresent": true,
+          "futureInputPresent": false
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "scenario": "allow",
+      "auth": "none",
+      "anonymous": true,
+      "passed": true,
+      "checks": {
+        "exit": true,
+        "actualSdkTool": true,
+        "sideEffect": true,
+        "coreTerminal": true,
+        "requestObserved": true,
+        "noAuthHeaders": true,
+        "credentialNotExecuted": true,
+        "frozenContext": true,
+        "usagePersisted": true,
+        "credentialLiteral": true
+      },
+      "events": [
+        {
+          "bindingDigest": "2c01cecf8f99b2203f40fcdb5d74b1b346888f531d3c3da488db9300a276ecb8",
+          "kind": "approvalRequested",
+          "requestId": "228eb239-c43d-4f64-bd2e-cfac50984cbf",
+          "toolCallId": "tool-5989f0ce0521f38b06f071421c274e7df0082a897c492431cd02f3d072fab992",
+          "toolName": "write"
+        },
+        {
+          "allowed": true,
+          "kind": "approvalSettled"
+        },
+        {
+          "activeTurnId": null,
+          "approvalStatuses": [
+            "consumed"
+          ],
+          "kind": "coreAudit",
+          "lastSeq": 16,
+          "toolCount": 1,
+          "turnStatus": "completed",
+          "usage": {
+            "inputTokens": 0,
+            "outputTokens": 0
+          }
+        }
+      ],
+      "requests": [
+        {
+          "authorizationPresent": false,
+          "authorizationDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "apiKeyPresent": false,
+          "model": "loom-fixture",
+          "historyUserPresent": true,
+          "historyAnswerPresent": true,
+          "futureInputPresent": false
+        },
+        {
+          "authorizationPresent": false,
+          "authorizationDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "apiKeyPresent": false,
+          "model": "loom-fixture",
+          "historyUserPresent": true,
+          "historyAnswerPresent": true,
+          "futureInputPresent": false
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "scenario": "allow",
+      "auth": "literal",
+      "anonymous": false,
+      "passed": true,
+      "checks": {
+        "exit": true,
+        "actualSdkTool": true,
+        "sideEffect": true,
+        "coreTerminal": true,
+        "requestObserved": true,
+        "noAuthHeaders": true,
+        "credentialNotExecuted": true,
+        "frozenContext": true,
+        "usagePersisted": true,
+        "credentialLiteral": true
+      },
+      "events": [
+        {
+          "bindingDigest": "d55d3b0963307bc2cfe400675c3683205fbc6c48ed9391c390964a8f7b0626c3",
+          "kind": "approvalRequested",
+          "requestId": "7898e6e7-ccf3-4665-8d0b-cda3a7c4ab7d",
+          "toolCallId": "tool-5989f0ce0521f38b06f071421c274e7df0082a897c492431cd02f3d072fab992",
+          "toolName": "write"
+        },
+        {
+          "allowed": true,
+          "kind": "approvalSettled"
+        },
+        {
+          "activeTurnId": null,
+          "approvalStatuses": [
+            "consumed"
+          ],
+          "kind": "coreAudit",
+          "lastSeq": 16,
+          "toolCount": 1,
+          "turnStatus": "completed",
+          "usage": {
+            "inputTokens": 0,
+            "outputTokens": 0
+          }
+        }
+      ],
+      "requests": [
+        {
+          "authorizationPresent": true,
+          "authorizationDigest": "9fdcad4bf5e379b8256f1c407f7922253e1da11ab1ca6528d61b331cd7844aa0",
+          "apiKeyPresent": false,
+          "model": "loom-fixture",
+          "historyUserPresent": true,
+          "historyAnswerPresent": true,
+          "futureInputPresent": false
+        },
+        {
+          "authorizationPresent": true,
+          "authorizationDigest": "9fdcad4bf5e379b8256f1c407f7922253e1da11ab1ca6528d61b331cd7844aa0",
+          "apiKeyPresent": false,
+          "model": "loom-fixture",
+          "historyUserPresent": true,
+          "historyAnswerPresent": true,
+          "futureInputPresent": false
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "scenario": "explore",
+      "auth": "key",
+      "anonymous": false,
+      "passed": true,
+      "checks": {
+        "exit": true,
+        "actualSdkTool": true,
+        "sideEffect": true,
+        "coreTerminal": true,
+        "requestObserved": true,
+        "noAuthHeaders": true,
+        "credentialNotExecuted": true,
+        "automaticPolicy": true,
+        "frozenContext": true,
+        "usagePersisted": true,
+        "credentialLiteral": true
+      },
+      "events": [
+        {
+          "allowed": false,
+          "kind": "policyDecision"
+        },
+        {
+          "activeTurnId": null,
+          "approvalStatuses": [],
+          "kind": "coreAudit",
+          "lastSeq": 13,
+          "toolCount": 1,
+          "turnStatus": "completed",
+          "usage": {
+            "inputTokens": 0,
+            "outputTokens": 0
+          }
+        }
+      ],
+      "requests": [
+        {
+          "authorizationPresent": true,
+          "authorizationDigest": "bb27d2507fa339e92bc01f77b8c5768ac40ee4e2b8020c2adc515b2d25ef2e8d",
+          "apiKeyPresent": false,
+          "model": "loom-fixture",
+          "historyUserPresent": true,
+          "historyAnswerPresent": true,
+          "futureInputPresent": false
+        },
+        {
+          "authorizationPresent": true,
+          "authorizationDigest": "bb27d2507fa339e92bc01f77b8c5768ac40ee4e2b8020c2adc515b2d25ef2e8d",
+          "apiKeyPresent": false,
+          "model": "loom-fixture",
+          "historyUserPresent": true,
+          "historyAnswerPresent": true,
+          "futureInputPresent": false
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "scenario": "execute",
+      "auth": "key",
+      "anonymous": false,
+      "passed": true,
+      "checks": {
+        "exit": true,
+        "actualSdkTool": true,
+        "sideEffect": true,
+        "coreTerminal": true,
+        "requestObserved": true,
+        "noAuthHeaders": true,
+        "credentialNotExecuted": true,
+        "automaticPolicy": true,
+        "frozenContext": true,
+        "usagePersisted": true,
+        "credentialLiteral": true
+      },
+      "events": [
+        {
+          "allowed": true,
+          "kind": "policyDecision"
+        },
+        {
+          "activeTurnId": null,
+          "approvalStatuses": [],
+          "kind": "coreAudit",
+          "lastSeq": 14,
+          "toolCount": 1,
+          "turnStatus": "completed",
+          "usage": {
+            "inputTokens": 0,
+            "outputTokens": 0
+          }
+        }
+      ],
+      "requests": [
+        {
+          "authorizationPresent": true,
+          "authorizationDigest": "bb27d2507fa339e92bc01f77b8c5768ac40ee4e2b8020c2adc515b2d25ef2e8d",
+          "apiKeyPresent": false,
+          "model": "loom-fixture",
+          "historyUserPresent": true,
+          "historyAnswerPresent": true,
+          "futureInputPresent": false
+        },
+        {
+          "authorizationPresent": true,
+          "authorizationDigest": "bb27d2507fa339e92bc01f77b8c5768ac40ee4e2b8020c2adc515b2d25ef2e8d",
+          "apiKeyPresent": false,
+          "model": "loom-fixture",
+          "historyUserPresent": true,
+          "historyAnswerPresent": true,
+          "futureInputPresent": false
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "scenario": "allowlist",
+      "auth": "key",
+      "anonymous": false,
+      "passed": true,
+      "checks": {
+        "exit": true,
+        "actualSdkTool": true,
+        "sideEffect": true,
+        "coreTerminal": true,
+        "requestObserved": true,
+        "noAuthHeaders": true,
+        "credentialNotExecuted": true,
+        "automaticPolicy": true,
+        "frozenContext": true,
+        "usagePersisted": true,
+        "credentialLiteral": true
+      },
+      "events": [
+        {
+          "allowed": true,
+          "kind": "policyDecision"
+        },
+        {
+          "activeTurnId": null,
+          "approvalStatuses": [],
+          "kind": "coreAudit",
+          "lastSeq": 14,
+          "toolCount": 1,
+          "turnStatus": "completed",
+          "usage": {
+            "inputTokens": 0,
+            "outputTokens": 0
+          }
+        }
+      ],
+      "requests": [
+        {
+          "authorizationPresent": true,
+          "authorizationDigest": "bb27d2507fa339e92bc01f77b8c5768ac40ee4e2b8020c2adc515b2d25ef2e8d",
+          "apiKeyPresent": false,
+          "model": "loom-fixture",
+          "historyUserPresent": true,
+          "historyAnswerPresent": true,
+          "futureInputPresent": false
+        },
+        {
+          "authorizationPresent": true,
+          "authorizationDigest": "bb27d2507fa339e92bc01f77b8c5768ac40ee4e2b8020c2adc515b2d25ef2e8d",
+          "apiKeyPresent": false,
+          "model": "loom-fixture",
+          "historyUserPresent": true,
+          "historyAnswerPresent": true,
+          "futureInputPresent": false
+        }
+      ],
+      "stderr": ""
+    }
+  ]
+}

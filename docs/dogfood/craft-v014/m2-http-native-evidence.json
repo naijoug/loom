@@ -1,0 +1,168 @@
+{
+  "workDate": "2026-10-10",
+  "recordedAt": "2026-10-10T00:13:31.188342+08:00",
+  "baseCommit": "f5a01c1f5a6f1412bf795782d757acebca962e8d",
+  "platform": "macOS-26.5.2-arm64-arm-64bit-Mach-O",
+  "scope": "Real Claude/Pi SDK + loopback HTTP model fixture; Claude native connection/deny/stop/resend/allow/restart verified; Pi native connection/deny verified, stop/resend/allow blocked by Mac lock",
+  "liveModelVerified": false,
+  "sourceSha256": {
+    "scripts/debug.sh": "d14ef112da1c7af15768c5fcc140d33453bc85cc9c44b8f1dea3ec0324293692",
+    "scripts/runtime-bridge-smoke.py": "0be506e40a42fce96dc01e6f13f59395d1097eb126e2ba036e7458bfaf5aa195",
+    "scripts/craft-inventory.mjs": "90bfd8126885a3e1a49f158b501a8f78182ab7d79fd36c67b0a3050c4e4618cb",
+    "tests/unit/debugScript.test.cjs": "b6d7358fecc4442feb511e1d24618104e140d40b892c090521c3b04955dcdc20",
+    "src/workbench/ConnectionSettings.tsx": "327f66ff89e85ff2e6efe73682e930384dadd9ba82d640fe4fc6b4ea5cb84554",
+    "src/workbench/WorkbenchApp.tsx": "c8f443b103bef2b6efbf25458442053a85dbe81eefb5daf4afc885719451a358",
+    "src-tauri/src/workbench/runtime.rs": "ccbf383c30521ee626f2316ad773d502ee64f43111f5f1c8b5f090928ad52385",
+    "src-tauri/src/workbench/connections.rs": "9b78b9bf75ba1b1b4ca824528ea08816f6f57f3b6726bc7a4bd3938649bedd53",
+    "packages/provider-workers/src/runtime-worker.ts": "d99efb0687aa3625b2b61de2159b84e96d5ac36055adffa685a8f6d6969cf3c7"
+  },
+  "artifactSha256": {
+    "src-tauri/target/debug/bundle/macos/Loom.app/Contents/MacOS/loom": "35fbb2c2f152b10b5c57c9954491067cd490efda1e4fe1be61a8a54c0ff33450",
+    "target/debug/examples/sdk_runtime_probe": "1aadd91d70ff5c008f13b856f86312e1f173ede4fee84631f9f5fcd80000f5d1"
+  },
+  "nativeChecks": {
+    "afterDeniedAndStopped": {
+      "approvalStatuses": [
+        "denied",
+        "cancelled"
+      ],
+      "turnStatuses": [
+        "completed",
+        "cancelled"
+      ],
+      "activeTurnId": null,
+      "fileExists": false
+    },
+    "afterAllowed": {
+      "approvalStatuses": [
+        "denied",
+        "cancelled",
+        "consumed"
+      ],
+      "turnStatuses": [
+        "completed",
+        "cancelled",
+        "completed"
+      ],
+      "activeTurnId": null,
+      "fileExact": true,
+      "fileSha256": "6e52cefcdb02798251c50cee5e6a7b66293648981aec5e16d300b6e59f19b4f0"
+    },
+    "afterRestart": {
+      "turnStatuses": [
+        "completed",
+        "cancelled",
+        "completed"
+      ],
+      "approvalStatuses": [
+        "denied",
+        "cancelled",
+        "consumed"
+      ],
+      "activeTurnId": null,
+      "messageCount": 6,
+      "fileExact": true
+    }
+  },
+  "nativeRequests": {
+    "kind": "native-loopback-model-fixture",
+    "provider": "claude",
+    "liveModelVerified": false,
+    "requests": [
+      {
+        "path": "/v1/messages?beta=true",
+        "model": "claude-sonnet-4-6",
+        "stream": true
+      },
+      {
+        "path": "/v1/messages?beta=true",
+        "model": "claude-sonnet-4-6",
+        "stream": true
+      },
+      {
+        "path": "/v1/messages?beta=true",
+        "model": "claude-sonnet-4-6",
+        "stream": true
+      },
+      {
+        "path": "/v1/messages?beta=true",
+        "model": "claude-sonnet-4-6",
+        "stream": true
+      },
+      {
+        "path": "/v1/messages?beta=true",
+        "model": "claude-sonnet-4-6",
+        "stream": true
+      }
+    ]
+  },
+  "checks": {
+    "httpCasesPassed": 10,
+    "frontendAndScriptTestsPassed": 6,
+    "bashSyntax": true,
+    "pythonCompile": true,
+    "fixedUpstreamInventory": true,
+    "connectionSaveRenameKeepRestart": true,
+    "credentialAbsentFromCatalogAndSessionJournal": true,
+    "previewExitCode": 0,
+    "fixtureExitCode": 0
+  },
+  "nativeArtifactsSha256": {
+    "designs/workbench-m2/http-native-2026-10-10/01-connection-saved.ax.txt": "d851baa61ff0d4b4097e2e58cc156cec93e3833f7b5a70c50c3048ff8e98f3a2",
+    "designs/workbench-m2/http-native-2026-10-10/01-connection-saved.png": "440da1eba55ea9f848af473187ac28776c24ecf314a3c085e382dfe68ab7d108",
+    "designs/workbench-m2/http-native-2026-10-10/02-connection-restarted.ax.txt": "b3b0efcf9530cd1d72d8fc7f7c0f578c2af3b19eb0515542274f9d4d81f0dcb5",
+    "designs/workbench-m2/http-native-2026-10-10/02-connection-restarted.png": "4d9da5e3ec816bd6d22b2f629adf89f2f068d2c523fc207d1527938de3a1262a",
+    "designs/workbench-m2/http-native-2026-10-10/03-sdk-denied.ax.txt": "debebc2a9a4feb844f0f0b1678cc6d6f002d3ee42e2d15f7b957edcfc2612ec4",
+    "designs/workbench-m2/http-native-2026-10-10/03-sdk-denied.png": "4cba719edf20aeeadaff293d02711dc1a7f33fef6ccb719925497ac057c586b5",
+    "designs/workbench-m2/http-native-2026-10-10/04-sdk-stopped.ax.txt": "50edb36decbe52541a5a9f2988c84c689a2ff85e67370a67cce5b8e3f1421e7b",
+    "designs/workbench-m2/http-native-2026-10-10/04-sdk-stopped.png": "4a4d1bd3bb495aff3be987406fbcd1ed69ec01dcfab963b3932ad35c89ddc858",
+    "designs/workbench-m2/http-native-2026-10-10/05-sdk-allowed.ax.txt": "640ee1ebb6856f41abdfb4310eb4e2d070a452dd530140e5272f21eb88d2a6c5",
+    "designs/workbench-m2/http-native-2026-10-10/05-sdk-allowed.png": "1c80c09a1c2b35a14901dce4b45a7e6229fac39ccdb2b48856cda4e7e1de3745",
+    "designs/workbench-m2/http-native-2026-10-10/06-sdk-restarted.ax.txt": "640ee1ebb6856f41abdfb4310eb4e2d070a452dd530140e5272f21eb88d2a6c5",
+    "designs/workbench-m2/http-native-2026-10-10/06-sdk-restarted.png": "0aad911d3007e5bb2d44c294958ffdb0d6a2a591e5b0744fab8f2f069c63457c"
+  },
+  "limitations": [
+    "Real model account/TLS/OAuth not tested",
+    "Pi native stop/resend/allow blocked by Mac lock; native connection and deny verified; graceful host shutdown does not verify the native stop button",
+    "SDK resume/compact/steer not implemented",
+    "Release resources/signing and cross-platform not delivered"
+  ],
+  "piNativePartial": {
+    "connection": "pi_compat/openai-completions/none",
+    "denyObservedInNativeUI": true,
+    "fileExists": false,
+    "turnStatusesAfterHostShutdown": [
+      "completed",
+      "cancelled"
+    ],
+    "approvalStatusesAfterHostShutdown": [
+      "cancelled",
+      "denied"
+    ],
+    "activeTurnIdAfterHostShutdown": null,
+    "nativeStopButtonVerified": false,
+    "blockedReason": "Mac locked when attempting the native stop button; graceful script shutdown used for cleanup",
+    "requests": {
+      "kind": "native-loopback-model-fixture",
+      "provider": "pi",
+      "liveModelVerified": false,
+      "requests": [
+        {
+          "path": "/v1/chat/completions",
+          "model": "loom-fixture",
+          "stream": true
+        },
+        {
+          "path": "/v1/chat/completions",
+          "model": "loom-fixture",
+          "stream": true
+        },
+        {
+          "path": "/v1/chat/completions",
+          "model": "loom-fixture",
+          "stream": true
+        }
+      ]
+    }
+  }
+}

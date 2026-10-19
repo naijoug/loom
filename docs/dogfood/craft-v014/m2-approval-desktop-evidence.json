@@ -1,0 +1,598 @@
+{
+  "recordedAt": "2026-10-07T22:06:21.816494+08:00",
+  "baseCommit": "ecfaebce9da727430baa6b7fe0508d547338a9b4",
+  "platform": "macOS-26.5.2-arm64-arm-64bit-Mach-O",
+  "fixture": ".tmp/workbench-approval-2026-10-03",
+  "runtime": "explicit no-side-effect desktop fixture; no model call",
+  "readback": [
+    {
+      "metadata": {
+        "key": {
+          "workspaceId": "approvals",
+          "sessionId": "allow"
+        },
+        "title": "允许一次",
+        "projectId": null,
+        "statusId": "todo",
+        "archived": false,
+        "flagged": false,
+        "labels": [],
+        "permissionMode": "ask",
+        "connection": {
+          "connectionId": null,
+          "model": null,
+          "thinking": null
+        },
+        "enabledSources": [],
+        "createdAtMs": 1791005972888,
+        "updatedAtMs": 1791381848080,
+        "lastReadMessageId": "assistant-877d1a6a4b54c083cedce6f97ce2c9bc6df0cedcf87fad9accee9b003081778f"
+      },
+      "notes": "",
+      "importedHistory": null,
+      "approvals": {
+        "approval-turn-2c26b8d2af85bb511b3ae5a707237f403954d7313c8d6455e2a17d389f8a04e5": {
+          "id": "approval-turn-2c26b8d2af85bb511b3ae5a707237f403954d7313c8d6455e2a17d389f8a04e5",
+          "turnId": "turn-2c26b8d2af85bb511b3ae5a707237f403954d7313c8d6455e2a17d389f8a04e5",
+          "toolCallId": "tool-turn-2c26b8d2af85bb511b3ae5a707237f403954d7313c8d6455e2a17d389f8a04e5",
+          "toolName": "FixtureApproval · 无副作用测试",
+          "preview": {
+            "api_key": "[content withheld; bound by digest]",
+            "operation": "仅验证允许/拒绝，不写文件、不执行命令"
+          },
+          "argumentsDigest": "9d8d25cc4aba62e472e5fba4005c6b6e8d4dd9ffdb0d975a0e63659d40b40402",
+          "bindingDigest": "6ae62b7435e480d717dca4114bab04a58798a52297b78f02c1c7f55583f6c4e8",
+          "workingDirectory": null,
+          "permissionMode": "ask",
+          "policyVersion": 1,
+          "createdAtMs": 1791380567295,
+          "expiresAtMs": 1791380687295,
+          "resolvedAtMs": 1791380649327,
+          "status": "consumed"
+        },
+        "approval-turn-877d1a6a4b54c083cedce6f97ce2c9bc6df0cedcf87fad9accee9b003081778f": {
+          "id": "approval-turn-877d1a6a4b54c083cedce6f97ce2c9bc6df0cedcf87fad9accee9b003081778f",
+          "turnId": "turn-877d1a6a4b54c083cedce6f97ce2c9bc6df0cedcf87fad9accee9b003081778f",
+          "toolCallId": "tool-turn-877d1a6a4b54c083cedce6f97ce2c9bc6df0cedcf87fad9accee9b003081778f",
+          "toolName": "FixtureApproval · 无副作用测试",
+          "preview": {
+            "api_key": "[content withheld; bound by digest]",
+            "operation": "仅验证允许/拒绝，不写文件、不执行命令"
+          },
+          "argumentsDigest": "9d8d25cc4aba62e472e5fba4005c6b6e8d4dd9ffdb0d975a0e63659d40b40402",
+          "bindingDigest": "5e23f833d2e82ff5d099f46ae3d3a0458a4784f7c0cc0f5a5ee8e5001abf51f4",
+          "workingDirectory": null,
+          "permissionMode": "ask",
+          "policyVersion": 1,
+          "createdAtMs": 1791381794510,
+          "expiresAtMs": 1791381914510,
+          "resolvedAtMs": 1791381845704,
+          "status": "consumed"
+        }
+      },
+      "lastSeq": 141,
+      "metadataRevision": 1,
+      "messages": [
+        {
+          "id": "user-2c26b8d2af85bb511b3ae5a707237f403954d7313c8d6455e2a17d389f8a04e5",
+          "turnId": "turn-2c26b8d2af85bb511b3ae5a707237f403954d7313c8d6455e2a17d389f8a04e5",
+          "role": "user",
+          "parts": [
+            {
+              "type": "text",
+              "id": "user-2c26b8d2af85bb511b3ae5a707237f403954d7313c8d6455e2a17d389f8a04e5",
+              "kind": "text",
+              "text": "allow fixture"
+            }
+          ],
+          "createdAtMs": 1791380567185
+        },
+        {
+          "id": "assistant-2c26b8d2af85bb511b3ae5a707237f403954d7313c8d6455e2a17d389f8a04e5",
+          "turnId": "turn-2c26b8d2af85bb511b3ae5a707237f403954d7313c8d6455e2a17d389f8a04e5",
+          "role": "assistant",
+          "parts": [
+            {
+              "type": "tool",
+              "toolCallId": "tool-turn-2c26b8d2af85bb511b3ae5a707237f403954d7313c8d6455e2a17d389f8a04e5"
+            },
+            {
+              "type": "text",
+              "id": "reply",
+              "kind": "text",
+              "text": "这是本地验证模式生成的测试回复。\n\n工作区、会话、流式事件和历史记录均由新的 Rust 内核保存；这段回复没有调用真实模型。"
+            }
+          ],
+          "createdAtMs": 1791380567185
+        },
+        {
+          "id": "user-877d1a6a4b54c083cedce6f97ce2c9bc6df0cedcf87fad9accee9b003081778f",
+          "turnId": "turn-877d1a6a4b54c083cedce6f97ce2c9bc6df0cedcf87fad9accee9b003081778f",
+          "role": "user",
+          "parts": [
+            {
+              "type": "text",
+              "id": "user-877d1a6a4b54c083cedce6f97ce2c9bc6df0cedcf87fad9accee9b003081778f",
+              "kind": "text",
+              "text": "final approval fixture"
+            }
+          ],
+          "createdAtMs": 1791381794426
+        },
+        {
+          "id": "assistant-877d1a6a4b54c083cedce6f97ce2c9bc6df0cedcf87fad9accee9b003081778f",
+          "turnId": "turn-877d1a6a4b54c083cedce6f97ce2c9bc6df0cedcf87fad9accee9b003081778f",
+          "role": "assistant",
+          "parts": [
+            {
+              "type": "tool",
+              "toolCallId": "tool-turn-877d1a6a4b54c083cedce6f97ce2c9bc6df0cedcf87fad9accee9b003081778f"
+            },
+            {
+              "type": "text",
+              "id": "reply",
+              "kind": "text",
+              "text": "这是本地验证模式生成的测试回复。\n\n工作区、会话、流式事件和历史记录均由新的 Rust 内核保存；这段回复没有调用真实模型。"
+            }
+          ],
+          "createdAtMs": 1791381794426
+        }
+      ],
+      "turns": [
+        {
+          "id": "turn-2c26b8d2af85bb511b3ae5a707237f403954d7313c8d6455e2a17d389f8a04e5",
+          "receipt": {
+            "clientRequestId": "769ea5b6-c506-4f61-b598-97285b25615d",
+            "turnId": "turn-2c26b8d2af85bb511b3ae5a707237f403954d7313c8d6455e2a17d389f8a04e5",
+            "userMessageId": "user-2c26b8d2af85bb511b3ae5a707237f403954d7313c8d6455e2a17d389f8a04e5",
+            "assistantMessageId": "assistant-2c26b8d2af85bb511b3ae5a707237f403954d7313c8d6455e2a17d389f8a04e5",
+            "acceptedSeq": 2,
+            "requestDigest": "2c26b8d2af85bb511b3ae5a707237f403954d7313c8d6455e2a17d389f8a04e5"
+          },
+          "status": "completed",
+          "configuration": {
+            "connection": {
+              "connectionId": null,
+              "model": null,
+              "thinking": null
+            },
+            "permissionMode": "ask"
+          },
+          "acceptedAtMs": 1791380567185,
+          "startedAtMs": 1791380567209,
+          "endedAtMs": 1791380651649,
+          "binding": {
+            "adapter": "desktop-fixture",
+            "connection": {
+              "connectionId": null,
+              "model": null,
+              "thinking": null
+            },
+            "permissionMode": "ask",
+            "policyVersion": 1,
+            "workingDirectory": null
+          },
+          "error": null
+        },
+        {
+          "id": "turn-877d1a6a4b54c083cedce6f97ce2c9bc6df0cedcf87fad9accee9b003081778f",
+          "receipt": {
+            "clientRequestId": "3c6d969d-a3cc-4ea1-ac00-a679409990f9",
+            "turnId": "turn-877d1a6a4b54c083cedce6f97ce2c9bc6df0cedcf87fad9accee9b003081778f",
+            "userMessageId": "user-877d1a6a4b54c083cedce6f97ce2c9bc6df0cedcf87fad9accee9b003081778f",
+            "assistantMessageId": "assistant-877d1a6a4b54c083cedce6f97ce2c9bc6df0cedcf87fad9accee9b003081778f",
+            "acceptedSeq": 72,
+            "requestDigest": "877d1a6a4b54c083cedce6f97ce2c9bc6df0cedcf87fad9accee9b003081778f"
+          },
+          "status": "completed",
+          "configuration": {
+            "connection": {
+              "connectionId": null,
+              "model": null,
+              "thinking": null
+            },
+            "permissionMode": "ask"
+          },
+          "acceptedAtMs": 1791381794426,
+          "startedAtMs": 1791381794457,
+          "endedAtMs": 1791381848013,
+          "binding": {
+            "adapter": "desktop-fixture",
+            "connection": {
+              "connectionId": null,
+              "model": null,
+              "thinking": null
+            },
+            "permissionMode": "ask",
+            "policyVersion": 1,
+            "workingDirectory": null
+          },
+          "error": null
+        }
+      ],
+      "tools": {
+        "tool-turn-2c26b8d2af85bb511b3ae5a707237f403954d7313c8d6455e2a17d389f8a04e5": {
+          "id": "tool-turn-2c26b8d2af85bb511b3ae5a707237f403954d7313c8d6455e2a17d389f8a04e5",
+          "turnId": "turn-2c26b8d2af85bb511b3ae5a707237f403954d7313c8d6455e2a17d389f8a04e5",
+          "name": "FixtureApproval · 无副作用测试",
+          "input": {
+            "api_key": "[content withheld; bound by digest]",
+            "operation": "仅验证允许/拒绝，不写文件、不执行命令"
+          },
+          "output": {
+            "fixture": true,
+            "sideEffects": false
+          },
+          "status": "succeeded"
+        },
+        "tool-turn-877d1a6a4b54c083cedce6f97ce2c9bc6df0cedcf87fad9accee9b003081778f": {
+          "id": "tool-turn-877d1a6a4b54c083cedce6f97ce2c9bc6df0cedcf87fad9accee9b003081778f",
+          "turnId": "turn-877d1a6a4b54c083cedce6f97ce2c9bc6df0cedcf87fad9accee9b003081778f",
+          "name": "FixtureApproval · 无副作用测试",
+          "input": {
+            "api_key": "[content withheld; bound by digest]",
+            "operation": "仅验证允许/拒绝，不写文件、不执行命令"
+          },
+          "output": {
+            "fixture": true,
+            "sideEffects": false
+          },
+          "status": "succeeded"
+        }
+      },
+      "activeTurnId": null
+    },
+    {
+      "metadata": {
+        "key": {
+          "workspaceId": "approvals",
+          "sessionId": "deny"
+        },
+        "title": "拒绝请求",
+        "projectId": null,
+        "statusId": "todo",
+        "archived": false,
+        "flagged": false,
+        "labels": [],
+        "permissionMode": "ask",
+        "connection": {
+          "connectionId": null,
+          "model": null,
+          "thinking": null
+        },
+        "enabledSources": [],
+        "createdAtMs": 1791005972940,
+        "updatedAtMs": 1791380835489,
+        "lastReadMessageId": "assistant-a2a9e414464ce81830a2937eab6045d57c1f61e3b731b9020d7c434d3aeaa82a"
+      },
+      "notes": "",
+      "importedHistory": null,
+      "approvals": {
+        "approval-turn-a2a9e414464ce81830a2937eab6045d57c1f61e3b731b9020d7c434d3aeaa82a": {
+          "id": "approval-turn-a2a9e414464ce81830a2937eab6045d57c1f61e3b731b9020d7c434d3aeaa82a",
+          "turnId": "turn-a2a9e414464ce81830a2937eab6045d57c1f61e3b731b9020d7c434d3aeaa82a",
+          "toolCallId": "tool-turn-a2a9e414464ce81830a2937eab6045d57c1f61e3b731b9020d7c434d3aeaa82a",
+          "toolName": "FixtureApproval · 无副作用测试",
+          "preview": {
+            "api_key": "[content withheld; bound by digest]",
+            "operation": "仅验证允许/拒绝，不写文件、不执行命令"
+          },
+          "argumentsDigest": "9d8d25cc4aba62e472e5fba4005c6b6e8d4dd9ffdb0d975a0e63659d40b40402",
+          "bindingDigest": "76e22bbfc0095613bdc6ab948ed3519a2bda368877da2e97896bf9821501a22c",
+          "workingDirectory": null,
+          "permissionMode": "ask",
+          "policyVersion": 1,
+          "createdAtMs": 1791380809666,
+          "expiresAtMs": 1791380929666,
+          "resolvedAtMs": 1791380833281,
+          "status": "denied"
+        }
+      },
+      "lastSeq": 69,
+      "metadataRevision": 1,
+      "messages": [
+        {
+          "id": "user-a2a9e414464ce81830a2937eab6045d57c1f61e3b731b9020d7c434d3aeaa82a",
+          "turnId": "turn-a2a9e414464ce81830a2937eab6045d57c1f61e3b731b9020d7c434d3aeaa82a",
+          "role": "user",
+          "parts": [
+            {
+              "type": "text",
+              "id": "user-a2a9e414464ce81830a2937eab6045d57c1f61e3b731b9020d7c434d3aeaa82a",
+              "kind": "text",
+              "text": "deny fixture"
+            }
+          ],
+          "createdAtMs": 1791380809580
+        },
+        {
+          "id": "assistant-a2a9e414464ce81830a2937eab6045d57c1f61e3b731b9020d7c434d3aeaa82a",
+          "turnId": "turn-a2a9e414464ce81830a2937eab6045d57c1f61e3b731b9020d7c434d3aeaa82a",
+          "role": "assistant",
+          "parts": [
+            {
+              "type": "text",
+              "id": "reply",
+              "kind": "text",
+              "text": "这是本地验证模式生成的测试回复。\n\n工作区、会话、流式事件和历史记录均由新的 Rust 内核保存；这段回复没有调用真实模型。"
+            }
+          ],
+          "createdAtMs": 1791380809580
+        }
+      ],
+      "turns": [
+        {
+          "id": "turn-a2a9e414464ce81830a2937eab6045d57c1f61e3b731b9020d7c434d3aeaa82a",
+          "receipt": {
+            "clientRequestId": "4b8b56c5-e914-4f2e-9c46-d7533a0037cb",
+            "turnId": "turn-a2a9e414464ce81830a2937eab6045d57c1f61e3b731b9020d7c434d3aeaa82a",
+            "userMessageId": "user-a2a9e414464ce81830a2937eab6045d57c1f61e3b731b9020d7c434d3aeaa82a",
+            "assistantMessageId": "assistant-a2a9e414464ce81830a2937eab6045d57c1f61e3b731b9020d7c434d3aeaa82a",
+            "acceptedSeq": 2,
+            "requestDigest": "a2a9e414464ce81830a2937eab6045d57c1f61e3b731b9020d7c434d3aeaa82a"
+          },
+          "status": "completed",
+          "configuration": {
+            "connection": {
+              "connectionId": null,
+              "model": null,
+              "thinking": null
+            },
+            "permissionMode": "ask"
+          },
+          "acceptedAtMs": 1791380809580,
+          "startedAtMs": 1791380809608,
+          "endedAtMs": 1791380835391,
+          "binding": {
+            "adapter": "desktop-fixture",
+            "connection": {
+              "connectionId": null,
+              "model": null,
+              "thinking": null
+            },
+            "permissionMode": "ask",
+            "policyVersion": 1,
+            "workingDirectory": null
+          },
+          "error": null
+        }
+      ],
+      "tools": {},
+      "activeTurnId": null
+    },
+    {
+      "metadata": {
+        "key": {
+          "workspaceId": "approvals",
+          "sessionId": "cancel"
+        },
+        "title": "取消等待",
+        "projectId": null,
+        "statusId": "todo",
+        "archived": false,
+        "flagged": false,
+        "labels": [],
+        "permissionMode": "ask",
+        "connection": {
+          "connectionId": null,
+          "model": null,
+          "thinking": null
+        },
+        "enabledSources": [],
+        "createdAtMs": 1791005972998,
+        "updatedAtMs": 1791381102918,
+        "lastReadMessageId": null
+      },
+      "notes": "",
+      "importedHistory": null,
+      "approvals": {
+        "approval-turn-7fe0afc291a4f956d0b7271a1946f459cfe7635998f23cbc3214556c5bbd867c": {
+          "id": "approval-turn-7fe0afc291a4f956d0b7271a1946f459cfe7635998f23cbc3214556c5bbd867c",
+          "turnId": "turn-7fe0afc291a4f956d0b7271a1946f459cfe7635998f23cbc3214556c5bbd867c",
+          "toolCallId": "tool-turn-7fe0afc291a4f956d0b7271a1946f459cfe7635998f23cbc3214556c5bbd867c",
+          "toolName": "FixtureApproval · 无副作用测试",
+          "preview": {
+            "api_key": "[content withheld; bound by digest]",
+            "operation": "仅验证允许/拒绝，不写文件、不执行命令"
+          },
+          "argumentsDigest": "9d8d25cc4aba62e472e5fba4005c6b6e8d4dd9ffdb0d975a0e63659d40b40402",
+          "bindingDigest": "dd9daea9aab418e461de60a973af5487a9f20160c7178700833ff0a97ff4118f",
+          "workingDirectory": null,
+          "permissionMode": "ask",
+          "policyVersion": 1,
+          "createdAtMs": 1791381081448,
+          "expiresAtMs": 1791381201448,
+          "resolvedAtMs": 1791381102918,
+          "status": "cancelled"
+        },
+        "approval-turn-86387df51fc67f1629f4f9df506dff9acb311ad2a9f6e3e2b47dfb17017c4f15": {
+          "id": "approval-turn-86387df51fc67f1629f4f9df506dff9acb311ad2a9f6e3e2b47dfb17017c4f15",
+          "turnId": "turn-86387df51fc67f1629f4f9df506dff9acb311ad2a9f6e3e2b47dfb17017c4f15",
+          "toolCallId": "tool-turn-86387df51fc67f1629f4f9df506dff9acb311ad2a9f6e3e2b47dfb17017c4f15",
+          "toolName": "FixtureApproval · 无副作用测试",
+          "preview": {
+            "api_key": "[content withheld; bound by digest]",
+            "operation": "仅验证允许/拒绝，不写文件、不执行命令"
+          },
+          "argumentsDigest": "9d8d25cc4aba62e472e5fba4005c6b6e8d4dd9ffdb0d975a0e63659d40b40402",
+          "bindingDigest": "7475c407e1b7e07b85ea5981064d9ad28da623de904033d722407ea87f7ab851",
+          "workingDirectory": null,
+          "permissionMode": "ask",
+          "policyVersion": 1,
+          "createdAtMs": 1791381009602,
+          "expiresAtMs": 1791381129602,
+          "resolvedAtMs": 1791381029280,
+          "status": "cancelled"
+        }
+      },
+      "lastSeq": 10,
+      "metadataRevision": 1,
+      "messages": [
+        {
+          "id": "user-86387df51fc67f1629f4f9df506dff9acb311ad2a9f6e3e2b47dfb17017c4f15",
+          "turnId": "turn-86387df51fc67f1629f4f9df506dff9acb311ad2a9f6e3e2b47dfb17017c4f15",
+          "role": "user",
+          "parts": [
+            {
+              "type": "text",
+              "id": "user-86387df51fc67f1629f4f9df506dff9acb311ad2a9f6e3e2b47dfb17017c4f15",
+              "kind": "text",
+              "text": "cancel fixture"
+            }
+          ],
+          "createdAtMs": 1791381009555
+        },
+        {
+          "id": "assistant-86387df51fc67f1629f4f9df506dff9acb311ad2a9f6e3e2b47dfb17017c4f15",
+          "turnId": "turn-86387df51fc67f1629f4f9df506dff9acb311ad2a9f6e3e2b47dfb17017c4f15",
+          "role": "assistant",
+          "parts": [],
+          "createdAtMs": 1791381009555
+        },
+        {
+          "id": "user-7fe0afc291a4f956d0b7271a1946f459cfe7635998f23cbc3214556c5bbd867c",
+          "turnId": "turn-7fe0afc291a4f956d0b7271a1946f459cfe7635998f23cbc3214556c5bbd867c",
+          "role": "user",
+          "parts": [
+            {
+              "type": "text",
+              "id": "user-7fe0afc291a4f956d0b7271a1946f459cfe7635998f23cbc3214556c5bbd867c",
+              "kind": "text",
+              "text": "shutdown fixture"
+            }
+          ],
+          "createdAtMs": 1791381081401
+        },
+        {
+          "id": "assistant-7fe0afc291a4f956d0b7271a1946f459cfe7635998f23cbc3214556c5bbd867c",
+          "turnId": "turn-7fe0afc291a4f956d0b7271a1946f459cfe7635998f23cbc3214556c5bbd867c",
+          "role": "assistant",
+          "parts": [],
+          "createdAtMs": 1791381081401
+        }
+      ],
+      "turns": [
+        {
+          "id": "turn-86387df51fc67f1629f4f9df506dff9acb311ad2a9f6e3e2b47dfb17017c4f15",
+          "receipt": {
+            "clientRequestId": "2663f05c-9c1e-4c75-9e85-0e0321d9ba16",
+            "turnId": "turn-86387df51fc67f1629f4f9df506dff9acb311ad2a9f6e3e2b47dfb17017c4f15",
+            "userMessageId": "user-86387df51fc67f1629f4f9df506dff9acb311ad2a9f6e3e2b47dfb17017c4f15",
+            "assistantMessageId": "assistant-86387df51fc67f1629f4f9df506dff9acb311ad2a9f6e3e2b47dfb17017c4f15",
+            "acceptedSeq": 2,
+            "requestDigest": "86387df51fc67f1629f4f9df506dff9acb311ad2a9f6e3e2b47dfb17017c4f15"
+          },
+          "status": "cancelled",
+          "configuration": {
+            "connection": {
+              "connectionId": null,
+              "model": null,
+              "thinking": null
+            },
+            "permissionMode": "ask"
+          },
+          "acceptedAtMs": 1791381009555,
+          "startedAtMs": 1791381009579,
+          "endedAtMs": 1791381029311,
+          "binding": {
+            "adapter": "desktop-fixture",
+            "connection": {
+              "connectionId": null,
+              "model": null,
+              "thinking": null
+            },
+            "permissionMode": "ask",
+            "policyVersion": 1,
+            "workingDirectory": null
+          },
+          "error": null
+        },
+        {
+          "id": "turn-7fe0afc291a4f956d0b7271a1946f459cfe7635998f23cbc3214556c5bbd867c",
+          "receipt": {
+            "clientRequestId": "bb4ef519-0928-4fd4-83bc-e2d7a28e24e9",
+            "turnId": "turn-7fe0afc291a4f956d0b7271a1946f459cfe7635998f23cbc3214556c5bbd867c",
+            "userMessageId": "user-7fe0afc291a4f956d0b7271a1946f459cfe7635998f23cbc3214556c5bbd867c",
+            "assistantMessageId": "assistant-7fe0afc291a4f956d0b7271a1946f459cfe7635998f23cbc3214556c5bbd867c",
+            "acceptedSeq": 7,
+            "requestDigest": "7fe0afc291a4f956d0b7271a1946f459cfe7635998f23cbc3214556c5bbd867c"
+          },
+          "status": "cancelled",
+          "configuration": {
+            "connection": {
+              "connectionId": null,
+              "model": null,
+              "thinking": null
+            },
+            "permissionMode": "ask"
+          },
+          "acceptedAtMs": 1791381081401,
+          "startedAtMs": 1791381081425,
+          "endedAtMs": 1791381102918,
+          "binding": {
+            "adapter": "desktop-fixture",
+            "connection": {
+              "connectionId": null,
+              "model": null,
+              "thinking": null
+            },
+            "permissionMode": "ask",
+            "policyVersion": 1,
+            "workingDirectory": null
+          },
+          "error": null
+        }
+      ],
+      "tools": {},
+      "activeTurnId": null
+    }
+  ],
+  "secretAbsentFromJournalAndCaches": true,
+  "nativeChecks": [
+    "final build restart renders two cancelled approvals without actions",
+    "final build new request renders redacted credential",
+    "final build allow once consumes one new permit and completes",
+    "fresh core readback verifies all five decisions; no raw fixture secret"
+  ],
+  "appSha256": "7ef36aab1111634aaea280ef2704bcd13716326a209aaba0f21168aa774bc1b7",
+  "sourceSha256": {
+    "crates/loom-core/src/approval.rs": "a4afbdd1798656752caa70475f36126726548b39464f295918773e30310908d8",
+    "crates/loom-core/src/repository/approvals.rs": "50cae366b6fadbd41ef1867159a05404637c0bcea99aae2361fb97c1646bb4fa",
+    "crates/loom-core/src/repository.rs": "8e7e622faf6000e8101fda5c20f60952b4dff0e1021e6bd0e87c3fc2e9690048",
+    "crates/loom-core/src/projection.rs": "af660e555976fca9fa5de794659627fe9e31d618768ee691814f167923e0e569",
+    "crates/loom-core/src/model.rs": "7782ad6e8921c9bf7e204952d51ebd715de217d0fb3131e6296af21d31e2b226",
+    "crates/loom-core/src/api.rs": "cd8918183cb402f461888888a80698b000140eb65913aad84efdd37d3623aea1",
+    "src-tauri/src/workbench/host.rs": "da1c3faeb7542e37d45a0c806cdabec33114894d0a2055b3babfc530893fd21a",
+    "src/workbench/ToolApprovals.tsx": "e536490639906b8fcb87d54fd959ad26638d328cc951093c4b56814b33dbbfe0",
+    "src/workbench/projection.ts": "0c7fe9cf3821757ce97ac4de5e48fd5b799b64e2504d6bb8162fa55f8bd31698",
+    "src/workbench/WorkbenchApp.tsx": "7c5dc3ccd583d2c96476bbe648385fbaaf31870d50dda6ad5c318d7de3afba30",
+    "src/workbench/workbench.css": "13636c2de1b4f8be70167be872a9371779c9f0c294bd0d0ba879d2e95f6c8d43",
+    "packages/protocol/src/workbench.ts": "906c07e10f4f7e07494043508d752f6d8953762c096c65202ce638e182adeb95"
+  },
+  "initialNativeBuild": {
+    "recordedAt": "2026-10-07T21:52:31.242892+08:00",
+    "appSha256": "1aecca6ca565e63a2a9bb5bfdbe4e5fe3290e195847e333ab60a508b35a4f2ed",
+    "sourceSha256": {
+      "crates/loom-core/src/approval.rs": "43ea7e876d47a1aba67dd23822e454b0f027f5b07c485fc8fd4ebb296bf0065d",
+      "crates/loom-core/src/repository/approvals.rs": "50cae366b6fadbd41ef1867159a05404637c0bcea99aae2361fb97c1646bb4fa",
+      "crates/loom-core/src/repository.rs": "8e7e622faf6000e8101fda5c20f60952b4dff0e1021e6bd0e87c3fc2e9690048",
+      "crates/loom-core/src/projection.rs": "af660e555976fca9fa5de794659627fe9e31d618768ee691814f167923e0e569",
+      "crates/loom-core/src/model.rs": "7782ad6e8921c9bf7e204952d51ebd715de217d0fb3131e6296af21d31e2b226",
+      "crates/loom-core/src/api.rs": "cd8918183cb402f461888888a80698b000140eb65913aad84efdd37d3623aea1",
+      "src-tauri/src/workbench/host.rs": "da1c3faeb7542e37d45a0c806cdabec33114894d0a2055b3babfc530893fd21a",
+      "src/workbench/ToolApprovals.tsx": "e536490639906b8fcb87d54fd959ad26638d328cc951093c4b56814b33dbbfe0",
+      "src/workbench/projection.ts": "0c7fe9cf3821757ce97ac4de5e48fd5b799b64e2504d6bb8162fa55f8bd31698",
+      "src/workbench/WorkbenchApp.tsx": "7c5dc3ccd583d2c96476bbe648385fbaaf31870d50dda6ad5c318d7de3afba30",
+      "src/workbench/workbench.css": "13636c2de1b4f8be70167be872a9371779c9f0c294bd0d0ba879d2e95f6c8d43",
+      "packages/protocol/src/workbench.ts": "906c07e10f4f7e07494043508d752f6d8953762c096c65202ce638e182adeb95"
+    },
+    "nativeChecks": [
+      "pending approval visible with redacted api_key",
+      "allow once consumes one permit and one fixture tool",
+      "deny leaves zero executed tools",
+      "stop cancels approval",
+      "Cmd+Q with pending approval persists cancelled turn before exit",
+      "fresh core process reads all terminal records"
+    ]
+  }
+}

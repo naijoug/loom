@@ -1,0 +1,51 @@
+{
+  "recordedAt": "2026-10-09T12:41:20.184993+08:00",
+  "baseCommit": "256877f2d2d438e6f55a420d5045f7c13f1c90ab",
+  "platform": "macOS-26.5.2-arm64-arm-64bit-Mach-O",
+  "checks": {
+    "workspaceTests": 117,
+    "tauriWorkbenchTests": 21,
+    "explicitPiSdkHostTests": 2,
+    "frontendTests": 11,
+    "upstreamSelectorCases": 79,
+    "nativeFixture": "passed: remember/reuse/clear/restart revocation",
+    "previewStopped": true,
+    "realHttp": "not-run; explicit approval pending",
+    "sourceTransports": "not-implemented"
+  },
+  "sourceSha256": {
+    "crates/loom-core/src/remember.rs": "b36f26029885b99ee9b9702094e2d0720b1ab11bb4f6de3cfffcc229ed58174a",
+    "crates/loom-core/src/repository/remembered.rs": "796c302a8337f5a8ba742d4e1e3da8cd37c531f880a0b3a24f6f321540098e73",
+    "crates/loom-core/src/approval.rs": "7d4498bf7251cff99e03d1daf645efa08a7efb5b03e39f7497408e16f054a550",
+    "crates/loom-core/src/repository/approvals.rs": "b06d3eb0607779b2a3efd86ab16d9f5ae64100dd8b5ee9a36d51c1867408c7fa",
+    "crates/loom-core/src/repository.rs": "f759eab5bc8507b4d2074d175264bf65c7d8ce2677448ad3ce9a6b7aed051731",
+    "crates/loom-core/src/model.rs": "a13e395d7397ae156eee8d0e0b4abaf4820ddf2e9697792e7feb3b475bd79b36",
+    "crates/loom-core/src/projection.rs": "6e08546f7b98ec35751a87faf012b524ba4bacc34a9c2eb9b1439e82d4518437",
+    "crates/loom-core/src/api.rs": "a2b3c248e83def09d61b2692109b17ed31efb5d26b72313a71995e075aa20bf6",
+    "crates/loom-core/tests/approvals.rs": "ddfefa3535bf4372b48f5a43d2efba84a89b343cd57ff0ff770ce5f4268231f1",
+    "crates/loom-core/examples/projection_fixture.rs": "fc53f1ebbf6c57a9d7b3ce2f0f8ce2dfda56be6aff457a2e1f88cc68866a227f",
+    "crates/loom-runtime/src/policy/remember.rs": "712886205181cdc50f325959f2167ae5e75ebd786023cc7c35e81ade4e64f8a1",
+    "crates/loom-runtime/src/policy.rs": "94bf409a1ceacb3cb1b8add19488ac91bf79c80419111271e2aa9592277725b3",
+    "crates/loom-runtime/src/core_bridge.rs": "05ce4a3e636e6d1c876fce7cc5ca214895a1aa36eb9aa4a8db52023cc9d693ec",
+    "crates/loom-runtime/tests/remember_keys.rs": "e20c1c94237972725428a0edaca1d3dd60fc64470384af18a52ceaf22567bd72",
+    "crates/loom-runtime/tests/tool_policy.rs": "224b975772b9be6fbdb1e3e206704403d302f630f9349b9763691b6edfcb531e",
+    "crates/loom-runtime/tests/fixtures/craft-remember-cases.json": "e20b01189706f0c0310fabcc5135bf5c917aa8352fe268f735172a3e549cc2b1",
+    "scripts/generate-craft-remember-cases.ts": "496b068061fd8612c980379089191a535c98182a44942472b3981405fea75544",
+    "src-tauri/src/workbench/host.rs": "4ddfff8de694eca3307977a13b8ea274479182f7085e7c151c8933e93b0404d9",
+    "src-tauri/src/workbench/runtime.rs": "ccbf383c30521ee626f2316ad773d502ee64f43111f5f1c8b5f090928ad52385",
+    "src/workbench/ToolApprovals.tsx": "bd877aff51781ae9200ebf8de4ef66ef04702c80aebe7b009a1713260ead806a",
+    "src/workbench/projection.ts": "67ca4b6e06fffd5bfff8a19c589c0156a208ea64d6737cba4c517314e74676eb",
+    "src/workbench/workbench.css": "b5f941a6a0ec3d8316fabfe560df5ce1edbb8f6db5ce141772712810ddc3cf00",
+    "packages/protocol/src/workbench.ts": "50f7c71402138e9cbef46f2095982cd42a4ebb25f5425ae9beff6506b1708926",
+    "tests/unit/toolRememberedApprovals.test.cjs": "5f894873d5580919afd70f2eeb5650c47cceaf80804954dada728b1c65e4a5b6"
+  },
+  "localLogSha256": {
+    ".tmp/remember-validation/core-check.log": "502ac62ae8c5d353ec13ecdcfa64f8ad9e4bcd7bf05f191aa8497f951499afd2",
+    ".tmp/remember-validation/frontend-build.log": "2c3acc854b75bccd966398e64aeb7a142550a8796ec787a9d05c877c9c483294",
+    ".tmp/remember-validation/frontend-test.log": "0a0edc5c87641140bd94947ad8a71238542f15a5f9d96f5865abaa919c2c5fd9",
+    ".tmp/remember-validation/host-clippy.log": "3882be5cad83ccfc84b389c2c911ae94c4a66b9d4898c68fd0e3f870bee86b00",
+    ".tmp/remember-validation/host-pi-sdk.log": "203ae7ef4ce0c826a522bc38761651669984cb8a28346ffc7fe7ea3a7a5df395",
+    ".tmp/remember-validation/host-test.log": "201471aa05659ca75ee73a0c30d5f959fc359355ea9d9368c58deeb7963384c3",
+    ".tmp/remember-validation/native-build.log": "a22367a6a0548d70694b1137a5f0f0375595cb11e4a884edf7c1b591351d0769"
+  }
+}

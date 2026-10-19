@@ -1,0 +1,45 @@
+Window: "Loom", App: Loom.
+0 standard window Loom, Secondary Actions: Raise
+	1 scroll area
+		2 HTML content Description: Loom, URL: tauri://localhost
+			3 container 模型连接
+				4 container
+					5 heading 模型连接, Value: 2
+						6 text 模型连接
+					7 button 关闭模型连接
+				8 container 已保存模型连接
+					9 button ＋ 新建连接
+					10 button M2 本机验收连接（保留凭据） 凭据已保存 · 未验证
+				11 container
+					12 text 名称
+					13 text field (settable) 连接名称, Value: M2 本机验收连接（保留凭据）
+					14 text 运行后端
+					15 pop up button 连接后端, Value: Claude Agent SDK
+					16 text API 地址 （可选覆盖）
+					17 text field (settable) API 地址, Value: http://127.0.0.1:18765, Placeholder: https://… 或本机 HTTP 地址
+					18 text 认证方式
+					19 pop up button 认证方式, Value: API Key
+					20 text 替换凭据（留空保留）
+					21 secure text field (settable) 连接凭据
+					22 text 凭据由系统凭据库保存，不会回显。更改提供方或端点时请重新输入。 模型 ID（每行一个）
+					23 text entry area (settable) 模型 ID 列表, Value: [text entry area: 模型 ID 列表]
+						24 text (settable) claude-sonnet-4-6
+					25 text 默认模型
+					26 text field (settable) 默认模型, Value: claude-sonnet-4-6, Placeholder: 留空使用列表中的第一个
+					27 checkbox 此端点支持图像输入, Value: 0
+					28 text 此端点支持图像输入 回复中发送新消息
+					29 pop up button 回复中消息行为, Value: 排队
+					30 text 凭据存储：macOS 钥匙串
+					31 button 保存连接
+	32 close button
+	33 full screen button Help: this button also has an action to zoom the window, Secondary Actions: zoom the window
+	34 minimize button
+35 menu bar
+	36 Loom
+	37 File
+	38 Edit
+	39 View
+	40 Window
+	41 Help
+
+The focused UI element is 13 text field (settable) 连接名称, Value: M2 本机验收连接（保留凭据）

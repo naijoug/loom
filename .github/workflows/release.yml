@@ -1,0 +1,174 @@
+name: macOS Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing stable version tag (vX.Y.Z)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: macos-release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+  LOOM_RELEASE_REPOSITORY: ${{ vars.LOOM_RELEASE_REPOSITORY || github.repository }}
+  LOOM_UPDATER_PUBLIC_KEY: ${{ vars.LOOM_UPDATER_PUBLIC_KEY }}
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ env.RELEASE_TAG }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate version and public updater configuration
+        run: node scripts/prepare-app-release.mjs
+      - name: Install Linux Tauri dependencies
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy,rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+
+  build:
+    needs: verify
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: aarch64-apple-darwin
+            runner: macos-15
+          - target: x86_64-apple-darwin
+            runner: macos-15-intel
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ env.RELEASE_TAG }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: pnpm install --frozen-lockfile
+      - name: Require signing and notarization credentials
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ vars.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+        run: |
+          node --input-type=module <<'JS'
+          for (const key of ['TAURI_SIGNING_PRIVATE_KEY','APPLE_CERTIFICATE','APPLE_CERTIFICATE_PASSWORD','APPLE_SIGNING_IDENTITY','APPLE_ID','APPLE_PASSWORD','APPLE_TEAM_ID']) {
+            if (!process.env[key]) throw new Error(`Missing configuration: ${key}`);
+          }
+          JS
+      - run: node scripts/prepare-app-release.mjs
+      - name: Build signed and notarized bundles
+        uses: tauri-apps/tauri-action@v0
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ vars.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+        with:
+          args: --target ${{ matrix.target }} --config ${{ github.workspace }}/.tmp/tauri.updater.conf.json --bundles app,dmg
+          # Stage both architectures before creating a Release or latest.json.
+          includeUpdaterJson: false
+      - name: Verify signed application and notarization ticket
+        env:
+          BUILD_TARGET: ${{ matrix.target }}
+        run: |
+          codesign --verify --deep --strict --verbose=2 "src-tauri/target/$BUILD_TARGET/release/bundle/macos/Loom.app"
+          spctl --assess --type execute --verbose=2 "src-tauri/target/$BUILD_TARGET/release/bundle/macos/Loom.app"
+          xcrun stapler validate "src-tauri/target/$BUILD_TARGET/release/bundle/macos/Loom.app"
+      - name: Stage uniquely named release assets
+        env:
+          BUILD_TARGET: ${{ matrix.target }}
+        run: node scripts/package-app-release.mjs stage .tmp/release-assets "$BUILD_TARGET"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.target }}
+          path: .tmp/release-assets/*
+          if-no-files-found: error
+          retention-days: 14
+
+  draft-release:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ env.RELEASE_TAG }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: .tmp/release-assets
+          merge-multiple: true
+      - run: node scripts/package-app-release.mjs manifest .tmp/release-assets
+      - name: Create or resume draft only
+        env:
+          GH_TOKEN: ${{ secrets.LOOM_RELEASE_TOKEN || github.token }}
+        run: |
+          node --input-type=module <<'JS'
+          import {execFileSync} from 'node:child_process';
+          import {writeFileSync,readdirSync} from 'node:fs';
+          const repo=process.env.LOOM_RELEASE_REPOSITORY, tag=process.env.RELEASE_TAG;
+          // Missing release is distinguished from auth/network failures by a successful listing.
+          const releases=JSON.parse(execFileSync('gh',['api','--paginate','--slurp',`repos/${repo}/releases?per_page=100`],{encoding:'utf8'})).flat();
+          const metadata=JSON.parse(execFileSync('gh',['api',`repos/${repo}`],{encoding:'utf8'}));
+          if(metadata.private)throw new Error('Updater assets must be in a public release repository');
+          const existing=releases.find(r=>r.tag_name===tag);
+          if(existing&&!existing.draft)throw new Error('Refusing to overwrite a published release');
+          if(!existing){
+            writeFileSync('.tmp/release-notes.md',`Loom ${tag}\n\nmacOS Apple Silicon / Intel。请先将 Loom.app 安装到应用程序目录。\n\n发布前完成 docs/release/app-updates.md 的真实升级验收，并将实际更新说明写入本 Release 和 latest.json。\n`);
+            const sha=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
+            const args=['release','create',tag,'--repo',repo,'--draft','--title',`Loom ${tag}`,'--notes-file','.tmp/release-notes.md'];
+            if(repo===process.env.GITHUB_REPOSITORY)args.push('--verify-tag','--target',sha);
+            execFileSync('gh',args,{stdio:'inherit'});
+          }
+          const paths=readdirSync('.tmp/release-assets').filter(n=>n!=='latest.json').map(n=>`.tmp/release-assets/${n}`);
+          execFileSync('gh',['release','upload',tag,'--repo',repo,'--clobber',...paths],{stdio:'inherit'});
+          execFileSync('gh',['release','upload',tag,'--repo',repo,'--clobber','.tmp/release-assets/latest.json'],{stdio:'inherit'});
+          JS

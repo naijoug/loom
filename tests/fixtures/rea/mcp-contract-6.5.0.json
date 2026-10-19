@@ -1,0 +1,4121 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-10-15T03:30:35.409Z",
+  "package": {
+    "name": "rea-agents",
+    "version": "6.5.0"
+  },
+  "transport": "stdio",
+  "initialize": {
+    "protocolVersion": "2025-06-18",
+    "serverInfo": {
+      "name": "rea",
+      "version": "6.5.0"
+    },
+    "capabilities": {
+      "tools": {
+        "listChanged": true
+      },
+      "completions": {},
+      "prompts": {
+        "listChanged": true
+      }
+    }
+  },
+  "catalog": {
+    "counts": {
+      "cli_commands": 153,
+      "mcp_tools": 207,
+      "mcp_prompts": 6
+    },
+    "digests": {
+      "tools_sha256": "805433f17bb4f709558ff20c04f96fe561fca2938fd0f459b1f8cc0f6b438ded",
+      "prompts_sha256": "7152916ab48bd2a9677a5ad9cdbde0a51dc53c113934952ad096e93f5f18aa7e",
+      "combined_sha256": "405725e736ec8dc8483435b970acbf20f9f26b9f1fd25203b992f5ab4cd2a4f4"
+    }
+  },
+  "toolsDigest": "dc7a8a58fbac9026cfda4520c13e4df6a92f1fe5390b12a10a2f5c7f561332d8",
+  "tools": [
+    "address_name",
+    "address_to_file_offset",
+    "analyze_function",
+    "analyze_javascript_application",
+    "analyze_swift_types",
+    "analyze_web_bundle",
+    "annotate_native_function",
+    "batch_decompile",
+    "binary_overview",
+    "binary_session",
+    "build_call_path",
+    "build_reconstruction_obligation_ledger",
+    "capture_adb_screen",
+    "capture_browser_scenario",
+    "capture_electron_scenario",
+    "capture_native_ui_scenario",
+    "capture_process_scenario",
+    "capture_web_screenshot",
+    "close_binary",
+    "close_frida_session",
+    "close_gdb_session",
+    "close_rizin_debug_session",
+    "collect_adb_bugreport",
+    "comment",
+    "compare_application_versions",
+    "compare_artifacts",
+    "compare_bundles",
+    "compare_functions",
+    "compare_javascript_export_shapes",
+    "compare_managed_members",
+    "compare_process_captures",
+    "compare_source_to_bundle",
+    "compare_wasm_interfaces",
+    "compare_web_captures",
+    "compare_web_screenshots",
+    "correlate_static_and_runtime",
+    "current_address",
+    "current_document",
+    "current_procedure",
+    "cutter_command",
+    "decode_android_resources",
+    "decode_interface_builder",
+    "decode_signal_recording",
+    "decompile_jeb_item",
+    "demangle_swift",
+    "discover_webmcp_tools",
+    "evaluate_reconstruction_coverage",
+    "execute_rizin_command",
+    "export_evidence_bundle",
+    "export_web_scripts",
+    "extract_artifact",
+    "extract_firmware",
+    "find_changed_behavior",
+    "find_xrefs_to_name",
+    "frida_session_status",
+    "gdb_console",
+    "gdb_session_status",
+    "get_call_graph",
+    "get_evidence_bundle",
+    "get_navigation_context",
+    "get_objc_classes",
+    "get_objc_protocols",
+    "goto_address",
+    "identify_flutter_build",
+    "import_evidence_bundle",
+    "import_managed_reconstruction",
+    "inline_comment",
+    "inspect_adb_client",
+    "inspect_adb_device",
+    "inspect_adb_display",
+    "inspect_adb_package",
+    "inspect_adb_window",
+    "inspect_address_context",
+    "inspect_analysis_view",
+    "inspect_android_class",
+    "inspect_android_method",
+    "inspect_android_package",
+    "inspect_apktool_client",
+    "inspect_artifact",
+    "inspect_asset_catalog",
+    "inspect_binary_layout",
+    "inspect_dart_aot",
+    "inspect_electron_fuses",
+    "inspect_electron_page",
+    "inspect_evm_interface",
+    "inspect_firmware_regions",
+    "inspect_go_binary",
+    "inspect_jeb_client",
+    "inspect_keyed_archive",
+    "inspect_macho",
+    "inspect_managed_artifact",
+    "inspect_managed_members",
+    "inspect_managed_native_boundaries",
+    "inspect_native_api",
+    "inspect_native_data_type",
+    "inspect_native_dispatch_metadata",
+    "inspect_native_instruction",
+    "inspect_native_load_image",
+    "inspect_packet_capture",
+    "inspect_packet_fields",
+    "inspect_pcap_capture",
+    "inspect_pcap_client",
+    "inspect_pe_resources",
+    "inspect_plist",
+    "inspect_recorded_crash",
+    "inspect_rust_binary",
+    "inspect_signal_decoders",
+    "inspect_signature",
+    "inspect_sqlite_database",
+    "inspect_wasm_artifact",
+    "inspect_web_event_listeners",
+    "inspect_web_network_capture",
+    "inspect_web_page",
+    "inspect_with_objdump",
+    "install_adb_package",
+    "instrument_with_frida",
+    "list_adb_devices",
+    "list_adb_directory",
+    "list_adb_features",
+    "list_adb_packages",
+    "list_adb_processes",
+    "list_adb_services",
+    "list_architectures",
+    "list_bookmarks",
+    "list_browser_targets",
+    "list_cutter_sessions",
+    "list_documents",
+    "list_electron_targets",
+    "list_frida_devices",
+    "list_frida_processes",
+    "list_javascript_runtime_targets",
+    "list_jeb_units",
+    "list_names",
+    "list_procedures",
+    "list_segments",
+    "list_strings",
+    "list_unknowns",
+    "load_frida_script",
+    "next_address",
+    "observe_javascript_runtime",
+    "observe_native_calls",
+    "observe_native_ui",
+    "observe_web_execution",
+    "observe_web_session",
+    "open_binary",
+    "open_jeb_project",
+    "prev_address",
+    "procedure_address",
+    "procedure_assembly",
+    "procedure_callees",
+    "procedure_callers",
+    "procedure_info",
+    "procedure_pseudo_code",
+    "procedure_references",
+    "project_android_application_graph",
+    "project_apple_application_graph",
+    "project_harmony_application_graph",
+    "project_managed_application_graph",
+    "pull_adb_file",
+    "pull_adb_package",
+    "push_adb_file",
+    "read_adb_logcat",
+    "read_adb_setting",
+    "read_bytes",
+    "read_function_instructions",
+    "reconcile_javascript_runtime",
+    "record_unknown",
+    "recover_javascript_sources",
+    "resolve_adb_packages",
+    "resolve_containing_procedure",
+    "resolve_native_call_targets",
+    "resume_frida_session",
+    "rizin_debug_command",
+    "rizin_debug_session_status",
+    "search_android_classes",
+    "search_bytes",
+    "search_procedures",
+    "search_strings",
+    "set_address_name",
+    "set_addresses_names",
+    "set_bookmark",
+    "set_comment",
+    "set_inline_comment",
+    "start_adb_activity",
+    "start_adb_app",
+    "start_frida_session",
+    "start_gdb_session",
+    "start_rizin_debug_session",
+    "stop_adb_app",
+    "trace_android_references",
+    "trace_application_feature",
+    "trace_call_path",
+    "trace_dylib_resolution",
+    "trace_feature",
+    "trace_javascript_semantics",
+    "trace_native_ui_action",
+    "trace_native_values",
+    "trace_web_module_imports",
+    "trace_web_source_location",
+    "uninstall_adb_package",
+    "unload_frida_script",
+    "unset_bookmark",
+    "update_unknown",
+    "verify_managed_native_boundaries",
+    "verify_reconstruction",
+    "verify_unknown_resolution",
+    "xrefs"
+  ],
+  "toolsListVersion": 1,
+  "binarySession": {
+    "clientFeatures": {
+      "elicitation_form": false,
+      "elicitation_url": false,
+      "roots": false,
+      "sampling": false
+    },
+    "open": false,
+    "groups": [
+      {
+        "names": [
+          "address_name",
+          "address_to_file_offset",
+          "comment",
+          "current_address",
+          "current_document",
+          "current_procedure",
+          "inline_comment",
+          "inspect_native_data_type",
+          "inspect_native_instruction",
+          "inspect_native_load_image",
+          "list_bookmarks",
+          "list_documents",
+          "list_names",
+          "list_procedures",
+          "list_segments",
+          "list_strings",
+          "next_address",
+          "prev_address",
+          "procedure_address",
+          "procedure_assembly",
+          "procedure_callees",
+          "procedure_callers",
+          "procedure_info",
+          "procedure_pseudo_code",
+          "procedure_references",
+          "read_bytes",
+          "read_function_instructions",
+          "resolve_containing_procedure",
+          "resolve_native_call_targets",
+          "search_bytes",
+          "search_procedures",
+          "search_strings",
+          "xrefs"
+        ],
+        "surface": "official-proxy",
+        "effects": [
+          "mutatesSession",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent"
+        ],
+        "available": false,
+        "reason": "target_required",
+        "remediation": "Call open_binary with a supported local target.",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "analyze_function",
+          "analyze_swift_types",
+          "batch_decompile",
+          "binary_overview",
+          "find_xrefs_to_name",
+          "get_call_graph",
+          "get_objc_classes",
+          "get_objc_protocols",
+          "inspect_native_dispatch_metadata",
+          "trace_native_ui_action",
+          "trace_native_values"
+        ],
+        "surface": "enhanced",
+        "effects": [
+          "mutatesSession",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent"
+        ],
+        "available": false,
+        "reason": "target_required",
+        "remediation": "Call open_binary with a supported local target.",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "analyze_javascript_application",
+          "reconcile_javascript_runtime"
+        ],
+        "surface": "electron-provider",
+        "effects": [
+          "mutatesSession",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent"
+        ],
+        "available": true,
+        "reason": "available",
+        "remediation": null,
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "analyze_web_bundle",
+          "capture_web_screenshot",
+          "discover_webmcp_tools",
+          "inspect_web_event_listeners",
+          "inspect_web_page",
+          "list_browser_targets",
+          "observe_web_session"
+        ],
+        "surface": "browser-provider",
+        "effects": [
+          "mutatesSession",
+          "accessesNetwork",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent",
+          "open_world"
+        ],
+        "available": true,
+        "reason": "available",
+        "remediation": null,
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "annotate_native_function"
+        ],
+        "surface": "official-proxy",
+        "effects": [
+          "mutatesTarget",
+          "mutatesSession",
+          "writesFilesystem",
+          "launchesProcess",
+          "mayDiscardData",
+          "idempotent"
+        ],
+        "annotations": [
+          "destructive",
+          "idempotent",
+          "open_world"
+        ],
+        "available": false,
+        "reason": "target_required",
+        "remediation": "Call open_binary with a supported local target.",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "binary_session"
+        ],
+        "surface": "session",
+        "effects": [
+          "launchesProcess",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent",
+          "open_world"
+        ],
+        "available": true,
+        "reason": "available",
+        "remediation": null,
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "build_call_path",
+          "compare_artifacts",
+          "compare_bundles",
+          "compare_functions",
+          "compare_process_captures",
+          "correlate_static_and_runtime",
+          "find_changed_behavior",
+          "import_evidence_bundle",
+          "inspect_address_context",
+          "verify_reconstruction"
+        ],
+        "surface": "session",
+        "effects": [
+          "mutatesSession",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent"
+        ],
+        "available": true,
+        "reason": "available",
+        "remediation": null,
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "build_reconstruction_obligation_ledger",
+          "compare_application_versions",
+          "compare_javascript_export_shapes",
+          "compare_managed_members",
+          "compare_source_to_bundle",
+          "compare_wasm_interfaces",
+          "import_managed_reconstruction",
+          "inspect_analysis_view",
+          "project_android_application_graph",
+          "project_apple_application_graph",
+          "project_harmony_application_graph",
+          "project_managed_application_graph",
+          "trace_application_feature",
+          "trace_javascript_semantics",
+          "verify_managed_native_boundaries"
+        ],
+        "surface": "application",
+        "effects": [
+          "mutatesSession",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent"
+        ],
+        "available": true,
+        "reason": "available",
+        "remediation": null,
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "capture_adb_screen",
+          "collect_adb_bugreport",
+          "pull_adb_file",
+          "pull_adb_package"
+        ],
+        "surface": "adb-provider",
+        "effects": [
+          "mutatesSession",
+          "writesFilesystem",
+          "launchesProcess",
+          "accessesNetwork"
+        ],
+        "annotations": [
+          "open_world"
+        ],
+        "available": false,
+        "reason": "provider_unavailable",
+        "remediation": "The selected adb binary was not found: adb",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "capture_browser_scenario"
+        ],
+        "surface": "browser-provider",
+        "effects": [
+          "mutatesTarget",
+          "mutatesSession",
+          "writesFilesystem",
+          "launchesProcess",
+          "accessesNetwork",
+          "changesUiState",
+          "mayDiscardData",
+          "executesForeignCode"
+        ],
+        "annotations": [
+          "destructive",
+          "open_world"
+        ],
+        "available": true,
+        "reason": "available",
+        "remediation": null,
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "capture_electron_scenario"
+        ],
+        "surface": "electron-provider",
+        "effects": [
+          "mutatesTarget",
+          "mutatesSession",
+          "writesFilesystem",
+          "launchesProcess",
+          "accessesNetwork",
+          "changesUiState",
+          "mayDiscardData",
+          "executesForeignCode"
+        ],
+        "annotations": [
+          "destructive",
+          "open_world"
+        ],
+        "available": true,
+        "reason": "available",
+        "remediation": null,
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "capture_native_ui_scenario",
+          "rizin_debug_command"
+        ],
+        "surface": "native-provider",
+        "effects": [
+          "mutatesTarget",
+          "mutatesSession",
+          "writesFilesystem",
+          "launchesProcess",
+          "accessesNetwork",
+          "changesUiState",
+          "mayDiscardData",
+          "executesForeignCode"
+        ],
+        "annotations": [
+          "destructive",
+          "open_world"
+        ],
+        "available": false,
+        "reason": "target_required",
+        "remediation": "Call open_binary with a supported local target.",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "capture_process_scenario"
+        ],
+        "surface": "session",
+        "effects": [
+          "mutatesSession",
+          "writesFilesystem",
+          "launchesProcess",
+          "accessesNetwork",
+          "executesForeignCode"
+        ],
+        "annotations": [
+          "destructive",
+          "open_world"
+        ],
+        "available": true,
+        "reason": "available",
+        "remediation": null,
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "close_binary"
+        ],
+        "surface": "session",
+        "effects": [
+          "mutatesSession",
+          "writesFilesystem",
+          "mayDiscardData"
+        ],
+        "annotations": [
+          "destructive"
+        ],
+        "available": true,
+        "reason": "available",
+        "remediation": null,
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "close_frida_session",
+          "start_frida_session",
+          "unload_frida_script"
+        ],
+        "surface": "native-provider",
+        "effects": [
+          "mutatesTarget",
+          "mutatesSession",
+          "launchesProcess",
+          "accessesNetwork"
+        ],
+        "annotations": [
+          "open_world"
+        ],
+        "available": true,
+        "reason": "available",
+        "remediation": null,
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "close_gdb_session",
+          "start_rizin_debug_session"
+        ],
+        "surface": "native-provider",
+        "effects": [
+          "mutatesTarget",
+          "mutatesSession",
+          "launchesProcess",
+          "executesForeignCode"
+        ],
+        "annotations": [
+          "destructive",
+          "open_world"
+        ],
+        "available": false,
+        "reason": "target_required",
+        "remediation": "Call open_binary with a supported local target.",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "close_rizin_debug_session"
+        ],
+        "surface": "native-provider",
+        "effects": [
+          "mutatesTarget",
+          "mutatesSession",
+          "launchesProcess",
+          "executesForeignCode",
+          "idempotent"
+        ],
+        "annotations": [
+          "destructive",
+          "idempotent",
+          "open_world"
+        ],
+        "available": false,
+        "reason": "target_required",
+        "remediation": "Call open_binary with a supported local target.",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "compare_web_captures",
+          "compare_web_screenshots"
+        ],
+        "surface": "browser-provider",
+        "effects": [
+          "mutatesSession",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent"
+        ],
+        "available": true,
+        "reason": "available",
+        "remediation": null,
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "cutter_command"
+        ],
+        "surface": "native-provider",
+        "effects": [
+          "mutatesTarget",
+          "mutatesSession",
+          "writesFilesystem",
+          "launchesProcess",
+          "accessesNetwork",
+          "changesUiState",
+          "executesForeignCode"
+        ],
+        "annotations": [
+          "destructive",
+          "open_world"
+        ],
+        "available": false,
+        "reason": "target_required",
+        "remediation": "Call open_binary with a supported local target.",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "decode_android_resources"
+        ],
+        "surface": "apktool-provider",
+        "effects": [
+          "mutatesSession",
+          "writesFilesystem",
+          "launchesProcess",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent",
+          "open_world"
+        ],
+        "available": false,
+        "reason": "provider_unavailable",
+        "remediation": "The selected apktool launcher was not found: apktool",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "decode_interface_builder",
+          "inspect_keyed_archive",
+          "trace_dylib_resolution"
+        ],
+        "surface": "artifact-provider",
+        "effects": [
+          "mutatesSession",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent"
+        ],
+        "available": false,
+        "reason": "target_required",
+        "remediation": "Call open_binary with a supported local target.",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "decode_signal_recording",
+          "inspect_signal_decoders"
+        ],
+        "surface": "artifact-provider",
+        "effects": [
+          "mutatesSession",
+          "writesFilesystem",
+          "launchesProcess",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent",
+          "open_world"
+        ],
+        "available": false,
+        "reason": "provider_missing",
+        "remediation": "On Linux, supply sigrok-cli 0.7.2 via absolute REA_SIGROK_COMMAND and util-linux prlimit (REA_SIGROK_PRLIMIT_COMMAND, default /usr/bin/prlimit). No active binary target or hardware is required; the tool is checked at execution.",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "decompile_jeb_item",
+          "inspect_jeb_client",
+          "list_jeb_units"
+        ],
+        "surface": "jeb-provider",
+        "effects": [
+          "mutatesSession",
+          "accessesNetwork",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent",
+          "open_world"
+        ],
+        "available": false,
+        "reason": "provider_missing",
+        "remediation": "Start a JEB client serving MCP (GUI client, or headless via its programmatic launcher) and point REA_JEB_MCP_URL at it (default http://127.0.0.1:8425/mcp). REA does not install or launch JEB.",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "demangle_swift",
+          "inspect_macho",
+          "inspect_plist",
+          "inspect_signature",
+          "inspect_with_objdump",
+          "list_architectures"
+        ],
+        "surface": "native-provider",
+        "effects": [
+          "mutatesSession",
+          "launchesProcess",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent",
+          "open_world"
+        ],
+        "available": false,
+        "reason": "target_required",
+        "remediation": "Call open_binary with a supported local target.",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "evaluate_reconstruction_coverage"
+        ],
+        "surface": "application",
+        "effects": [
+          "idempotent"
+        ],
+        "annotations": [
+          "read_only",
+          "idempotent"
+        ],
+        "available": true,
+        "reason": "available",
+        "remediation": null,
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "execute_rizin_command"
+        ],
+        "surface": "native-provider",
+        "effects": [
+          "mutatesTarget",
+          "mutatesSession",
+          "writesFilesystem",
+          "launchesProcess",
+          "accessesNetwork",
+          "mayDiscardData",
+          "executesForeignCode"
+        ],
+        "annotations": [
+          "destructive",
+          "open_world"
+        ],
+        "available": false,
+        "reason": "target_required",
+        "remediation": "Call open_binary with a supported local target.",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "export_evidence_bundle"
+        ],
+        "surface": "session",
+        "effects": [
+          "writesFilesystem",
+          "mayDiscardData",
+          "idempotent"
+        ],
+        "annotations": [
+          "destructive",
+          "idempotent"
+        ],
+        "available": true,
+        "reason": "available",
+        "remediation": null,
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "export_web_scripts"
+        ],
+        "surface": "application",
+        "effects": [
+          "mutatesSession",
+          "writesFilesystem"
+        ],
+        "annotations": [],
+        "available": true,
+        "reason": "available",
+        "remediation": null,
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "extract_artifact"
+        ],
+        "surface": "artifact-provider",
+        "effects": [
+          "mutatesSession",
+          "writesFilesystem",
+          "launchesProcess"
+        ],
+        "annotations": [
+          "open_world"
+        ],
+        "available": false,
+        "reason": "target_required",
+        "remediation": "Call open_binary with a supported local target.",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "extract_firmware"
+        ],
+        "surface": "firmware-provider",
+        "effects": [
+          "mutatesSession",
+          "writesFilesystem",
+          "launchesProcess"
+        ],
+        "annotations": [
+          "open_world"
+        ],
+        "available": false,
+        "reason": "provider_missing",
+        "remediation": "On Linux, provide an absolute REA_BINWALK_COMMAND (Binwalk 3.1.x, verified with 3.1.0) or REA_UNBLOB_COMMAND (Unblob 26.6.x, verified with 26.6.4) path and util-linux prlimit. Extraction also requires the selected format’s external extractor.",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "frida_session_status"
+        ],
+        "surface": "native-provider",
+        "effects": [
+          "idempotent"
+        ],
+        "annotations": [
+          "read_only",
+          "idempotent"
+        ],
+        "available": true,
+        "reason": "available",
+        "remediation": null,
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "gdb_console"
+        ],
+        "surface": "native-provider",
+        "effects": [
+          "mutatesTarget",
+          "mutatesSession",
+          "writesFilesystem",
+          "launchesProcess",
+          "accessesNetwork",
+          "executesForeignCode"
+        ],
+        "annotations": [
+          "destructive",
+          "open_world"
+        ],
+        "available": false,
+        "reason": "target_required",
+        "remediation": "Call open_binary with a supported local target.",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "gdb_session_status"
+        ],
+        "surface": "native-provider",
+        "effects": [
+          "idempotent"
+        ],
+        "annotations": [
+          "read_only",
+          "idempotent"
+        ],
+        "available": false,
+        "reason": "target_required",
+        "remediation": "Call open_binary with a supported local target.",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "get_evidence_bundle",
+          "list_unknowns",
+          "verify_unknown_resolution"
+        ],
+        "surface": "session",
+        "effects": [
+          "idempotent"
+        ],
+        "annotations": [
+          "read_only",
+          "idempotent"
+        ],
+        "available": true,
+        "reason": "available",
+        "remediation": null,
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "get_navigation_context"
+        ],
+        "surface": "session",
+        "effects": [
+          "mutatesSession",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent"
+        ],
+        "available": false,
+        "reason": "provider_missing",
+        "remediation": "Configure a provider for one of: current_document, current_address, resolve_containing_procedure.",
+        "defaultModeAvailable": false,
+        "modes": [
+          {
+            "name": "current_selection",
+            "available": false,
+            "missingOperations": [
+              "current_document",
+              "current_address",
+              "resolve_containing_procedure"
+            ],
+            "remediation": "Configure a provider for required operation current_document."
+          },
+          {
+            "name": "explicit_document",
+            "available": false,
+            "missingOperations": [
+              "current_address",
+              "resolve_containing_procedure"
+            ],
+            "remediation": "Configure a provider for required operation current_address."
+          }
+        ]
+      },
+      {
+        "names": [
+          "goto_address"
+        ],
+        "surface": "official-proxy",
+        "effects": [
+          "mutatesSession",
+          "changesUiState",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent"
+        ],
+        "available": false,
+        "reason": "target_required",
+        "remediation": "Call open_binary with a supported local target.",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "identify_flutter_build",
+          "inspect_dart_aot"
+        ],
+        "surface": "flutter-provider",
+        "effects": [
+          "mutatesSession",
+          "writesFilesystem",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent"
+        ],
+        "available": true,
+        "reason": "available",
+        "remediation": null,
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "inspect_adb_client"
+        ],
+        "surface": "adb-provider",
+        "effects": [
+          "mutatesSession",
+          "launchesProcess",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent",
+          "open_world"
+        ],
+        "available": false,
+        "reason": "provider_unavailable",
+        "remediation": "The selected adb binary was not found: adb",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "inspect_adb_device",
+          "inspect_adb_display",
+          "inspect_adb_package",
+          "inspect_adb_window",
+          "list_adb_devices",
+          "list_adb_directory",
+          "list_adb_features",
+          "list_adb_packages",
+          "list_adb_processes",
+          "list_adb_services",
+          "read_adb_logcat",
+          "read_adb_setting",
+          "resolve_adb_packages"
+        ],
+        "surface": "adb-provider",
+        "effects": [
+          "mutatesSession",
+          "launchesProcess",
+          "accessesNetwork",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent",
+          "open_world"
+        ],
+        "available": false,
+        "reason": "provider_unavailable",
+        "remediation": "The selected adb binary was not found: adb",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "inspect_android_class",
+          "inspect_android_method",
+          "inspect_android_package",
+          "search_android_classes",
+          "trace_android_references"
+        ],
+        "surface": "android-provider",
+        "effects": [
+          "mutatesSession",
+          "writesFilesystem",
+          "launchesProcess",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent",
+          "open_world"
+        ],
+        "available": false,
+        "reason": "provider_missing",
+        "remediation": "Set REA_JADX_MCP_JAR to the absolute path of a caller-supplied jadx-headless-mcp 0.7.1 JAR. REA does not download or install it.",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "inspect_apktool_client"
+        ],
+        "surface": "apktool-provider",
+        "effects": [
+          "mutatesSession",
+          "launchesProcess",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent",
+          "open_world"
+        ],
+        "available": false,
+        "reason": "provider_unavailable",
+        "remediation": "The selected apktool launcher was not found: apktool",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "inspect_artifact"
+        ],
+        "surface": "artifact-provider",
+        "effects": [
+          "mutatesSession",
+          "writesFilesystem",
+          "launchesProcess",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent",
+          "open_world"
+        ],
+        "available": false,
+        "reason": "target_required",
+        "remediation": "Call open_binary with a supported local target.",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "inspect_asset_catalog"
+        ],
+        "surface": "artifact-provider",
+        "effects": [
+          "mutatesSession",
+          "launchesProcess",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent",
+          "open_world"
+        ],
+        "available": false,
+        "reason": "target_required",
+        "remediation": "Call open_binary with a supported local target.",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "inspect_binary_layout",
+          "inspect_recorded_crash"
+        ],
+        "surface": "native-provider",
+        "effects": [
+          "mutatesSession",
+          "writesFilesystem",
+          "launchesProcess",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent",
+          "open_world"
+        ],
+        "available": false,
+        "reason": "provider_missing",
+        "remediation": "On Linux x64, set absolute REA_PWNTOOLS_PYTHON to caller-supplied Python with pwntools 4.15.0. No active binary target is required.",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "inspect_electron_fuses",
+          "inspect_go_binary",
+          "inspect_rust_binary"
+        ],
+        "surface": "artifact-provider",
+        "effects": [
+          "mutatesSession",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent"
+        ],
+        "available": true,
+        "reason": "available",
+        "remediation": null,
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "inspect_electron_page",
+          "list_electron_targets"
+        ],
+        "surface": "electron-provider",
+        "effects": [
+          "mutatesSession",
+          "accessesNetwork",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent",
+          "open_world"
+        ],
+        "available": true,
+        "reason": "available",
+        "remediation": null,
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "inspect_evm_interface"
+        ],
+        "surface": "artifact-provider",
+        "effects": [
+          "mutatesSession",
+          "writesFilesystem",
+          "launchesProcess",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent",
+          "open_world"
+        ],
+        "available": false,
+        "reason": "provider_missing",
+        "remediation": "The bundled offline EVM interface profile is currently real-verified on Linux x64. No active binary target or chain endpoint is required.",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "inspect_firmware_regions"
+        ],
+        "surface": "firmware-provider",
+        "effects": [
+          "mutatesSession",
+          "writesFilesystem",
+          "launchesProcess",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent",
+          "open_world"
+        ],
+        "available": false,
+        "reason": "provider_missing",
+        "remediation": "On Linux, provide an absolute REA_BINWALK_COMMAND (Binwalk 3.1.x, verified with 3.1.0) or REA_UNBLOB_COMMAND (Unblob 26.6.x, verified with 26.6.4) path and util-linux prlimit. Extraction also requires the selected format’s external extractor.",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "inspect_managed_artifact",
+          "inspect_managed_members",
+          "inspect_managed_native_boundaries"
+        ],
+        "surface": "managed-provider",
+        "effects": [
+          "mutatesSession",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent"
+        ],
+        "available": true,
+        "reason": "available",
+        "remediation": null,
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "inspect_native_api",
+          "trace_call_path",
+          "trace_feature"
+        ],
+        "surface": "enhanced",
+        "effects": [
+          "mutatesSession"
+        ],
+        "annotations": [],
+        "available": false,
+        "reason": "target_required",
+        "remediation": "Call open_binary with a supported local target.",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "inspect_packet_capture",
+          "inspect_packet_fields"
+        ],
+        "surface": "artifact-provider",
+        "effects": [
+          "mutatesSession",
+          "writesFilesystem",
+          "launchesProcess",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent",
+          "open_world"
+        ],
+        "available": false,
+        "reason": "provider_missing",
+        "remediation": "On Linux, supply TShark 4.x via absolute REA_TSHARK_COMMAND and util-linux prlimit (REA_TSHARK_PRLIMIT_COMMAND, default /usr/bin/prlimit). No active binary target or hardware is required; the tool is checked at execution.",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "inspect_pcap_capture",
+          "inspect_pcap_client"
+        ],
+        "surface": "pcap-provider",
+        "effects": [
+          "mutatesSession",
+          "writesFilesystem",
+          "launchesProcess",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent",
+          "open_world"
+        ],
+        "available": true,
+        "reason": "available",
+        "remediation": null,
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "inspect_pe_resources"
+        ],
+        "surface": "native-provider",
+        "effects": [
+          "mutatesSession",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent"
+        ],
+        "available": true,
+        "reason": "available",
+        "remediation": null,
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "inspect_sqlite_database"
+        ],
+        "surface": "artifact-provider",
+        "effects": [
+          "mutatesSession",
+          "writesFilesystem",
+          "launchesProcess",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent",
+          "open_world"
+        ],
+        "available": true,
+        "reason": "available",
+        "remediation": null,
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "inspect_wasm_artifact"
+        ],
+        "surface": "artifact-provider",
+        "effects": [
+          "mutatesSession",
+          "writesFilesystem",
+          "launchesProcess",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent",
+          "open_world"
+        ],
+        "available": false,
+        "reason": "provider_missing",
+        "remediation": "Supply WABT 1.0.42 via absolute REA_WABT_BIN_DIRECTORY. No active binary target is required; tools are checked at execution.",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "inspect_web_network_capture"
+        ],
+        "surface": "browser-provider",
+        "effects": [
+          "mutatesSession",
+          "writesFilesystem",
+          "launchesProcess",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent",
+          "open_world"
+        ],
+        "available": true,
+        "reason": "available",
+        "remediation": null,
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "install_adb_package",
+          "start_adb_activity",
+          "start_adb_app",
+          "stop_adb_app",
+          "uninstall_adb_package"
+        ],
+        "surface": "adb-provider",
+        "effects": [
+          "mutatesTarget",
+          "mutatesSession",
+          "launchesProcess",
+          "accessesNetwork",
+          "mutatesDevice"
+        ],
+        "annotations": [
+          "destructive",
+          "open_world"
+        ],
+        "available": false,
+        "reason": "provider_unavailable",
+        "remediation": "The selected adb binary was not found: adb",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "instrument_with_frida",
+          "load_frida_script",
+          "resume_frida_session"
+        ],
+        "surface": "native-provider",
+        "effects": [
+          "mutatesTarget",
+          "mutatesSession",
+          "launchesProcess",
+          "accessesNetwork",
+          "executesForeignCode"
+        ],
+        "annotations": [
+          "destructive",
+          "open_world"
+        ],
+        "available": true,
+        "reason": "available",
+        "remediation": null,
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "list_cutter_sessions"
+        ],
+        "surface": "native-provider",
+        "effects": [
+          "accessesNetwork",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent",
+          "open_world"
+        ],
+        "available": false,
+        "reason": "target_required",
+        "remediation": "Call open_binary with a supported local target.",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "list_frida_devices",
+          "list_frida_processes"
+        ],
+        "surface": "native-provider",
+        "effects": [
+          "launchesProcess",
+          "accessesNetwork",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent",
+          "open_world"
+        ],
+        "available": true,
+        "reason": "available",
+        "remediation": null,
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "list_javascript_runtime_targets",
+          "observe_javascript_runtime"
+        ],
+        "surface": "runtime-provider",
+        "effects": [
+          "mutatesSession",
+          "accessesNetwork",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent",
+          "open_world"
+        ],
+        "available": true,
+        "reason": "available",
+        "remediation": null,
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "observe_native_calls"
+        ],
+        "surface": "native-provider",
+        "effects": [
+          "mutatesSession",
+          "writesFilesystem",
+          "launchesProcess",
+          "accessesNetwork",
+          "changesUiState",
+          "executesForeignCode"
+        ],
+        "annotations": [
+          "destructive",
+          "open_world"
+        ],
+        "available": false,
+        "reason": "target_required",
+        "remediation": "Call open_binary with a supported local target.",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "observe_native_ui"
+        ],
+        "surface": "native-provider",
+        "effects": [
+          "mutatesSession",
+          "writesFilesystem",
+          "launchesProcess",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent",
+          "open_world"
+        ],
+        "available": false,
+        "reason": "target_required",
+        "remediation": "Call open_binary with a supported local target.",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "observe_web_execution"
+        ],
+        "surface": "browser-provider",
+        "effects": [
+          "mutatesTarget",
+          "mutatesSession",
+          "accessesNetwork",
+          "mayDiscardData"
+        ],
+        "annotations": [
+          "destructive",
+          "open_world"
+        ],
+        "available": true,
+        "reason": "available",
+        "remediation": null,
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "open_binary"
+        ],
+        "surface": "session",
+        "effects": [
+          "mutatesSession",
+          "launchesProcess",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent",
+          "open_world"
+        ],
+        "available": true,
+        "reason": "available",
+        "remediation": null,
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "open_jeb_project"
+        ],
+        "surface": "jeb-provider",
+        "effects": [
+          "mutatesSession",
+          "accessesNetwork"
+        ],
+        "annotations": [
+          "open_world"
+        ],
+        "available": false,
+        "reason": "provider_missing",
+        "remediation": "Start a JEB client serving MCP (GUI client, or headless via its programmatic launcher) and point REA_JEB_MCP_URL at it (default http://127.0.0.1:8425/mcp). REA does not install or launch JEB.",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "push_adb_file"
+        ],
+        "surface": "adb-provider",
+        "effects": [
+          "mutatesTarget",
+          "mutatesSession",
+          "writesFilesystem",
+          "launchesProcess",
+          "accessesNetwork",
+          "mutatesDevice"
+        ],
+        "annotations": [
+          "destructive",
+          "open_world"
+        ],
+        "available": false,
+        "reason": "provider_unavailable",
+        "remediation": "The selected adb binary was not found: adb",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "record_unknown",
+          "update_unknown"
+        ],
+        "surface": "session",
+        "effects": [
+          "mutatesSession"
+        ],
+        "annotations": [],
+        "available": true,
+        "reason": "available",
+        "remediation": null,
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "recover_javascript_sources"
+        ],
+        "surface": "application",
+        "effects": [
+          "mutatesSession",
+          "writesFilesystem",
+          "launchesProcess"
+        ],
+        "annotations": [
+          "open_world"
+        ],
+        "available": false,
+        "reason": "provider_missing",
+        "remediation": "On Linux x64, provide an absolute REA_WAKARU_COMMAND for Wakaru ^1.13.0 (verified with 1.14.0) and util-linux prlimit; see docs/javascript-recovery.md#install-wakaru. No binary target is required.",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "rizin_debug_session_status"
+        ],
+        "surface": "native-provider",
+        "effects": [
+          "mutatesSession",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent"
+        ],
+        "available": false,
+        "reason": "target_required",
+        "remediation": "Call open_binary with a supported local target.",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "set_address_name",
+          "set_addresses_names",
+          "set_bookmark",
+          "set_comment",
+          "set_inline_comment",
+          "unset_bookmark"
+        ],
+        "surface": "official-proxy",
+        "effects": [
+          "mutatesTarget",
+          "mutatesSession",
+          "mayDiscardData",
+          "idempotent"
+        ],
+        "annotations": [
+          "destructive",
+          "idempotent"
+        ],
+        "available": false,
+        "reason": "target_required",
+        "remediation": "Call open_binary with a supported local target.",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "start_gdb_session"
+        ],
+        "surface": "native-provider",
+        "effects": [
+          "mutatesSession",
+          "launchesProcess"
+        ],
+        "annotations": [
+          "open_world"
+        ],
+        "available": false,
+        "reason": "target_required",
+        "remediation": "Call open_binary with a supported local target.",
+        "defaultModeAvailable": null,
+        "modes": null
+      },
+      {
+        "names": [
+          "trace_web_module_imports"
+        ],
+        "surface": "application",
+        "effects": [
+          "mutatesSession",
+          "writesFilesystem",
+          "launchesProcess",
+          "accessesNetwork",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent",
+          "open_world"
+        ],
+        "available": true,
+        "reason": "available",
+        "remediation": null,
+        "defaultModeAvailable": false,
+        "modes": [
+          {
+            "name": "sources-without-literal-imports",
+            "available": true,
+            "missingOperations": [],
+            "remediation": null
+          },
+          {
+            "name": "native-literal-resolution",
+            "available": false,
+            "missingOperations": [
+              "native-module-resolver"
+            ],
+            "remediation": "Provide an absolute REA_BROWSER_EXECUTABLE supporting import.meta.resolve; no binary target is required."
+          }
+        ]
+      },
+      {
+        "names": [
+          "trace_web_source_location"
+        ],
+        "surface": "application",
+        "effects": [
+          "mutatesSession",
+          "writesFilesystem",
+          "launchesProcess",
+          "idempotent"
+        ],
+        "annotations": [
+          "idempotent",
+          "open_world"
+        ],
+        "available": true,
+        "reason": "available",
+        "remediation": null,
+        "defaultModeAvailable": null,
+        "modes": null
+      }
+    ],
+    "providerCandidates": [
+      {
+        "id": "ghidra",
+        "name": "Ghidra",
+        "version": null,
+        "selected": false,
+        "availability": {
+          "status": "unavailable",
+          "code": "not_configured",
+          "reason": "Set GHIDRA_INSTALL_DIR to an extracted Ghidra 12.1.x release directory."
+        },
+        "targetSupport": {
+          "status": "unknown",
+          "code": null,
+          "reason": "No target is open."
+        },
+        "operations": [
+          "address_name",
+          "inspect_native_data_type",
+          "inspect_native_instruction",
+          "procedure_callees",
+          "procedure_callers",
+          "procedure_info",
+          "resolve_native_call_targets",
+          "address_to_file_offset",
+          "analyze_function",
+          "annotate_native_function",
+          "inspect_native_load_image",
+          "list_documents",
+          "list_names",
+          "list_procedures",
+          "procedure_address",
+          "list_segments",
+          "list_strings",
+          "procedure_assembly",
+          "procedure_pseudo_code",
+          "procedure_references",
+          "read_bytes",
+          "read_function_instructions",
+          "resolve_containing_procedure",
+          "search_bytes",
+          "search_procedures",
+          "search_strings",
+          "set_address_name",
+          "set_addresses_names",
+          "xrefs"
+        ]
+      },
+      {
+        "id": "hopper",
+        "name": "Hopper Disassembler",
+        "version": null,
+        "selected": false,
+        "availability": {
+          "status": "unavailable",
+          "code": "executable_missing",
+          "reason": "Hopper launcher is missing or not executable: /Applications/Hopper Disassembler.app/Contents/MacOS/hopper"
+        },
+        "targetSupport": {
+          "status": "unknown",
+          "code": null,
+          "reason": "No target is open."
+        },
+        "operations": [
+          "address_name",
+          "comment",
+          "current_address",
+          "current_document",
+          "current_procedure",
+          "goto_address",
+          "inline_comment",
+          "list_bookmarks",
+          "list_documents",
+          "list_names",
+          "list_procedures",
+          "list_segments",
+          "next_address",
+          "prev_address",
+          "procedure_address",
+          "procedure_assembly",
+          "procedure_callees",
+          "procedure_callers",
+          "procedure_info",
+          "procedure_pseudo_code",
+          "procedure_references",
+          "read_bytes",
+          "read_function_instructions",
+          "resolve_containing_procedure",
+          "xrefs",
+          "address_to_file_offset",
+          "analyze_function",
+          "list_strings",
+          "search_bytes",
+          "search_procedures",
+          "search_strings",
+          "set_address_name",
+          "set_addresses_names",
+          "set_bookmark",
+          "set_comment",
+          "set_inline_comment",
+          "unset_bookmark"
+        ]
+      },
+      {
+        "id": "ida",
+        "name": "IDA MCP adapter",
+        "version": "1",
+        "selected": false,
+        "availability": {
+          "status": "unavailable",
+          "code": "not_configured",
+          "reason": "Set REA_IDA_MCP_CONFIG to an upstream IDA MCP JSON registration; see docs/ida-provider.md."
+        },
+        "targetSupport": {
+          "status": "unknown",
+          "code": null,
+          "reason": "No target is open."
+        },
+        "operations": [
+          "analyze_function",
+          "procedure_assembly",
+          "procedure_pseudo_code",
+          "read_function_instructions",
+          "list_documents",
+          "list_procedures",
+          "list_strings",
+          "procedure_address",
+          "procedure_callees",
+          "procedure_callers",
+          "search_procedures",
+          "search_strings",
+          "xrefs"
+        ]
+      }
+    ]
+  },
+  "schemaDigests": {
+    "annotate_native_function": {
+      "input": "d151dd291adb9b0177d2e70b1adcf512cf9382346b4c56ba4bf82f8b7cb819eb",
+      "output": "ee5b0726ec35f7574ac7c43930adab0fb34c6522c73e4db151975664f6003d6d",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "inspect_native_load_image": {
+      "input": "74dc20be5919e2b123386136ebec11b298d6fdd9b7e5f13bab01e10b0bd3ed92",
+      "output": "2d0609ed6289dc3ee87bb75faeb75f674d4b4dd4a909139af5df975c4f360419",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "inspect_native_data_type": {
+      "input": "a9b016f7750eb58517ffc53eb5506e0c24803bfffe965fe77e215aacc161f8c8",
+      "output": "34e443f98f76dd07417c42164a05c221a806a26d5552b1b5d19a24d0fc8a37ad",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "inspect_native_instruction": {
+      "input": "0a04363f569016ff37f1e97f99ae8dd02743d062be15c86794c9c8ff07e8ab17",
+      "output": "059ac362954068901e442635239d5fd775c7dbdd11646fc34cb7f10443a8fdef",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "resolve_native_call_targets": {
+      "input": "0a04363f569016ff37f1e97f99ae8dd02743d062be15c86794c9c8ff07e8ab17",
+      "output": "705ec52bb956e5efb4fdd6ac71ebd5b1af61a7cb113c5e973d8c39f74c6523a6",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "address_name": {
+      "input": "b171ecd4f8efa4f055af39d3af35b799b02ec7446d29933d577e2221a8903a1c",
+      "output": "d6c6650704115daa3b4e62839d6ef0add8889d58f5290a60f5532d7b01987e4d",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "comment": {
+      "input": "b171ecd4f8efa4f055af39d3af35b799b02ec7446d29933d577e2221a8903a1c",
+      "output": "d6c6650704115daa3b4e62839d6ef0add8889d58f5290a60f5532d7b01987e4d",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "current_address": {
+      "input": "aed9d51ff40603dd090407f1e567c718c70ca065e3a22cbb807f5c625e5689f2",
+      "output": "9ed40aecf71dc4ec4f3858877f70ebb5955ed65341ddb8a72a8798a6f84f9441",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "current_procedure": {
+      "input": "aed9d51ff40603dd090407f1e567c718c70ca065e3a22cbb807f5c625e5689f2",
+      "output": "9ed40aecf71dc4ec4f3858877f70ebb5955ed65341ddb8a72a8798a6f84f9441",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "current_document": {
+      "input": "74dc20be5919e2b123386136ebec11b298d6fdd9b7e5f13bab01e10b0bd3ed92",
+      "output": "9ed40aecf71dc4ec4f3858877f70ebb5955ed65341ddb8a72a8798a6f84f9441",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "goto_address": {
+      "input": "4ad6491349554188e98deae910737020a21e8121ed60773a12ac8ec1d0a16a5c",
+      "output": "9ed40aecf71dc4ec4f3858877f70ebb5955ed65341ddb8a72a8798a6f84f9441",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "inline_comment": {
+      "input": "b171ecd4f8efa4f055af39d3af35b799b02ec7446d29933d577e2221a8903a1c",
+      "output": "d6c6650704115daa3b4e62839d6ef0add8889d58f5290a60f5532d7b01987e4d",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "list_bookmarks": {
+      "input": "aed9d51ff40603dd090407f1e567c718c70ca065e3a22cbb807f5c625e5689f2",
+      "output": "f4fe0d8d025c887c59f77b12cd3dc559adfaeb8e9cf57cfb342f4b1c22290ef1",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "list_documents": {
+      "input": "74dc20be5919e2b123386136ebec11b298d6fdd9b7e5f13bab01e10b0bd3ed92",
+      "output": "7861c1926cfb6e22f478942f1bf69a968223bd558154002a73773d836cb095e2",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "list_names": {
+      "input": "b171ecd4f8efa4f055af39d3af35b799b02ec7446d29933d577e2221a8903a1c",
+      "output": "b4b2efe9b447f2833755cec7c27b51ba50e155689159e5936ae242d8032d92ee",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "list_procedures": {
+      "input": "aed9d51ff40603dd090407f1e567c718c70ca065e3a22cbb807f5c625e5689f2",
+      "output": "b4b2efe9b447f2833755cec7c27b51ba50e155689159e5936ae242d8032d92ee",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "list_segments": {
+      "input": "aed9d51ff40603dd090407f1e567c718c70ca065e3a22cbb807f5c625e5689f2",
+      "output": "1f5c72de01fa3670a8c08da60b1d69d36c2da2dbdde173140d638f94bd3643be",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "list_strings": {
+      "input": "b171ecd4f8efa4f055af39d3af35b799b02ec7446d29933d577e2221a8903a1c",
+      "output": "3222ce5a0b746e18a811f51ed0d1651c9280276047de43698a09f5db537cd864",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "next_address": {
+      "input": "b171ecd4f8efa4f055af39d3af35b799b02ec7446d29933d577e2221a8903a1c",
+      "output": "9ed40aecf71dc4ec4f3858877f70ebb5955ed65341ddb8a72a8798a6f84f9441",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "prev_address": {
+      "input": "b171ecd4f8efa4f055af39d3af35b799b02ec7446d29933d577e2221a8903a1c",
+      "output": "9ed40aecf71dc4ec4f3858877f70ebb5955ed65341ddb8a72a8798a6f84f9441",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "procedure_address": {
+      "input": "fcef424237fbefc6def19bc6d4d17b57e13653e2d993c6d03eac3011986dc0d3",
+      "output": "9ed40aecf71dc4ec4f3858877f70ebb5955ed65341ddb8a72a8798a6f84f9441",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "procedure_assembly": {
+      "input": "fcef424237fbefc6def19bc6d4d17b57e13653e2d993c6d03eac3011986dc0d3",
+      "output": "9ed40aecf71dc4ec4f3858877f70ebb5955ed65341ddb8a72a8798a6f84f9441",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "procedure_callees": {
+      "input": "fcef424237fbefc6def19bc6d4d17b57e13653e2d993c6d03eac3011986dc0d3",
+      "output": "7861c1926cfb6e22f478942f1bf69a968223bd558154002a73773d836cb095e2",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "procedure_callers": {
+      "input": "fcef424237fbefc6def19bc6d4d17b57e13653e2d993c6d03eac3011986dc0d3",
+      "output": "7861c1926cfb6e22f478942f1bf69a968223bd558154002a73773d836cb095e2",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "procedure_info": {
+      "input": "fcef424237fbefc6def19bc6d4d17b57e13653e2d993c6d03eac3011986dc0d3",
+      "output": "396181919b39430b0674afd2128c4b1e9e50dca0ed160e876ea68cf96571956c",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "read_function_instructions": {
+      "input": "cd674423639cacdeb007bf70c0db59c77162e6639471989ef5eac23fab293ec2",
+      "output": "3aacfc011e52c19413aeb5ce71fb1ba469a0fa3ffc1848130683e8b3e439ac51",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "search_bytes": {
+      "input": "3f68f6230193a693500f08da2847c031cc31e01faf4f258dd09417dec40fd838",
+      "output": "4bc1b1efa001b9caf95c5d49f089553e55187c06b4e1e895b25c7e3f05fa9ed1",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "read_bytes": {
+      "input": "00f43f3b4826cd8ef58cf6f34a2f24a797faf2b8009e30bf8988685f11c86c9c",
+      "output": "ab4dc0aab0f1cb231618502be04da51323fc320c9a47bf4fce87683c69b53a52",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "address_to_file_offset": {
+      "input": "4ad6491349554188e98deae910737020a21e8121ed60773a12ac8ec1d0a16a5c",
+      "output": "7dabfeb4634c0d45f8fc46589f9bb250014c809c5614e6956a88fb1de163a369",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "procedure_references": {
+      "input": "ed57ebb3a31ff5719675698debd187bcf04d09dbad81024437a9f210ae53cec7",
+      "output": "a075d15999d5dbb9ae3d2c99d3711041d3527f157686bef395b9631f47edd5fe",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "procedure_pseudo_code": {
+      "input": "fcef424237fbefc6def19bc6d4d17b57e13653e2d993c6d03eac3011986dc0d3",
+      "output": "d6c6650704115daa3b4e62839d6ef0add8889d58f5290a60f5532d7b01987e4d",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "resolve_containing_procedure": {
+      "input": "4ad6491349554188e98deae910737020a21e8121ed60773a12ac8ec1d0a16a5c",
+      "output": "205bdaedb3cd860ca950c69715b08843c262713402a45867366e68eec6f19eba",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "search_procedures": {
+      "input": "ce768686f5b59a8eceb6b59e45fb1dc09bfc747b58b3aa586fb6d1532cdc8967",
+      "output": "b62be3f527e12c8254b094131ec2b1206183e8d5e0caf1584dd13f10052715d6",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "search_strings": {
+      "input": "cf5bf5ed5c9c4b9503856a760a4940118405d98c6b99dec530e5bf15beda6561",
+      "output": "3222ce5a0b746e18a811f51ed0d1651c9280276047de43698a09f5db537cd864",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "set_address_name": {
+      "input": "8b915a67993cae74fb40b962677eb30a98ae5e8396dc14d0d8e9e6d42b145ede",
+      "output": "aa7ec64c0f83efebb8cabeb783ec64ce955841fbb3161286072282aa5c7cac8f",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "set_addresses_names": {
+      "input": "b68c44c943f9e9d42becbb870f54a073a15ef08cc76dcea6464fb61af0cfea95",
+      "output": "d65931d63bab36cca17d7539cb8ab776c9b686c3479176315e36efe354da76c2",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "set_bookmark": {
+      "input": "a7418d8542fc8022836434afac2681a241ba2b91939772e30ef89d6cdabe059b",
+      "output": "aa7ec64c0f83efebb8cabeb783ec64ce955841fbb3161286072282aa5c7cac8f",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "set_comment": {
+      "input": "c734a25a9f0584c92690892d872c490a555a890761fbc2cfb101005ca7cd2009",
+      "output": "aa7ec64c0f83efebb8cabeb783ec64ce955841fbb3161286072282aa5c7cac8f",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "set_inline_comment": {
+      "input": "6f598b0c01004b967496d26d6f4033006a0609c965894c8d62099285420b21bb",
+      "output": "aa7ec64c0f83efebb8cabeb783ec64ce955841fbb3161286072282aa5c7cac8f",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "unset_bookmark": {
+      "input": "4ad6491349554188e98deae910737020a21e8121ed60773a12ac8ec1d0a16a5c",
+      "output": "aa7ec64c0f83efebb8cabeb783ec64ce955841fbb3161286072282aa5c7cac8f",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "xrefs": {
+      "input": "b171ecd4f8efa4f055af39d3af35b799b02ec7446d29933d577e2221a8903a1c",
+      "output": "7861c1926cfb6e22f478942f1bf69a968223bd558154002a73773d836cb095e2",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "trace_native_values": {
+      "input": "a7c048d8e40eb4d30aed38a23e86f83b28a911b2fc2b81f2824a4e5d0c6f8f24",
+      "output": "ee81ee6ed81633011cbd3427ce0e6748641696ba4a55deeffab2e5bc64773d5a",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "inspect_native_dispatch_metadata": {
+      "input": "8143d7257745dd9c5041f130e3f116991199ce751b64d07bfe9cd51df4a0841c",
+      "output": "a9a5a99d610c086f94ec4a5c0b7c6cd1ded37b182fda2e731f5182a59fbf5df8",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "get_objc_classes": {
+      "input": "cb17d0edf7bd11e0959500813dad85a09d96e5c40985296c37a2ce7c6ffd8924",
+      "output": "0225db2f0b38ecf5ddf4f2e649c57906268625370e3a649d9fc8e2a532983796",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "get_objc_protocols": {
+      "input": "74dc20be5919e2b123386136ebec11b298d6fdd9b7e5f13bab01e10b0bd3ed92",
+      "output": "7847c81e6828ace6adfd82679961b86cf4ce3e1aa36d13e219eafeb1a5d95963",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "batch_decompile": {
+      "input": "4ec3ef5cd65cacaff8e1d3717f53e50b328444f3a7a9adb6c89200cb8ca911c5",
+      "output": "d83224132167eb7e5fc92d2036300738f474b3df523dd44f09882d2ac7203d40",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "get_call_graph": {
+      "input": "b60afc1122405ad806cc746a83036ea5ca3bbedd43ad766206656f5bb4cb3a76",
+      "output": "2e42fe7d6feb82512fb8f1d175de9cb68ab34c837a5295654d4940fbf5e980bd",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "analyze_swift_types": {
+      "input": "d38034189c6eaf732b3c0b199472e94ace7e7f3e82083dab796d8fcd0dbe0fbb",
+      "output": "065a5e135da33a7c3c5340e1f1c4c24ee5830a054fba8bc4aae7c121e4cc1637",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "find_xrefs_to_name": {
+      "input": "110ec6e81f973219b3ae52e14262b8639668c597c062c4c75f4af08a2c84230b",
+      "output": "b4704e043c0e8e648e0c0869619404ca9bf8b634a36634d3d90aa5ff91d06909",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "binary_overview": {
+      "input": "74dc20be5919e2b123386136ebec11b298d6fdd9b7e5f13bab01e10b0bd3ed92",
+      "output": "5d26d0202a88d13a30046c28f558b6d7af1f7d4c1f8f9122e0e9ba8ce06b2079",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "analyze_function": {
+      "input": "6d331703fbb3f1d47dceedfb2f018770081d546fc89696b1c97ac4e663e360f5",
+      "output": "53cbfcfd6498cb79d0453a445cae109341d718dfc8426299f03019cf76109da9",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "inspect_native_api": {
+      "input": "6d331703fbb3f1d47dceedfb2f018770081d546fc89696b1c97ac4e663e360f5",
+      "output": "a364843ffc56c7609ce9d2ff03eec19ba7ae46dd8baa9aa6a9183f25cccd8ece",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      }
+    },
+    "trace_feature": {
+      "input": "1419c6552cfdddea9aa586a6c51f69a880c663190cd51a7ca891825f082a4272",
+      "output": "0fb1c264d35976e4f2fe341e69804487c6318cfe00965749196729f8e53be47a",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      }
+    },
+    "trace_call_path": {
+      "input": "91cb98094ae56d855e13db1ebe0be3544cbd7226cf60a1bbc83f132e32c39ad4",
+      "output": "74206817654ffc71012ada48deeb25e26aa611ad87a2b073d4b80c2d422ab302",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      }
+    },
+    "trace_native_ui_action": {
+      "input": "d1d873fed58bc26583d6b11a30ea602afa8d7320c813107adcaa340a1e342eef",
+      "output": "4e38f1594da7beaeedeece7cd8d1e4cd6e0518c024ec238c63ebbd2fccc9330d",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "observe_native_ui": {
+      "input": "eb84d716f97bccb0985f586f130f243246e62f5beb7f5bb4d3e8e39beaaaf2cf",
+      "output": "99cd6a5c5b31291183f430659d9af7c79e76e0bebf58b9a9285bb5ab8c6c6788",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "capture_native_ui_scenario": {
+      "input": "afcc1b92d2691ae70234096cea1b4ce388899cd9d82bc321cf3880abaa1e7836",
+      "output": "99cd6a5c5b31291183f430659d9af7c79e76e0bebf58b9a9285bb5ab8c6c6788",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    "observe_native_calls": {
+      "input": "ef4bd942fdf23a7deb253d1614e79356b4c9dc884ee0a332a4a13787c891da1c",
+      "output": "ecbf6ccde04754c8f1d90a905486bd43eb360c875a88a5befd48c06a62fa9f17",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    "inspect_macho": {
+      "input": "6ca97167f411e72e2b85b7b69b16207d8e2c9bde5692162746511682fa2f7346",
+      "output": "425acf90db856397e7f3f6eb20876666c4c2de69c8bf13b52a335cfe7a1080a7",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "inspect_signature": {
+      "input": "74dc20be5919e2b123386136ebec11b298d6fdd9b7e5f13bab01e10b0bd3ed92",
+      "output": "4911fe9e74d414f8311f7b978919b97078c335605c3cfe949cf540f8e5425a93",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "inspect_plist": {
+      "input": "9728b8f5312f19e81b069d007fe70dedcd0f0c8042f6a65de2d04da3aba098d9",
+      "output": "e93ace14bb7b0fc7831fb43351ab6f7d508607bf2014ded2658671028af9796f",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "list_architectures": {
+      "input": "74dc20be5919e2b123386136ebec11b298d6fdd9b7e5f13bab01e10b0bd3ed92",
+      "output": "804488ccfb15790bb4aa0ba3b2a55415bed14527d291d9a0dda4a0790851950f",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "demangle_swift": {
+      "input": "1b817dcd97ae22e37c2522b7071fe35fe6085ce40ca750053b0145b3b9effeaa",
+      "output": "f8ca41c39223c934ad04c4fae855fe18c8cc4deaf8930ec6392c52f17eb078cc",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "inspect_artifact": {
+      "input": "5425eba8de4661750cae3a3f5c52c73ab818b062ba3702daffd260ce42b84c39",
+      "output": "46f042a174f02e117c9e1b64391beeaa7384e55a3f05ea0acc85c658da0222e2",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "extract_artifact": {
+      "input": "82769bd5a1df252b51f3af5b921eba54264922f6d85910196ba9ab8c7a004700",
+      "output": "045ba9181f9f11b0136d9467621639c443bbb0f506a699d20432bf56846677d3",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    "decode_interface_builder": {
+      "input": "5d43847915705b638235a815932a8f2c5ed549d611a38b6a420259be86d6b3ac",
+      "output": "2d433bb6b028d577fc2feb28907318eb44f4e45b309cafdcc92ab77675363a2e",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "inspect_keyed_archive": {
+      "input": "ea8b3208597759c95259b979434f410f4ff198f63a6dc5e46ef020cd410c3a2a",
+      "output": "29bf61bdc8e6f077cdf357205515894f5a4b09c9bb4910e6111e03c23bc8913e",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "inspect_asset_catalog": {
+      "input": "cd1d34dc66ccc4cc97f01181998e085c64b7bc50b40f6f738f76837abfa6a976",
+      "output": "3ad284bc611f6d61887ef6087de3a1092bb2d799ba21e9cfaac708dc35e33108",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "trace_dylib_resolution": {
+      "input": "42fee60956b1c287e7f449a43bb09ea6cebb9b55cb43955c727e6bbfe00d5b97",
+      "output": "bb6b5521da14703b796e089eb4523f8ff25c9bedd8504ff22bb4a9a06cd42d36",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "inspect_managed_artifact": {
+      "input": "bf606e135c94fafdf143eed5706fbc1daf4157260246a2a37e2e805d115c3b32",
+      "output": "5c4523a4e5e11a12835f5bfede2a06923f048143ed122ec63572857ab617362d",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "inspect_managed_members": {
+      "input": "3d6612eb3453758ddb6d5f7b9daf64c4ea96948505af5b6b065da982cb631c57",
+      "output": "7688debf0894096cc1638ad1075a0f57c745c87bdf35033c4f43d8b04aab412e",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "inspect_managed_native_boundaries": {
+      "input": "7f7015ac5beaef723f11b2e544ef2bf3868c9901bbcc4ad6f226861c53ef088c",
+      "output": "090bb9c8f9a8b7602231ecf67a1f1e16b534221c24085a27883987375cd5169e",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "compare_managed_members": {
+      "input": "6e9a24e48edd092a1849f894122623faf1c9c1813f105b02642cfbaf11d332b2",
+      "output": "8413b5f65f6b8b0264be94e8702cb89d0bb980fe2cef4af887991e49574edd9b",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "verify_managed_native_boundaries": {
+      "input": "0279577436cf9ef5ce8601082f7c847d07a54512abdca0040f493ab6ac14714a",
+      "output": "2a2245841483c95e15b6a5fb69d4a5ac2ba77893dfbaecd9445e31e41a4688a2",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "import_managed_reconstruction": {
+      "input": "531f3f6dbdb55f4d2178b56205e4c3e3c912290322af9a8e3e43db8b116aea4d",
+      "output": "9854d875a956984621f0a76f3e677f682e20c193e1f2d06da4a400a8ad5cbc43",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "project_managed_application_graph": {
+      "input": "5a8c84b20e4f127457479c0b8a2a32afa813a43bd46d148512eb49f1cf16cf70",
+      "output": "e21fbc0088b4c26d7c2e4926025627c0daea5dfd66af7187a4266ad6790da24e",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "inspect_with_objdump": {
+      "input": "f24dd35fe1ddf1f840f0e5a6d501861d2d4ef2cc29a06025ebbd00229614fbe5",
+      "output": "1879d8b3e119a2cec1ba0dfefb2a1ec00afcdb39909cbf6ad45995e09dcc7d8e",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "execute_rizin_command": {
+      "input": "580a344d8dc556bb36eaf011718908b4986b1987ff3a1ff368b1a7c727e028f4",
+      "output": "1879d8b3e119a2cec1ba0dfefb2a1ec00afcdb39909cbf6ad45995e09dcc7d8e",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    "list_frida_devices": {
+      "input": "28e50399d9e4736a712149068168aaf7f5a486028c35a4668bc47c92b805e25d",
+      "output": "a7ecc9f2aed9b89e5e66f4513dd1224d5c3f42b72fc762187d8c26cdc1828975",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "list_frida_processes": {
+      "input": "18ae026103c42930a2d1be5f1f667df481468050b777b171c5c24994d04aa4f2",
+      "output": "fe9373c0d1e2567a5dde6aa282a3f3702e701da1da7c6b63456aa0324b80d4a5",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "start_frida_session": {
+      "input": "599ab7495d7f49e049732502d3e8f979e0c416742042bc3500d0c4903cfc4eb8",
+      "output": "97464111e95891142ca533f6df74575343721c588f90263cfd836b08b562aae8",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    "load_frida_script": {
+      "input": "20a4e6ebe2608d4458342c10dcf25250eb35eae8fd4dfc48829bbe0cf0a4acd2",
+      "output": "68b4cce84c1ca9948238a75aa271dbfe630c70cc1ce52e1716c89563205ae983",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    "resume_frida_session": {
+      "input": "a0704f554047e7bbecff292f1bc65abc5a2af106275c10b2fa3d8af8e8a7f265",
+      "output": "d5e1440f600af87789ca228f3bf3c991176abadd70c69bc8d5ae69c81d797010",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    "unload_frida_script": {
+      "input": "151f095a09b5f224644d1489d6d348337fb737d98e3953dc9dafd1a2b674ab27",
+      "output": "bc0fb9429e6d7b65e8cc31ce1d324a8f0341f29fb468c4ec86ed442a54fb4086",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    "frida_session_status": {
+      "input": "a0704f554047e7bbecff292f1bc65abc5a2af106275c10b2fa3d8af8e8a7f265",
+      "output": "6b5d6c1a68d5d7baf28516d15452df8e6ff8d1bc74118044c8ae36170090f3fb",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "close_frida_session": {
+      "input": "a0704f554047e7bbecff292f1bc65abc5a2af106275c10b2fa3d8af8e8a7f265",
+      "output": "0e1f421e3d4f23bdb4d9916c7b3285e8d93f0c8a5889f2094cd020c4fe1d3328",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    "instrument_with_frida": {
+      "input": "251a89fd64c17e12c71c31884544731a47ea0b8cbf210bef06e8d50044d846c9",
+      "output": "6082a33c2a9a0e3de5d8051db5d18614e7ff56b0bf193125aeb35d75cec5886a",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    "list_cutter_sessions": {
+      "input": "74dc20be5919e2b123386136ebec11b298d6fdd9b7e5f13bab01e10b0bd3ed92",
+      "output": "fd316ded925bcbe1574d1ee98811573033274676f8d03229fe23fff9ab1ad804",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "cutter_command": {
+      "input": "08dad4d73d3e65ce633bf4106a0c2e44c72956ccf1685556ff641f531e4fd04c",
+      "output": "c370207dd38d3c9f550f0b198026f74b4d5c4d762a289b3cc45a6531069033ff",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    "start_gdb_session": {
+      "input": "f17f81d0c2c5843dd8bce20b15b6face61b462e36f004105b75ae396e41adae5",
+      "output": "8d55fac3d8732eae7cbf0f3669b67c7d3e8c5177ff33b5cd16ad789a1b8e09ea",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    "gdb_console": {
+      "input": "a20a0cb58feeb182bd2132df56c0cb5025a13073c4fee4098c2edce7046104e0",
+      "output": "80ef035972b24ac53a13a33a7c804a26b83433e45d6a2b8479b5e766dd2cd702",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    "gdb_session_status": {
+      "input": "a0704f554047e7bbecff292f1bc65abc5a2af106275c10b2fa3d8af8e8a7f265",
+      "output": "5edb9b9c5e1fd410042dd37a284123a8fce8be34ac2bb857ebd9f875f330f742",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "close_gdb_session": {
+      "input": "a0704f554047e7bbecff292f1bc65abc5a2af106275c10b2fa3d8af8e8a7f265",
+      "output": "bf42c7007f6d4fcb9e9a204e4244c881dc5b289c78358b4555056b1f4fd90829",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    "start_rizin_debug_session": {
+      "input": "014cd890e95d8cb035b305e97c73305b992662b98477b29bfe9a29392cd167e0",
+      "output": "2fe24bd80466795f9fd350f2d05cc13c1037ac88e09bc8d41ee67d193680a4f4",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    "rizin_debug_command": {
+      "input": "1389c0c8c63fc63f71ce9deba0a73908c7508ec676eeadbb5af05f23ac70010f",
+      "output": "d33158726827cc093186209d2e1b5020ef86c402aa9d5aab3200b3d8c0667991",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    "rizin_debug_session_status": {
+      "input": "a0704f554047e7bbecff292f1bc65abc5a2af106275c10b2fa3d8af8e8a7f265",
+      "output": "275f89faa95a3a82c6168079e9627566475a112af4eca8cab1b00ca8e8954817",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "close_rizin_debug_session": {
+      "input": "a0704f554047e7bbecff292f1bc65abc5a2af106275c10b2fa3d8af8e8a7f265",
+      "output": "0e1f421e3d4f23bdb4d9916c7b3285e8d93f0c8a5889f2094cd020c4fe1d3328",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "inspect_packet_capture": {
+      "input": "219f29b023bec59f1d6f5a1fc09315792fa9b4e33043a3eeb18af67f8b1c6591",
+      "output": "f76b0a932e4c5eea7fce024d26deeea2ebf251e797d755af13df5444595e9057",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "inspect_packet_fields": {
+      "input": "3454d3114f7068c0c4abc99f3e3af0e0ecf0f3109f6a2c3bbffce7f7049aca8b",
+      "output": "b503637848366bea58e60ee26800df33785c002d439d72d6264e7fa2f9142ec8",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "decode_signal_recording": {
+      "input": "3f2f7f20c86535b3e971ed024df7b22d63ec4e18ea53edbe5b3117046fbf6467",
+      "output": "a6ef46758dc819bfb31a848129b1c27496768e3f4061856698a074f0e6551a4d",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "inspect_signal_decoders": {
+      "input": "cc044a35f50044953aed0736920c5e2b28853420080b3e7affdc5aa1805436f2",
+      "output": "26a055a37b6abf2abb6df94b0dc06d2aa9e8ab6f5b93e63caeda2c5cefe90448",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "inspect_android_package": {
+      "input": "4115edcb8b17a26b613cefa7df8b3e103c36bf5e49d58fdf1890b3d111918018",
+      "output": "7de189be19da279f6c24d297e010bd7e17b8e85a12024727f851a2b5ef8dd775",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "search_android_classes": {
+      "input": "1ef2b01a6bc2b0a339b1759d788cf93ad99b3c3823bedd95a5039bb505f7d938",
+      "output": "d8516474d8cf3e4f2f4d1ac3f37923a7b14c8ebe320ae90af7b3e126ee6031c8",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "inspect_android_class": {
+      "input": "04b2c4ad94235dd7740fdb5edfba793fe6dc3ad575a46951862576fc1d534f77",
+      "output": "547ab4ef4ccc7608a6c6da036fc4c1b4669b3ceef2aeb7cab8cc4559b0f7d5e8",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "inspect_android_method": {
+      "input": "94d11cf83b8b117b6b27f6c99b0e7019b97b3ed6c0c9331e9d64d6486ac6526d",
+      "output": "4e669f36b5be30305fd9befb70c31dc7ce4d899520a30c44abda8ae94acc8478",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "trace_android_references": {
+      "input": "4879598877736f22c58d76dcabd3268667d0dccc5efac32f709a4ba0268fbd43",
+      "output": "041cf8cedcdc42762a69c6bd8652cc13963d802abdc7a757d9b4633dd78ebeda",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "inspect_jeb_client": {
+      "input": "74dc20be5919e2b123386136ebec11b298d6fdd9b7e5f13bab01e10b0bd3ed92",
+      "output": "6001fac751c4b0e15fb4c668353966e2e63534b568d83705561fa2c640c54e69",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "open_jeb_project": {
+      "input": "d98b89217e885c331c8638d780d5f40cac058cbd2b5e48ee63f51fdbc8ae5835",
+      "output": "89de57af28bcc6abf2d73fbd795cbc1f748c32fb1ac4874cb57eb74a79e5f6b8",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    "list_jeb_units": {
+      "input": "732b3e18ec3983b1a0d72ea445988213084463a07f55e84e6dff243978f1fef9",
+      "output": "342d17ab23eafe6c15210c8fc346327f28a8d3e9fe2393ea96c466be0ee0d139",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "decompile_jeb_item": {
+      "input": "74f3c51b97033e234afb724c4d885c7f9deab30a2702982515d8673f5263a503",
+      "output": "20684c4abd5bb3e1dc36a8ffc8971571f393424bbe75ef77c42e12b99d4e5791",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "inspect_binary_layout": {
+      "input": "128295a674c7a8a464a66f812afeda80a6410fabbb96d150afc21ce5f53da23c",
+      "output": "b1d988724c08db1bd6ffac8d19f167fff7ffc0d9216969ac902d87220978ea37",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "inspect_analysis_view": {
+      "input": "5429580209723faf0fc5dc9b71d83c5fb4ce86249424bfe17c085305b7eacfb5",
+      "output": "351b2ce09c333dcf3aaffbf70f4d360030d52d4dabd9d47fdd8680b9de0d827f",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "inspect_pe_resources": {
+      "input": "c0cbea3038ca3b6f023fd3a10d3b7f8e9860fc374d65519db1ecd1e2bc5857b6",
+      "output": "14993ff975565e7eb1b0e453e0d0e82ca902770849ec4ef49b7dd7e5151341c5",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "inspect_go_binary": {
+      "input": "02a5ce434e7c65b698414a2bc68c44b767a822c2ce07887c72451f28583163d3",
+      "output": "5186f0c4c5caece9cef86f97bb8c297005f49177e46958e17382297ad35a2171",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "inspect_rust_binary": {
+      "input": "02a5ce434e7c65b698414a2bc68c44b767a822c2ce07887c72451f28583163d3",
+      "output": "f9fa9d3a0747bf8edb3997f0b3876b9f5177f9ece6b148e3addaa1caa0c0e96c",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "compare_wasm_interfaces": {
+      "input": "0e906b16b82e2d47f8153f88a82b41ee33f955c1dca5a66f1d748c6d7bea6708",
+      "output": "4dbc32e8996acf1b44eccccef4c2b959ffa30a726b5136e1e91683d9440aade3",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "inspect_wasm_artifact": {
+      "input": "96018ec6edb86eb779e098736e3ec56e7c00b2e0ccc9aa260fa834c0a4be878f",
+      "output": "451f2f440419af2bc7e06208ae8cff09794686546f70d2a95ddfd62aae3410f0",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "inspect_evm_interface": {
+      "input": "2f250bf91e00cd68dadee78bcb2fa8f77d1e78521964f5051af6980b94c56d6a",
+      "output": "cb432f708caa39a6bdb7d94ac9ea8a5b11ad932f80c4e057d9bc88ac08661e68",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "inspect_sqlite_database": {
+      "input": "b77918eb6ee983e64435cacc830c108735eecff9bcada7fd81d906d60ac4dbc7",
+      "output": "54f11bc9d72cdf0a7dd1149047ea5eab1b75a01808cf870fb27ad4c26a5bfa11",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "inspect_recorded_crash": {
+      "input": "9544ab1a08be7e9acc62b7e386a5dffebb1c24362a9f5536fa8e2098c906c17b",
+      "output": "bf4c6d4b2cf4eb09bb4496a85488b2eeb6fbe48aa0168c0d76c611abdd05bd44",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "inspect_firmware_regions": {
+      "input": "64bec3be6c0c9db9a9ca4afe2414c6345a1d843bd6323046041fc11dd2196a49",
+      "output": "46113a3e1f5a964e82174625a7b7f4abf9b1e5382fa2a62510b2cbd3a497663f",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "extract_firmware": {
+      "input": "e59d91e9a333f3024ea5d422fddb0c1cac14152de0306acd367d133e67e86a10",
+      "output": "b3b9dc1bd8bc76de66ef356a917cf67947a7779b297bbcc1c7176804d0800f83",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    "trace_web_module_imports": {
+      "input": "b3dbf754d42f09e9d7226b1f7146cd708cbb609d5322c3a87da52aa722ec12ab",
+      "output": "c4f035cc7f46d7230da181957ee335cf5f7d8b1178ad2201bfaea27f9390cba5",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "trace_web_source_location": {
+      "input": "2f4d83198d8240f90e219648ec472b675b14634f3d6c81d5640910dc24325950",
+      "output": "45278531712dd3f45b8c09e95b4bf37975c761b8cce594d3650ea3caff7e6f04",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "observe_web_execution": {
+      "input": "b63f8cdb6f8e0ec6c780948ff3ddaa0ab0c98579f0d3073177f773c47e7ac08b",
+      "output": "6bd212e98c379e44f2fa23df9ddc509a5a0d5ed2ff40468a88fac4c0ba5421df",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    "inspect_web_event_listeners": {
+      "input": "5a8861c597576316d544e4eb8dd941ad903c8b9d0f450bd415894bb9b29c352a",
+      "output": "3c8678642a49a0fab7d9108fb08fbd34ae7695d23475a46b0f5f58778e324769",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "inspect_web_network_capture": {
+      "input": "d9cfbf1802d4cfc1a814f57a03738495a90c649a21b67b659ba62debf44c33c1",
+      "output": "36439406f51bb984d0a4fa7f73e100fcea6780a9f740b062e860c5ec24f94809",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "recover_javascript_sources": {
+      "input": "cfecad0d622680041488cd7c4f9101671ceb3d97e4faabe1bd679173388dfbae",
+      "output": "05e564523fdebaf82e422b35888c19aab7105d36a4f8ae6d6bbe372283d8d758",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    "inspect_adb_client": {
+      "input": "74dc20be5919e2b123386136ebec11b298d6fdd9b7e5f13bab01e10b0bd3ed92",
+      "output": "9cab568da648431e5a94c82bf1f365354c35fce31d3ace5078650191b039527e",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "list_adb_devices": {
+      "input": "74dc20be5919e2b123386136ebec11b298d6fdd9b7e5f13bab01e10b0bd3ed92",
+      "output": "682f3c2e03f0d83b645c2f915d24ba98cb7d6302936066feffa05c1581ee087a",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "inspect_adb_device": {
+      "input": "b6af57c9fdb1a538dd2b9cde610c0bfee8b228df7b2b9cd21b8a95cd832e06d1",
+      "output": "01488fc3cda76619a219e473a8737094fd76511a63bfa99b9e971f7ffb628c69",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "list_adb_packages": {
+      "input": "2cc4dbb33418e0ab0b258897146da2e1ec1fdc4a2a3b7c465510479612c5d8df",
+      "output": "67747d22d12e5d4ab219be0a98e051df6013ad87e67e3ab408d463a3bff16090",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "pull_adb_package": {
+      "input": "2e3ff2fa3dcca1f9492efbcac5ea801f533aed083fc1e26bc0c6ae5d6dcbd3ba",
+      "output": "277eab64eb55fa8ffd8a6f10fafaa74b63085cec9b3d31e8bb9ada366c7fb4ff",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    "read_adb_logcat": {
+      "input": "17276682b2a7e0ab532d50fee0fc947ff21ff6111f33e242f15128484c0fbf17",
+      "output": "00cd693350b288cc72d4410fbe9194664e31ce8f00f32e36e24685236c924988",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "inspect_adb_package": {
+      "input": "ccc7323b6ecd2210099055f30bd67a63c8a0093e5839d2d6a7d156daa2f8f14c",
+      "output": "132712dae07413296f8202527d94840fb72ac654a5dfed1d294fab25ea9dfdc2",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "pull_adb_file": {
+      "input": "a67560d2d73aa33c897a0e5b8fcd253d91b77bcf39fe8bd58a6a4d16c3d9b69d",
+      "output": "59ebeb38d41f6987d44b2cf7cf19fd0686e05449958663d8607947e1122f2fb9",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    "push_adb_file": {
+      "input": "45b4bb65cc7124619dbccf440f2937dcfeb6fcd304850226ef4936bd97f5b92e",
+      "output": "077c0b04dae935661b3a95d3e9d206f6fa3247ab0b97eec3c9bd60706e5f82af",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    "capture_adb_screen": {
+      "input": "f835dad3120ab5ece450742de8ee4217007ac9c8c30a65548465d3c020b8687b",
+      "output": "2ed1b8a269b54eb9618cfe6644b1b4690fa681a7e135cdb886e3df7aee5b4f45",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    "list_adb_processes": {
+      "input": "b6af57c9fdb1a538dd2b9cde610c0bfee8b228df7b2b9cd21b8a95cd832e06d1",
+      "output": "06ba2e58ed2c807dc7ff0842174cff8efffed9dad7afc721e4e2abe502d05d19",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "list_adb_directory": {
+      "input": "391e9aa6d91e5c4e3c42a2f2b00e011a528bf13f4fbb1f36162852d790c49c0b",
+      "output": "d40d687114d756bff508b1415b1dcf51c9885428cfd5547b7229ace33d9130ed",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "list_adb_features": {
+      "input": "b6af57c9fdb1a538dd2b9cde610c0bfee8b228df7b2b9cd21b8a95cd832e06d1",
+      "output": "7a461a3eac83cc2f19a7aa5c48ed6b19ab565e28593c1b5d4853e07e51e2c866",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "list_adb_services": {
+      "input": "b6af57c9fdb1a538dd2b9cde610c0bfee8b228df7b2b9cd21b8a95cd832e06d1",
+      "output": "5137400682377d2146ec15ef3fe2964e08d11e6517c099ad67f52fbfc9915131",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "inspect_adb_display": {
+      "input": "b6af57c9fdb1a538dd2b9cde610c0bfee8b228df7b2b9cd21b8a95cd832e06d1",
+      "output": "96c375b12b6b8a5f8fc0d7f29fad616176ae539cbdd0413083ffc3ab163df966",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "inspect_adb_window": {
+      "input": "b6af57c9fdb1a538dd2b9cde610c0bfee8b228df7b2b9cd21b8a95cd832e06d1",
+      "output": "30ddcd8eb66f2efe5cacb1069af9c3f02a0e11e6380a0d9551f7a3b84d42a4f3",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "read_adb_setting": {
+      "input": "2918152a16b94e6affc1ea3058c61a2585e308741987dcdb50dc4b8aa8987160",
+      "output": "06b93fcb9e7f5c740b686223b33d9820eacfefa3f31dfeff941277af09eb8d7a",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "collect_adb_bugreport": {
+      "input": "be4dcddecf50896b52ff2c92eec429f2b58fe38a6ba8832ee881b8193374f82c",
+      "output": "a538b2469eb4dcb1089b43f532b35ed6b229bb6390d6c922c482d8142678a94f",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    "resolve_adb_packages": {
+      "input": "6af271aeeee3e8b4554a50c8eacdb97c5c36a193f76c33a12467da4e15f0dd0b",
+      "output": "7a682d93cfab83954fcd0b102759ac574f63f3893ecca5667615d1a1619d2fde",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "install_adb_package": {
+      "input": "db2b3281d207e7896790a2f36a11bbaef3a5c114034dff3523aa6a5d31c0241c",
+      "output": "1972f51612014c7f4053af0f03955af3227181ccbc688fedc71f355892989272",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    "uninstall_adb_package": {
+      "input": "98acfc6fd9e8337b50ff009c1e2740879c9b99bba14a98a04655ab1d931d2dc4",
+      "output": "4ec0fa3332c31c3801a8fc9c98e8808e85ab68ce17a46c802f854e77a1f30b8d",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    "start_adb_app": {
+      "input": "6590c625fcdf70f0404ad3e95a711717284af97bcb82e1b5aad7f67e28dfdd58",
+      "output": "c9bbb5d58c0299c8b49493a5b046763764458a91e0da675203a6374b1a51ece5",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    "start_adb_activity": {
+      "input": "5afda1e0c3b38ef9199cc12774d80bc14d3a9e3e705a303cdfebaeab50ce78a7",
+      "output": "5019f812963ca5183585a798c7ad9439d478cfe130edb6b14f242f7e053099af",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    "stop_adb_app": {
+      "input": "ba60c987406ac61bc187921e06ebd1336f38b68644b19a2412395b9652fea16c",
+      "output": "4ec0fa3332c31c3801a8fc9c98e8808e85ab68ce17a46c802f854e77a1f30b8d",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    "inspect_pcap_client": {
+      "input": "74dc20be5919e2b123386136ebec11b298d6fdd9b7e5f13bab01e10b0bd3ed92",
+      "output": "c17123182f051254f46c3c3e48c4e51d7176bb8d93932aa8032606fd1e5c1b18",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "inspect_pcap_capture": {
+      "input": "20e81e4c48c06ab95931a1c3acd2f10dc80c434b9fde7e670c45694f448c9ede",
+      "output": "a6697999183ef6059f9894c792e0011a5667a242f1db128693cc1e3044a65d19",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "identify_flutter_build": {
+      "input": "ae0e805f00a17b7ae0eca730dbe7ef33b88adda8e6d1efacf2343e2393c2a556",
+      "output": "c20d86fd3695c15fea6d0f332dd09e819ce38489ae61664a095c30059a81b82b",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "inspect_dart_aot": {
+      "input": "fbe275ae4df167cde7dc58cdc566000d3579a5f705984a6627729be776114e31",
+      "output": "e49ebfbbce7577bf7aa6930e57ca051ea6c4ea8b14d55c8b94f958539a8635a0",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "inspect_apktool_client": {
+      "input": "74dc20be5919e2b123386136ebec11b298d6fdd9b7e5f13bab01e10b0bd3ed92",
+      "output": "2036052696e7c334a98b07150dfd44eba41a574cb481372bc5a45ac36c7db95e",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "decode_android_resources": {
+      "input": "679bd95aa3a75970dea90c54b36365c75c85dffe521e54a27d2b4e37ea0c07d0",
+      "output": "abc83dd255b4ae75527dcf02db0b19036705799b9b401ab50991fb360c5c7e2b",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "export_web_scripts": {
+      "input": "6114cb7a6fc5f18cf321f51425cd9a1446db2c6880b547a7616ea877af51f278",
+      "output": "6978df00a30a7c84a8e6403eda577539e982144b64543dd196a442f29c463dea",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      }
+    },
+    "list_browser_targets": {
+      "input": "74b59e9518a9f1af73deabbfdb3bd7ad5072097151398a63a52d7b32ef0b2e43",
+      "output": "9738cf4bce3deee595922c6873ffca0610faa8a6128e484bc97f271967fb5618",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "inspect_web_page": {
+      "input": "df31cc47eba1c14789d0fcb9bc235c16b76ece6e017625ab464ec0c99d1189b5",
+      "output": "68d561d71261654cbebc934c007f17b7110f365a3727e8385d5eb3f4451428c1",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "analyze_web_bundle": {
+      "input": "4f5bca1669f185d96057ce6f1a8154785f7836c168872e14cbed444914b749a1",
+      "output": "0e5e5a603196aff3056ce5d374c40e404c4fd31644079de79e046168df0b875a",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "observe_web_session": {
+      "input": "410d7baf2afafae154c9a2f531fef5c8ecc5c98ebfdc4af9faa76e7456ed0da5",
+      "output": "1c4cd35471dd84a761369579df54bd031e01b8de5d64e43b7f219b758541a26c",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "discover_webmcp_tools": {
+      "input": "19b04cb44c2df460d2eede06f2c55d843181663ca68dd14a278d13f71d98d9e2",
+      "output": "6401b7e995ea56116d467861a1aa0f34842dd82a84d2f0360c3074319a193792",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "compare_web_captures": {
+      "input": "d178e38386582334d7caa3b820df23d662596206101e0f8efdefe4131efdacf8",
+      "output": "eb627cfe21598b6cdae45e1a863c95be3de6a60a07bca3bf3152d79c013c80e1",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "capture_web_screenshot": {
+      "input": "7059593c7bf5afb5461680bcc6ad96adb7a243fc2f7ba9a8e2e9fb0446baf9f4",
+      "output": "443b32c5a207dfa6c5a710e3641eebc15ac6f2804a55d96f59f0b5bc0212fce3",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "compare_web_screenshots": {
+      "input": "90fc11d7eb2a02fec76561c09c736482a5b49b6f94fbb8faf7af367a58ddc5b6",
+      "output": "c7070d6de120f1b3377fa043458e87f81312dc9805446428a4739ea017601b73",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "capture_browser_scenario": {
+      "input": "c1936243f98f1d4b290fe7b416547da8acb365e642a57eb93408918bc18e2642",
+      "output": "0b7a83d2d4930bb1fe26aa0a31e131a72a0b1b1c93e649d36ddb1c9e83dbe289",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    "inspect_electron_fuses": {
+      "input": "a9390b2bc14ac0942c29dec3349b28ce034a862958feb9c892c274e9397c744c",
+      "output": "81b688488671223422dca1565b7926536cf890967f3f53a1a9f1d18a632cd717",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "list_electron_targets": {
+      "input": "e47f3b2a29e5abdfd957c7a6146647c3e2387a393a3a8e3dbd1628ce8ec04b0d",
+      "output": "3bccd599c4a2840c55818d5c41601d9d3e06e0610b102e2e0c87ead28df306f5",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "inspect_electron_page": {
+      "input": "6b8552954af7cdc6b7ae1f5313a9bb49ecb109ea6cbe1fbb95a7421e3dde746f",
+      "output": "62086708348568ec31e7eb297c9393b9484298fd37b227dea2dee7037df41928",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "analyze_javascript_application": {
+      "input": "49919fcff0381db0c21e5cd798d813fb982d7fac418f0c338784a0eedefa1284",
+      "output": "58a2c3d7bacd256afb84961a76cd6c1fda3173251f30eff6fde5b3acf06c2f41",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "reconcile_javascript_runtime": {
+      "input": "b68d7455836cbbc49666c3c34fab7c0dba478ca6638f11eba2e776b75b4d6544",
+      "output": "88b1f0e3ef25f1e63a84fa101cb1330afbedc369541853275e48ab72b57379a6",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "capture_electron_scenario": {
+      "input": "4cca6ee6a7c3a0dba52e9a2e6edc093f0d03ff32eeee14e6302afa9d74aa097d",
+      "output": "12e1b043f0e76beb48dd1a45faa6b350f1f188e3f40a395bd8d63e1ec5a57a19",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    "list_javascript_runtime_targets": {
+      "input": "e7a522b8c617d3c1ae4d7887ef8305873ce2c76dd0c6fb73bc3f599c055f1ca5",
+      "output": "c973346ccbcef689654b2e5d7bd7cc61b666927ab5550d1f1dda52281c524564",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "observe_javascript_runtime": {
+      "input": "0c0f11975994d4ba565b1da0c7d4ecda7370e2e1e2e8aaf05431c04513b4b88e",
+      "output": "74deec14bf4d2fd60c2c226cad784e425cde3efaf6f5c736450d2b3d92affabd",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "trace_application_feature": {
+      "input": "b19a00e7779cd2e16ebc6c20b7e5f5e4110224e28d50a167d05e602ca0abd4c8",
+      "output": "a2c0ac133af80283ae59be5dc19d6cffd3f0eca8ac0ed4e6d25eb4bafb46f768",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "trace_javascript_semantics": {
+      "input": "d31092d6fe5a7f75c46655d5c68ab31458c5f9f495f5c45de225831322e490a0",
+      "output": "aeff6599661aa78a1a7598889a90145fad438f0f54d6b50227dfb9fa3b789cd5",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "compare_application_versions": {
+      "input": "33b9f5214e12c44786003d9e2ae953c867a3be93f0bb8adad43a90fd7e326cf6",
+      "output": "e1b56eddf4159358e8f52d3d37efb78c7315f5a2f278b090ea9213f1109843ca",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "compare_source_to_bundle": {
+      "input": "2dc0aa54a4910a493c2f5d7e84460352845318893aa5e3086ed687a9a4f78218",
+      "output": "31be3f1f13ac14c2f37141afb7a4baf9903e7b7c80fc1cf4c8ca37bec3d22dca",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "compare_javascript_export_shapes": {
+      "input": "328b83b61c31f90e09a22cac804662feafb7944172686bf3a655b7098431be91",
+      "output": "4905b24a13d904fd2b4fd6e0e6ae4a34f57dbe95ada717738ee7040e22dfe913",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "build_reconstruction_obligation_ledger": {
+      "input": "dc8acb6b8d4449f141a2bcf0b81fba4213a24eda1bebc0ad99ff1d24ec31aaee",
+      "output": "b5e79b56bf9da16a2ce969e7831b920f3259b60a90aa37c204f5867b7d4d8252",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "evaluate_reconstruction_coverage": {
+      "input": "26a4c03e9b35709df7eeac35f92b7349e9e873940403ba3177a258a37583309f",
+      "output": "08f6dd5ab39a8271ce89a22df12dfb3a7d82af18dff1ffba681f4aca6ca7c899",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "project_android_application_graph": {
+      "input": "d4e4cbd51fa017c37969ffb481482ce69c35b09887938d1c49d6d7ce854c3a74",
+      "output": "0300184dfd5c9e980262e72895bea08b08f72f1ff0a58da772f628e152507ad9",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "project_apple_application_graph": {
+      "input": "d4e4cbd51fa017c37969ffb481482ce69c35b09887938d1c49d6d7ce854c3a74",
+      "output": "ad9f17ddd5967e2f31b06eebba26572d9472c7c4af7026eece0876e4a38f2abe",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "project_harmony_application_graph": {
+      "input": "d4e4cbd51fa017c37969ffb481482ce69c35b09887938d1c49d6d7ce854c3a74",
+      "output": "895deabe8378203c0e3dae970c7ed05d7a8505101d464a85c8484a9e0171e464",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "open_binary": {
+      "input": "8082a4907ab905e088f2db66d3daf220d376e022acb2afd85d9974162c726382",
+      "output": "673a0ebda495301cb8e3cce919747f04c790efe53691c46c63abc83e3289ae9f",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "close_binary": {
+      "input": "2bf56c5363e113e442ee8b46addab71f0a2027a6976b948c22d832dd3d1aa4cb",
+      "output": "9f8a8148b3dec0805969f44ed523a0c678a3eaebbae310eb3d1d959e4fdcaac9",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false
+      }
+    },
+    "binary_session": {
+      "input": "11f5a64609fc4a3aeafa24ee6c75a1d04d68507f0f9171ac74780e9f2844c554",
+      "output": "9da69f49771ea20e9192e85ec103c386dd5266d31f4b6c216ee3bf9af413fe10",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    "export_evidence_bundle": {
+      "input": "9ccf1df1ed81e05f2ae5b91046c0d891256f410f629a26d268111a439237c23c",
+      "output": "f887c4f213c13454c58baa783bb8de4dbb52fd518ae2a4d00da1c9c7b7391ec5",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "import_evidence_bundle": {
+      "input": "3ea8c470b14d002aadecebe2d066d4ce3c2a0ea144db71607afc3159c2bdb48c",
+      "output": "340a175e91c31f926437e6b60dcce7fc226db4d79961a62aa722ab8c71994b69",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "get_evidence_bundle": {
+      "input": "ba97a0d33a7ca0047a2e33bd28f8674635131e6a5e03b632a1fac093c67d4be3",
+      "output": "1084decacc15cbddcd1df29a81a93e3cf59a215bd4da670a34ec20bc20f9d0a2",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "capture_process_scenario": {
+      "input": "90aeea184b6d2dd6f7fb15b94e18ea1e4bc21f2126af4f94305e3d72ae92910d",
+      "output": "f10b9268220e2bfda93f02d48936c2339334e6c3deb1757ac0fcb5989b3ebe85",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    "compare_process_captures": {
+      "input": "f42d2c7c9408de7ad89629afae4d2bd5577ba2127ff91aed51a7a2fb1c30697f",
+      "output": "47688c2a2270a18f49fc715af99ac3f04f3e78375667613fac84a825729d1f4e",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "compare_artifacts": {
+      "input": "6e9a24e48edd092a1849f894122623faf1c9c1813f105b02642cfbaf11d332b2",
+      "output": "e8b1e6cd3c8bc7adf9dd8a272faaffcac3a5d14fa3f993561602c7781bf0a227",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "compare_functions": {
+      "input": "6e9a24e48edd092a1849f894122623faf1c9c1813f105b02642cfbaf11d332b2",
+      "output": "de9b6184fdf959f3ac2e2f85138200efb16fcb607653e3f7a1d9d18607ace756",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "compare_bundles": {
+      "input": "9a8577032c37b4711024474ee958b5b43c04d1d62e62addb0c2f2dbc91ab698e",
+      "output": "0c8444e5590868f4e376ef874b1543cd64dc768c74c6cf4b5174cac19de19a4d",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "find_changed_behavior": {
+      "input": "f2642f4f2aafff752172085d2d585a5c6a90673fde764ab4fe957f60fc5f0bda",
+      "output": "54bdecea738bca3ff03bad6960d26fc78713cbe6748cae1d36006d6d441a96d6",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "build_call_path": {
+      "input": "f753d620ecd6ccfdf00c5b26f79bc2c28484aeaf67c3e88c3dab608dc2d6ab93",
+      "output": "a20103debb0b3e0f4744259bd74623bcfb0ed87d52f819788fa3a9cb311ccf91",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "correlate_static_and_runtime": {
+      "input": "635f15156c14c4f56537b7e02d7d36faa3c79fc43e0cc21839f5a32d608d6634",
+      "output": "58b9c6aea30b9ce12925fd5eaec4a10c256992690c1e419d7c5732e5c00d9480",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "verify_reconstruction": {
+      "input": "7c7d7d9cad699342f769716dd08afafc4deb3fcc8203dd010459826f2ad7a647",
+      "output": "e65b1270064f07d9c676abf3d0249f0683be77602ba1a6729566a6f0eba6e8d7",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "list_unknowns": {
+      "input": "315a9d7e13ad4d66203f97d7cbbee95a3e555af972c94bb595448a8032cddf25",
+      "output": "e15b7e225283ea6d17f9bf40631fb7eae3f3d266203573d75f89887a34c0fd22",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "record_unknown": {
+      "input": "4c0dd6173b92992d2bc1a13e1d04793c86a0c91434bcafb9e5510eab220daad8",
+      "output": "b39bf16bd88cc0d5aff478c4b705d8ffdc56f1b6b2e2ecbd12a168dc431d0574",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      }
+    },
+    "update_unknown": {
+      "input": "5d907a002eb889a20cc09f8f7d5559d3f70573ea5d7d0d714d78b06a32388a2f",
+      "output": "b39bf16bd88cc0d5aff478c4b705d8ffdc56f1b6b2e2ecbd12a168dc431d0574",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      }
+    },
+    "verify_unknown_resolution": {
+      "input": "ab1572b9fec5a73141675a900450f2465e5d12845faebea362a6c97147b03263",
+      "output": "45fdc299c51b716c55d052c7572c0bcbc8d6126dfc21fd175971fe66086ec934",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "get_navigation_context": {
+      "input": "80f0deaf06980788f110651a7bf263b9f1c906675f377fb972f945f6ddd27fe8",
+      "output": "f058a04c0608c90830a75f9a02863c9391deb744dccede13d96a16db241e5d99",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    "inspect_address_context": {
+      "input": "947e24f80dd263388c26efbc2724f11cc86a2346cff5140603f04308991751cd",
+      "output": "3a28dac39a55490f15071626fe6bda6075ad9b43ce886d043820fa793be9ef34",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    }
+  }
+}

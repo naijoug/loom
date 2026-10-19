@@ -1,0 +1,81 @@
+Window: "Loom", App: Loom.
+0 standard window Loom, Secondary Actions: Raise
+	1 scroll area
+		2 HTML content Description: Loom, URL: tauri://localhost
+			3 container
+				4 button 切换侧栏
+				5 text L 我
+				6 pop up button 工作区, Value: 我的工作区
+				7 button 创建工作区
+				8 text Loom
+			9 container
+				10 button 新会话 ⌘N
+				11 container 会话分类
+					12 button 所有会话 1
+					13 button 待整理
+					14 button 待办 1
+					15 button 进行中
+					16 button 待审阅
+					17 button 已完成
+					18 button 已取消
+					19 button 已标记
+					20 button 已归档
+				21 text 项目
+				22 button 登记项目文件夹
+				23 button 无项目会话
+				24 button 模型连接
+				25 button 权限设置
+				26 text L 本地工作区 会话保存在这台设备
+			27 container 会话列表
+				28 container
+					29 heading 所有会话, Value: 1
+						30 text 所有会话
+					31 button 新会话
+				32 text field (settable) 搜索会话
+				33 text 会话
+				34 button 原生 SDK 验收一：等待工具审批后拒绝写入。 待办
+			35 container
+				36 button 原生 SDK 验收一：等待工具审批后拒绝写入。
+				37 button 标记会话
+				38 button 归档会话
+				39 button 会话信息
+				40 container 会话记录
+					41 container 你的消息
+						42 text 原生 SDK 验收一：等待工具审批后拒绝写入。
+					43 container 助手消息
+						44 text L Loom
+						45 text Fixture tool result received.
+						46 text 已完成
+					47 container 你的消息
+						48 text 原生 SDK 验收二：等待工具审批时停止回复。
+					49 container 助手消息
+						50 text L Loom
+						51 text 已停止
+						52 text 已停止
+				53 container 工具授权
+					54 summary 工具授权记录（2）, Value: off
+						55 text 工具授权记录（
+						56 text 2
+						57 text ）
+				58 pop up button 权限模式, Value: Ask · 询问
+				59 text 待办
+				60 text entry area (settable) 消息, Value: [text entry area: 消息], Placeholder: 想一起完成什么？
+					61 text 想一起完成什么？
+				62 text 无项目
+				63 pop up button (disabled) 会话模型连接, Value: M2 本机验收连接（保留凭据）
+				64 pop up button 会话模型, Value: claude-sonnet-4-6
+				65 text SDK 已就绪
+				66 button (disabled) 发送消息
+				67 text Enter 发送 · Shift+Enter 换行
+	68 close button
+	69 full screen button Help: this button also has an action to zoom the window, Secondary Actions: zoom the window
+	70 minimize button
+71 menu bar
+	72 Loom
+	73 File
+	74 Edit
+	75 View
+	76 Window
+	77 Help
+
+The focused UI element is 2 HTML content Description: Loom, URL: tauri://localhost

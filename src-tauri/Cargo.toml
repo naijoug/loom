@@ -1,0 +1,37 @@
+[package]
+name = "loom"
+version = "0.1.0"
+description = "A desktop workbench for orchestrating local coding agents"
+authors = ["naijoug"]
+edition = "2021"
+rust-version = "1.90"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "loom_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+loom-core = { path = "../crates/loom-core" }
+loom-runtime = { path = "../crates/loom-runtime" }
+zeroize = "=1.9.0" # Keep host credential buffers out of Debug/serialization and clear on drop.
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10" # Bind native chat sessions without persisting raw execution configuration.
+tokio = { version = "1", features = ["io-util", "macros", "process", "signal", "sync", "time"] }
+tauri-plugin-dialog = "2"
+pulldown-cmark = "0.11"
+portable-pty = "0.9"
+tauri-plugin-updater = "2"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+security-framework = "=3.7.0" # Store model credentials in Keychain, not application JSON.

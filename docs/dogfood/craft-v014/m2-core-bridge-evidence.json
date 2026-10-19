@@ -1,0 +1,49 @@
+{
+  "recordedAt": "2026-10-09T00:11:45.296230+08:00",
+  "baseCommit": "2fb672a18d33a0de89e2472c0530e82714d3901e",
+  "platform": "macOS-26.5.2-arm64-arm-64bit-Mach-O",
+  "checks": {
+    "workspaceTests": 91,
+    "addedTests": 11,
+    "frontendProjectionTests": 7,
+    "workerTypecheck": "passed",
+    "frontendBuild": "passed",
+    "protocolDrift": "passed",
+    "piSdkInjectedFetchCases": 6,
+    "piSdkInjectedFetch": "passed",
+    "realHttp": "not-run: earlier auto-review timeouts; sandbox bind denied; explicit approval pending",
+    "claudeRuntime": "not-tested",
+    "liveModel": "not-tested",
+    "desktopIntegration": "not-implemented"
+  },
+  "sourceSha256": {
+    "crates/loom-core/src/approval.rs": "d946d397dfcb531971c93055b159d19e3ff55a077570f02e7330bbb2731b3f52",
+    "crates/loom-core/src/bindings.rs": "82f63d2a8de3396f3559656b7a984e556d5f497fe4a2912cd16f5d2646cd219c",
+    "crates/loom-core/src/lib.rs": "a03a612177b242d63a591bfc1f28638eccb57bd61401914693383906a0156a46",
+    "crates/loom-core/src/model.rs": "ce1b3db724ac8255a44d53980b17e1e1798a066eff7d168f2f8d16fffd9e8cb1",
+    "crates/loom-core/src/projection.rs": "93039a12f9c9f0688470e3cf249c6bb057697a428da202074f108617bf095df6",
+    "crates/loom-core/src/repository.rs": "e905f856b69df55476756b4e118be918e704f31c0562c6f9d254c5703d44eded",
+    "crates/loom-core/src/repository/approvals.rs": "574d6230f62871f1f88e18aaed227a4d65f1e1f3a3aea5c9ff6122b2aaf1ea9e",
+    "crates/loom-core/src/repository/runtime_context.rs": "9898a563691916b154b6abab7bc6fea1792bfad28d4be8b9fb67de63fc1fcb19",
+    "crates/loom-core/tests/runtime_context.rs": "c88e72a0c70ac64183d95412b847d88ed02e28f27e141144ed955af1da760302",
+    "crates/loom-core/tests/legacy.rs": "c838d52f0dcb44ccedf21d597a5be790e867401f4877cf766d607153fe2eb904",
+    "crates/loom-core/examples/projection_fixture.rs": "4a1f8fb347f7707805d9bd680ed5026be5ee5174c6a03b9b977060e1c52b10de",
+    "crates/loom-runtime/src/core_bridge.rs": "7664d308cfaf66535e809cde1a0d721d40e01dd62c7d1029aa902b0a96ef618b",
+    "crates/loom-runtime/src/lib.rs": "b652f95a876de88d7aa7c7039b95e4bdf4c56290abe2d5b028b7c48ac7892cb7",
+    "crates/loom-runtime/src/supervisor.rs": "82c45974daabbc9ebe2feffb35804993b24dd90c4f0f818db4c30f87b806206e",
+    "crates/loom-runtime/tests/core_bridge.rs": "ef63e4519719596f46fb1a727e5b5e3eee2f0b7c8e43f38e978bb9a52fdc45c3",
+    "crates/loom-runtime/examples/sdk_runtime_probe.rs": "24a651e111a10d53e7b720878a041652d3261e5cc90a457986af50281e004931",
+    "packages/protocol/src/workbench.ts": "e3adff6464ce008065cb03f44a6cae2636424b6d017de2f6ac02d4048c8fce5a",
+    "packages/provider-workers/src/runtime-worker.ts": "d99efb0687aa3625b2b61de2159b84e96d5ac36055adffa685a8f6d6969cf3c7",
+    "packages/provider-workers/tests/pi-fetch-fixture.ts": "e18940fb66cbc1bc828e733da5ce4b7feebc96e6f629a35282c3ab472eac7994",
+    "scripts/runtime-fetch-smoke.py": "2bb04274897a6862c775db82adb112270e205c8a69b05e1041cbaf7f7271fa72",
+    "src/workbench/projection.ts": "10991cc2f6ee280ac7149454cdfe8621b1c0125b31903d9e21a0347fe640e8cd"
+  },
+  "localLogSha256": {
+    ".tmp/core-bridge-validation/core-check.log": "89d3c3c7ffe0ed1a5c75f07e71370455e157590afcba58e8a50014357b6d3f70",
+    ".tmp/core-bridge-validation/frontend-build.log": "128e4a53d74f7ef3ea58571d8317d123ef9818ea2dd4e308cab4c7c39a40992b",
+    ".tmp/core-bridge-validation/frontend-test.log": "d326d5893763e904ddf26d929170f04edcda4feb9f2a02e3a7187bf4bf98af3e",
+    ".tmp/core-bridge-validation/pi-fetch.log": "514f2a39ca18d4e24b491770feaa0661ccf87e7974495335e56167816bc9d8bc",
+    ".tmp/core-bridge-validation/probe-build.log": "bda100581ce66ac47919d16fec1295492d042546b31815ea91f79d962e8e1c91"
+  }
+}

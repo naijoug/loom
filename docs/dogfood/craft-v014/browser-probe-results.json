@@ -1,0 +1,55 @@
+{
+  "evidenceKind": "native-rust-cef-loopback-probe",
+  "recordedAt": "2026-09-30T06:15:04.437Z",
+  "platform": "darwin-arm64",
+  "steps": [
+    {
+      "name": "native_window_and_local_page",
+      "passed": true
+    },
+    {
+      "name": "cdp_accessibility_tree",
+      "passed": true,
+      "nodeCount": 29
+    },
+    {
+      "name": "cdp_form_input_and_result",
+      "passed": true
+    },
+    {
+      "name": "native_hide_show_keeps_page",
+      "passed": true
+    },
+    {
+      "name": "native_window_close_hides_without_destroying",
+      "passed": true
+    },
+    {
+      "name": "profile_storage_and_cookie_written",
+      "passed": true
+    },
+    {
+      "name": "graceful_native_shutdown",
+      "passed": true
+    },
+    {
+      "name": "profile_storage_and_cookie_survive_restart",
+      "passed": true
+    },
+    {
+      "name": "ready_for_manual_native_input",
+      "passed": true
+    }
+  ],
+  "complete": true,
+  "sourceSha256": {
+    "experiments/browser-host/src/bridge.rs": "155a81805530ffaf8430e4f50bd07bfcd875c3a67b768d0c2f42a38d7b553128",
+    "experiments/browser-host/src/mac/mod.rs": "df2c44bf29d599e805c3d9a533d32053ff2a4eda9fb009039e48401c53fabf36",
+    "experiments/browser-host/src/shared/mod.rs": "025217d4a49ceab588b4adceec92119dc2f3c95e21524425373da6affea4cd74",
+    "experiments/browser-host/src/shared/simple_app.rs": "89cc2b2f5c7a4acef8abe456d585239edb7e59458ea3736cdac0a4e1781f1153",
+    "experiments/browser-host/src/shared/simple_handler/mod.rs": "480894e284cec04fbce42b2a068d5d938a8c880ba622e6aa07b98ba730592053",
+    "experiments/browser-host/Cargo.lock": "800c89fe94750377f127934ad11b9b6169907df19c85e25c72927a4dda389cc5",
+    "scripts/browser-probe.mjs": "fb75e348d821f7bbb64bed9ac49a1ac50324ea71e2967c0fbfb7c7de489ca6af",
+    "experiments/browser-host/web/index.html": "4c3d899c893e3c599f2468288cc0c73e5ff8469dcb3a2faa46c398cd0e1b2b69"
+  }
+}

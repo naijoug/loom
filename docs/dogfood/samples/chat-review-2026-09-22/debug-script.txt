@@ -1,0 +1,22 @@
+TAP version 13
+# Subtest: debug stop recognizes dev executables, never build/compiler commands containing cfg(dev)
+ok 1 - debug stop recognizes dev executables, never build/compiler commands containing cfg(dev)
+  ---
+  duration_ms: 51.798667
+  type: 'test'
+  ...
+# Subtest: debug stop succeeds with no dev process and a PID disappearing before inspection
+ok 2 - debug stop succeeds with no dev process and a PID disappearing before inspection
+  ---
+  duration_ms: 13.76575
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 101.558292

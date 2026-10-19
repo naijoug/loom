@@ -1,0 +1,666 @@
+{
+  "upstreamSha": "73bd9c2a3573158bea880984eb8d5fdb41e0cac2",
+  "sourceSha256": "8788497df817334a7458b15f333546a13b8279afde04559cd7f493671d0d8e5b",
+  "cases": [
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__get_issue",
+      "allowed": true
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__listIssues",
+      "allowed": true
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__getOrCreateIssue",
+      "allowed": false
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__get_or_create_issue",
+      "allowed": false
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__search_and_replace",
+      "allowed": false
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__run_query",
+      "allowed": false
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__mark_as_read",
+      "allowed": false
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__delete_account",
+      "allowed": false
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__send_thread_reply",
+      "allowed": false
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__post_status",
+      "allowed": false
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__upload_info",
+      "allowed": false
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__status",
+      "allowed": true
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__count_documents",
+      "allowed": true
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__info",
+      "allowed": true
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__exists",
+      "allowed": true
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__query",
+      "allowed": true
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__rebuild_search_index",
+      "allowed": false
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__refresh_materialized_view",
+      "allowed": false
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__get_commit",
+      "allowed": true
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__get_post",
+      "allowed": true
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__get_block",
+      "allowed": true
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__get_charge",
+      "allowed": true
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__list_trash",
+      "allowed": true
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__issue_read",
+      "allowed": true
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__notion-search",
+      "allowed": true
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__slack_get_channel_history",
+      "allowed": false
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__alpha_get_record",
+      "allowed": true
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__getURLInfo",
+      "allowed": true
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__GET_RECORD",
+      "allowed": true
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__readFile",
+      "allowed": true
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__find_file",
+      "allowed": true
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__fetch_data",
+      "allowed": true
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__inspect",
+      "allowed": true
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__view_page",
+      "allowed": true
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__set_status",
+      "allowed": false
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__get_update",
+      "allowed": false
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__delete_read",
+      "allowed": false
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__search",
+      "allowed": true
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__other",
+      "allowed": false
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__a_count",
+      "allowed": false
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__a_status",
+      "allowed": false
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__resource_info",
+      "allowed": false
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__readOnly",
+      "allowed": true
+    },
+    {
+      "source": "alpha",
+      "name": "mcp__alpha__get1Thing",
+      "allowed": false
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__get_issue",
+      "allowed": true
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__listIssues",
+      "allowed": true
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__getOrCreateIssue",
+      "allowed": false
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__get_or_create_issue",
+      "allowed": false
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__search_and_replace",
+      "allowed": false
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__run_query",
+      "allowed": false
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__mark_as_read",
+      "allowed": false
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__delete_account",
+      "allowed": false
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__send_thread_reply",
+      "allowed": false
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__post_status",
+      "allowed": false
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__upload_info",
+      "allowed": false
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__status",
+      "allowed": true
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__count_documents",
+      "allowed": true
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__info",
+      "allowed": true
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__exists",
+      "allowed": true
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__query",
+      "allowed": true
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__rebuild_search_index",
+      "allowed": false
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__refresh_materialized_view",
+      "allowed": false
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__get_commit",
+      "allowed": true
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__get_post",
+      "allowed": true
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__get_block",
+      "allowed": true
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__get_charge",
+      "allowed": true
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__list_trash",
+      "allowed": true
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__issue_read",
+      "allowed": true
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__notion-search",
+      "allowed": true
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__slack_get_channel_history",
+      "allowed": false
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__alpha_get_record",
+      "allowed": false
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__getURLInfo",
+      "allowed": true
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__GET_RECORD",
+      "allowed": true
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__readFile",
+      "allowed": true
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__find_file",
+      "allowed": true
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__fetch_data",
+      "allowed": true
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__inspect",
+      "allowed": true
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__view_page",
+      "allowed": true
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__set_status",
+      "allowed": false
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__get_update",
+      "allowed": false
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__delete_read",
+      "allowed": false
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__search",
+      "allowed": true
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__other",
+      "allowed": false
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__a_count",
+      "allowed": false
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__a_status",
+      "allowed": false
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__resource_info",
+      "allowed": false
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__readOnly",
+      "allowed": true
+    },
+    {
+      "source": "budget",
+      "name": "mcp__budget__get1Thing",
+      "allowed": false
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__get_issue",
+      "allowed": true
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__listIssues",
+      "allowed": true
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__getOrCreateIssue",
+      "allowed": false
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__get_or_create_issue",
+      "allowed": false
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__search_and_replace",
+      "allowed": false
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__run_query",
+      "allowed": false
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__mark_as_read",
+      "allowed": false
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__delete_account",
+      "allowed": false
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__send_thread_reply",
+      "allowed": false
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__post_status",
+      "allowed": false
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__upload_info",
+      "allowed": false
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__status",
+      "allowed": true
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__count_documents",
+      "allowed": true
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__info",
+      "allowed": true
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__exists",
+      "allowed": true
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__query",
+      "allowed": true
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__rebuild_search_index",
+      "allowed": false
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__refresh_materialized_view",
+      "allowed": false
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__get_commit",
+      "allowed": true
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__get_post",
+      "allowed": true
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__get_block",
+      "allowed": true
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__get_charge",
+      "allowed": true
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__list_trash",
+      "allowed": true
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__issue_read",
+      "allowed": true
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__notion-search",
+      "allowed": true
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__slack_get_channel_history",
+      "allowed": true
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__alpha_get_record",
+      "allowed": false
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__getURLInfo",
+      "allowed": true
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__GET_RECORD",
+      "allowed": true
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__readFile",
+      "allowed": true
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__find_file",
+      "allowed": true
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__fetch_data",
+      "allowed": true
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__inspect",
+      "allowed": true
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__view_page",
+      "allowed": true
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__set_status",
+      "allowed": false
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__get_update",
+      "allowed": false
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__delete_read",
+      "allowed": false
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__search",
+      "allowed": true
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__other",
+      "allowed": false
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__a_count",
+      "allowed": false
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__a_status",
+      "allowed": false
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__resource_info",
+      "allowed": false
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__readOnly",
+      "allowed": true
+    },
+    {
+      "source": "slack",
+      "name": "mcp__slack__get1Thing",
+      "allowed": false
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+/* App specific styles, most layout is in AppLayout.css and theme.css */
+button {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.app-view-loading {
+  display: grid;
+  min-height: 240px;
+  place-items: center;
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+}

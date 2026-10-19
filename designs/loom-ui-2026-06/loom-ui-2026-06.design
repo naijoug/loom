@@ -1,0 +1,124 @@
+{
+  "data": [
+    {
+      "id": "page-planning-room",
+      "title": "规划讨论室",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1750920000000,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/planning-room.html",
+        "interactions": [
+          {
+            "trigger": "cta-create-tasks",
+            "action": "navigate",
+            "target": "page-task-board"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-task-board",
+      "title": "任务看板",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1750920000000,
+      "canvasData": {
+        "x": 620,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/task-board.html",
+        "interactions": [
+          {
+            "trigger": "cta-run-task",
+            "action": "navigate",
+            "target": "page-in-progress"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-in-progress",
+      "title": "执行中",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1750920000000,
+      "canvasData": {
+        "x": 1240,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/in-progress.html",
+        "interactions": [
+          {
+            "trigger": "cta-mark-testing",
+            "action": "navigate",
+            "target": "page-testing-cockpit"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-testing-cockpit",
+      "title": "调试验收",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1750920000000,
+      "canvasData": {
+        "x": 1860,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/testing-cockpit.html",
+        "interactions": [
+          {
+            "trigger": "cta-mark-done",
+            "action": "navigate",
+            "target": "page-delivery-summary"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-delivery-summary",
+      "title": "交付总结",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1750920000000,
+      "canvasData": {
+        "x": 2480,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/delivery-summary.html",
+        "interactions": [
+          {
+            "trigger": "cta-followup",
+            "action": "navigate",
+            "target": "page-planning-room",
+            "hideEdge": true
+          }
+        ]
+      }
+    }
+  ],
+  "config": {
+    "autoLayout": true,
+    "deviceType": "desktop",
+    "projectName": "Loom 多 Agent 编程工作台",
+    "windowSize": {
+      "width": 800,
+      "height": 600
+    }
+  }
+}

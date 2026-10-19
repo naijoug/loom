@@ -1,0 +1,92 @@
+{
+  "evidenceKind": "native-desktop-actions-read-back-through-production-core",
+  "fixtureRuntime": true,
+  "sessions": [
+    {
+      "key": {
+        "workspaceId": "1e4c41d5-dbe6-430f-bcd8-ee6ef6104d3b",
+        "sessionId": "0230c5e9-4fc6-4de9-9ddf-71432ba09267"
+      },
+      "title": null,
+      "notesSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "flagged": false,
+      "archived": false,
+      "userMessageCount": 1,
+      "turnStatuses": [
+        "completed"
+      ],
+      "lastStartedAtMs": 1790755711812,
+      "activeTurnId": null
+    },
+    {
+      "key": {
+        "workspaceId": "1e4c41d5-dbe6-430f-bcd8-ee6ef6104d3b",
+        "sessionId": "e3ff5449-e1fd-425d-8a2b-f9de6e45dcdd"
+      },
+      "title": null,
+      "notesSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "flagged": false,
+      "archived": false,
+      "userMessageCount": 1,
+      "turnStatuses": [
+        "cancelled"
+      ],
+      "lastStartedAtMs": 1790756425210,
+      "activeTurnId": null
+    },
+    {
+      "key": {
+        "workspaceId": "1e4c41d5-dbe6-430f-bcd8-ee6ef6104d3b",
+        "sessionId": "2c695fe4-0992-4449-a76f-503d9e7c35f3"
+      },
+      "title": null,
+      "notesSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "flagged": false,
+      "archived": false,
+      "userMessageCount": 1,
+      "turnStatuses": [
+        "interrupted"
+      ],
+      "lastStartedAtMs": 1790755842138,
+      "activeTurnId": null
+    },
+    {
+      "key": {
+        "workspaceId": "default-workspace",
+        "sessionId": "340c8b34-fe5d-4ad2-94c7-d239f10348b6"
+      },
+      "title": "M1 桌面验收",
+      "notesSha256": "9eed47e2a983f2b80583e43e8064bc5441e608d2fbd0a41bd33c23ed34afec42",
+      "flagged": true,
+      "archived": false,
+      "userMessageCount": 3,
+      "turnStatuses": [
+        "completed",
+        "cancelled",
+        "completed"
+      ],
+      "lastStartedAtMs": 1790754558866,
+      "activeTurnId": null
+    },
+    {
+      "key": {
+        "workspaceId": "default-workspace",
+        "sessionId": "df95bef4-7f21-44ab-b805-ee0a195bf3c7"
+      },
+      "title": null,
+      "notesSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "flagged": false,
+      "archived": false,
+      "userMessageCount": 0,
+      "turnStatuses": [],
+      "lastStartedAtMs": 0,
+      "activeTurnId": null
+    }
+  ],
+  "exitWhileRunning": {
+    "fixedCaseSessionId": "e3ff5449-e1fd-425d-8a2b-f9de6e45dcdd",
+    "result": "cancelled-with-no-active-owner",
+    "earlierNativeQuitCase": "interrupted before the custom menu fix; preserved as historical failure"
+  },
+  "scope": "Synthetic local fixtures only; no real model or legacy data migration tested."
+}

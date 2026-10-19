@@ -1,0 +1,1123 @@
+{
+  "coreApprovalIntegration": true,
+  "evidenceKind": "real-sdk-local-model-fixture",
+  "liveModelVerified": false,
+  "recordedAt": "2026-10-07T21:58:36.499580+08:00",
+  "platform": {
+    "system": "Darwin",
+    "release": "25.5.0",
+    "arch": "arm64"
+  },
+  "scope": "Single real SDK Write/write tool, local model fixture, Rust decision binding; no broad parity claim.",
+  "sourceSha256": {
+    "packages/provider-workers/src/worker.ts": "6ef9890a69c0780feda92a66b77b7e94a8816b9e05501d32b311eb5eb98f5b9a",
+    "packages/provider-workers/bun.lock": "72adca0bf3eea6f8ab9e15f1d78ab526dc1333062399291067b1481854ac3c12",
+    "experiments/runtime-bridge/src/main.rs": "4bfa83f58b7e02c9165abecf33bcb6ed82716abed9139396e612fbfb3ea760f1",
+    "experiments/runtime-bridge/Cargo.lock": "ffc436772ac3d5cf91b2be617c1152668d7fae0351aa080f6222ab9ae94a371a",
+    "scripts/runtime-bridge-smoke.py": "3fe02e4265df463da8b85d361cf7b1ac72f09c3c59d3d06cb0797cf28ef86943",
+    "crates/loom-core/examples/sdk_core_approval_probe.rs": "913754648a3e4a8fabddfe8e2261e648d7d8017aa27d88ed40855945d2d1cdb6",
+    "crates/loom-core/src/approval.rs": "a4afbdd1798656752caa70475f36126726548b39464f295918773e30310908d8",
+    "crates/loom-core/src/repository/approvals.rs": "50cae366b6fadbd41ef1867159a05404637c0bcea99aae2361fb97c1646bb4fa",
+    "crates/loom-core/src/projection.rs": "af660e555976fca9fa5de794659627fe9e31d618768ee691814f167923e0e569"
+  },
+  "sdkVersions": {
+    "@anthropic-ai/claude-agent-sdk": "0.3.280",
+    "@earendil-works/pi-coding-agent": "0.87.1"
+  },
+  "results": [
+    {
+      "provider": "claude",
+      "scenario": "allow",
+      "passed": true,
+      "checks": {
+        "worker_exit_ok": true,
+        "real_sdk_requested_tool": true,
+        "observed_model_api": true,
+        "exact_side_effect": true,
+        "rust_decision_observed": true,
+        "stale_response_rejected": true,
+        "durable_core_approval": true,
+        "core_turn_settled": true
+      },
+      "requests": [
+        {
+          "path": "/v1/messages?beta=true",
+          "model": "claude-sonnet-4-6",
+          "stream": true
+        },
+        {
+          "path": "/v1/messages?beta=true",
+          "model": "claude-sonnet-4-6",
+          "stream": true
+        }
+      ],
+      "events": [
+        {
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "kind": "started",
+          "protocolVersion": 1,
+          "provider": "claude"
+        },
+        {
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "cwd": "$FIXTURE",
+          "digest": "3ac68c39c3023bcb201a7261f2a0da7a4781938286e621998a7f29586bfb3e76",
+          "input": {
+            "content": "loom-sdk-probe\n",
+            "file_path": "$FIXTURE/probe.txt"
+          },
+          "kind": "approvalRequested",
+          "protocolVersion": 1,
+          "requestId": "f3eacec3-c8a0-405b-86f2-cfcdea647c9a",
+          "toolCallId": "loom_probe_tool_1",
+          "toolName": "Write"
+        },
+        {
+          "allowed": true,
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "kind": "approvalSettled",
+          "protocolVersion": 1,
+          "requestId": "f3eacec3-c8a0-405b-86f2-cfcdea647c9a",
+          "toolCallId": "loom_probe_tool_1"
+        },
+        {
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "kind": "toolResult",
+          "protocolVersion": 1,
+          "result": {
+            "content": "loom-sdk-probe\n",
+            "filePath": "$FIXTURE/probe.txt",
+            "originalFile": null,
+            "structuredPatch": [],
+            "type": "create",
+            "userModified": false
+          },
+          "toolCallId": "loom_probe_tool_1"
+        },
+        {
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "isError": false,
+          "kind": "providerResult",
+          "protocolVersion": 1,
+          "subtype": "success"
+        },
+        {
+          "cancelled": false,
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "kind": "completed",
+          "protocolVersion": 1
+        },
+        {
+          "activeTurnId": null,
+          "approvalStatuses": [
+            "consumed"
+          ],
+          "kind": "coreAudit",
+          "lastSeq": 9,
+          "toolCount": 1,
+          "turnStatus": "completed"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "provider": "claude",
+      "scenario": "deny",
+      "passed": true,
+      "checks": {
+        "worker_exit_ok": true,
+        "real_sdk_requested_tool": true,
+        "observed_model_api": true,
+        "exact_side_effect": true,
+        "rust_decision_observed": true,
+        "stale_response_rejected": true,
+        "durable_core_approval": true,
+        "core_turn_settled": true
+      },
+      "requests": [
+        {
+          "path": "/v1/messages?beta=true",
+          "model": "claude-sonnet-4-6",
+          "stream": true
+        },
+        {
+          "path": "/v1/messages?beta=true",
+          "model": "claude-sonnet-4-6",
+          "stream": true
+        }
+      ],
+      "events": [
+        {
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "kind": "started",
+          "protocolVersion": 1,
+          "provider": "claude"
+        },
+        {
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "cwd": "$FIXTURE",
+          "digest": "8a280f7785cc93ba728e0ffc1de20119f71743c75e494ddfb3aba6ff5af51e01",
+          "input": {
+            "content": "loom-sdk-probe\n",
+            "file_path": "$FIXTURE/probe.txt"
+          },
+          "kind": "approvalRequested",
+          "protocolVersion": 1,
+          "requestId": "4890bb9b-b346-4450-8c80-6cc28abd47af",
+          "toolCallId": "loom_probe_tool_1",
+          "toolName": "Write"
+        },
+        {
+          "allowed": false,
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "kind": "approvalSettled",
+          "protocolVersion": 1,
+          "requestId": "4890bb9b-b346-4450-8c80-6cc28abd47af",
+          "toolCallId": "loom_probe_tool_1"
+        },
+        {
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "isError": false,
+          "kind": "providerResult",
+          "protocolVersion": 1,
+          "subtype": "success"
+        },
+        {
+          "cancelled": false,
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "kind": "completed",
+          "protocolVersion": 1
+        },
+        {
+          "activeTurnId": null,
+          "approvalStatuses": [
+            "denied"
+          ],
+          "kind": "coreAudit",
+          "lastSeq": 7,
+          "toolCount": 0,
+          "turnStatus": "completed"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "provider": "claude",
+      "scenario": "cancel",
+      "passed": true,
+      "checks": {
+        "worker_exit_ok": true,
+        "real_sdk_requested_tool": true,
+        "observed_model_api": true,
+        "exact_side_effect": true,
+        "rust_decision_observed": true,
+        "stale_response_rejected": true,
+        "durable_core_approval": true,
+        "core_turn_settled": true
+      },
+      "requests": [
+        {
+          "path": "/v1/messages?beta=true",
+          "model": "claude-sonnet-4-6",
+          "stream": true
+        },
+        {
+          "path": "/v1/messages?beta=true",
+          "model": "claude-sonnet-4-6",
+          "stream": true
+        }
+      ],
+      "events": [
+        {
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "kind": "started",
+          "protocolVersion": 1,
+          "provider": "claude"
+        },
+        {
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "cwd": "$FIXTURE",
+          "digest": "00cb49f36512233f1e26363ea7ffd0d2a722f9228b86f21e686f4821127abca4",
+          "input": {
+            "content": "loom-sdk-probe\n",
+            "file_path": "$FIXTURE/probe.txt"
+          },
+          "kind": "approvalRequested",
+          "protocolVersion": 1,
+          "requestId": "f9aa909f-21c3-4f32-ade9-f51b56aa6004",
+          "toolCallId": "loom_probe_tool_1",
+          "toolName": "Write"
+        },
+        {
+          "allowed": false,
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "kind": "approvalSettled",
+          "protocolVersion": 1,
+          "requestId": "f9aa909f-21c3-4f32-ade9-f51b56aa6004",
+          "toolCallId": "loom_probe_tool_1"
+        },
+        {
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "isError": false,
+          "kind": "providerResult",
+          "protocolVersion": 1,
+          "subtype": "success"
+        },
+        {
+          "cancelled": true,
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "kind": "error",
+          "message": "Operation aborted",
+          "protocolVersion": 1
+        },
+        {
+          "activeTurnId": null,
+          "approvalStatuses": [
+            "cancelled"
+          ],
+          "kind": "coreAudit",
+          "lastSeq": 6,
+          "toolCount": 0,
+          "turnStatus": "cancelled"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "provider": "claude",
+      "scenario": "stale",
+      "passed": true,
+      "checks": {
+        "worker_exit_ok": true,
+        "real_sdk_requested_tool": true,
+        "observed_model_api": true,
+        "exact_side_effect": true,
+        "rust_decision_observed": true,
+        "stale_response_rejected": true,
+        "durable_core_approval": true,
+        "core_turn_settled": true
+      },
+      "requests": [
+        {
+          "path": "/v1/messages?beta=true",
+          "model": "claude-sonnet-4-6",
+          "stream": true
+        },
+        {
+          "path": "/v1/messages?beta=true",
+          "model": "claude-sonnet-4-6",
+          "stream": true
+        }
+      ],
+      "events": [
+        {
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "kind": "started",
+          "protocolVersion": 1,
+          "provider": "claude"
+        },
+        {
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "cwd": "$FIXTURE",
+          "digest": "27de318e7ef6d19b1cecf14a7283f2f290bec5edae398c072dd268c6c71e6af2",
+          "input": {
+            "content": "loom-sdk-probe\n",
+            "file_path": "$FIXTURE/probe.txt"
+          },
+          "kind": "approvalRequested",
+          "protocolVersion": 1,
+          "requestId": "91e07613-b971-4cc5-9d3b-57d22819c17f",
+          "toolCallId": "loom_probe_tool_1",
+          "toolName": "Write"
+        },
+        {
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "kind": "protocolError",
+          "message": "Stale, unknown or mismatched approval",
+          "protocolVersion": 1
+        },
+        {
+          "allowed": true,
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "kind": "approvalSettled",
+          "protocolVersion": 1,
+          "requestId": "91e07613-b971-4cc5-9d3b-57d22819c17f",
+          "toolCallId": "loom_probe_tool_1"
+        },
+        {
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "kind": "toolResult",
+          "protocolVersion": 1,
+          "result": {
+            "content": "loom-sdk-probe\n",
+            "filePath": "$FIXTURE/probe.txt",
+            "originalFile": null,
+            "structuredPatch": [],
+            "type": "create",
+            "userModified": false
+          },
+          "toolCallId": "loom_probe_tool_1"
+        },
+        {
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "isError": false,
+          "kind": "providerResult",
+          "protocolVersion": 1,
+          "subtype": "success"
+        },
+        {
+          "cancelled": false,
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "kind": "completed",
+          "protocolVersion": 1
+        },
+        {
+          "activeTurnId": null,
+          "approvalStatuses": [
+            "consumed"
+          ],
+          "kind": "coreAudit",
+          "lastSeq": 9,
+          "toolCount": 1,
+          "turnStatus": "completed"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "provider": "claude",
+      "scenario": "disconnect",
+      "passed": true,
+      "checks": {
+        "worker_exit_ok": true,
+        "real_sdk_requested_tool": true,
+        "observed_model_api": true,
+        "exact_side_effect": true,
+        "rust_decision_observed": true,
+        "stale_response_rejected": true,
+        "durable_core_approval": true,
+        "core_turn_settled": true
+      },
+      "requests": [
+        {
+          "path": "/v1/messages?beta=true",
+          "model": "claude-sonnet-4-6",
+          "stream": true
+        },
+        {
+          "path": "/v1/messages?beta=true",
+          "model": "claude-sonnet-4-6",
+          "stream": true
+        }
+      ],
+      "events": [
+        {
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "kind": "started",
+          "protocolVersion": 1,
+          "provider": "claude"
+        },
+        {
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "cwd": "$FIXTURE",
+          "digest": "f0cbe3b9ab6f5778010cd76352fb68747fd089cd96f12da7ca456690518f11bc",
+          "input": {
+            "content": "loom-sdk-probe\n",
+            "file_path": "$FIXTURE/probe.txt"
+          },
+          "kind": "approvalRequested",
+          "protocolVersion": 1,
+          "requestId": "336585ff-b119-4e30-8027-97df766f93a3",
+          "toolCallId": "loom_probe_tool_1",
+          "toolName": "Write"
+        },
+        {
+          "allowed": false,
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "kind": "approvalSettled",
+          "protocolVersion": 1,
+          "requestId": "336585ff-b119-4e30-8027-97df766f93a3",
+          "toolCallId": "loom_probe_tool_1"
+        },
+        {
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "isError": false,
+          "kind": "providerResult",
+          "protocolVersion": 1,
+          "subtype": "success"
+        },
+        {
+          "cancelled": true,
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "kind": "error",
+          "message": "Operation aborted",
+          "protocolVersion": 1
+        },
+        {
+          "activeTurnId": null,
+          "approvalStatuses": [
+            "cancelled"
+          ],
+          "kind": "coreAudit",
+          "lastSeq": 6,
+          "toolCount": 0,
+          "turnStatus": "interrupted"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "provider": "pi",
+      "scenario": "allow",
+      "passed": true,
+      "checks": {
+        "worker_exit_ok": true,
+        "real_sdk_requested_tool": true,
+        "observed_model_api": true,
+        "exact_side_effect": true,
+        "rust_decision_observed": true,
+        "stale_response_rejected": true,
+        "durable_core_approval": true,
+        "core_turn_settled": true
+      },
+      "requests": [
+        {
+          "path": "/v1/chat/completions",
+          "model": "loom-fixture",
+          "stream": true
+        },
+        {
+          "path": "/v1/chat/completions",
+          "model": "loom-fixture",
+          "stream": true
+        }
+      ],
+      "events": [
+        {
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "kind": "started",
+          "protocolVersion": 1,
+          "provider": "pi"
+        },
+        {
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "cwd": "$FIXTURE",
+          "digest": "bf6e659cb8d794eaf7457006ebf6bd808568c8f4cc0b62a4cbe9888cf530eee8",
+          "input": {
+            "content": "loom-sdk-probe\n",
+            "path": "$FIXTURE/probe.txt"
+          },
+          "kind": "approvalRequested",
+          "protocolVersion": 1,
+          "requestId": "15a230bf-9855-419f-b599-b035b130afe3",
+          "toolCallId": "loom_probe_tool_1",
+          "toolName": "write"
+        },
+        {
+          "allowed": true,
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "kind": "approvalSettled",
+          "protocolVersion": 1,
+          "requestId": "15a230bf-9855-419f-b599-b035b130afe3",
+          "toolCallId": "loom_probe_tool_1"
+        },
+        {
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "kind": "toolResult",
+          "protocolVersion": 1,
+          "result": {
+            "content": [
+              {
+                "text": "Successfully wrote to $FIXTURE/probe.txt",
+                "type": "text"
+              }
+            ]
+          },
+          "toolCallId": "loom_probe_tool_1"
+        },
+        {
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "isError": false,
+          "kind": "toolExecutionEnd",
+          "protocolVersion": 1,
+          "toolCallId": "loom_probe_tool_1"
+        },
+        {
+          "cancelled": false,
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "kind": "completed",
+          "protocolVersion": 1
+        },
+        {
+          "activeTurnId": null,
+          "approvalStatuses": [
+            "consumed"
+          ],
+          "kind": "coreAudit",
+          "lastSeq": 9,
+          "toolCount": 1,
+          "turnStatus": "completed"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "provider": "pi",
+      "scenario": "deny",
+      "passed": true,
+      "checks": {
+        "worker_exit_ok": true,
+        "real_sdk_requested_tool": true,
+        "observed_model_api": true,
+        "exact_side_effect": true,
+        "rust_decision_observed": true,
+        "stale_response_rejected": true,
+        "durable_core_approval": true,
+        "core_turn_settled": true
+      },
+      "requests": [
+        {
+          "path": "/v1/chat/completions",
+          "model": "loom-fixture",
+          "stream": true
+        },
+        {
+          "path": "/v1/chat/completions",
+          "model": "loom-fixture",
+          "stream": true
+        }
+      ],
+      "events": [
+        {
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "kind": "started",
+          "protocolVersion": 1,
+          "provider": "pi"
+        },
+        {
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "cwd": "$FIXTURE",
+          "digest": "ada0cb205fb8f269ed764c44c363d9ebf4268cfc6c5acbe92222ec8a5ca55d1c",
+          "input": {
+            "content": "loom-sdk-probe\n",
+            "path": "$FIXTURE/probe.txt"
+          },
+          "kind": "approvalRequested",
+          "protocolVersion": 1,
+          "requestId": "764a4f8b-1c70-4725-91d3-12882c580020",
+          "toolCallId": "loom_probe_tool_1",
+          "toolName": "write"
+        },
+        {
+          "allowed": false,
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "kind": "approvalSettled",
+          "protocolVersion": 1,
+          "requestId": "764a4f8b-1c70-4725-91d3-12882c580020",
+          "toolCallId": "loom_probe_tool_1"
+        },
+        {
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "isError": true,
+          "kind": "toolExecutionEnd",
+          "protocolVersion": 1,
+          "toolCallId": "loom_probe_tool_1"
+        },
+        {
+          "cancelled": false,
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "kind": "completed",
+          "protocolVersion": 1
+        },
+        {
+          "activeTurnId": null,
+          "approvalStatuses": [
+            "denied"
+          ],
+          "kind": "coreAudit",
+          "lastSeq": 7,
+          "toolCount": 0,
+          "turnStatus": "completed"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "provider": "pi",
+      "scenario": "cancel",
+      "passed": true,
+      "checks": {
+        "worker_exit_ok": true,
+        "real_sdk_requested_tool": true,
+        "observed_model_api": true,
+        "exact_side_effect": true,
+        "rust_decision_observed": true,
+        "stale_response_rejected": true,
+        "durable_core_approval": true,
+        "core_turn_settled": true
+      },
+      "requests": [
+        {
+          "path": "/v1/chat/completions",
+          "model": "loom-fixture",
+          "stream": true
+        }
+      ],
+      "events": [
+        {
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "kind": "started",
+          "protocolVersion": 1,
+          "provider": "pi"
+        },
+        {
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "cwd": "$FIXTURE",
+          "digest": "fc6dd37b11064311bc9678c4d1f8d6245d0620f3627dff4aff307cad4cd06add",
+          "input": {
+            "content": "loom-sdk-probe\n",
+            "path": "$FIXTURE/probe.txt"
+          },
+          "kind": "approvalRequested",
+          "protocolVersion": 1,
+          "requestId": "e316d705-8ded-4aa9-8785-a1bda06a77a5",
+          "toolCallId": "loom_probe_tool_1",
+          "toolName": "write"
+        },
+        {
+          "allowed": false,
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "kind": "approvalSettled",
+          "protocolVersion": 1,
+          "requestId": "e316d705-8ded-4aa9-8785-a1bda06a77a5",
+          "toolCallId": "loom_probe_tool_1"
+        },
+        {
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "isError": true,
+          "kind": "toolExecutionEnd",
+          "protocolVersion": 1,
+          "toolCallId": "loom_probe_tool_1"
+        },
+        {
+          "cancelled": true,
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "kind": "completed",
+          "protocolVersion": 1
+        },
+        {
+          "activeTurnId": null,
+          "approvalStatuses": [
+            "cancelled"
+          ],
+          "kind": "coreAudit",
+          "lastSeq": 6,
+          "toolCount": 0,
+          "turnStatus": "cancelled"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "provider": "pi",
+      "scenario": "stale",
+      "passed": true,
+      "checks": {
+        "worker_exit_ok": true,
+        "real_sdk_requested_tool": true,
+        "observed_model_api": true,
+        "exact_side_effect": true,
+        "rust_decision_observed": true,
+        "stale_response_rejected": true,
+        "durable_core_approval": true,
+        "core_turn_settled": true
+      },
+      "requests": [
+        {
+          "path": "/v1/chat/completions",
+          "model": "loom-fixture",
+          "stream": true
+        },
+        {
+          "path": "/v1/chat/completions",
+          "model": "loom-fixture",
+          "stream": true
+        }
+      ],
+      "events": [
+        {
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "kind": "started",
+          "protocolVersion": 1,
+          "provider": "pi"
+        },
+        {
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "cwd": "$FIXTURE",
+          "digest": "9cd0adee91690f650e072db0419162ff5277895bceccbf342844ae28e17d0abf",
+          "input": {
+            "content": "loom-sdk-probe\n",
+            "path": "$FIXTURE/probe.txt"
+          },
+          "kind": "approvalRequested",
+          "protocolVersion": 1,
+          "requestId": "5fb625ca-fc90-4839-84af-6be88a7ea6c2",
+          "toolCallId": "loom_probe_tool_1",
+          "toolName": "write"
+        },
+        {
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "kind": "protocolError",
+          "message": "Stale, unknown or mismatched approval",
+          "protocolVersion": 1
+        },
+        {
+          "allowed": true,
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "kind": "approvalSettled",
+          "protocolVersion": 1,
+          "requestId": "5fb625ca-fc90-4839-84af-6be88a7ea6c2",
+          "toolCallId": "loom_probe_tool_1"
+        },
+        {
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "kind": "toolResult",
+          "protocolVersion": 1,
+          "result": {
+            "content": [
+              {
+                "text": "Successfully wrote to $FIXTURE/probe.txt",
+                "type": "text"
+              }
+            ]
+          },
+          "toolCallId": "loom_probe_tool_1"
+        },
+        {
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "isError": false,
+          "kind": "toolExecutionEnd",
+          "protocolVersion": 1,
+          "toolCallId": "loom_probe_tool_1"
+        },
+        {
+          "cancelled": false,
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "kind": "completed",
+          "protocolVersion": 1
+        },
+        {
+          "activeTurnId": null,
+          "approvalStatuses": [
+            "consumed"
+          ],
+          "kind": "coreAudit",
+          "lastSeq": 9,
+          "toolCount": 1,
+          "turnStatus": "completed"
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "provider": "pi",
+      "scenario": "disconnect",
+      "passed": true,
+      "checks": {
+        "worker_exit_ok": true,
+        "real_sdk_requested_tool": true,
+        "observed_model_api": true,
+        "exact_side_effect": true,
+        "rust_decision_observed": true,
+        "stale_response_rejected": true,
+        "durable_core_approval": true,
+        "core_turn_settled": true
+      },
+      "requests": [
+        {
+          "path": "/v1/chat/completions",
+          "model": "loom-fixture",
+          "stream": true
+        }
+      ],
+      "events": [
+        {
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "kind": "started",
+          "protocolVersion": 1,
+          "provider": "pi"
+        },
+        {
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "cwd": "$FIXTURE",
+          "digest": "8c247f58bb78453f372a803f4b99b1327786e62242c8dab7f830623ef6b6060b",
+          "input": {
+            "content": "loom-sdk-probe\n",
+            "path": "$FIXTURE/probe.txt"
+          },
+          "kind": "approvalRequested",
+          "protocolVersion": 1,
+          "requestId": "9c0cefe2-d605-4c10-a91f-568a0754ada8",
+          "toolCallId": "loom_probe_tool_1",
+          "toolName": "write"
+        },
+        {
+          "allowed": false,
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "kind": "approvalSettled",
+          "protocolVersion": 1,
+          "requestId": "9c0cefe2-d605-4c10-a91f-568a0754ada8",
+          "toolCallId": "loom_probe_tool_1"
+        },
+        {
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "isError": true,
+          "kind": "toolExecutionEnd",
+          "protocolVersion": 1,
+          "toolCallId": "loom_probe_tool_1"
+        },
+        {
+          "cancelled": true,
+          "context": {
+            "sessionId": "sdk-session",
+            "turnId": "turn-4f5bf8dca4d96eb765e1e1b2e063edbda9fdec74b160081d49a65e7e99e21ae8",
+            "workspaceId": "sdk-workspace"
+          },
+          "kind": "completed",
+          "protocolVersion": 1
+        },
+        {
+          "activeTurnId": null,
+          "approvalStatuses": [
+            "cancelled"
+          ],
+          "kind": "coreAudit",
+          "lastSeq": 6,
+          "toolCount": 0,
+          "turnStatus": "interrupted"
+        }
+      ],
+      "stderr": ""
+    }
+  ]
+}

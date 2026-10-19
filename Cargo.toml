@@ -1,0 +1,15 @@
+[workspace]
+resolver = "2"
+members = ["crates/loom-core", "crates/loom-runtime"]
+# Preserve the existing desktop build and isolate feasibility experiments.
+exclude = ["src-tauri", "experiments/runtime-bridge", "experiments/browser-host"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.89"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"

@@ -1,0 +1,63 @@
+    Checking loom-core v0.1.0 ($PROJECT/crates/loom-core)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.35s
+   Compiling loom-core v0.1.0 ($PROJECT/crates/loom-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.33s
+     Running unittests src/lib.rs (target/debug/deps/loom_core-332297b95b724e03)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/bin/export-workbench-types.rs (target/debug/deps/export_workbench_types-8f0c4beec11961ab)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/bin/loom-core-host.rs (target/debug/deps/loom_core_host-f482d970bc3dbda5)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/core.rs (target/debug/deps/core-3a955d6bb04d5f50)
+
+running 26 tests
+test crash_worker ... ok
+
+running 1 test
+test invalid_create_configuration_does_not_poison_the_session_id ... ok
+test protocol_and_message_budgets_reject_without_mutating_state ... ok
+test incomplete_tail_is_preserved_then_repaired_but_complete_corruption_is_not ... ok
+test failed_journal_write_does_not_reserve_request_or_publish_success ... ok
+test project_replaced_by_symlink_cannot_be_claimed_as_its_old_directory ... ok
+test archive_preserves_history_and_duplicate_send_is_safe_after_archive ... ok
+test queued_cancellation_does_not_start_a_runtime ... ok
+test concurrent_send_has_one_durable_receipt_and_restart_preserves_it ... ok
+test invalid_identifiers_and_cross_scope_journals_are_rejected ... ok
+test jsonl_transport_persists_real_commands_and_exposes_no_runtime_mutation ... ok
+test session_list_stays_lightweight_when_notes_are_large ... ok
+test crash_releases_writer_and_recovery_interrupts_without_replaying ... ok
+test symlink_session_and_derived_cache_cannot_redirect_storage ... ok
+test uncertain_commit_is_reconciled_without_reaccepting_or_reexecuting ... ok
+test cancellation_rejects_late_output_and_dropped_owner_interrupts_tools ... ok
+test writer_lock_is_exclusive_and_released_on_drop ... ok
+test truncated_committed_history_is_rejected_even_with_valid_remaining_records ... ok
+test streaming_does_not_conflict_with_metadata_edits_but_other_metadata_edits_do ... ok
+test queue_keeps_accepted_configuration_and_only_one_runtime_owner ... ok
+test tool_lifecycle_blocks_premature_completion_and_survives_cache_loss ... ok
+test runtime_frames_are_idempotent_and_bound_to_an_unforgeable_live_owner ... ok
+test workspace_does_not_require_a_project_and_project_membership_is_enforced ... ok
+test unread_cursor_does_not_move_backwards_and_empty_cancelled_turn_is_not_unread ... ok
+test subscribers_receive_only_their_session_and_slow_clients_can_replay ... ok
+test evicted_sessions_and_active_owners_remain_consistent ... ok
+
+test result: ok. 26 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.18s
+
+   Doc-tests loom_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+Workbench wire declarations verified

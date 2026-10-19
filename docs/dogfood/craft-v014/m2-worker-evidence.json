@@ -1,0 +1,36 @@
+{
+  "recordedAt": "2026-10-08T23:21:10.135748+08:00",
+  "baseCommit": "1bf174ba027fa2ae6b5a44d06ec41b2df0e632ed",
+  "platform": "macOS-26.5.2-arm64-arm-64bit-Mach-O",
+  "checks": {
+    "workspaceTests": 80,
+    "runtimeTests": 12,
+    "workerTypecheck": "passed",
+    "protocolDrift": "passed",
+    "piSdkInjectedFetchCases": 6,
+    "piSdkInjectedFetch": "passed",
+    "realHttp": "not-run: auto-review timed out twice; sandbox bind denied; explicit approval pending",
+    "claudeRuntime": "not-tested",
+    "liveModel": "not-tested",
+    "desktop": "not-tested"
+  },
+  "sourceSha256": {
+    "Cargo.toml": "aa4b9cd1883c0291c0e006fce9b35354da87c779e6ffeec0f25532cac19fc853",
+    "Cargo.lock": "85784010bcb0263dd2543e7dd1965741d88d2b6b23fb45ef779ced8ca36079e2",
+    "scripts/check-core.sh": "83b9bebb33082cc4046337989376ba5526bf392366ca1845869117b4f12fdeb9",
+    "scripts/runtime-bridge-smoke.py": "f0cf67e8cbb90edaf70116c01ddfc8283a5ae26444b151671add5d8e5b6ef380",
+    "scripts/runtime-fetch-smoke.py": "51dd6c883efbef9ebe2ce1a9b41d7a6ccb92d95838b2da859d3a9c4820bbc13d",
+    "packages/provider-workers/src/runtime-worker.ts": "d99efb0687aa3625b2b61de2159b84e96d5ac36055adffa685a8f6d6969cf3c7",
+    "packages/provider-workers/tests/pi-fetch-fixture.ts": "dde3ee5d60a25acf0a94403b10018b0010694950baa51f7b1eaccd534424012e",
+    "packages/provider-workers/package.json": "f7892417b1ac499b8319a6a85fcd465faccc2a311624cd615612a7a0b922ad42",
+    "packages/provider-workers/tsconfig.json": "c37da3d5b9882da5552b1fc5afb3a62c1776eca189163286d7ed8ee6cacce818",
+    "packages/protocol/src/runtime.ts": "8ad0cbf661c7bff3bbc0e25b639ba27f9478ba1d4f2b96b6b98e983d8b48f5c4",
+    "crates/loom-runtime/Cargo.toml": "0e33a2016b24857bc467024ffdca02466a82eb8da6b8841cfdb8e5797393c957",
+    "crates/loom-runtime/examples/sdk_runtime_probe.rs": "e920c0e6e5e29380d435b06418b2ac0f634f858b3b0b46ea5d2d5e9768401bed",
+    "crates/loom-runtime/src/bin/export-runtime-types.rs": "c83dca0fbf858e84c0cf158634641b5c1ed02118b143612cc70fc3ef389bd39f",
+    "crates/loom-runtime/src/lib.rs": "e223d579eec5bfa3bc7aca4f5d85fb62c465f2adbc6208c639abc26c8fa1f795",
+    "crates/loom-runtime/src/protocol.rs": "243f717dd99c68fce0393831547eeb4711ffaf50e434d9dc31c435f830f74867",
+    "crates/loom-runtime/src/supervisor.rs": "c2929122edf07f4865162bbfae9010bd83f9ddd5d0318c0dd98a4f670bd9a702",
+    "crates/loom-runtime/tests/supervisor.rs": "c48b97838a39aaa48fed5045a235398bcab669d4ca38cc13f27ff27c77acac5c"
+  }
+}

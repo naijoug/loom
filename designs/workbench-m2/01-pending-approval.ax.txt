@@ -1,0 +1,80 @@
+Window: "Loom", App: Loom.
+0 standard window Loom, Secondary Actions: Raise
+	1 scroll area
+		2 HTML content Description: Loom, URL: tauri://localhost
+			3 container
+				4 button 切换侧栏
+				5 text L 工
+				6 pop up button 工作区, Value: 工具审批验收
+				7 button 创建工作区
+				8 text 本地验证模式 · 测试回复 Loom
+			9 container
+				10 button 新会话 ⌘N
+				11 container 会话分类
+					12 button 所有会话 3
+					13 button 待整理
+					14 button 待办 3
+					15 button 进行中
+					16 button 待审阅
+					17 button 已完成
+					18 button 已取消
+					19 button 已标记
+					20 button 已归档
+				21 text 项目
+				22 button 登记项目文件夹
+				23 button 无项目会话
+				24 text L 本地工作区 会话保存在这台设备
+			25 container 会话列表
+				26 container
+					27 heading 所有会话, Value: 1
+						28 text 所有会话
+					29 button 新会话
+				30 text field (settable) 搜索会话
+				31 text 会话
+				32 button 允许一次 正在回复
+				33 button 取消等待 待办
+				34 button 拒绝请求 待办
+			35 container
+				36 button 允许一次
+				37 button 标记会话
+				38 button (disabled) 归档会话
+				39 button 会话信息
+				40 container 会话记录
+					41 container 你的消息
+						42 text allow fixture
+					43 container 助手消息
+						44 text L Loom
+						45 text 正在回复
+						46 text 正在回复
+				47 container 工具授权
+					48 container
+						49 text FixtureApproval · 无副作用测试  请求授权 等待决定
+					50 container (expanded) Secondary Actions: Collapse
+						51 summary 查看工具参数（敏感内容已隐藏）, Value: on
+							52 text 查看工具参数（敏感内容已隐藏）
+						53 text {
+  "api_key": "[content withheld; bound by digest]",
+  "operation": "仅验证允许/拒绝，不写文件、不执行命令"
+}
+					54 container
+						55 text 仅限本次调用
+						56 button 拒绝
+						57 button 允许一次
+				58 pop up button (disabled) 权限模式, Value: Ask · 询问
+				59 text 待办
+				60 text entry area (settable) 消息, Placeholder: 想一起完成什么？
+					61 text 想一起完成什么？
+				62 text 无项目
+				63 text 本地测试流
+				64 button 停止回复
+				65 text Enter 发送 · Shift+Enter 换行  · 新消息将排队
+	66 close button
+	67 full screen button Help: this button also has an action to zoom the window, Secondary Actions: zoom the window
+	68 minimize button
+69 menu bar
+	70 Loom
+	71 File
+	72 Edit
+	73 View
+	74 Window
+	75 Help

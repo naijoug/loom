@@ -1,0 +1,98 @@
+
+> loom@0.1.0 test $PROJECT
+> node scripts/run-tests.mjs -- tests/unit/workbenchApp.test.cjs tests/unit/workbenchProjection.test.cjs tests/unit/workbenchClient.test.cjs tests/unit/contract.test.cjs
+
+TAP version 13
+# Subtest: frontend command event and schema contract matches the canonical fixture
+ok 1 - frontend command event and schema contract matches the canonical fixture
+  ---
+  duration_ms: 0.791042
+  type: 'test'
+  ...
+# Subtest: Tauri core and event access stays behind the typed client
+ok 2 - Tauri core and event access stays behind the typed client
+  ---
+  duration_ms: 5.812167
+  type: 'test'
+  ...
+# Subtest: typed Tauri client forwards invoke payloads and unwraps event payloads
+ok 3 - typed Tauri client forwards invoke payloads and unwraps event payloads
+  ---
+  duration_ms: 0.184625
+  type: 'test'
+  ...
+# Subtest: late send acknowledgement cannot clear another session draft and IME Enter does not send
+ok 4 - late send acknowledgement cannot clear another session draft and IME Enter does not send
+  ---
+  duration_ms: 82.108958
+  type: 'test'
+  ...
+# Subtest: wire client uses generated command shape and checks request ownership and response type
+ok 5 - wire client uses generated command shape and checks request ownership and response type
+  ---
+  duration_ms: 0.826375
+  type: 'test'
+  ...
+# Subtest: watch uses one channel, closes once, and drops delayed messages after close
+ok 6 - watch uses one channel, closes once, and drops delayed messages after close
+  ---
+  duration_ms: 0.177416
+  type: 'test'
+  ...
+# Subtest: workspace watcher invalidates only its workspace and remains closable
+ok 7 - workspace watcher invalidates only its workspace and remains closable
+  ---
+  duration_ms: 0.126584
+  type: 'test'
+  ...
+# Subtest: frontend replay equals real Rust projections including tools, cancellation and notes
+ok 8 - frontend replay equals real Rust projections including tools, cancellation and notes
+  ---
+  duration_ms: 2.102292
+  type: 'test'
+  ...
+# Subtest: events arriving before a snapshot, out of order and duplicated do not lose output
+ok 9 - events arriving before a snapshot, out of order and duplicated do not lose output
+  ---
+  duration_ms: 0.328375
+  type: 'test'
+  ...
+# Subtest: a missing event stays a gap until replay fills it; a wrong-scope snapshot is rejected
+ok 10 - a missing event stays a gap until replay fills it; a wrong-scope snapshot is rejected
+  ---
+  duration_ms: 0.233708
+  type: 'test'
+  ...
+# Subtest: buffer pressure requests a fresh snapshot rather than consuming unbounded history
+ok 11 - buffer pressure requests a fresh snapshot rather than consuming unbounded history
+  ---
+  duration_ms: 1.557292
+  type: 'test'
+  ...
+# Subtest: controller survives StrictMode stop/start and ignores old generation responses
+ok 12 - controller survives StrictMode stop/start and ignores old generation responses
+  ---
+  duration_ms: 0.319083
+  type: 'test'
+  ...
+# Subtest: controller repairs missing delivery through the production event page shape
+ok 13 - controller repairs missing delivery through the production event page shape
+  ---
+  duration_ms: 0.323542
+  type: 'test'
+  ...
+# Subtest: backpressure before the initial watch response does not strand a dead subscription
+ok 14 - backpressure before the initial watch response does not strand a dead subscription
+  ---
+  duration_ms: 2.256375
+  type: 'test'
+  ...
+1..14
+# tests 14
+# suites 0
+# pass 14
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1207.632834

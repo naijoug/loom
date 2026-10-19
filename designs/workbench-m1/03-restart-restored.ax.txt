@@ -1,0 +1,78 @@
+Window: "Loom", App: Loom.
+0 standard window Loom, Secondary Actions: Raise
+	1 scroll area
+		2 HTML content Description: Loom, URL: tauri://localhost
+			3 container
+				4 button 切换侧栏
+				5 text L 我
+				6 pop up button 工作区, Value: 我的工作区
+				7 button 创建工作区
+				8 text 本地验证模式 · 测试回复 Loom
+			9 container
+				10 button 新会话 ⌘N
+				11 container 会话分类
+					12 button 所有会话 0
+					13 button 待整理
+					14 button 待办
+					15 button 进行中
+					16 button 待审阅
+					17 button 已完成
+					18 button 已取消
+					19 button 已标记
+					20 button 已归档
+				21 text 项目
+				22 button 登记项目文件夹
+				23 button 无项目会话
+				24 text L 本地工作区 会话保存在这台设备
+			25 container 会话列表
+				26 container
+					27 heading 已归档, Value: 1
+						28 text 已归档
+					29 button 新会话
+				30 text field (settable) 搜索会话
+				31 text 会话
+				32 button M1 桌面验收 待办
+			33 container
+				34 button M1 桌面验收
+				35 button 取消标记
+				36 button 恢复会话
+				37 button 会话信息
+				38 container 会话记录
+					39 container 你的消息
+						40 text 检查工作区保存与续聊。
+					41 container 助手消息
+						42 text L Loom
+						43 text 这是本地验证模式生成的测试回复。
+
+工作区、会话、流式事件和历史记录均由新的 Rust 内核保存；这段回复没有调用真实模型。
+						44 text 已完成
+					45 container 你的消息
+						46 text 停止验证
+					47 container 助手消息
+						48 text L Loom
+						49 text 这是本地验证模式生成的测试回复。
+
+工作区、会话、流式事件和历
+						50 text 已停止
+				51 heading 会话信息, Value: 3
+					52 text 会话信息
+				53 container
+					54 text 状态
+					55 pop up button 会话状态, Value: 待办
+				56 container
+					57 text 笔记
+					58 text entry area (settable) 会话笔记, Value: 已验证：创建、流式输出、停止。重启后检查这条笔记。
+						59 text (settable) 已验证：创建、流式输出、停止。重启后检查这条笔记。
+				60 button 保存笔记
+				61 text 此会话已归档
+				62 button 恢复会话
+	63 close button
+	64 full screen button Help: this button also has an action to zoom the window, Secondary Actions: zoom the window
+	65 minimize button
+66 menu bar
+	67 Loom
+	68 File
+	69 Edit
+	70 View
+	71 Window
+	72 Help

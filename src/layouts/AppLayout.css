@@ -1,0 +1,101 @@
+.app-layout {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background-color: var(--loom-bg);
+  color: var(--loom-text);
+}
+
+.app-sidebar {
+  width: 256px;
+  flex-shrink: 0;
+  height: 100%;
+  background-color: var(--loom-sidebar);
+  border-right: 1px solid var(--loom-border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: width 0.2s ease;
+}
+
+.app-layout.sidebar-collapsed .app-sidebar {
+  width: 0;
+  border-right: 0;
+}
+
+/* When collapsed, the main area starts at x=0; clear the macOS traffic lights. */
+.app-layout.sidebar-collapsed .app-header {
+  padding-left: 78px;
+}
+
+.app-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+}
+
+.app-header {
+  height: 44px;
+  min-height: 44px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  background-color: var(--loom-bg);
+  border-bottom: 1px solid var(--loom-border);
+}
+
+.app-header-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.app-header-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Shared collapse/expand toggle, used by both the sidebar (left) and view
+   panels portalled into the header (right) so they share one baseline. */
+.panel-toggle-button {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: var(--loom-r-chip);
+  background: transparent;
+  color: var(--loom-text-2);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.panel-toggle-button:hover {
+  background: var(--loom-hover);
+  color: var(--loom-text);
+}
+
+.app-content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+@media (max-width: 760px) {
+  .app-sidebar {
+    display: none;
+  }
+
+  .app-content {
+    min-width: 0;
+  }
+}

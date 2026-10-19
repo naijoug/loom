@@ -1,0 +1,33 @@
+{
+  "exportSchemaVersion": 1,
+  "exportedAtMs": 1789889057123,
+  "inProgress": false,
+  "jsonFile": "session.json",
+  "logs": [
+    {
+      "capturedAtMs": 1789889057122,
+      "error": null,
+      "exportedBytes": 39,
+      "incompleteTailBytes": 0,
+      "path": "runs/turn-contract/stdout.log",
+      "sourcePrefixBytes": 39,
+      "stream": "stdout",
+      "turnId": "turn-contract"
+    },
+    {
+      "capturedAtMs": 1789889057122,
+      "error": null,
+      "exportedBytes": 16,
+      "incompleteTailBytes": 0,
+      "path": "runs/turn-contract/stderr.log",
+      "sourcePrefixBytes": 16,
+      "stream": "stderr",
+      "turnId": "turn-contract"
+    }
+  ],
+  "markdownFile": "transcript.md",
+  "sessionId": "chat-contract",
+  "sessionSchemaVersion": 2,
+  "snapshotSeq": 1,
+  "warnings": []
+}

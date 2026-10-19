@@ -1,0 +1,19 @@
+{
+  "root": {
+    "nodeId": "gen-project-shell",
+    "kind": "project-shell",
+    "pageIds": ["page-planning-room", "page-task-board", "page-in-progress", "page-testing-cockpit", "page-delivery-summary"],
+    "output": "partials/project-shell.html",
+    "sharedRegions": ["app frame (sidebar + main + header)", "sidebar with logo/search/project-tree/settings", "header with sidebar-toggle + breadcrumb + mini-stepper + header-actions-slot", "global background, font stack, radius scale, border model"],
+    "privateRegions": [],
+    "mutableSlots": ["activeNavItem", "breadcrumbCurrent", "miniStepperState", "mainContent"],
+    "status": "planned",
+    "children": [
+      { "nodeId": "gen-page-planning-room", "kind": "page-leaf", "pageIds": ["page-planning-room"], "output": "pages/planning-room.html", "sharedRegions": [], "privateRegions": ["planning chat stream + agent discussion + right summary panel + composer input"], "mutableSlots": ["activeNavItem", "breadcrumbCurrent", "miniStepperState"], "status": "planned", "children": [] },
+      { "nodeId": "gen-page-task-board", "kind": "page-leaf", "pageIds": ["page-task-board"], "output": "pages/task-board.html", "sharedRegions": [], "privateRegions": ["task board with status groups + Linear-style task rows"], "mutableSlots": ["activeNavItem", "breadcrumbCurrent"], "status": "planned", "children": [] },
+      { "nodeId": "gen-page-in-progress", "kind": "page-leaf", "pageIds": ["page-in-progress"], "output": "pages/in-progress.html", "sharedRegions": [], "privateRegions": ["agent session view with thinking/tool-calls/diff + steer input"], "mutableSlots": ["activeNavItem", "breadcrumbCurrent", "miniStepperState"], "status": "planned", "children": [] },
+      { "nodeId": "gen-page-testing-cockpit", "kind": "page-leaf", "pageIds": ["page-testing-cockpit"], "output": "pages/testing-cockpit.html", "sharedRegions": [], "privateRegions": ["multi-terminal debug view + debug agent fix-loop + manual feedback"], "mutableSlots": ["activeNavItem", "breadcrumbCurrent", "miniStepperState"], "status": "planned", "children": [] },
+      { "nodeId": "gen-page-delivery-summary", "kind": "page-leaf", "pageIds": ["page-delivery-summary"], "output": "pages/delivery-summary.html", "sharedRegions": [], "privateRegions": ["delivery summary with completed items + changed files + verification + timeline"], "mutableSlots": ["activeNavItem", "breadcrumbCurrent", "miniStepperState"], "status": "planned", "children": [] }
+    ]
+  }
+}

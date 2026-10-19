@@ -1,0 +1,49 @@
+{
+  "recordedAt": "2026-10-09T09:17:06.206186+08:00",
+  "baseCommit": "9b4bcb72d6390757642da24338842d5656050dd7",
+  "platform": "macOS-26.5.2-arm64-arm-64bit-Mach-O",
+  "checks": {
+    "workspaceTests": 104,
+    "tauriWorkbenchTests": 17,
+    "explicitPiSdkHostTests": 1,
+    "piSdkHostModes": [
+      "explore",
+      "ask",
+      "execute"
+    ],
+    "frontendAndScriptTests": 18,
+    "frontendBuild": "passed",
+    "hostClippy": "passed",
+    "hostFormatting": "passed",
+    "tauriKeychainNative": "ignored; no native Keychain revalidation",
+    "realHttp": "not-run: earlier auto-review timeouts; explicit approval pending",
+    "nativeUI": "not-tested; unlock pending",
+    "releaseRuntimeResources": "not-implemented"
+  },
+  "sourceSha256": {
+    "crates/loom-core/src/model.rs": "2da3e2b97ab0edeba436d83e6b448c3246041371457f64748fc10b05d5425507",
+    "crates/loom-core/src/projection.rs": "0a922d917f1b4157f7053da70f6e2856a98b5eb50ef0b9108861932b90beed1d",
+    "crates/loom-core/src/repository.rs": "101b2b1e0c0e109fd1b0ee19b0649c6910aba06ecee65b3cce172af89772cea0",
+    "crates/loom-core/tests/core.rs": "e640dc9505596f62daa6129ec669d402bad01f6c16e73ea9b267ab19c7c81eb9",
+    "crates/loom-core/examples/projection_fixture.rs": "851c1ef33cd7c6ccef5aa24b622b5f8ecef74119d2c61c67eefb92931eebca9c",
+    "src-tauri/Cargo.toml": "fb2a807f7b2110d880594fea3d21f63b6731df0a51694fbe4c8a82b58f912d8c",
+    "src-tauri/Cargo.lock": "bdf831c14220bd1f30b259a9932ac4e33fb0bbb2adc2d9e4bb0d7caa0be8bdaa",
+    "src-tauri/src/workbench/host.rs": "9047c1f250ea2e2e0838c4ce4b5eb85e6be5b912978c8f1cc33c6840109a405a",
+    "src-tauri/src/workbench/runtime.rs": "127f412a22d07e043896f0cf5bd93b7e34b97aa88951092a8b35c34964301a62",
+    "src-tauri/src/workbench/connections.rs": "9b78b9bf75ba1b1b4ca824528ea08816f6f57f3b6726bc7a4bd3938649bedd53",
+    "src-tauri/src/workbench/mod.rs": "49937867cbcf337e6f94bcad099d6665164527263ebeaa19ac521750a57ce63f",
+    "packages/protocol/src/workbench.ts": "44b6ef15dce4387ecb4667686a63142ca8692345127c9e77c33a08a31cb1770e",
+    "src/workbench/WorkbenchApp.tsx": "a951642030e7fc74d4363180bf04b7211729de42d25dac1f6b3c27eaaa17b33c",
+    "src/workbench/projection.ts": "38e44d32511d78a890356407951a9ec0f14033f0c778c00943e34f109365f515",
+    "scripts/debug.sh": "b1ed84e32c7671cf0ca2460e8fc97af5929c05604b2eaca9c3f8badc04dfc0be",
+    "tests/unit/workbenchSdk.test.cjs": "478bd4acff8453e4a85f0cf94af8e00e65335f1b7324f47491ede46651fc53fd"
+  },
+  "localLogSha256": {
+    ".tmp/desktop-sdk-validation/core-check.log": "4ba6892bf417534e4ea4cf9907d3dc5019445699bf40bfc0b405a639db70b459",
+    ".tmp/desktop-sdk-validation/frontend-build.log": "14cb904319a9a5befc9ed362246aacc96cca453db16f0b0ddadb2f9a3e964408",
+    ".tmp/desktop-sdk-validation/frontend-test.log": "06a95ef933517f548edeaf9f1c6a83f4774c7f5cb94a3c9ec4564d9a3fe183c5",
+    ".tmp/desktop-sdk-validation/host-clippy.log": "9ad332be1173b7fbca0f856576486c00ef0cb5f6a38042cd4da07ae936e677c5",
+    ".tmp/desktop-sdk-validation/host-pi-sdk.log": "b8181cb03e2ebcce42a7f06660435fdc4aad433f346f8c8ffacb83b16c97709e",
+    ".tmp/desktop-sdk-validation/host-test.log": "e2a123f28c67bd2b0501734bcd0471bc8fffbe6fe79aacc047c482008a1c69f1"
+  }
+}

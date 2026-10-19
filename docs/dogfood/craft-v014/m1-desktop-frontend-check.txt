@@ -1,0 +1,1228 @@
+
+> loom@0.1.0 test $PROJECT
+> node scripts/run-tests.mjs
+
+TAP version 13
+# Subtest: formatQuotedFeedback returns just the note when nothing is quoted
+ok 1 - formatQuotedFeedback returns just the note when nothing is quoted
+  ---
+  duration_ms: 0.634125
+  type: 'test'
+  ...
+# Subtest: formatQuotedFeedback fences the quoted log lines and attributes the command
+ok 2 - formatQuotedFeedback fences the quoted log lines and attributes the command
+  ---
+  duration_ms: 0.196375
+  type: 'test'
+  ...
+# Subtest: formatQuotedFeedback works with a quote and no note
+ok 3 - formatQuotedFeedback works with a quote and no note
+  ---
+  duration_ms: 0.065083
+  type: 'test'
+  ...
+# Subtest: buildRepairPrompt embeds repair context, note, quoted logs, and plan
+ok 4 - buildRepairPrompt embeds repair context, note, quoted logs, and plan
+  ---
+  duration_ms: 2.524417
+  type: 'test'
+  ...
+# Subtest: buildRepairPrompt degrades gracefully with no repair context or plan
+ok 5 - buildRepairPrompt degrades gracefully with no repair context or plan
+  ---
+  duration_ms: 0.141375
+  type: 'test'
+  ...
+# Subtest: buildAgentCommandArgs uses codex exec form with write sandbox
+ok 6 - buildAgentCommandArgs uses codex exec form with write sandbox
+  ---
+  duration_ms: 0.858208
+  type: 'test'
+  ...
+# Subtest: buildAgentCommandArgs uses claude stream-json form
+ok 7 - buildAgentCommandArgs uses claude stream-json form
+  ---
+  duration_ms: 0.159958
+  type: 'test'
+  ...
+# Subtest: buildAgentCommandArgs substitutes placeholders in custom args
+ok 8 - buildAgentCommandArgs substitutes placeholders in custom args
+  ---
+  duration_ms: 0.128125
+  type: 'test'
+  ...
+# Subtest: buildAgentCommandArgs appends the prompt when custom args omit the placeholder
+ok 9 - buildAgentCommandArgs appends the prompt when custom args omit the placeholder
+  ---
+  duration_ms: 0.268291
+  type: 'test'
+  ...
+# Subtest: buildAgentCommandInvocation resumes codex sessions through headless exec
+ok 10 - buildAgentCommandInvocation resumes codex sessions through headless exec
+  ---
+  duration_ms: 0.43975
+  type: 'test'
+  ...
+# Subtest: buildAgentCommandInvocation resumes claude sessions in print mode
+ok 11 - buildAgentCommandInvocation resumes claude sessions in print mode
+  ---
+  duration_ms: 0.140459
+  type: 'test'
+  ...
+# Subtest: buildAgentCommandInvocation falls back when resume command is unsupported
+ok 12 - buildAgentCommandInvocation falls back when resume command is unsupported
+  ---
+  duration_ms: 0.049125
+  type: 'test'
+  ...
+# Subtest: buildImplementationPrompt embeds scoped todo, rules, and final plan
+ok 13 - buildImplementationPrompt embeds scoped todo, rules, and final plan
+  ---
+  duration_ms: 0.073084
+  type: 'test'
+  ...
+# Subtest: buildResumeRepairPrompt uses incremental context without embedding the full plan
+ok 14 - buildResumeRepairPrompt uses incremental context without embedding the full plan
+  ---
+  duration_ms: 0.050959
+  type: 'test'
+  ...
+# Subtest: production bridge waits for listeners and buffers events before get resolves
+ok 15 - production bridge waits for listeners and buffers events before get resolves
+  ---
+  duration_ms: 145.717625
+  type: 'test'
+  ...
+# Subtest: production bridge ignores late A loads/errors after selecting B and replays sequence gaps
+ok 16 - production bridge ignores late A loads/errors after selecting B and replays sequence gaps
+  ---
+  duration_ms: 45.287833
+  type: 'test'
+  ...
+# Subtest: production bridge catches a missed final event on focus and reports durable changes
+ok 17 - production bridge catches a missed final event on focus and reports durable changes
+  ---
+  duration_ms: 52.237917
+  type: 'test'
+  ...
+# Subtest: production bridge reports listener initialization failures without marking the listener ready
+ok 18 - production bridge reports listener initialization failures without marking the listener ready
+  ---
+  duration_ms: 38.866459
+  type: 'test'
+  ...
+# Subtest: production bridge reports only errors for the active turn
+ok 19 - production bridge reports only errors for the active turn
+  ---
+  duration_ms: 13.376
+  type: 'test'
+  ...
+# Subtest: production bridge drains paged recovery using the updated cursor
+ok 20 - production bridge drains paged recovery using the updated cursor
+  ---
+  duration_ms: 13.005208
+  type: 'test'
+  ...
+# Subtest: production bridge falls back to a fresh snapshot after the recovery page cap
+ok 21 - production bridge falls back to a fresh snapshot after the recovery page cap
+  ---
+  duration_ms: 9.777875
+  type: 'test'
+  ...
+# Subtest: production bridge refreshes from snapshot when recovery marks projection stale
+ok 22 - production bridge refreshes from snapshot when recovery marks projection stale
+  ---
+  duration_ms: 15.117416
+  type: 'test'
+  ...
+# Subtest: production bridge suppresses recovery failures after switching sessions
+ok 23 - production bridge suppresses recovery failures after switching sessions
+  ---
+  duration_ms: 36.631541
+  type: 'test'
+  ...
+# Subtest: production bridge reports recovery failures for the current session
+ok 24 - production bridge reports recovery failures for the current session
+  ---
+  duration_ms: 16.139334
+  type: 'test'
+  ...
+# TypeError: Cannot read properties of null (reading 'tag')
+#     at getNodeFromInstance ($PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:11617:12)
+#     at getInstIfValueChanged ($PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:7812:20)
+#     at getTargetInstForInputEventPolyfill ($PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:7911:12)
+#     at extractEvents$1 ($PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:7981:16)
+#     at extractEvents$5 ($PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:9025:5)
+#     at dispatchEventsForPlugins ($PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:9096:3)
+#     at $PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:9288:12
+#     at batchedUpdates$1 ($PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:26179:12)
+#     at batchedUpdates ($PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:3991:12)
+#     at dispatchEventForPluginEventSystem ($PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:9287:3)
+# TypeError: Cannot read properties of null (reading 'tag')
+#     at getNodeFromInstance ($PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:11617:12)
+#     at getInstIfValueChanged ($PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:7812:20)
+#     at getTargetInstForInputEventPolyfill ($PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:7911:12)
+#     at extractEvents$1 ($PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:7981:16)
+#     at extractEvents$5 ($PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:9025:5)
+#     at dispatchEventsForPlugins ($PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:9096:3)
+#     at $PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:9288:12
+#     at batchedUpdates$1 ($PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:26179:12)
+#     at batchedUpdates ($PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:3991:12)
+#     at dispatchEventForPluginEventSystem ($PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:9287:3)
+# TypeError: Cannot read properties of null (reading 'tag')
+#     at getNodeFromInstance ($PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:11617:12)
+#     at getInstIfValueChanged ($PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:7812:20)
+#     at getTargetInstForInputEventPolyfill ($PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:7911:12)
+#     at extractEvents$1 ($PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:7981:16)
+#     at extractEvents$5 ($PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:9025:5)
+#     at dispatchEventsForPlugins ($PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:9096:3)
+#     at $PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:9288:12
+#     at batchedUpdates$1 ($PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:26179:12)
+#     at batchedUpdates ($PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:3991:12)
+#     at dispatchEventForPluginEventSystem ($PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:9287:3)
+# Subtest: composer cannot send before listener readiness or while IME is composing
+ok 25 - composer cannot send before listener readiness or while IME is composing
+  ---
+  duration_ms: 62.943792
+  type: 'test'
+  ...
+# Subtest: Ask still requires the explicit per-turn confirmation after bridge integration
+ok 26 - Ask still requires the explicit per-turn confirmation after bridge integration
+  ---
+  duration_ms: 32.276
+  type: 'test'
+  ...
+# Subtest: composer exposes stop as pending evidence while abort is in flight
+ok 27 - composer exposes stop as pending evidence while abort is in flight
+  ---
+  duration_ms: 20.103791
+  type: 'test'
+  ...
+# TypeError: activeElement.attachEvent is not a function
+#     at startWatchingForValueChange ($PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:7846:17)
+#     at handleEventsForInputEventPolyfill ($PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:7892:5)
+#     at extractEvents$1 ($PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:7990:5)
+#     at extractEvents$5 ($PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:9025:5)
+#     at dispatchEventsForPlugins ($PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:9096:3)
+#     at $PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:9288:12
+#     at batchedUpdates$1 ($PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:26179:12)
+#     at batchedUpdates ($PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:3991:12)
+#     at dispatchEventForPluginEventSystem ($PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:9287:3)
+#     at dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay ($PROJECT/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:6465:5)
+# Subtest: renaming reads the visible input, ignores IME confirmation and commits once
+ok 28 - renaming reads the visible input, ignores IME confirmation and commits once
+  ---
+  duration_ms: 25.8665
+  type: 'test'
+  ...
+# Subtest: legacy resume is labelled for reset; structured handles allow resume and the reset action
+ok 29 - legacy resume is labelled for reset; structured handles allow resume and the reset action
+  ---
+  duration_ms: 11.912584
+  type: 'test'
+  ...
+# Subtest: chatInputEnvelope wraps fields under input
+ok 30 - chatInputEnvelope wraps fields under input
+  ---
+  duration_ms: 2.551084
+  type: 'test'
+  ...
+# Subtest: five input-envelope chat commands use chat_* names and input wrapper shape
+ok 31 - five input-envelope chat commands use chat_* names and input wrapper shape
+  ---
+  duration_ms: 0.451083
+  type: 'test'
+  ...
+# Subtest: flat-arg chat commands stay flat (no input wrapper)
+ok 32 - flat-arg chat commands stay flat (no input wrapper)
+  ---
+  duration_ms: 0.5375
+  type: 'test'
+  ...
+# Subtest: chatClient wrappers are exported
+ok 33 - chatClient wrappers are exported
+  ---
+  duration_ms: 0.191
+  type: 'test'
+  ...
+# Subtest: production Chat wrappers invoke the real transport with the correct envelopes and replay cursor
+ok 34 - production Chat wrappers invoke the real transport with the correct envelopes and replay cursor
+  ---
+  duration_ms: 0.535292
+  type: 'test'
+  ...
+# Subtest: ChatContextPanel empty-state defers MCP/Sources and shows loom/chat + diagnostics
+ok 35 - ChatContextPanel empty-state defers MCP/Sources and shows loom/chat + diagnostics
+  ---
+  duration_ms: 0.678542
+  type: 'test'
+  ...
+# Subtest: Session menu promote stub stresses draft-only no auto run
+ok 36 - Session menu promote stub stresses draft-only no auto run
+  ---
+  duration_ms: 0.122792
+  type: 'test'
+  ...
+# Subtest: export menu invokes production hook once and shows warnings plus an explicit folder action
+ok 37 - export menu invokes production hook once and shows warnings plus an explicit folder action
+  ---
+  duration_ms: 247.483667
+  type: 'test'
+  ...
+# Subtest: late export responses cannot overwrite a new session, and returning to the old session is not stuck busy
+ok 38 - late export responses cannot overwrite a new session, and returning to the old session is not stuck busy
+  ---
+  duration_ms: 18.253916
+  type: 'test'
+  ...
+# Subtest: export and folder errors stay visible and export can be retried
+ok 39 - export and folder errors stay visible and export can be retried
+  ---
+  duration_ms: 17.876875
+  type: 'test'
+  ...
+# Subtest: damaged or missing log warnings are exposed as incomplete export evidence
+ok 40 - damaged or missing log warnings are exposed as incomplete export evidence
+  ---
+  duration_ms: 19.361375
+  type: 'test'
+  ...
+# Subtest: titleFromUserMessage truncates on word boundary
+ok 41 - titleFromUserMessage truncates on word boundary
+  ---
+  duration_ms: 0.6785
+  type: 'test'
+  ...
+# Subtest: titleFromUserMessage uses first non-empty line
+ok 42 - titleFromUserMessage uses first non-empty line
+  ---
+  duration_ms: 0.118458
+  type: 'test'
+  ...
+# Subtest: needsAttention from flag or error, not archived
+ok 43 - needsAttention from flag or error, not archived
+  ---
+  duration_ms: 0.071459
+  type: 'test'
+  ...
+# Subtest: inbox filters active / needs_attention / archived
+ok 44 - inbox filters active / needs_attention / archived
+  ---
+  duration_ms: 0.357208
+  type: 'test'
+  ...
+# Subtest: inbox query filters title and preview without changing empty query order
+ok 45 - inbox query filters title and preview without changing empty query order
+  ---
+  duration_ms: 2.937625
+  type: 'test'
+  ...
+# Subtest: inbox query can include visible fallback metadata
+ok 46 - inbox query can include visible fallback metadata
+  ---
+  duration_ms: 0.478792
+  type: 'test'
+  ...
+# Subtest: inbox agent metadata search mirrors whether fallback text is visible
+ok 47 - inbox agent metadata search mirrors whether fallback text is visible
+  ---
+  duration_ms: 0.169583
+  type: 'test'
+  ...
+# Subtest: inbox search placeholder lists all searchable visible fields
+ok 48 - inbox search placeholder lists all searchable visible fields
+  ---
+  duration_ms: 0.045916
+  type: 'test'
+  ...
+# Subtest: inbox search accessible label lists all searchable visible fields
+ok 49 - inbox search accessible label lists all searchable visible fields
+  ---
+  duration_ms: 0.231917
+  type: 'test'
+  ...
+# Subtest: inbox empty copy distinguishes empty tabs from empty search results
+ok 50 - inbox empty copy distinguishes empty tabs from empty search results
+  ---
+  duration_ms: 0.286166
+  type: 'test'
+  ...
+# Subtest: message error fallback stays visible beside structured tool parts
+ok 51 - message error fallback stays visible beside structured tool parts
+  ---
+  duration_ms: 0.554417
+  type: 'test'
+  ...
+# Subtest: out-of-order and duplicate durable events are applied exactly once
+ok 52 - out-of-order and duplicate durable events are applied exactly once
+  ---
+  duration_ms: 1.273042
+  type: 'test'
+  ...
+# Subtest: events arriving during snapshot load survive and stale responses cannot erase them
+ok 53 - events arriving during snapshot load survive and stale responses cannot erase them
+  ---
+  duration_ms: 0.785292
+  type: 'test'
+  ...
+# Subtest: large sequence gaps are capped and wait for an authoritative snapshot
+ok 54 - large sequence gaps are capped and wait for an authoritative snapshot
+  ---
+  duration_ms: 3.987208
+  type: 'test'
+  ...
+# Subtest: terminal stream events keep text idempotent while preserving structured parts
+ok 55 - terminal stream events keep text idempotent while preserving structured parts
+  ---
+  duration_ms: 0.419167
+  type: 'test'
+  ...
+# Subtest: other projects/sessions and stale turn payloads cannot contaminate a selection
+ok 56 - other projects/sessions and stale turn payloads cannot contaminate a selection
+  ---
+  duration_ms: 0.158083
+  type: 'test'
+  ...
+# Subtest: patches persist terminal text, clear optional handles and reject identity mutation
+ok 57 - patches persist terminal text, clear optional handles and reject identity mutation
+  ---
+  duration_ms: 0.105375
+  type: 'test'
+  ...
+# Subtest: failed patches keep the last safe session until a fresh snapshot arrives
+ok 58 - failed patches keep the last safe session until a fresh snapshot arrives
+  ---
+  duration_ms: 0.195625
+  type: 'test'
+  ...
+# Subtest: new sessions and restored snapshots establish the cursor without replaying old deltas
+ok 59 - new sessions and restored snapshots establish the cursor without replaying old deltas
+  ---
+  duration_ms: 0.072375
+  type: 'test'
+  ...
+# Subtest: drafts remain isolated and survive switching away from a project
+ok 60 - drafts remain isolated and survive switching away from a project
+  ---
+  duration_ms: 0.255834
+  type: 'test'
+  ...
+# Subtest: a late send acknowledgment clears only the submitted draft in its own project
+ok 61 - a late send acknowledgment clears only the submitted draft in its own project
+  ---
+  duration_ms: 0.303125
+  type: 'test'
+  ...
+# Subtest: MockChatStore create/list/send roundtrip
+ok 62 - MockChatStore create/list/send roundtrip
+  ---
+  duration_ms: 0.722
+  type: 'test'
+  ...
+# Subtest: MockChatStore archive and title helpers
+ok 63 - MockChatStore archive and title helpers
+  ---
+  duration_ms: 0.12225
+  type: 'test'
+  ...
+# Subtest: normalizeChatPermissionMode maps legacy aliases
+ok 64 - normalizeChatPermissionMode maps legacy aliases
+  ---
+  duration_ms: 0.555625
+  type: 'test'
+  ...
+# Subtest: chatPermissionAllowsWrite: explore read-only; ask/auto writable
+ok 65 - chatPermissionAllowsWrite: explore read-only; ask/auto writable
+  ---
+  duration_ms: 0.114875
+  type: 'test'
+  ...
+# Subtest: cyclePermissionMode explore → ask → auto → explore
+ok 66 - cyclePermissionMode explore → ask → auto → explore
+  ---
+  duration_ms: 0.402875
+  type: 'test'
+  ...
+# Subtest: askTurnRequiresConfirm only for ask
+ok 67 - askTurnRequiresConfirm only for ask
+  ---
+  duration_ms: 0.190458
+  type: 'test'
+  ...
+# Subtest: permissionCliHint stays truthful with write capability
+ok 68 - permissionCliHint stays truthful with write capability
+  ---
+  duration_ms: 0.459125
+  type: 'test'
+  ...
+# Subtest: production run viewer shows immutable invocation, exit reason, separate streams and paginated offsets
+ok 69 - production run viewer shows immutable invocation, exit reason, separate streams and paginated offsets
+  ---
+  duration_ms: 304.250833
+  type: 'test'
+  ...
+# Subtest: late log responses never replace a different stream/session and errors stay visible
+ok 70 - late log responses never replace a different stream/session and errors stay visible
+  ---
+  duration_ms: 31.254125
+  type: 'test'
+  ...
+# Subtest: ambiguous IPC failure retains request identity, success permits an intentional new submission
+ok 71 - ambiguous IPC failure retains request identity, success permits an intentional new submission
+  ---
+  duration_ms: 2.32725
+  type: 'test'
+  ...
+# Subtest: double submit shares the pending operation and project/session/content/permission are isolated
+ok 72 - double submit shares the pending operation and project/session/content/permission are isolated
+  ---
+  duration_ms: 1.396458
+  type: 'test'
+  ...
+# Subtest: production controller and wrapper forward the same request ID through real IPC on retry
+ok 73 - production controller and wrapper forward the same request ID through real IPC on retry
+  ---
+  duration_ms: 1.367666
+  type: 'test'
+  ...
+# Subtest: production Chat → workflow → Chat/Settings routes isolate task loading and Planning listeners
+ok 74 - production Chat → workflow → Chat/Settings routes isolate task loading and Planning listeners
+  ---
+  duration_ms: 385.884833
+  type: 'test'
+  ...
+# Subtest: switching project bumps generation and clears selection
+ok 75 - switching project bumps generation and clears selection
+  ---
+  duration_ms: 0.671375
+  type: 'test'
+  ...
+# Subtest: stale generation cannot overwrite session or summaries
+ok 76 - stale generation cannot overwrite session or summaries
+  ---
+  duration_ms: 0.097833
+  type: 'test'
+  ...
+# Subtest: drafts are per session
+ok 77 - drafts are per session
+  ---
+  duration_ms: 0.112458
+  type: 'test'
+  ...
+# Subtest: CHAT_TURN_TIMEOUT_MS is 10 minutes
+ok 78 - CHAT_TURN_TIMEOUT_MS is 10 minutes
+  ---
+  duration_ms: 0.414208
+  type: 'test'
+  ...
+# Subtest: isChatTurnRunning uses sending or streaming
+ok 79 - isChatTurnRunning uses sending or streaming
+  ---
+  duration_ms: 0.06475
+  type: 'test'
+  ...
+# Subtest: formatTurnElapsed and turnRunningHint
+ok 80 - formatTurnElapsed and turnRunningHint
+  ---
+  duration_ms: 0.278583
+  type: 'test'
+  ...
+# Subtest: parses program and simple args
+ok 81 - parses program and simple args
+  ---
+  duration_ms: 0.899791
+  type: 'test'
+  ...
+# Subtest: preserves quoted arguments and escaped spaces
+ok 82 - preserves quoted arguments and escaped spaces
+  ---
+  duration_ms: 0.157375
+  type: 'test'
+  ...
+# Subtest: single quotes keep backslashes literal
+ok 83 - single quotes keep backslashes literal
+  ---
+  duration_ms: 0.124708
+  type: 'test'
+  ...
+# Subtest: rejects unclosed quotes
+ok 84 - rejects unclosed quotes
+  ---
+  duration_ms: 0.19725
+  type: 'test'
+  ...
+# Subtest: empty command returns an empty program
+ok 85 - empty command returns an empty program
+  ---
+  duration_ms: 0.11575
+  type: 'test'
+  ...
+# Subtest: detects destructive and reset commands
+ok 86 - detects destructive and reset commands
+  ---
+  duration_ms: 2.899292
+  type: 'test'
+  ...
+# Subtest: detects dependency installs and package mutations
+ok 87 - detects dependency installs and package mutations
+  ---
+  duration_ms: 0.292
+  type: 'test'
+  ...
+# Subtest: detects production-like targets
+ok 88 - detects production-like targets
+  ---
+  duration_ms: 0.208125
+  type: 'test'
+  ...
+# Subtest: does not flag ordinary validation commands
+ok 89 - does not flag ordinary validation commands
+  ---
+  duration_ms: 0.35325
+  type: 'test'
+  ...
+# Subtest: commandRunIntent treats absent intent as legacy
+ok 90 - commandRunIntent treats absent intent as legacy
+  ---
+  duration_ms: 0.428875
+  type: 'test'
+  ...
+# Subtest: validation intent wins even when command text is not configured
+ok 91 - validation intent wins even when command text is not configured
+  ---
+  duration_ms: 0.069875
+  type: 'test'
+  ...
+# Subtest: agent action failure does not count as validation failure
+ok 92 - agent action failure does not count as validation failure
+  ---
+  duration_ms: 0.055958
+  type: 'test'
+  ...
+# Subtest: legacy runs fall back to configured validation commands
+ok 93 - legacy runs fall back to configured validation commands
+  ---
+  duration_ms: 0.064292
+  type: 'test'
+  ...
+# Subtest: Settings toggle emits the next value and respects disabled state
+ok 94 - Settings toggle emits the next value and respects disabled state
+  ---
+  duration_ms: 154.69175
+  type: 'test'
+  ...
+# Subtest: Testing acceptance gate exposes the blocking reason and only fires when enabled
+ok 95 - Testing acceptance gate exposes the blocking reason and only fires when enabled
+  ---
+  duration_ms: 42.592042
+  type: 'test'
+  ...
+# Subtest: Testing acceptance gate keeps preview and unrelated task runs blocked
+ok 96 - Testing acceptance gate keeps preview and unrelated task runs blocked
+  ---
+  duration_ms: 21.794375
+  type: 'test'
+  ...
+# Subtest: Testing acceptance gate accepts explicit validation intent without configured command match
+ok 97 - Testing acceptance gate accepts explicit validation intent without configured command match
+  ---
+  duration_ms: 40.613584
+  type: 'test'
+  ...
+# Subtest: Testing acceptance gate waits for explicit custom validation runs after a prior pass
+ok 98 - Testing acceptance gate waits for explicit custom validation runs after a prior pass
+  ---
+  duration_ms: 41.598166
+  type: 'test'
+  ...
+# Subtest: Testing feedback composer disables empty repair requests and submits actionable feedback
+ok 99 - Testing feedback composer disables empty repair requests and submits actionable feedback
+  ---
+  duration_ms: 77.152125
+  type: 'test'
+  ...
+# Subtest: frontend command event and schema contract matches the canonical fixture
+ok 100 - frontend command event and schema contract matches the canonical fixture
+  ---
+  duration_ms: 0.970083
+  type: 'test'
+  ...
+# Subtest: Tauri core and event access stays behind the typed client
+ok 101 - Tauri core and event access stays behind the typed client
+  ---
+  duration_ms: 21.566125
+  type: 'test'
+  ...
+# Subtest: typed Tauri client forwards invoke payloads and unwraps event payloads
+ok 102 - typed Tauri client forwards invoke payloads and unwraps event payloads
+  ---
+  duration_ms: 0.224375
+  type: 'test'
+  ...
+# Subtest: debug stop recognizes dev executables, never build/compiler commands containing cfg(dev)
+ok 103 - debug stop recognizes dev executables, never build/compiler commands containing cfg(dev)
+  ---
+  duration_ms: 525.043666
+  type: 'test'
+  ...
+# Subtest: debug stop succeeds with no dev process and a PID disappearing before inspection
+ok 104 - debug stop succeeds with no dev process and a PID disappearing before inspection
+  ---
+  duration_ms: 35.799208
+  type: 'test'
+  ...
+# Subtest: approval prompt explains dependency changes as environment risk
+ok 105 - approval prompt explains dependency changes as environment risk
+  ---
+  duration_ms: 0.499584
+  type: 'test'
+  ...
+# Subtest: approval prompt labels destructive filesystem risk
+ok 106 - approval prompt labels destructive filesystem risk
+  ---
+  duration_ms: 0.077042
+  type: 'test'
+  ...
+# Subtest: implementation Review gate requires a completed run
+ok 107 - implementation Review gate requires a completed run
+  ---
+  duration_ms: 0.632666
+  type: 'test'
+  ...
+# Subtest: implementation Review gate rejects self-review and blockers
+ok 108 - implementation Review gate rejects self-review and blockers
+  ---
+  duration_ms: 0.102666
+  type: 'test'
+  ...
+# Subtest: implementation Review gate allows a different reviewer with accepted blockers
+ok 109 - implementation Review gate allows a different reviewer with accepted blockers
+  ---
+  duration_ms: 0.057125
+  type: 'test'
+  ...
+# Subtest: passes when the validation run succeeds
+ok 110 - passes when the validation run succeeds
+  ---
+  duration_ms: 2.327584
+  type: 'test'
+  ...
+# Subtest: repairs on the first failure within budget
+ok 111 - repairs on the first failure within budget
+  ---
+  duration_ms: 0.747041
+  type: 'test'
+  ...
+# Subtest: escalates after the max repair attempts are spent
+ok 112 - escalates after the max repair attempts are spent
+  ---
+  duration_ms: 0.252083
+  type: 'test'
+  ...
+# Subtest: escalates on repeated identical failures (no progress)
+ok 113 - escalates on repeated identical failures (no progress)
+  ---
+  duration_ms: 0.156333
+  type: 'test'
+  ...
+# Subtest: escalates when the wall-clock budget is exceeded (hung run)
+ok 114 - escalates when the wall-clock budget is exceeded (hung run)
+  ---
+  duration_ms: 0.217167
+  type: 'test'
+  ...
+# Subtest: decideAfterRepair re-validates on success and escalates on agent failure
+ok 115 - decideAfterRepair re-validates on success and escalates on agent failure
+  ---
+  duration_ms: 0.570416
+  type: 'test'
+  ...
+# Subtest: decideAfterRepair times out even when the agent run reports success
+ok 116 - decideAfterRepair times out even when the agent run reports success
+  ---
+  duration_ms: 1.3245
+  type: 'test'
+  ...
+# Subtest: failureFingerprint normalizes evidence and falls back to command+exit
+ok 117 - failureFingerprint normalizes evidence and falls back to command+exit
+  ---
+  duration_ms: 0.125042
+  type: 'test'
+  ...
+# Subtest: isTimedOut respects a disabled (zero) budget
+ok 118 - isTimedOut respects a disabled (zero) budget
+  ---
+  duration_ms: 0.350541
+  type: 'test'
+  ...
+# Subtest: mentions resolve aliases without silently adding other agents
+ok 119 - mentions resolve aliases without silently adding other agents
+  ---
+  duration_ms: 0.960791
+  type: 'test'
+  ...
+# Subtest: unknown mentions are explicit instead of falling back to every agent
+ok 120 - unknown mentions are explicit instead of falling back to every agent
+  ---
+  duration_ms: 0.089375
+  type: 'test'
+  ...
+# Subtest: default selection preserves available project preferences
+ok 121 - default selection preserves available project preferences
+  ---
+  duration_ms: 0.076958
+  type: 'test'
+  ...
+# Subtest: project dialog never invents analysis or reuses a different directory's cached metadata
+ok 122 - project dialog never invents analysis or reuses a different directory's cached metadata
+  ---
+  duration_ms: 170.155416
+  type: 'test'
+  ...
+# Subtest: recent-project hydration does not show an empty-state modal before persisted projects arrive
+ok 123 - recent-project hydration does not show an empty-state modal before persisted projects arrive
+  ---
+  duration_ms: 34.367458
+  type: 'test'
+  ...
+# Subtest: a genuinely empty hydrated project list still opens onboarding without fake stacks
+ok 124 - a genuinely empty hydrated project list still opens onboarding without fake stacks
+  ---
+  duration_ms: 20.6985
+  type: 'test'
+  ...
+# Subtest: command logs are bucketed by run id and starting another run does not clear existing logs
+ok 125 - command logs are bucketed by run id and starting another run does not clear existing logs
+  ---
+  duration_ms: 1.241708
+  type: 'test'
+  ...
+# Subtest: command log buckets are independently capped
+ok 126 - command log buckets are independently capped
+  ---
+  duration_ms: 6.952334
+  type: 'test'
+  ...
+# Subtest: loop command events stay visible on the loaded task timeline
+ok 127 - loop command events stay visible on the loaded task timeline
+  ---
+  duration_ms: 0.7095
+  type: 'test'
+  ...
+# Subtest: implementation loop validation failure keeps task in implementation stage
+ok 128 - implementation loop validation failure keeps task in implementation stage
+  ---
+  duration_ms: 0.136291
+  type: 'test'
+  ...
+# Subtest: selecting a task routes to task-detail and preserves a valid selected todo
+ok 129 - selecting a task routes to task-detail and preserves a valid selected todo
+  ---
+  duration_ms: 0.13875
+  type: 'test'
+  ...
+# Subtest: app/stageViewed sets and clears the viewed stage
+ok 130 - app/stageViewed sets and clears the viewed stage
+  ---
+  duration_ms: 0.076459
+  type: 'test'
+  ...
+# Subtest: selecting a task resets any stage being reviewed
+ok 131 - selecting a task resets any stage being reviewed
+  ---
+  duration_ms: 0.099458
+  type: 'test'
+  ...
+# Subtest: selecting another project resets the viewed stage
+ok 132 - selecting another project resets the viewed stage
+  ---
+  duration_ms: 0.117458
+  type: 'test'
+  ...
+# Subtest: loading tasks for another project caches them without replacing the current board
+ok 133 - loading tasks for another project caches them without replacing the current board
+  ---
+  duration_ms: 0.317583
+  type: 'test'
+  ...
+# Subtest: selecting a project restores its cached tasks
+ok 134 - selecting a project restores its cached tasks
+  ---
+  duration_ms: 0.339625
+  type: 'test'
+  ...
+# Subtest: removing an inactive project drops it from recent projects and cached tasks
+ok 135 - removing an inactive project drops it from recent projects and cached tasks
+  ---
+  duration_ms: 0.188542
+  type: 'test'
+  ...
+# Subtest: removing the active project clears the selected workspace state
+ok 136 - removing the active project clears the selected workspace state
+  ---
+  duration_ms: 0.154459
+  type: 'test'
+  ...
+# Subtest: upserting the selected task preserves the viewed stage
+ok 137 - upserting the selected task preserves the viewed stage
+  ---
+  duration_ms: 0.075125
+  type: 'test'
+  ...
+# Subtest: upserting a different task resets the viewed stage
+ok 138 - upserting a different task resets the viewed stage
+  ---
+  duration_ms: 0.049958
+  type: 'test'
+  ...
+# Subtest: starting a new task drops into the empty planning composer
+ok 139 - starting a new task drops into the empty planning composer
+  ---
+  duration_ms: 0.041417
+  type: 'test'
+  ...
+# Subtest: a tasks reload while drafting keeps the composer empty
+ok 140 - a tasks reload while drafting keeps the composer empty
+  ---
+  duration_ms: 0.152542
+  type: 'test'
+  ...
+# Subtest: creating the task from a draft leaves draft mode and selects it
+ok 141 - creating the task from a draft leaves draft mode and selects it
+  ---
+  duration_ms: 0.052708
+  type: 'test'
+  ...
+# Subtest: removing the selected task drops it and returns to the board
+ok 142 - removing the selected task drops it and returns to the board
+  ---
+  duration_ms: 0.066458
+  type: 'test'
+  ...
+# Subtest: removing an unselected task keeps the current selection and view
+ok 143 - removing an unselected task keeps the current selection and view
+  ---
+  duration_ms: 0.037542
+  type: 'test'
+  ...
+# Subtest: completing all todos moves the optimistic task state to reviewing
+ok 144 - completing all todos moves the optimistic task state to reviewing
+  ---
+  duration_ms: 0.055916
+  type: 'test'
+  ...
+# Subtest: planning progress replaces queued entries with backend status events
+ok 145 - planning progress replaces queued entries with backend status events
+  ---
+  duration_ms: 0.130333
+  type: 'test'
+  ...
+# Subtest: planning progress tracks retry attempts and review pairs separately
+ok 146 - planning progress tracks retry attempts and review pairs separately
+  ---
+  duration_ms: 0.061125
+  type: 'test'
+  ...
+# Subtest: planning logs are bucketed by run phase agent and capped
+ok 147 - planning logs are bucketed by run phase agent and capped
+  ---
+  duration_ms: 1.356
+  type: 'test'
+  ...
+# Subtest: planning progress queue clears prior planning logs for the same task
+ok 148 - planning progress queue clears prior planning logs for the same task
+  ---
+  duration_ms: 0.122084
+  type: 'test'
+  ...
+# Subtest: round summary surfaces failed drafts instead of hiding them behind zero successes
+ok 149 - round summary surfaces failed drafts instead of hiding them behind zero successes
+  ---
+  duration_ms: 0.455125
+  type: 'test'
+  ...
+# Subtest: round summary reports mixed draft outcomes
+ok 150 - round summary reports mixed draft outcomes
+  ---
+  duration_ms: 0.069083
+  type: 'test'
+  ...
+# Subtest: findTestsInDirectory recursively returns sorted .test.cjs files
+ok 151 - findTestsInDirectory recursively returns sorted .test.cjs files
+  ---
+  duration_ms: 41.448542
+  type: 'test'
+  ...
+# Subtest: resolveRequestedTestFiles defaults to tests/unit
+ok 152 - resolveRequestedTestFiles defaults to tests/unit
+  ---
+  duration_ms: 1.7135
+  type: 'test'
+  ...
+# Subtest: resolveRequestedTestFiles supports pnpm separator, files, directories, and absolute targets
+ok 153 - resolveRequestedTestFiles supports pnpm separator, files, directories, and absolute targets
+  ---
+  duration_ms: 1.236833
+  type: 'test'
+  ...
+# Subtest: resolveRequestedTestFiles rejects unsupported or empty targets
+ok 154 - resolveRequestedTestFiles rejects unsupported or empty targets
+  ---
+  duration_ms: 1.646833
+  type: 'test'
+  ...
+# Subtest: completed tasks show Done as the active stage
+ok 155 - completed tasks show Done as the active stage
+  ---
+  duration_ms: 0.731958
+  type: 'test'
+  ...
+# Subtest: verifying tasks remain in the running Testing stage before manual accept
+ok 156 - verifying tasks remain in the running Testing stage before manual accept
+  ---
+  duration_ms: 0.102958
+  type: 'test'
+  ...
+# Subtest: step labels stay stable and Chinese while status carries progress
+ok 157 - step labels stay stable and Chinese while status carries progress
+  ---
+  duration_ms: 0.06925
+  type: 'test'
+  ...
+# Subtest: a fully completed task keeps the same Chinese mini stepper labels
+ok 158 - a fully completed task keeps the same Chinese mini stepper labels
+  ---
+  duration_ms: 0.048792
+  type: 'test'
+  ...
+# Subtest: empty task state exposes the four planned stages
+ok 159 - empty task state exposes the four planned stages
+  ---
+  duration_ms: 0.419375
+  type: 'test'
+  ...
+# Subtest: stageOf folds task statuses into the four public workflow stages
+ok 160 - stageOf folds task statuses into the four public workflow stages
+  ---
+  duration_ms: 0.051333
+  type: 'test'
+  ...
+# Subtest: deriveTaskStages highlights the viewed stage and locks unreached stages
+ok 161 - deriveTaskStages highlights the viewed stage and locks unreached stages
+  ---
+  duration_ms: 0.506667
+  type: 'test'
+  ...
+# Subtest: deriveTaskStages without a viewed stage highlights the task's current stage
+ok 162 - deriveTaskStages without a viewed stage highlights the task's current stage
+  ---
+  duration_ms: 0.071541
+  type: 'test'
+  ...
+# Subtest: deriveTaskStages exposes testing as a stage id (not the legacy debugging id)
+ok 163 - deriveTaskStages exposes testing as a stage id (not the legacy debugging id)
+  ---
+  duration_ms: 0.288083
+  type: 'test'
+  ...
+# Subtest: default Agent draft is implementation-capable and safe to edit
+ok 164 - default Agent draft is implementation-capable and safe to edit
+  ---
+  duration_ms: 0.581792
+  type: 'test'
+  ...
+# Subtest: Agent draft round-trips editable fields
+ok 165 - Agent draft round-trips editable fields
+  ---
+  duration_ms: 0.340625
+  type: 'test'
+  ...
+# Subtest: buildTaskTimelineRows merges planning, loop trace, and task events by newest first
+ok 166 - buildTaskTimelineRows merges planning, loop trace, and task events by newest first
+  ---
+  duration_ms: 1.228834
+  type: 'test'
+  ...
+# Subtest: buildTaskTimelineRows omits command runs already represented by loop trace
+ok 167 - buildTaskTimelineRows omits command runs already represented by loop trace
+  ---
+  duration_ms: 0.141
+  type: 'test'
+  ...
+# Subtest: buildTaskTimelineRows includes implementation review, feedback, and summary artifacts
+ok 168 - buildTaskTimelineRows includes implementation review, feedback, and summary artifacts
+  ---
+  duration_ms: 0.120667
+  type: 'test'
+  ...
+# Subtest: buildDefaultSlots prefers detected preview and validation commands
+ok 169 - buildDefaultSlots prefers detected preview and validation commands
+  ---
+  duration_ms: 4.61775
+  type: 'test'
+  ...
+# Subtest: buildDefaultSlots falls back from project stacks
+ok 170 - buildDefaultSlots falls back from project stacks
+  ---
+  duration_ms: 0.088458
+  type: 'test'
+  ...
+# Subtest: terminalSlotFromDraft trims values and rejects incomplete drafts
+ok 171 - terminalSlotFromDraft trims values and rejects incomplete drafts
+  ---
+  duration_ms: 45.417917
+  type: 'test'
+  ...
+# Subtest: applyTerminalSlotDraft updates or appends slots
+ok 172 - applyTerminalSlotDraft updates or appends slots
+  ---
+  duration_ms: 0.131
+  type: 'test'
+  ...
+# Subtest: draftFromTerminalSlot and resolveTerminalSlotCwd share slot shape
+ok 173 - draftFromTerminalSlot and resolveTerminalSlotCwd share slot shape
+  ---
+  duration_ms: 0.159792
+  type: 'test'
+  ...
+# Subtest: validation evidence requires a passing run newer than the latest failure
+ok 174 - validation evidence requires a passing run newer than the latest failure
+  ---
+  duration_ms: 0.947667
+  type: 'test'
+  ...
+# Subtest: validation evidence ignores preview and unrelated task runs
+ok 175 - validation evidence ignores preview and unrelated task runs
+  ---
+  duration_ms: 0.543334
+  type: 'test'
+  ...
+# Subtest: explicit validation intent counts even when command text is not configured
+ok 176 - explicit validation intent counts even when command text is not configured
+  ---
+  duration_ms: 0.175584
+  type: 'test'
+  ...
+# Subtest: running validation evidence includes explicit custom commands
+ok 177 - running validation evidence includes explicit custom commands
+  ---
+  duration_ms: 0.078583
+  type: 'test'
+  ...
+# Subtest: gate status explains running and blocking conditions
+ok 178 - gate status explains running and blocking conditions
+  ---
+  duration_ms: 0.144208
+  type: 'test'
+  ...
+# Subtest: feedback conversation keeps structured evidence visible
+ok 179 - feedback conversation keeps structured evidence visible
+  ---
+  duration_ms: 0.226917
+  type: 'test'
+  ...
+# Subtest: resolveThemeMode prefers settings over the legacy localStorage theme
+ok 180 - resolveThemeMode prefers settings over the legacy localStorage theme
+  ---
+  duration_ms: 0.446208
+  type: 'test'
+  ...
+# Subtest: resolveThemeMode falls back to legacy light/dark and then system
+ok 181 - resolveThemeMode falls back to legacy light/dark and then system
+  ---
+  duration_ms: 0.062709
+  type: 'test'
+  ...
+# Subtest: effectiveThemeForMode maps system mode to the current system theme
+ok 182 - effectiveThemeForMode maps system mode to the current system theme
+  ---
+  duration_ms: 0.051583
+  type: 'test'
+  ...
+# Subtest: isThemeMode accepts only supported theme modes
+ok 183 - isThemeMode accepts only supported theme modes
+  ---
+  duration_ms: 0.051125
+  type: 'test'
+  ...
+# Subtest: late send acknowledgement cannot clear another session draft and IME Enter does not send
+ok 184 - late send acknowledgement cannot clear another session draft and IME Enter does not send
+  ---
+  duration_ms: 194.219083
+  type: 'test'
+  ...
+# Subtest: wire client uses generated command shape and checks request ownership and response type
+ok 185 - wire client uses generated command shape and checks request ownership and response type
+  ---
+  duration_ms: 4.850042
+  type: 'test'
+  ...
+# Subtest: watch uses one channel, closes once, and drops delayed messages after close
+ok 186 - watch uses one channel, closes once, and drops delayed messages after close
+  ---
+  duration_ms: 37.420375
+  type: 'test'
+  ...
+# Subtest: workspace watcher invalidates only its workspace and remains closable
+ok 187 - workspace watcher invalidates only its workspace and remains closable
+  ---
+  duration_ms: 0.206125
+  type: 'test'
+  ...
+# Subtest: frontend replay equals real Rust projections including tools, cancellation and notes
+ok 188 - frontend replay equals real Rust projections including tools, cancellation and notes
+  ---
+  duration_ms: 2.04925
+  type: 'test'
+  ...
+# Subtest: events arriving before a snapshot, out of order and duplicated do not lose output
+ok 189 - events arriving before a snapshot, out of order and duplicated do not lose output
+  ---
+  duration_ms: 0.397334
+  type: 'test'
+  ...
+# Subtest: a missing event stays a gap until replay fills it; a wrong-scope snapshot is rejected
+ok 190 - a missing event stays a gap until replay fills it; a wrong-scope snapshot is rejected
+  ---
+  duration_ms: 0.304417
+  type: 'test'
+  ...
+# Subtest: buffer pressure requests a fresh snapshot rather than consuming unbounded history
+ok 191 - buffer pressure requests a fresh snapshot rather than consuming unbounded history
+  ---
+  duration_ms: 3.152292
+  type: 'test'
+  ...
+# Subtest: controller survives StrictMode stop/start and ignores old generation responses
+ok 192 - controller survives StrictMode stop/start and ignores old generation responses
+  ---
+  duration_ms: 1.016375
+  type: 'test'
+  ...
+# Subtest: controller repairs missing delivery through the production event page shape
+ok 193 - controller repairs missing delivery through the production event page shape
+  ---
+  duration_ms: 0.460875
+  type: 'test'
+  ...
+# Subtest: backpressure before the initial watch response does not strand a dead subscription
+ok 194 - backpressure before the initial watch response does not strand a dead subscription
+  ---
+  duration_ms: 4.286584
+  type: 'test'
+  ...
+# Subtest: core workflow copy uses Chinese actions with stable domain terms
+ok 195 - core workflow copy uses Chinese actions with stable domain terms
+  ---
+  duration_ms: 3.189959
+  type: 'test'
+  ...
+1..195
+# tests 195
+# suites 0
+# pass 195
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2263.123542

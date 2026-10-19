@@ -1,0 +1,20 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.40s
+     Running unittests src/lib.rs (src-tauri/target/debug/deps/loom_lib-69122084d044f652)
+
+running 2 tests
+test chat::shutdown::tests::exit_gate_defers_once_allows_only_after_ready_and_can_retry_failure ... ok
+test chat::shutdown::tests::shutdown_cases_in_isolated_processes ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 298 filtered out; finished in 0.44s
+
+     Running unittests src/main.rs (src-tauri/target/debug/deps/loom-87dcdcd057e1030e)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/workflow_harness.rs (src-tauri/target/debug/deps/workflow_harness-ec31731de05a41e0)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
