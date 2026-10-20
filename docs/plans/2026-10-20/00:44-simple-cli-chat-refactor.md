@@ -1,6 +1,6 @@
 # 简化为 Claude Code 式本机 CLI Chat 的重构计划
 
-- 状态：实施中，未关闭（2026-10-20 回填）。R0–R4 代码已在分支 `codex/simple-cli-chat` 完成（`7e1dfcb`、`3dd9a9f`，未合入 `main`），工程门禁通过；R5 的文档已改写但未提交，真实 CLI 进程验收部分通过，**用户桌面验收未执行**。证据见 [验收记录](../../dogfood/2026-10-20-simple-chat-acceptance.md)，明细见 §10。执行拆解见 [实施计划](01:01-simple-chat-implementation.md)（R0→P0，R1→P1，R2→P2/P3，R3→P4–P7，R4→P8，R5→P9）。
+- 状态：工程与资料收尾完成，待用户桌面验收（2026-10-20）。R0–R4 代码已在分支 `codex/simple-cli-chat` 完成（`7e1dfcb`、`3dd9a9f`，未合入 `main`），工程门禁通过；R5 文档已提交于 `0acbb10` 并继续补齐收尾记录；真实 CLI 进程验证有分项证据，**桌面验收由用户明确接手，未执行项仍保持 not-tested**。证据见 [验收记录](../../dogfood/2026-10-20-simple-chat-acceptance.md)，明细见 §10。执行拆解见 [实施计划](01:01-simple-chat-implementation.md)（R0→P0，R1→P1，R2→P2/P3，R3→P4–P7，R4→P8，R5→P9）。
 - 代码基线：`main` @ `bed095c`（2026-10-18），工作区仅 `docs/reviews/` 未跟踪。
 - 关联：本计划落地后取代 [Craft 完整重建计划](../2026-09-30/13:17-craft-parity-rebuild.md) 作为当前实施入口；与 [2026-09-14 chat-first 重构](../2026-09-14/20:06-chat-first-refactor.md) 方向一致，复用 [2026-09-17 Chat 重建](../2026-09-17/10:15-local-agent-chat-rebuild.md) 已落地的仓储与运行链。
 
@@ -201,7 +201,7 @@
 | R2 探测与 OpenCode | 完成 | `3dd9a9f` | `$PATH` 优先，然后查通用候选；版本探测 2 秒超时；adapter 返回 capabilities；`chat_send` 补了 cwd 校验（§7 S1）。OpenCode 通过 `run --format json` + `--session` 实现原生续聊 |
 | R3 会话界面 | 完成 | `3dd9a9f` | 组件已拆分，Markdown 手写最小解析，没有新增依赖；只有合成网页验证 |
 | R4 删除 Task 工作流 | 完成 | `3dd9a9f` | 删除约 4.3 万行；旧符号零引用；Task 数据未触碰。**删除没有单独提交**（见下文“偏差”） |
-| R5 文档、构建、验收 | 部分完成 | 文档未提交 | CI 与 `check.sh` 已移出冻结内核；`pnpm check`、`pnpm tauri build --no-bundle` 已通过；真实桌面验收 not-tested |
+| R5 文档、构建、验收 | 工程交付完成，用户验收待执行 | `0acbb10` + 本轮文档收尾 | CI 与 `check.sh` 已移出冻结内核；`pnpm check`、`pnpm tauri build --no-bundle` 已通过；真实桌面验收 not-tested |
 
 成功标准逐项状态见 [验收记录](../../dogfood/2026-10-20-simple-chat-acceptance.md#成功标准重构计划-1)。目前只有 1、7、8 为 passed；2–5、9、10 为 partial（真实 CLI 进程或合成网页已通过，缺桌面验收）；6 中 Grok blocked（额度耗尽）。
 
@@ -210,6 +210,6 @@
 - 回滚颗粒度：计划要求每个里程碑一个或多个独立 PR，R4 删除单独提交；实际 R1–R4 合在一个提交 `3dd9a9f`（240 个文件，+4k / −43k 行），无法按里程碑单独 revert。
 - Q1：按默认值执行，`crates/`、`packages/`、`src/workbench/`、`src-tauri/src/workbench/` 保留冻结，并移出默认门禁。
 - Codex 的 `ask` 与 `auto` 映射为同一组参数（`workspace-write; approval_policy=never`），Auto-run 只跳过 Loom 的回合确认。
-- 切换 Agent 的确认和 Auto-run 警告用的是 `window.confirm`，不是设计稿中的应用内弹层；Tauri 下的表现未验证。
+- `3dd9a9f` 使用 `window.confirm`；独立 UI 打磨已在工作区改成应用内提示条，但尚未提交和桌面验收，不计入此基线。
 
-**关闭条件**：完成桌面验收，把标准 2–5、9、10 升级为 passed；文档与计划提交；分支合入 `main`。
+**交付与验收边界**：本轮代码、工程检查、验收资料及阶段性 commit 已交付。用户已明确接手桌面验收；上述产品验收项保持开放，不能因工程交付完成而自动改成 passed。合入 `main` 由后续验收决定，本轮不自动合并。

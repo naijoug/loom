@@ -1,0 +1,50 @@
+{
+  "codex-stop-before-fix": {
+    "source": "synthetic temporary Chat v2 snapshot",
+    "sourceAvailable": true,
+    "turns": [
+      {
+        "status": "failed",
+        "terminationReason": "runtime_error",
+        "errorSummary": "failed to terminate process group [test-pid]: Operation not permitted (os error 1)",
+        "exitCode": null
+      }
+    ]
+  },
+  "opencode-stop-before-fix": {
+    "source": "synthetic temporary Chat v2 snapshot",
+    "sourceAvailable": true,
+    "turns": [
+      {
+        "status": "failed",
+        "terminationReason": "runtime_error",
+        "errorSummary": "failed to terminate process group [test-pid]: Operation not permitted (os error 1)",
+        "exitCode": null
+      }
+    ]
+  },
+  "claude-tool-discovery-timeout": {
+    "source": "synthetic temporary Chat v2 snapshot",
+    "sourceAvailable": true,
+    "turns": [
+      {
+        "status": "timed_out",
+        "terminationReason": "chat_timeout",
+        "errorSummary": "回合超时（超过 10 分钟，已自动停止）",
+        "exitCode": 143
+      }
+    ]
+  },
+  "codex-read-probe-before-prompt-fix": {
+    "source": "synthetic temporary Chat v2 snapshot",
+    "sourceAvailable": true,
+    "turns": [
+      {
+        "status": "completed",
+        "terminationReason": null,
+        "errorSummary": null,
+        "exitCode": 0
+      }
+    ]
+  }
+}

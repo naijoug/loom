@@ -1,6 +1,6 @@
 # 简化 CLI Chat 实施计划
 
-- 状态：实施中，未关闭（2026-10-20 回填）。P0–P8 代码已完成（`7e1dfcb`、`3dd9a9f`，分支 `codex/simple-cli-chat`，未合入 `main`）；P9 只完成了文档改写和工程门禁，桌面验收未执行。明细见 §6 和 [验收记录](../../dogfood/2026-10-20-simple-chat-acceptance.md)。
+- 状态：工程与资料收尾完成，待用户桌面验收（2026-10-20）。P0–P8 代码已完成（`7e1dfcb`、`3dd9a9f`，分支 `codex/simple-cli-chat`，未合入 `main`）；P9 工程门禁与文档提交已完成（首版资料 `0acbb10`），桌面验收由用户明确接手，未执行项仍为 not-tested。明细见 §6 和 [验收记录](../../dogfood/2026-10-20-simple-chat-acceptance.md)。
 - 上位计划：[简化 CLI Chat 重构计划](00:44-simple-cli-chat-refactor.md)。目标、非目标、决策 D1–D8 和成功标准以那份计划为准，本文只写怎么做。
 - UI 设计：[Loom Chat 初版 UI（Claude Design 画布）](https://claude.ai/artifact/MrT5QtAcWQJVt3tdTWodx4)，包含主会话（运行中）、新会话空状态、Composer 命令与 Agent 切换、设置页本机 Agent 四个画板。画布是私有链接，未分享前只有作者能打开。
 - 代码基线：`main` @ `bed095c`。
@@ -184,7 +184,9 @@ P2 ─┴─> P7 ────────┘
 
 ### 2026-10-20 回填
 
-没有按 §1 拆成单独的 PR 和 `refactor/simple-chat-pN-*` 分支：P0 是 `7e1dfcb`，P1–P8 合在 `3dd9a9f`，都在分支 `codex/simple-cli-chat` 上，还没有 PR。验证命令在 HEAD + 当前工作区复跑：`pnpm check`（82 个前端测试；148 个 Rust 测试，16 个真实 CLI 测试按设计忽略；strict Clippy；release 文档检查）通过，`pnpm tauri build --no-bundle` 通过。
+没有按 §1 拆成单独的 PR 和 `refactor/simple-chat-pN-*` 分支：P0 是 `7e1dfcb`，P1–P8 合在 `3dd9a9f`，都在分支 `codex/simple-cli-chat` 上，还没有 PR。验证命令在 HEAD + 当前工作区复跑：`pnpm check`（82 个前端测试；148 个 Rust 测试，16 个显式 opt-in 测试按设计忽略；strict Clippy；release 文档检查）通过，`pnpm tauri build --no-bundle` 通过。
+
+下表 P1–P8 针对已提交的 `3dd9a9f` 基线；独立 UI 打磨未混入本轮提交。
 
 | P | 状态 | 实现要点 | 未通过 / 偏差 |
 |---|---|---|---|
@@ -197,6 +199,8 @@ P2 ─┴─> P7 ────────┘
 | P6 | 完成（合成验证） | `AgentPicker`、默认 Agent 回落、能力降级 | 切换确认用 `window.confirm`，Tauri 下的表现未验证 |
 | P7 | 完成 | 设置页只剩 4 个分区；Work modes 表的数据来自适配器 | Codex 的 Code 与 Auto-run 显示为同一组参数 |
 | P8 | 完成 | 删除旧前后端代码；契约同步；旧符号零引用 | 前端和后端删除没有分成两个提交；`src/workbench/` 按上位计划 Q1 保留冻结，没有按本节清单删除 |
-| P9 | 部分完成 | 文档改写（未提交）；CI 与 `check.sh` 移出冻结内核；验收记录 | 桌面验收 not-tested；真实 CLI 测试没有在 HEAD 上完整重跑；Grok blocked（402） |
+| P9 | 工程与文档交付完成，用户验收待执行 | `0acbb10` 已提交文档，本轮补齐收尾说明；CI、验证矩阵、真实 CLI 分项证据及启动步骤已就绪 | 用户明确接手桌面验收，仍记 not-tested；真实 CLI 为定向运行，未在最终提交上整套重跑；Grok blocked（402） |
 
-P9 场景矩阵见 [验收记录](../../dogfood/2026-10-20-simple-chat-acceptance.md#p9-场景矩阵)。真实 CLI 进程层面，Claude / Codex / OpenCode 的必测项都有通过记录，但开发过程中出现过失败后又通过的运行，原因没有保存，记录里已列出。
+P9 场景矩阵见 [验收记录](../../dogfood/2026-10-20-simple-chat-acceptance.md#p9-场景矩阵)。真实 CLI 进程层面，Claude / Codex / OpenCode 的必测项都有通过记录，开发过程中的失败与复验原因已补入验收资料；当前工作区另有独立 UI 打磨，尚未提交，不混入本轮文档 commit。
+
+用户交接：原生桌面验收按用户明确选择留给用户；工程交付完成不等于产品验收全部通过。启动方式见验收记录“启动用户测试”。

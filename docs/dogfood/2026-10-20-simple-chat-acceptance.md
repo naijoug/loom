@@ -1,9 +1,9 @@
 # 简化 CLI Chat 验收记录（2026-10-20）
 
 - 对应计划：[重构计划](../plans/2026-10-20/00:44-simple-cli-chat-refactor.md) §1 成功标准、[实施计划](../plans/2026-10-20/01:01-simple-chat-implementation.md) P9 场景矩阵。
-- 代码：分支 `codex/simple-cli-chat`，`7e1dfcb`（CLI 样本）+ `3dd9a9f`（实现），未合入 `main`；文档改动在工作区未提交。
+- 交付基线：分支 `codex/simple-cli-chat`；`7e1dfcb` 为 CLI 样本，`3dd9a9f` 为重构实现，`0acbb10` 已提交首版验收资料。未推送、未合入 `main`。本记录的完整工程门禁针对重构基线，不自动覆盖后续 UI 打磨改动。
 - 环境：macOS（Darwin 25.5.0），Claude Code 2.1.304、Codex 0.163.0、Grok 1.0.62、OpenCode 1.19.3（官方临时副本，见下文）。
-- 结论：**partial**。工程门禁通过；Claude Code / Codex / OpenCode 的真实 CLI 进程验收通过；**用户桌面验收（`scripts/debug.sh desktop`）未执行**，所以没有任何一项按计划要求标为桌面 `passed`。
+- 交付结论：**重构工程与资料收尾完成，产品验收为 partial，等待用户桌面验收**。用户已明确选择“原生桌面验收留给我，完成其余工作后通知我”。本轮不再以自动操作原生窗口作为交付前提；没有将任何未执行的桌面场景标为 passed。
 
 ## 状态口径
 
@@ -18,7 +18,7 @@
 
 1. **工程与合成**：单测、构建、样本回放、`pnpm smoke:visual` 合成网页（`kind: synthetic-web-only`）。
 2. **真实 CLI 进程**：`src-tauri/src/chat/real_agent_tests.rs` 里需要显式开启的测试（`LOOM_REAL_CHAT=1 … -- --ignored`）。它们经过生产仓储、runtime 和适配器调用真实模型，但不经过 React UI。所谓“重启”是每轮重新打开磁盘仓储，并不是重启应用。
-3. **用户桌面**：本轮未执行。
+3. **用户桌面**：自动化曾因 Mac 锁屏无法操作；随后用户明确接手。本轮仍记 not-tested。
 
 ## 工程门禁
 
@@ -26,10 +26,10 @@
 |---|---|---|
 | `pnpm test` | passed | 82/82 |
 | `pnpm build` | passed | tsc + vite build |
-| `cargo test`（src-tauri） | passed | 148 通过，16 个真实 CLI 测试按设计忽略 |
+| `cargo test`（src-tauri） | passed | 148 通过，16 个显式 opt-in 测试按设计忽略（包括真实 CLI 和证据生成用例） |
 | `cargo clippy --all-targets --all-features -D warnings` | passed | 无警告 |
-| `pnpm check`（含 release 文档检查与 fmt） | passed | 2026-10-20 review 时在 HEAD + 当前工作区复跑；`check.sh` 使用 `set -e`，最后一步 cargo test 已执行完毕 |
-| `pnpm tauri build --no-bundle` | passed | 同日复跑，release 构建产物 `src-tauri/target/release/loom` |
+| `pnpm check`（含 release 文档检查与 fmt） | passed | 重构收口工作树通过，随后提交为 `3dd9a9f`；`check.sh` 使用 `set -e`，全部步骤执行完毕 |
+| `pnpm tauri build --no-bundle` | passed | 重构收口时通过；产物 `src-tauri/target/release/loom`。后续前端打磨未重新打包，测试最新工作区请使用下方 debug 启动方式 |
 | 样本回放 | passed | `chat::tools` 测试读取 `src-tauri/tests/fixtures/cli-streams/` 下 Claude / Codex / OpenCode 样本，验证配对且没有重复卡片 |
 | 旧数据兼容 | passed | `chat::models` 读取旧 snake_case 工具片段；Rust 非测试代码中没有删除 `.loom/` Task 数据的调用 |
 | 硬编码文案 | passed | `src/features`、`src/components`、`src/hooks`、`src/state` 中没有 CJK 字符（字典与测试除外） |
@@ -72,7 +72,7 @@ sample 均位于 [`samples/simple-chat/`](samples/simple-chat/)，文件名为 `
 
 ## 真实 CLI 运行明细与失败记录
 
-sample 保留了开发过程中的失败运行。下表按 cargo 测试总数（passed + failed + filtered）排序，这个数字可以近似反映运行时的代码状态。HEAD 的总数是 164（148 + 16 ignored）。
+sample 保留开发过程中的失败运行。测试总数仅是原始输出中的数量，不能证明运行来自相同提交。重构收口门禁的总数为 164（148 passed + 16 ignored）；各真实 CLI 用例在开发过程中按对应改动定向复验。
 
 | sample | 测试总数 | 结果 |
 |---|---|---|
@@ -90,20 +90,44 @@ sample 保留了开发过程中的失败运行。下表按 cargo 测试总数（
 
 限制：
 
-- sample 没有保存失败的 panic 信息，所以无法判断后来的通过是因为代码修复，还是因为模型行为不同。Codex 权限测试在同一测试总数下先失败后通过，可能存在不稳定。
-- 只有最后一条（opencode-stop）和 HEAD 的测试总数一致。**真实 CLI 测试没有在 `3dd9a9f` 上完整重跑一遍**。重跑会消耗账户额度，需要用户决定。
+- 原 sample 仅保留摘要。收尾补充了 [失败原因与复验说明](samples/simple-chat/failure-retests.md) 和 [持久化失败字段](samples/simple-chat/failure-details.json)：区分测试提示词修正、CLI 工具发现超时与停止收口修复，不把后续通过解释为所有自然语言请求都稳定。
+- **没有在最终提交上将全部真实 CLI 场景再跑一遍**；记录对应各功能的定向运行，完整离线门禁在收口时执行。后续因实现、CLI 版本、账户状态变化或新失败而复验；已有本任务内授权不需重复确认，但真实调用仍会消耗模型额度。
 - OpenCode 结果来自官方 1.19.3 临时副本，来源、SHA-256 和签名见 [opencode-provenance.json](samples/simple-chat/opencode-provenance.json)。用户本机原有安装签名无效（exit 137），保持原样未改动。
 - Grok 失败是账户额度问题（402），不能视为适配器回退，也不能视为通过。
 
 ## 已知限制（未在本轮解决）
 
-- **桌面专属行为未验证**：切换 Agent 的确认和 Auto-run 首次警告使用 `window.confirm`，它在 Tauri WKWebView 中能否弹出未验证；计划设计的是应用内弹层。
+- **桌面专属行为未验证**：`3dd9a9f` 的切换 Agent 与 Auto-run 确认使用 `window.confirm`。当前独立 UI 打磨已在工作区替换为应用内提示条，但尚未提交；本记录没有将它计入重构基线的桌面通过证据。
 - **Codex 的 Auto-run 与 Code 参数相同**：都是 `workspace-write; approval_policy=never`。打开 Auto-run 只是跳过 Loom 的回合确认，不改变 CLI 行为。
-- **工具卡片元信息不全**：没有行数、匹配数和耗时；同一条消息的多张工具卡片会重复渲染执行日志入口。
+- **工具卡片元信息不全**：重构基线没有行数、匹配数和耗时，日志入口可能重复。工作区 UI 打磨已改成每回合一个日志入口；其余元信息仍不在已验收范围内。
 - **样本环境不干净**：Codex 样本中出现了本机全局指令（`rtk`、`RTK.md`）的痕迹，录制时没有隔离用户级 CLI 配置。
 
-## 下一步
+## 启动用户测试
 
-1. 按 [测试指南 · 用户验收](../testing.md#用户验收) 跑 `scripts/debug.sh desktop`（前后执行 `scripts/debug.sh stop`），把上表中的 `partial` 升级为 `passed`，或改记为失败。
-2. 用户同意消耗额度后，在 HEAD 上重跑 Claude / Codex / OpenCode 的真实 CLI 测试，并保存失败输出。
-3. Grok 额度恢复后补测续聊和权限。
+当前工作区已安装依赖。在项目终端运行：
+
+```bash
+cd /Users/guojian/Workspace/naijoug/loom
+scripts/debug.sh stop
+scripts/debug.sh desktop
+```
+
+等待 Tauri 编译结束，打开的窗口标题为 **Loom**，开发服务固定端口 **1420**。此方式加载工作区最新前端，也包含尚未提交的 UI 打磨；不会启动旧 Task 或 Workbench。
+
+建议先用 Claude Code / Codex 和可安全修改的临时项目，按 [用户验收清单](../testing.md#用户验收) 检查：新建与切换会话、三轮追问、停止再发、Research → Code、重启恢复、语言与主题，以及两处应用内确认。
+
+测试结束后，在另一终端执行：
+
+```bash
+scripts/debug.sh stop
+```
+
+仅查看合成页面可用 `scripts/debug.sh web`，访问 `http://127.0.0.1:1420/?fixture=simple-chat`。它不调用真实 Agent。截图目录会随 UI 打磨更新，不作为重构基线的不可变截图。
+
+## 用户接手项
+
+1. 原生桌面验收由用户执行，再将矩阵中相应 partial 更新为 passed 或记录失败；本轮不自动合入 main。
+2. OpenCode 原安装需修复签名后再验收默认路径；官方临时副本的通过不表示原安装已修好。
+3. Grok 额度恢复后补测。遇到问题请附会话导出或脱敏执行日志，注明 CLI 版本和模式。
+
+本轮收尾只提交验收文档、两份计划状态和重构依赖/删除清单；独立 UI 打磨及原有架构评审文件保留原工作区状态。

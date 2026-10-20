@@ -1,0 +1,23 @@
+[
+  "src-tauri/src/attachments.rs",
+  "src-tauri/src/command_runner.rs",
+  "src-tauri/src/context_builder.rs",
+  "src-tauri/src/execution_policy.rs",
+  "src-tauri/src/implementation_review.rs",
+  "src-tauri/src/plan_html.rs",
+  "src-tauri/src/project_git.rs",
+  "src-tauri/src/project_preferences.rs",
+  "src-tauri/src/pty.rs",
+  "src-tauri/src/run_recovery.rs",
+  "src-tauri/src/task_repository.rs",
+  "src-tauri/src/task_state.rs",
+  "src-tauri/src/task_summary.rs",
+  "src-tauri/src/tasks.rs",
+  "src-tauri/src/tasks/testing.rs",
+  "src-tauri/src/tasks/lifecycle.rs",
+  "src-tauri/src/terminals.rs",
+  "src-tauri/src/agents/artifacts.rs",
+  "src-tauri/src/agents/orchestrator.rs",
+  "src-tauri/src/agents/prompts.rs",
+  "src-tauri/tests/workflow_harness.rs"
+]
