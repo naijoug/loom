@@ -1,41 +1,33 @@
 # Loom
 
-Loom 是基于 Tauri、React 和 Rust 的本地编程 Agent 工作台。当前优先交付可靠的单 Agent Chat：选择项目、检测本机 CLI、建立会话、查看流式回复、停止和续聊。CLI 可以调用远端模型，“本机调用”不等于离线推理。
+Loom 是 Tauri + React + Rust 构建的本机 CLI Chat。会话按项目分组，选择 Research 或 Code，在输入框中选择本机 Claude Code、Codex、OpenCode、Grok 或自定义 CLI，查看流式回答和工具调用，停止并继续对话。
 
-## 当前交付范围
+界面默认英文，可在 Settings → Appearance 切换简体中文和主题。Agent 登录与模型选择仍由各 CLI 管理；本机启动 CLI 不代表离线推理。
 
-- 至少一个真实本机 Agent 完整通过多轮、停止和重启验收；其他 Agent 按实际能力与证据展示支持状态。
-- ChatSession 与 Task 分离，普通聊天不要求多 Agent 讨论、计划确认或实施 Review。
-- 当前 Ask 是每回合发送前的写入授权；尚无逐工具审批传输。权限限制与现有缺口见 [Chat 契约](docs/architecture/chat-contracts.md)。
-- Chat 重构仍在进行。网页预览、fixture 或历史工作流验收不能代替当前真实桌面 Chat 验收。
-
-## 启动与验证
+## 启动
 
 ```bash
 pnpm install
 scripts/debug.sh stop
 scripts/debug.sh desktop
-# 验证结束后
+# 使用结束后
 scripts/debug.sh stop
 ```
 
-仅浏览器预览使用 `scripts/debug.sh web`，固定端口 1420。开发检查按 [验证矩阵](docs/testing.md#开发变更验证矩阵) 选择；里程碑完整门禁为 `pnpm check`，桌面构建另跑 `pnpm tauri build --no-bundle`。
+网页预览：`scripts/debug.sh web`，固定端口 1420。开发态访问 `http://127.0.0.1:1420/?fixture=simple-chat` 可查看合成会话；该模式不调用模型，不能作为真实 CLI 验收证据。
 
-## 高级 Task 工作流
+## 使用边界
 
-Task 保留需求讨论 → 实施与独立 Review → 调试验收 → 修复循环：多 Agent 起草与互评、主 Agent Todo 实施、blocker 门禁、日志与附件、Git baseline 归因和 JSON/Markdown 总结。这些能力有独立的历史验收记录，不是 Chat 使用前提。
+- Research 对应 CLI 只读策略；Code 每回合确认后允许修改，Auto-run 使用适配器声明的自动执行策略。Loom 不提供逐工具审批。
+- 已有 `.loom/chat/v2` 会话继续读取。Task/Board/Planning 工作流已退出应用；旧任务文件保留，不迁移、不删除。
+- Workbench、Rust 新内核和 SDK worker 源码冻结，不进入默认应用与主门禁。
+- 各 CLI 的已测能力与环境阻塞见 [本轮验收记录](docs/dogfood/2026-10-20-simple-chat-acceptance.md)。
 
-## 文档入口
+## 验证与文档
 
-- [现行需求与 Chat 成功标准](docs/requirements.md)
-- [架构与模块边界](docs/architecture.md)
-- [Chat 当前契约与重构目标](docs/architecture/chat-contracts.md)
-- [Agent Adapter](docs/agent-adapter.md)
-- [高级 Task 状态机](docs/task-state-machine.md)
-- [安全策略](docs/security-policy.md)
-- [开发指南与计划规范](docs/development.md)
-- [测试与验收](docs/testing.md)
-- [Agent 行为验收案例](docs/guides/agent-behavior-evaluation.md)
-- [当前计划与历史索引](docs/PLANS.md)
-- [Beta 发布资料](docs/release/README.md)（仅发布准备时查阅）
-- [高级工作流历史需求审计](docs/requirements-audit.md)与[历史验收报告](docs/dogfood/complete-version-2026-07-24.md)
+完整工程检查为 `pnpm check`，桌面构建为 `pnpm tauri build --no-bundle`。`pnpm smoke:visual` 检查合成网页交互与截图；`pnpm smoke:chat` 验证真实本地 fixture 进程，不请求模型。
+
+- [需求](docs/requirements.md)、[架构](docs/architecture.md)、[Chat 契约](docs/architecture/chat-contracts.md)
+- [Agent 适配与实测](docs/agent-adapter.md)、[测试验收](docs/testing.md)
+- [实施计划](docs/plans/2026-10-20/01:01-simple-chat-implementation.md)、[计划索引](docs/PLANS.md)
+- [开发指南](docs/development.md)、[脚本](scripts/README.md)、[发布资料](docs/release/README.md)

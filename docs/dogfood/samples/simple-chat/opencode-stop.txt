@@ -1,0 +1,6 @@
+STOP_CANARY agent=<verified-opencode-1.19.3> round=1 status=aborted persisted_messages=2
+STOP_CANARY agent=<verified-opencode-1.19.3> round=2 status=complete persisted_messages=4
+STOP_CANARY evidence=<temporary-directory>/loom-stop-canary-1792497608303-1
+test chat::real_agent_tests::opencode_stop_then_send ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 163 filtered out; finished in 15.93s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

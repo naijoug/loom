@@ -1,0 +1,17 @@
+test chat::real_agent_tests::opencode_file_permissions_in_new_and_resumed_chat ... PERMISSION_CANARY project=<temporary-directory>/loom-permission-canary-1792497283517-1
+PERMISSION_CANARY mode=explore round=1 status=complete native=true file_changed=false parts=["read"]
+PERMISSION_CANARY mode=explore round=2 status=complete native=true file_changed=false parts=["read"]
+PERMISSION_CANARY mode=ask round=1 status=complete native=true file_changed=true parts=["read", "edit", "read"]
+PERMISSION_CANARY mode=ask round=2 status=complete native=true file_changed=true parts=["read", "edit", "read"]
+test chat::real_agent_tests::opencode_stop_then_send ... 
+test chat::real_agent_tests::opencode_three_turns_resume_after_repository_reopen ... REAL_CHAT turn=1 status=complete stream_bytes=28 native_resume=true marker_matches=1
+REAL_CHAT turn=1 duplicate_active=deduplicated duplicate_reopened=deduplicated
+REAL_CHAT turn=2 status=complete stream_bytes=28 native_resume=true marker_matches=1
+REAL_CHAT turn=2 duplicate_active=deduplicated duplicate_reopened=deduplicated
+REAL_CHAT turn=3 status=complete stream_bytes=28 native_resume=true marker_matches=1
+REAL_CHAT turn=3 duplicate_active=deduplicated duplicate_reopened=deduplicated
+REAL_CHAT evidence=<temporary-directory>/loom-real-chat-1792497376781-32
+failures:
+failures:
+    chat::real_agent_tests::opencode_stop_then_send
+test result: FAILED. 2 passed; 1 failed; 0 ignored; 0 measured; 159 filtered out; finished in 129.75s

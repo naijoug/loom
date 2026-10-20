@@ -1,0 +1,6 @@
+PERMISSION_CANARY project=<temporary-directory>/loom-permission-canary-1792496956589-1
+PERMISSION_CANARY mode=explore round=1 status=complete native=true file_changed=false parts=["ToolSearch", "Read"]
+PERMISSION_CANARY mode=ask round=2 status=complete native=true file_changed=true parts=["ToolSearch", "Read", "Write"]
+test chat::real_agent_tests::claude_mode_switch ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 158 filtered out; finished in 35.66s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

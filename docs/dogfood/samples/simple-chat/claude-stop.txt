@@ -1,0 +1,8 @@
+test chat::real_agent_tests::claude_stop_then_send ... STOP_CANARY agent=claude round=1 status=aborted persisted_messages=2
+STOP_CANARY agent=claude round=2 status=complete persisted_messages=4
+STOP_CANARY evidence=<temporary-directory>/loom-stop-canary-1792495858470-1
+test chat::real_agent_tests::codex_stop_then_send ... 
+failures:
+failures:
+    chat::real_agent_tests::codex_stop_then_send
+test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 149 filtered out; finished in 14.65s

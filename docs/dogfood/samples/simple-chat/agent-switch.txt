@@ -1,0 +1,10 @@
+REAL_CHAT turn=1 status=complete stream_bytes=27 native_resume=true marker_matches=1
+REAL_CHAT turn=1 duplicate_active=deduplicated duplicate_reopened=deduplicated
+REAL_CHAT turn=2 status=complete stream_bytes=27 native_resume=true marker_matches=1
+REAL_CHAT turn=2 duplicate_active=deduplicated duplicate_reopened=deduplicated
+REAL_CHAT turn=3 status=complete stream_bytes=27 native_resume=true marker_matches=1
+REAL_CHAT turn=3 duplicate_active=deduplicated duplicate_reopened=deduplicated
+REAL_CHAT evidence=<temporary-directory>/loom-real-chat-1792496186897-1
+test chat::real_agent_tests::claude_to_codex_history_replay ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 156 filtered out; finished in 46.43s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

@@ -1,8 +1,10 @@
 # Loom Agent 指南
 
+外部账号操作前读取 `/Users/guojian/Workspace/naijoug/AGENTS.md`；个人工作区账号路由规则在临时 checkout 中同样适用。
+
 ## 当前范围与文档入口
 
-Loom 是 Tauri + React + Rust 的本地 Agent 工作台。当前实施目标是保留 Tauri/React/Rust，按 Craft Agents v0.14.0 固定基线完整重建功能与交互。新内核按计划独立建设；旧 Chat/四阶段 Task 是待迁移的现有实现，不作为新架构约束。
+Loom 是 Tauri + React + Rust 的本地 Agent 工作台。当前目标是保留 Tauri/React/Rust，按 2026-10-20 两份简化 Chat 计划提供按项目组织的本机 CLI Chat。Task/Board/Planning 已退出产品；Workbench、新内核和 SDK worker 保留冻结，不进入默认构建。旧 Task 数据不得修改或删除。
 
 - 产品范围以 [需求文档](docs/requirements.md) 为准；用户明确更新的要求优先于仓库约定。计划描述实施安排，历史计划不覆盖现行需求。
 - 按任务需要查阅：[模块边界](docs/architecture.md)、[Chat 契约](docs/architecture/chat-contracts.md)、[Agent 适配](docs/agent-adapter.md)、[安全策略](docs/security-policy.md)。无需每次编辑都读取全部文档。

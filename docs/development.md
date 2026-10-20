@@ -41,4 +41,4 @@ Rust 最低版本为 1.90（见 `src-tauri/Cargo.toml`）；Chat 仓储使用标
 
 ## 新内核 workspace
 
-根 `Cargo.toml` 管理 `crates/loom-core`；旧 `src-tauri` 和 `experiments/*` 保持独立，不会被根 Cargo 命令隐式重构。新内核默认检查为 `pnpm check:core`，已包含在完整 `pnpm check` 中。模型与 API 字段修改后运行 `cargo run -p loom-core --features bindings --bin export-workbench-types`，不要手改 `packages/protocol/src/workbench.ts`。
+根 `Cargo.toml` 管理 `crates/loom-core`；旧 `src-tauri` 和 `experiments/*` 保持独立，不会被根 Cargo 命令隐式重构。新内核已冻结；`pnpm check:core` 仅供显式选择，已移出完整 `pnpm check` 和默认 CI。模型与 API 字段修改后运行 `cargo run -p loom-core --features bindings --bin export-workbench-types`，不要手改 `packages/protocol/src/workbench.ts`。

@@ -1,0 +1,15 @@
+{
+  "status": "passed",
+  "kind": "synthetic-web-only",
+  "checks": [
+    "new chat sends with selected Agent and mode",
+    "project groups",
+    "new chat mode-only cards",
+    "tool cards and diff",
+    "light/dark",
+    "language persists after reload",
+    "Settings preserves selected chat",
+    "700px sidebar collapse",
+    "no horizontal overflow"
+  ]
+}

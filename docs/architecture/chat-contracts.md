@@ -1,8 +1,6 @@
 # Chat 当前契约与重构目标
 
-> 2026-09-30：本文件继续描述现有 Chat 契约，供回归和迁移使用。新的 Craft 全功能重建按 [实施计划](../plans/2026-09-30/13:17-craft-parity-rebuild.md) 推进；当前 Ask 仍为回合确认，不代表新逐工具审批已实现。
-
-- 核对日期：2026-09-22；产品范围见 [需求](../requirements.md)，当前修复见 [进展 Review 修复计划](../plans/2026-09-22/14:29-chat-progress-review-fixes.md)，整体验收见 [重构计划](../plans/2026-09-17/10:15-local-agent-chat-rebuild.md)。
+- 核对日期：2026-10-20；当前范围为 [简化 CLI Chat](../plans/2026-10-20/00:44-simple-cli-chat-refactor.md)，实施证据见 [本轮验收](../dogfood/2026-10-20-simple-chat-acceptance.md)。Workbench / Craft 重建已暂停。
 - 前端：`src/domain/chat.ts`、`src/api/chatClient.ts`、`src/features/chat/useChatBridge.ts`、`state/ChatProjection.ts`。
 - 后端：`src-tauri/src/chat/{mod,models,repository,journal,service,runtime}.rs`。
 - 当前持久化为 **schema v2**；v1 只读迁移。浏览器 Mock 仍可使用 v1 外形，不代表真实桌面或模型验收。
@@ -43,10 +41,11 @@
 
 `ChatSession` 保留 id/projectPath/agentId/title/permissionMode/messages、时间、可选 resumeCommand/activeTurnId/promotedTaskId、active/archived、flagged，新增 `lastSeq`、`revision`、`resumeHandle` 和 `schemaVersion: 2`。
 
-- ChatSession 不要求 taskId，不自动推进 Task。升格只复制转录/需求创建 Task 草稿。
+- ChatSession 不要求 taskId。升格为 Task 的 UI 和命令已删除；已有 promotedTaskId 仅作为兼容历史字段保留。
 - 会话运行兼容状态仍为 idle/streaming/error；消息为 complete/streaming/aborted/error。新增 `turns` 保存独立回合状态和执行证据；旧会话缺省为空，不反推或伪造旧运行记录。
 - message.parts 支持 text/tool/error；tool 的 inputSummary/outputSummary 输出 camelCase，并兼容读取旧 snake_case。
-- 换 Agent/权限、清 resume、归档和升格在后端拒绝活动回合操作；运行时可以改标题/旗标，结束保存不能覆盖这些新元数据。
+- tool 新增可选 callId/kind/target/exitCode/diffStats/diffPreview；缺字段的旧 v2 不升级 schema。diffPreview 最多 40 行 / 8 KiB。runtime、journal 和前端按 callId 合并调用/结果，保留完整输入，避免重复卡片。Codex 的无 patch 文件事件使用回合开始前的有界本地文本基线补全；无法可靠比较时不伪造。
+- 换 Agent/权限、清 resume和归档在后端拒绝活动回合操作；运行时可以改标题/旗标，结束保存不能覆盖这些新元数据。
 - 已归档会话需要恢复后才能发送。元数据操作不应清空转录；改 Agent/有效权限会清除不相容的续聊句柄。
 
 `sendReceipts` 是追加且不可修改的接收回执，包含 clientRequestId/turnId/userMessageId/assistantMessageId/requestedPermissionMode；与两条消息在同一个 journal patch 提交。旧 v1/v2 会话缺少时读为空。请求标识在 canonical 项目与会话内唯一，限 1–160 个字母、数字、连字符或下划线。
@@ -61,6 +60,7 @@
 
 | Command | Input | Output |
 |---|---|---|
+| chat_list_project_groups | `{ projectPaths?: string[] }` | 按最近项目顺序返回 project/sessionCount/sessions/storageError；只展开指定路径，其他仅读目录计数 |
 | chat_list_sessions | `{ projectPath }` | summary[]，含可选 storageError |
 | chat_create | `{ input: { projectPath, agentId, title?, permissionMode? } }` | ChatSession |
 | chat_get | `{ projectPath, sessionId }` | 已重放/恢复的 ChatSession |
@@ -72,13 +72,12 @@
 | chat_set_agent | `{ projectPath, sessionId, agentId }` | ChatSession |
 | chat_update_meta | `{ input: { projectPath, sessionId, title?, permissionMode?, status?, flagged?, titleFromFirstMessage? } }` | ChatSession |
 | chat_clear_resume | `{ projectPath, sessionId }` | ChatSession |
-| chat_promote_to_task | `{ input: { projectPath, sessionId } }` | `{ taskId, task, session }` |
 
 前端均通过 `chatClient.ts`。Rust/TS 共同验证 `contracts/tauri-contract.json` 的命令、事件、schema 与会话/事件样本；生产 wrapper 的实际调用参数有独立回归。
 
 ## 事件与前端投影
 
-默认 Chat 使用 `ChatShell`，复用项目导航并保留高级工作流入口，不挂载 Task Header、任务列表加载或 Planning 订阅。`useAgentCatalog` 只提供 Agent 配置/诊断；高级工作流 `WorkflowShell` 挂载时读取 Tasks，并通过 `usePlanningEvents` 订阅一次状态与日志，离开时清理，返回时重新读取持久化任务。`useAgentBridge` 保留高级工作流操作，不隐式添加订阅。
+默认应用仅挂载 Chat 与设置，Task/Planning 命令和事件已删除。项目树按需加载摘要，设置打开时保留 Chat 挂载、草稿和活动会话。`useAgentCatalog` 提供 Agent 配置、版本探测及适配器能力。界面英文优先，locale 保存在 AppSettings，旧文件缺省 en。
 
 正常事件统一为 `loom://chat-event`：
 
@@ -105,7 +104,7 @@ Patch 只允许指定的元数据字段，不允许更改身份/路径/schema，
 - 草稿按项目和会话隔离；发送成功只清除该次已提交的文本，不覆盖其他会话或后来输入的草稿。
 - `ChatSendController` 合并同内容的待提交请求；IPC 失败后保留请求标识，手动重发同内容/权限复用标识。明确收到回执后下一次提交分配新标识；不自动重跑 Agent。标识缓存跨 Chat 页面挂载保留，但不跨 renderer 重载持久化；重载后已提交转录从后端恢复，手动新写消息属于新请求。
 - Shift+Tab 保留反向焦点导航，不修改权限；消息发送与标题保存均防止把 IME 确认回车当作提交。
-- 已记录的助手回合显示状态、耗时和“执行记录”；展开查看固定配置、时间/退出码及 stdout/stderr。日志分页、重载和错误可见；切换流/会话/项目时忽略迟到响应。内容作为纯文本展示，不执行 HTML。
+- 工具卡片和错误提示提供“执行日志”入口；展开查看固定配置、时间/退出码及 stdout/stderr。日志分页、重载和错误可见；切换流/会话/项目时忽略迟到响应。内容作为纯文本展示，不执行 HTML。
 
 ## 导出与回滚
 
@@ -117,7 +116,7 @@ JSON 保留完整转录和结构化证据，Markdown 用动态围栏保留字面
 
 ## Runtime 与上下文
 
-生产链路为 command → context/adapter → runtime → journal → UI 投影。`ProcessOwner::Chat` 使用 project/session/turn 独立归属，Task 构造与查询保持兼容。
+生产链路为 command → context/adapter → runtime → journal → UI 投影。`ProcessOwner::Chat` 使用 project/session/turn 独立归属，旧 Task 运行链已删除；ProcessSupervisor 的通用归属基础保留。
 
 `service::run_chat_turn` 是生产 runtime 与回合/日志仓储的接线边界：spawn 前创建独立日志，启动后提交 running，再将每条 stdout/stderr 脱敏写入相应文件。日志创建/写入失败使回合失败并停止执行，不能仅在 UI 隐藏错误。单回合两份日志总预算 8 MiB；写入 flush 不等于硬断电保障。
 
@@ -127,18 +126,18 @@ JSON 保留完整转录和结构化证据，Markdown 用动态围栏保留字面
 - 每回合输出预算 8 MiB、单行 512 KiB、20,000 行和 1,000 工具片段；超限明确失败。非零退出保留 partial 但标 error，不更新 resume。
 - 正常或异常收口清理同进程组；正常应用退出已接 Tauri 关闭/退出和 Unix TERM/INT：先关闭新操作入口、取消活动回合，TERM 后升级 KILL，等待操作结束与持久化；失败保留窗口并可重试。真实 CLI 停止与原生桌面运行中退出/强制退出仍需独立验收，不能以本地进程测试代替。
 - `prepare_chat_invocation` 以 adapter 的 resumed 为准：原生续聊只传新增输入；fallback 历史最多 12 条、单条 2000 字符、序列化 12000 字符并标截断。最新请求保留，超过 32000 字符先报错，不裁剪原始转录。
-- Codex/Claude 请求已有 stdin 能力，只有 adapter 返回 stdin_prompt 才写入；Grok/自定义 positional 模板使用 argv。Grok 1.0.30 使用 `streaming-messages-json`。
+- Codex/Claude 请求已有 stdin 能力，只有 adapter 返回 stdin_prompt 才写入；Grok/自定义 positional 模板使用 argv。Grok 使用 `streaming-messages-json`。
 
 `resumeHandle = { version: 1, adapterType, nativeSessionId, configFingerprint }` 由成功回合的 prepared 配置和解析出的原生 ID 生成。SHA-256 绑定 Agent id/type、程序、参数、工作目录策略、能力、读写/命令开关、项目路径、Chat 权限和当前兼容 stage；不保存指纹原文。标题/显示名称变化不影响它。指纹不检测 CLI 外部设置/登录身份或磁盘二进制替换。
 
 续聊仅使用有效且配置匹配的结构化句柄；`resumeCommand` 作为诊断兼容字段，不作为 Chat 可执行参数。旧记录只有字符串时提示“续聊需重建”，配置变化/无效句柄也拒绝发送，要求用户“开新 CLI 会话”；清除后有预算地重放原有历史。不会在恢复失败时偷偷重跑新调用。
 
-adapter 的旧字符串入口（高级 Task 仍使用）仅解析确切程序前缀、已知 resume 操作、单个 1–160 字符的字母数字/连字符/下划线 ID，首字符须为字母数字。额外参数、跨程序、选项式 ID 和相对路径均拒绝；含空格的程序路径按整个前缀匹配。Codex/Claude 的正文与参数用 stdin 或 `--` 分开，Grok 前导连字符正文使用附着的 `--single=...` 值。
+adapter 的兼容字符串入口仅解析确切程序前缀、已知 resume 操作、单个 1–160 字符的字母数字/连字符/下划线 ID，首字符须为字母数字。额外参数、跨程序、选项式 ID 和相对路径均拒绝；含空格的程序路径按整个前缀匹配。Codex/Claude 的正文与参数用 stdin 或 `--` 分开，Grok 前导连字符正文使用附着的 `--single=...` 值。
 
 ## 权限与完成边界
 
-Chat 使用独立的 `chat_permission_mode`，不再要求 Agent 具备 Task planning/debugging capability；启用/可用性、可写和命令开关仍由后端校验。Codex 每轮包括 resume 都明确 sandbox/cwd 和 `approval_policy="never"`；Claude/Grok Chat 每轮都明确 plan 或 acceptEdits。兼容 stage 仅用于旧模板和指纹，Task 自身的规划协议保持不变。Ask 是 Composer 的**每回合授权**，不是逐工具审批，后端也尚未校验独立授权凭证。具体 CLI 限制仍按真实证据判断；不得把 Task command runner 的 execution_policy 当成 Chat 工具的保障。
+Chat 使用独立的 chat_permission_mode。Codex 每轮包括 resume 都明确 sandbox/cwd 和 approval_policy=never；Claude/Grok 明确 plan、acceptEdits 或 auto。OpenCode 使用单次权限环境配置，Research 默认拒绝，仅允许读取/搜索/网页读取。自定义 CLI 依赖自身策略，不能宣称由 Loom 提供只读沙箱。
 
-Grok 的真实无工具文本/原生续聊已有 canary；本轮隔离 QA App 验证了真实发送、后台会话隔离、正常重启续聊、重命名、归档/恢复和搜索，见 [v2 验收记录](../dogfood/2026-09-20-chat-v2.md)。这不代表 Release 或所有 CLI 完成。
+Ask 是 Composer 每回合授权，不是逐工具审批；后端没有独立授权令牌。实际 CLI 权限、工具、停止及宿主退出保证必须与真实证据对应，见 [本轮验收](../dogfood/2026-10-20-simple-chat-acceptance.md)。
 
-仍须按计划完成：长历史冷启动与日志保留策略、完整权限/工具/停止和应用退出矩阵、Chat 主界面剩余交互验收，以及同一发布候选的签名/公证/安装及实际桌面回退门禁。回合/日志证据见 [执行记录验收](../dogfood/2026-09-20-chat-turn-logs.md)，导出与离线回滚样本见 [导出验收](../dogfood/2026-09-20-chat-export.md)。历史证据只代表当时切片，不用其中“下一步”清单覆盖本契约现状。
+本轮保留 v2 数据格式、幂等回执、补流和执行日志。尚未解决的长期边界包括硬断电 fsync、长历史冷启动成本、日志保留策略，以及每个分发 artifact 的签名/公证/安装门禁。旧 Task 的历史评审和验收资料不代表当前产品能力。

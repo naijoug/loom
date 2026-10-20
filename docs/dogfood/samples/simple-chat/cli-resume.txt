@@ -1,0 +1,19 @@
+test chat::real_agent_tests::claude_three_turns_resume_after_repository_reopen ... REAL_CHAT turn=1 status=complete stream_bytes=27 native_resume=true marker_matches=1
+REAL_CHAT turn=1 duplicate_active=deduplicated duplicate_reopened=deduplicated
+REAL_CHAT turn=2 status=complete stream_bytes=27 native_resume=true marker_matches=1
+REAL_CHAT turn=2 duplicate_active=deduplicated duplicate_reopened=deduplicated
+REAL_CHAT turn=3 status=complete stream_bytes=27 native_resume=true marker_matches=1
+REAL_CHAT turn=3 duplicate_active=deduplicated duplicate_reopened=deduplicated
+REAL_CHAT evidence=<temporary-directory>/loom-real-chat-1792494192440-1
+test chat::real_agent_tests::codex_three_turns_resume_after_repository_reopen ... REAL_CHAT turn=1 status=complete stream_bytes=28 native_resume=true marker_matches=1
+REAL_CHAT turn=1 duplicate_active=deduplicated duplicate_reopened=deduplicated
+REAL_CHAT turn=2 status=complete stream_bytes=28 native_resume=true marker_matches=1
+REAL_CHAT turn=2 duplicate_active=deduplicated duplicate_reopened=deduplicated
+REAL_CHAT turn=3 status=complete stream_bytes=28 native_resume=true marker_matches=1
+REAL_CHAT turn=3 duplicate_active=deduplicated duplicate_reopened=deduplicated
+REAL_CHAT evidence=<temporary-directory>/loom-real-chat-1792494223308-16
+test chat::real_agent_tests::grok_three_turns_resume_after_repository_reopen ... REAL_CHAT turn=1 status=error stream_bytes=0 native_resume=false marker_matches=0
+failures:
+failures:
+    chat::real_agent_tests::grok_three_turns_resume_after_repository_reopen
+test result: FAILED. 2 passed; 1 failed; 0 ignored; 0 measured; 143 filtered out; finished in 71.48s

@@ -1,0 +1,6 @@
+STOP_CANARY agent=codex round=1 status=aborted persisted_messages=2
+STOP_CANARY agent=codex round=2 status=complete persisted_messages=4
+STOP_CANARY evidence=<temporary-directory>/loom-stop-canary-1792496110740-1
+test chat::real_agent_tests::codex_stop_then_send ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 153 filtered out; finished in 11.33s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

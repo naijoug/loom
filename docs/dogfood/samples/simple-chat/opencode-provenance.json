@@ -1,0 +1,7 @@
+{
+  "version": "1.19.3",
+  "source": "https://github.com/anomalyco/opencode/releases/download/v1.19.3/opencode-darwin-arm64.zip",
+  "sha256": "c2d0fecd27acf6e08be02c1f5d384614d07495587766bcc4a6bff3971749bb64",
+  "codeSignature": "valid",
+  "existingInstallation": "invalid signature; exit 137; unchanged"
+}

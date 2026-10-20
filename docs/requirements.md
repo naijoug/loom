@@ -1,14 +1,18 @@
 # 编程开发助手桌面端需求文档
 
-## 当前重建目标（2026-09-30）
+## 当前目标（2026-10-20）
 
-用户已授权按 [Craft 完整重建计划](plans/2026-09-30/13:17-craft-parity-rebuild.md) 实施，保留 Tauri + React + Rust，以 Craft v0.14.0 / `73bd9c2a3573158bea880984eb8d5fdb41e0cac2` 为固定产品基线。
+用户已授权按 [简化 CLI Chat 重构计划](plans/2026-10-20/00:44-simple-cli-chat-refactor.md) 和 [实施计划](plans/2026-10-20/01:01-simple-chat-implementation.md) 重构，保留 Tauri + React + Rust，收敛为按项目组织的本机 CLI Chat。
 
-范围覆盖计划 F01–F23：Workspace/Project/Session、完整会话交互、多模型、逐工具审批、Sources/MCP、Skills、内容/浏览器/Pages、后台任务/DAG/自动化/决策、远程/Web/CLI、消息渠道/分享与桌面设置。完整复刻按可观察行为、真实持久化/恢复和平台验收判断，不能以旧 Chat 测试或静态 UI 代替。
+- 默认应用仅有 Chat 和 Settings；Task/Board/Planning 不再属于产品。旧 Task 数据原样保留。
+- Research / Code 复用 `explore` / `ask` / `auto`。权限由 CLI 执行；Code 的发送确认是回合授权，非逐工具审批。
+- 本机探测 Claude Code、Codex、OpenCode、Grok；支持自定义 CLI。原生续聊、工具事件等按适配器能力与真实证据展示。
+- 新会话只选择模式；Agent 选择器固定在输入框左下，新旧会话一致。流式回复、停止、恢复、工具卡片、Markdown、导出和执行日志保留。
+- 会话保持项目本地 `.loom/chat/v2`；按项目聚合列表，不跨项目移动会话。
+- 默认英文，Settings → Appearance 支持简体中文和主题，立即生效并持久化。
+- Craft 全功能重建暂停，Workbench / SDK worker 源码冻结并移出默认构建与主门禁；不扩展 Sources/MCP、Skills、Browser、Pages、DAG、远程和分享。
 
-当前状态以 [计划第 24 节](plans/2026-09-30/13:17-craft-parity-rebuild.md) 为准，本节不另记里程碑进度。现有程序与旧数据保留，旧四阶段编排不再扩张；新版本验收后按只读迁移与回退方案切换。Rust 继续拥有执行/权限/存储边界，React 只负责交互与展示。
-
-以下 2026-09-20 范围和第 1–11 节作为旧实现/历史产品背景保留，不能覆盖本节的新目标；其中尚有价值的安全、日志和恢复约束在新契约继续落实。
+验收以 [测试指南](testing.md) 和 [本轮证据](dogfood/2026-10-20-simple-chat-acceptance.md) 为准；实现、合成回归、真实 CLI 和用户桌面验收分别记录。以下范围与第 1–11 节仅为历史产品背景，不覆盖当前目标。
 
 ## 历史交付范围（2026-09-20）
 

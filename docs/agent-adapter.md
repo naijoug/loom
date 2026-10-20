@@ -1,88 +1,53 @@
-# Agent 适配器协议
+# 本机 CLI 适配器
 
-## 目标
+Loom 通过 Rust `agent_adapter.rs` 生成可执行文件、参数、cwd、stdin 方式、输出协议和必要的单次环境配置。React 只传会话、消息、Agent ID 和模式，不拼接命令。
 
-Loom 的编排层只描述“在哪个项目、哪个阶段、用哪个 Agent、发送什么上下文”，不直接拼接特定 CLI 参数。所有本地 Agent 调用都必须先经过 Rust 后端的适配器层，得到统一的进程启动描述，Task 调用再交给命令运行器；Chat 当前由自身 runtime 启动适配后的进程并接入 ProcessSupervisor。两者权限边界见 [安全策略](security-policy.md)。
+## 探测与配置
 
-## 阶段
+`agents/config.rs` 先查 `$PATH`，再查当前 `$HOME` 下的 `.local/bin`、`.npm-global/bin`、`.opencode/bin`、`.grok/bin`，以及 `/opt/homebrew/bin`、`/usr/local/bin`。检查可执行位，不使用 shell，不包含写死的用户名目录。
 
-适配器接受以下阶段，并在启动前校验 Agent 的 capability 与权限：
+内建 Agent 为 Claude Code、Codex、OpenCode、Grok；Dummy 仅在 debug/test 构建出现。已保存的命令路径覆盖和启用状态不被重新探测覆盖。诊断直接执行 `--version`，两秒超时，失败显示 `unknown`；“已安装”只代表找到可执行文件，登录/模型可用性需真实调用验证。
 
-- `planning`：只读计划生成。
-- `implementation`：允许写文件和运行命令。
-- `review`：只读审查。
-- `debugging`：允许写文件和运行命令；实施 Agent 可作为兼容后备。
-- `testing`：只读代码，但允许运行验证命令。
-- `documentation`：只读文档生成。
+诊断返回 `capabilities { structuredStream, toolEvents, nativeResume, modes }`。每个 mode 含适配器生成的 policy 文本；设置表格不自行拼写参数。单项测试同样仅执行版本探测。
 
-## 输入契约
+## 权限与续聊
 
-Task 的 `PrepareAgentInvocationInput` 包含：
+| CLI | Research (`explore`) | Code (`ask`) | Auto-run (`auto`) | 输出 |
+|---|---|---|---|---|
+| Claude Code | `--permission-mode plan` | `acceptEdits` | `auto` | `stream-json` + partial messages |
+| Codex | `--sandbox read-only` | `workspace-write` | `workspace-write` | `exec --json` |
+| Grok | `--permission-mode plan` | `acceptEdits` | `auto` | `streaming-messages-json` |
+| OpenCode | `plan`，单次权限配置默认拒绝，仅允许读取/搜索/网页读取 | `build`，编辑可用，其余遵守 CLI 确认 | `build`，自动权限，禁止 external_directory | `run --format json` |
+| 自定义 CLI | 执行自身策略，Loom 不提供额外沙箱 | 同左 | 同左 | 纯文本 |
 
-- `projectPath`：已打开项目的根目录。
-- `taskId`：用于生命周期门禁、运行记录和证据关联。
-- `agentId`：已保存的 Agent 配置 ID。
-- `stage`：当前调用阶段。
-- `prompt`：已由上下文构建器裁剪、脱敏并汇总的提示词。
-- `resumeCommand`：可选；仅内建且可安全解析的适配器允许恢复会话。
+Codex 每轮显式设置 `approval_policy="never"`、cwd 和 sandbox，包括 resume；支持无 Git 的项目目录。Claude/Grok 每轮重申权限。Code 的发送确认是 Loom 的回合授权，不是逐工具审批；CLI 非交互模式可能拒绝需要额外审批的工具。
 
-Chat 使用内部 `AdapterInvocationRequest`，不需要领域 taskId；由 `chat_context.rs` 按 adapter 返回的 `resumed` 选择新增输入或有界历史。原生续聊失败不自动重跑。
+Claude 使用 `--resume <id>`，Codex 使用 `exec … resume --json -- <id> -`，Grok 使用 `--resume <id>`。成功后保存绑定 Agent/命令/项目/权限/参数的原生句柄；换 Agent 或模式清除句柄，保留转录并在下一轮有界重放。OpenCode 使用 `run --session <id>`，从事件的 `sessionID` 捕获原生句柄；官方 1.19.3 临时副本已通过三轮原生续聊、仓储重开和停止后再发，因此能力中启用 nativeResume。
 
-规划和 Review 的内部调用还可以提供 `promptFile`，让自定义 CLI 通过 `{promptFile}` 占位符读取长提示词。
+OpenCode 的参数与权限配置依据 [官方 CLI 文档](https://opencode.ai/docs/cli/) 和 [权限文档](https://opencode.ai/docs/permissions/)；本机旧安装无法启动；另用官方验签的 1.19.3 临时副本完成 runtime 验收。模型调用仍使用 CLI 自身的账户配置，不在 Loom 管理凭据。
 
-## 输出契约
+自定义 CLI 使用专用可执行文件，拒绝 `sh/bash/zsh/fish/cmd/powershell/pwsh` 包装；参数按数组传递，支持 `{prompt}`、`{projectPath}` 等已有模板。不承诺自定义工具卡片或原生续聊。
 
-适配器返回 `PreparedAgentInvocation`：
+## CLI 实测矩阵（2026-10-20）
 
-- `program`：配置中登记的可执行程序。
-- `args`：适配器生成的参数列表，不经过 shell。
-- `cwd`：项目根目录。
-- `stdinPrompt`：是否需要通过 stdin 发送提示词。
-- `outputMode`：`plain`、`codex_json`、`claude_stream_json` 或 Grok 的 `streaming_json`。
-- `resumed`：是否准备了原生续聊调用；不代表远端会话已验证存在。
+| CLI / 版本 | 真实状态 | 已观察的协议 | 续聊 |
+|---|---|---|---|
+| Claude Code 2.1.304 | 问答、读文件、pwd、Research 禁写、Code 编辑已测 | `tool_use.id` 与 `tool_result.tool_use_id`；Read/Bash/Edit/Write 输入输出；部分正文 + assistant 最终消息 | 三轮与每轮磁盘仓储重开通过 |
+| Codex 0.163.0 | 问答、读取命令、pwd、Research 禁写、Code 编辑已测 | `thread.started.thread_id`；`item.started/completed`，命令 item id / aggregated_output / exit_code；file_change | 三轮与每轮磁盘仓储重开通过 |
+| Grok 1.0.62 | blocked：返回 402，使用额度耗尽；同时报告刷新登录异常 | 真实 system/result 错误样本已保存 | 本轮未通过，保留既有适配能力，不将历史结果计为本轮通过 |
+| OpenCode 1.19.3（官方临时副本） | 读取、Research 禁写、Code 编辑、停止后再发通过；本机原安装仍因无效代码签名 blocked | `step_start/tool_use/text/step_finish`；`part.callID`、`state.input.filePath`、`state.output`、`sessionID` | 三轮原生续聊与仓储重开通过 |
+| 自定义 CLI | 本地 fixture 进程回归 | 纯文本 / 有界历史 | 不提供原生续聊 |
 
-调用者不得修改 `program` 或重新拼接特定 Agent 的参数。实施与调试入口还必须把 `agentId` 传给命令运行器，由后端再次核对命令、能力与权限。
+OpenCode 临时副本来自 [官方 1.19.3 发布](https://github.com/anomalyco/opencode/releases/tag/v1.19.3)，下载 SHA-256 为 `c2d0fecd27acf6e08be02c1f5d384614d07495587766bcc4a6bff3971749bb64`，`codesign --verify` 通过。没有替换用户已有安装或改写全局模型配置。
 
-## 内建映射
+真实样本位于 `src-tauri/tests/fixtures/cli-streams/`。样本保留协议结构，去掉无关系统/hook 通知，替换用户路径和原生 session ID。原始临时日志不提交；Grok 错误样本不能计为流式成功。具体命令、工程门禁与桌面测试范围见 [验收记录](dogfood/2026-10-20-simple-chat-acceptance.md)。
 
-### Codex CLI
+## 工具与流
 
-- 只读阶段使用 `read-only` sandbox。
-- 实施和调试使用 `workspace-write` sandbox。
-- 输出使用 JSON 事件流。
-- 恢复命令只接受与当前配置程序一致的 `codex resume <session-id>` 形态。
+工具片段按 `callId` 合并，运行态依次变成 done/error；runtime、持久化 journal 和前端投影遵循相同规则。Claude 的初始空输入不覆盖后续完整输入，最终 assistant 文本不重复追加已流式显示的正文。
 
-### Claude Code
+可选字段包含 `kind`、`target`、`exitCode`、`diffStats`、`diffPreview`。Edit/Write 的 old/new 输入可生成差异；有 patch 内容的 Codex 事件按增删行计算。本机 0.163.0 实测的 file_change 只有路径与状态，因此 Code 回合在 Rust 侧先保存有界文本基线，再按已完成事件的路径计算前后替换差异；不使用 HEAD，已有未提交修改不会被误算为本轮新增。基线限制为 4096 个目录项、单文件 256 KiB、总计 8 MiB；跳过 symlink、二进制、依赖/构建目录和 .env。无法可靠比较时只显示文件变更信息，不伪造增删行。预览最多 40 行 / 8 KiB；旧片段缺字段时按 other 降级。
 
-- 非交互调用使用 print + stream-json。
-- 实施和调试阶段使用 `acceptEdits` 权限模式。
-- 恢复命令只接受与当前配置程序一致的 `claude --resume <session-id>` 形态。
+日志脱敏先保持 JSON 信封，再处理敏感字段；usage 的 token 计数不会破坏整条协议帧。正文、参数、工具输出和导出均作为文本处理，不执行其中的 HTML。
 
-### 自定义 CLI
-
-支持以下参数占位符：
-
-- `{projectPath}`
-- `{promptFile}`
-- `{prompt}`
-- `{stage}`
-
-自定义 CLI 默认不支持会话恢复；如需恢复能力，应新增显式适配器并对恢复命令进行结构化解析，不能把任意字符串交给 shell。
-
-## 上下文与能力边界
-
-共享指引保持模型中立，不给所有 CLI 强制指定同一模型或 API 参数。记录实际 CLI 版本，未知模型/能力记 unknown；参数存在不等于真实协议验收。Chat 请求独立携带 `chat_permission_mode`，不再用 Task capability 作为聊天前提。Codex 新建/resume 均重传 sandbox/cwd，approval policy 为 never；Claude Chat explore 显式传 plan，Task 的规划输出协议保持原样。续聊字符串只接受程序字面路径、已知操作与单个 ID，拒绝额外选项；Chat 另用版本化 resumeHandle 绑定执行配置。边界详见 [Chat 契约](architecture/chat-contracts.md)。
-
-## 诊断与失败语义
-
-Agent 设置页通过后端诊断获取命令解析路径、版本探测结果、启用状态和详细说明。命令存在不等同于已经登录；认证状态在下一次真实调用中验证。调用失败需要记录退出码、超时、stderr 摘要、证据路径和可恢复会话信息。
-
-## 扩展新 Agent
-
-新增 Agent 时：
-
-1. 实现 `AgentAdapter::prepare`。
-2. 为阶段权限、参数映射、输出模式和恢复命令增加单元测试。
-3. 在适配器选择函数中注册新类型。
-4. 如输出不是现有输出模式之一，再扩展统一日志解析层。
-5. 不得在 React 组件中添加该 Agent 的 CLI 参数分支。
+CLI 明确报告失败（result.is_error、turn.failed、OpenCode error）时，即使进程退出码为 0，也按失败保存，不更新续聊句柄。

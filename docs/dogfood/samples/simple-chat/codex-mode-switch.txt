@@ -1,0 +1,10 @@
+test chat::real_agent_tests::claude_mode_switch ... PERMISSION_CANARY project=<temporary-directory>/loom-permission-canary-1792496231256-1
+PERMISSION_CANARY mode=explore round=1 status=aborted native=false file_changed=false parts=["ToolSearch", "ToolSearch", "ToolSearch", "ToolSearch", "Read", "ToolSearch", "ToolSearch", "Write"]
+test chat::real_agent_tests::codex_mode_switch ... PERMISSION_CANARY project=<temporary-directory>/loom-permission-canary-1792496351742-9
+PERMISSION_CANARY mode=explore round=1 status=complete native=true file_changed=false parts=["command"]
+PERMISSION_CANARY mode=explore round=2 status=complete native=true file_changed=false parts=["command"]
+PERMISSION_CANARY mode=ask round=3 status=complete native=true file_changed=true parts=["command", "command", "file_change", "command"]
+failures:
+failures:
+    chat::real_agent_tests::claude_mode_switch
+test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 155 filtered out; finished in 188.16s
