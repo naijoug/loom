@@ -14,6 +14,27 @@ use crate::{
 #[tokio::test]
 #[ignore = "requires explicit LOOM_REAL_CHAT=1 and a configured Grok account; consumes model usage"]
 async fn grok_three_turns_resume_after_repository_reopen() {
+    three_turns("grok", ADAPTER_GROK, false).await;
+}
+
+#[tokio::test]
+#[ignore = "requires LOOM_REAL_CHAT=1 and a configured Claude account"]
+async fn claude_three_turns_resume_after_repository_reopen() {
+    three_turns("claude", crate::agent_adapter::ADAPTER_CLAUDE, false).await;
+}
+
+#[tokio::test]
+#[ignore = "requires LOOM_REAL_CHAT=1 and a configured Codex account"]
+async fn codex_three_turns_resume_after_repository_reopen() {
+    three_turns("codex", crate::agent_adapter::ADAPTER_CODEX, false).await;
+}
+
+#[tokio::test]
+#[ignore = "requires LOOM_REAL_CHAT=1; real cross-Agent history replay"]
+async fn claude_to_codex_history_replay() {
+    three_turns("claude", crate::agent_adapter::ADAPTER_CLAUDE, true).await;
+}
+async fn three_turns(command: &str, adapter: &str, switch_agent: bool) {
     assert_eq!(
         std::env::var("LOOM_REAL_CHAT").as_deref(),
         Ok("1"),
@@ -22,14 +43,14 @@ async fn grok_three_turns_resume_after_repository_reopen() {
     let ids = IdGenerator::default();
     let project = std::env::temp_dir().join(ids.next("loom-real-chat"));
     std::fs::create_dir_all(&project).unwrap();
-    let agent = AgentConfig {
+    let mut agent = AgentConfig {
         id: "real-grok-canary".into(),
         name: "Grok canary".into(),
-        command: "grok".into(),
+        command: command.into(),
         args: Vec::new(),
         working_directory_policy: "project_root".into(),
         capabilities: vec!["planning".into()],
-        adapter_type: ADAPTER_GROK.into(),
+        adapter_type: adapter.into(),
         can_write_files: false,
         can_run_commands: false,
         enabled: true,
@@ -47,6 +68,12 @@ async fn grok_three_turns_resume_after_repository_reopen() {
         repo.create(&session).unwrap();
     }
     for index in 0..3 {
+        if switch_agent && index == 2 {
+            agent.command = "codex".into();
+            agent.adapter_type = crate::agent_adapter::ADAPTER_CODEX.into();
+            agent.id = "switched-codex".into();
+        }
+
         // No prior repository instance survives: later turns must read their
         // native resume handle from disk, just as after an application restart.
         let repo = ChatRepository::open(&project).unwrap();
@@ -66,9 +93,13 @@ async fn grok_three_turns_resume_after_repository_reopen() {
         };
         let accepted = repo
             .begin_once(&input, &turn_id, |session| {
+                crate::chat_context::update_execution_config(session, Some(&agent.id), None)?;
                 let transport =
                     prepare_chat_invocation(&agent, session, &prompt, AgentStage::Planning)?;
-                assert_eq!(transport.invocation.resumed, index > 0);
+                assert_eq!(
+                    transport.invocation.resumed,
+                    index > 0 && !(switch_agent && index == 2)
+                );
                 session.messages.push(ChatMessage {
                     id: ids.next("user"),
                     role: "user".into(),
@@ -163,7 +194,7 @@ async fn grok_three_turns_resume_after_repository_reopen() {
             .as_ref()
             .expect("structured native resume missing");
         assert_eq!(handle.config_fingerprint, resume_binding.config_fingerprint);
-        assert_eq!(handle.adapter_type, ADAPTER_GROK);
+        assert_eq!(handle.adapter_type, agent.adapter_type);
         assert_eq!(snapshot.send_receipts.len(), index + 1);
         drop(lease);
         drop(repo);
@@ -184,31 +215,61 @@ async fn grok_three_turns_resume_after_repository_reopen() {
             index + 1
         );
     }
-    std::fs::remove_dir_all(project).unwrap();
+    println!("REAL_CHAT evidence={}", project.display());
 }
 
 #[tokio::test]
 #[ignore = "requires LOOM_REAL_CHAT=1; real model file-tool probes in synthetic temporary projects"]
 async fn grok_file_permissions_in_new_and_resumed_chat() {
+    file_permissions("grok", ADAPTER_GROK, false).await;
+}
+#[tokio::test]
+#[ignore = "requires LOOM_REAL_CHAT=1; real Claude file tools"]
+async fn claude_file_permissions_in_new_and_resumed_chat() {
+    file_permissions("claude", crate::agent_adapter::ADAPTER_CLAUDE, false).await;
+}
+#[tokio::test]
+#[ignore = "requires LOOM_REAL_CHAT=1; real Codex file tools"]
+async fn codex_file_permissions_in_new_and_resumed_chat() {
+    file_permissions("codex", crate::agent_adapter::ADAPTER_CODEX, false).await;
+}
+#[tokio::test]
+#[ignore = "requires LOOM_REAL_CHAT=1; real Research to Code mode switch"]
+async fn claude_mode_switch() {
+    file_permissions("claude", crate::agent_adapter::ADAPTER_CLAUDE, true).await;
+}
+#[tokio::test]
+#[ignore = "requires LOOM_REAL_CHAT=1; real Research to Code mode switch"]
+async fn codex_mode_switch() {
+    file_permissions("codex", crate::agent_adapter::ADAPTER_CODEX, true).await;
+}
+async fn file_permissions(command: &str, adapter: &str, switch_mode: bool) {
     assert_eq!(std::env::var("LOOM_REAL_CHAT").as_deref(), Ok("1"));
     let ids = IdGenerator::default();
     let project = std::env::temp_dir().join(ids.next("loom-permission-canary"));
     std::fs::create_dir_all(&project).unwrap();
     let agent = AgentConfig {
-        id: "grok-permission-canary".into(),
-        name: "Grok canary".into(),
-        command: "grok".into(),
+        id: "cli-permission-canary".into(),
+        name: "CLI canary".into(),
+        command: command.into(),
         args: vec![],
         working_directory_policy: "project_root".into(),
         capabilities: vec![],
-        adapter_type: ADAPTER_GROK.into(),
+        adapter_type: adapter.into(),
         can_write_files: true,
         can_run_commands: true,
         enabled: true,
         available: true,
     };
     println!("PERMISSION_CANARY project={}", project.display());
-    for mode in ["explore", "ask"] {
+    for mode in ["explore", "ask"].into_iter().filter(|mode| {
+        std::env::var("LOOM_REAL_MODES")
+            .ok()
+            .is_none_or(|requested| requested == *mode)
+    }) {
+        if switch_mode && mode == "ask" {
+            continue;
+        }
         let session_id = ids.next("session");
         let path = project.join(format!("sentinel-{mode}.txt"));
         let original = ids.next("READ-MARKER");
@@ -222,10 +283,29 @@ async fn grok_file_permissions_in_new_and_resumed_chat() {
             })).unwrap();
             repo.create(&session).unwrap();
         }
+        let file_mode = mode;
         for round in 0..2 {
+            let mode = if switch_mode && round == 1 {
+                "ask"
+            } else {
+                file_mode
+            };
             let repo = ChatRepository::open(&project).unwrap();
             let changed = ids.next("WRITE-MARKER");
-            let prompt = format!("Read sentinel-{mode}.txt using the file reading tool and report its exact contents. Then attempt to replace its entire contents with {changed} using the file editing tool. This is a disposable test file. Do not change permission modes, use shell commands, or modify any other file. If editing is unavailable or denied, report that; do not work around it.");
+            let reading = if command == "codex" {
+                "Use a read-only cat command to read the file if no file-reading tool is available. Use apply_patch for the edit; never use a shell command to write."
+            } else {
+                "Use the file reading and editing tools. Do not use shell commands."
+            };
+            let prompt = if switch_mode && mode == "explore" {
+                if command == "claude" {
+                    format!("Discover your built-in Read tool with ToolSearch query select:Read, then Read sentinel-{file_mode}.txt. Reply only with its exact contents. Do not use Monitor, background tasks, MCP tools, or change files or permission modes.")
+                } else {
+                    format!("Read sentinel-{file_mode}.txt and report its exact contents. Use a read-only command if no file reading tool is available. Do not edit any files or change permission modes.")
+                }
+            } else {
+                format!("Read sentinel-{file_mode}.txt and report its exact contents. Then attempt to replace its entire contents with {changed}. {reading} This is a disposable test file. Do not change permission modes or modify any other file. If editing is unavailable or denied, report that; do not work around it.")
+            };
             let input = ChatSendInput {
                 project_path: project.to_string_lossy().into_owned(),
                 session_id: session_id.clone(),
@@ -237,9 +317,13 @@ async fn grok_file_permissions_in_new_and_resumed_chat() {
             let turn = ids.next("turn");
             let accepted = repo
                 .begin_once(&input, &turn, |session| {
+                    crate::chat_context::update_execution_config(session, None, Some(mode))?;
                     let stage = super::permission_to_stage(mode);
                     let prepared = prepare_chat_invocation(&agent, session, &prompt, stage)?;
-                    assert_eq!(prepared.invocation.resumed, round > 0);
+                    assert_eq!(
+                        prepared.invocation.resumed,
+                        round > 0 && !(switch_mode && round == 1)
+                    );
                     for (id, role, content, status) in [
                         (ids.next("user"), "user", prompt.clone(), "complete"),
                         (assistant.clone(), "assistant", String::new(), "streaming"),
@@ -306,8 +390,172 @@ async fn grok_file_permissions_in_new_and_resumed_chat() {
                     changed,
                     "writable chat did not edit the sentinel"
                 );
+                if command == "codex" {
+                    assert!(answer.parts.iter().any(|part| matches!(part, super::ChatMessagePart::Tool { metadata, .. } if metadata.diff_stats.as_ref().is_some_and(|stats| stats.added > 0 && stats.removed > 0) && metadata.diff_preview.as_ref().is_some_and(|preview| preview.contains(&changed)))), "Codex edit card is missing the actual workspace diff");
+                }
             }
         }
     }
     // Keep only this synthetic evidence directory for independent review.
+}
+
+#[tokio::test]
+#[ignore = "requires LOOM_REAL_CHAT=1; real Claude cancellation and next turn"]
+async fn claude_stop_then_send() {
+    stop_then_send("claude", crate::agent_adapter::ADAPTER_CLAUDE).await;
+}
+#[tokio::test]
+#[ignore = "requires LOOM_REAL_CHAT=1; real Codex cancellation and next turn"]
+async fn codex_stop_then_send() {
+    stop_then_send("codex", crate::agent_adapter::ADAPTER_CODEX).await;
+}
+
+async fn stop_then_send(command: &str, adapter: &str) {
+    assert_eq!(std::env::var("LOOM_REAL_CHAT").as_deref(), Ok("1"));
+    let ids = IdGenerator::default();
+    let project = std::env::temp_dir().join(ids.next("loom-stop-canary"));
+    std::fs::create_dir_all(&project).unwrap();
+    let repo = ChatRepository::open(&project).unwrap();
+    let agent: AgentConfig = serde_json::from_value(serde_json::json!({
+        "id":"stop-canary","name":"Stop canary","command":command,"args":[],"workingDirectoryPolicy":"project_root","capabilities":[],"adapterType":adapter,"canWriteFiles":false,"canRunCommands":false,"enabled":true,"available":true
+    })).unwrap();
+    let session_id = ids.next("session");
+    let session: ChatSession = serde_json::from_value(serde_json::json!({
+        "id":session_id,"projectPath":repo.project_path(),"agentId":agent.id,"title":"Stop canary","permissionMode":"explore","messages":[],"createdAtMs":now_ms(),"updatedAtMs":now_ms(),"turnStatus":"idle","schemaVersion":2
+    })).unwrap();
+    repo.create(&session).unwrap();
+    for round in 0..2 {
+        let prompt = if round == 0 {
+            "Explain prime numbers in detail. Do not use tools."
+        } else {
+            "The previous generation was stopped deliberately. Reply with only STOP-RECOVERED. Do not use tools."
+        };
+        let input = ChatSendInput {
+            project_path: project.to_string_lossy().into_owned(),
+            session_id: session_id.clone(),
+            client_request_id: ids.next("request"),
+            text: prompt.into(),
+            permission_mode: Some("explore".into()),
+        };
+        let turn_id = ids.next("turn");
+        let assistant = ids.next("assistant");
+        let accepted = repo
+            .begin_once(&input, &turn_id, |session| {
+                let prepared =
+                    prepare_chat_invocation(&agent, session, prompt, AgentStage::Planning)?;
+                let user = ids.next("user");
+                for (id, role, content, status) in [
+                    (user.clone(), "user", prompt.to_string(), "complete"),
+                    (assistant.clone(), "assistant", String::new(), "streaming"),
+                ] {
+                    session.messages.push(ChatMessage {
+                        id,
+                        role: role.into(),
+                        content,
+                        status: status.into(),
+                        created_at_ms: now_ms(),
+                        error_summary: None,
+                        parts: vec![],
+                    });
+                }
+                session.turns.push(super::turns::new_turn(
+                    &turn_id,
+                    &input.client_request_id,
+                    &user,
+                    &assistant,
+                    prepared.logged_invocation.clone(),
+                ));
+                Ok(prepared)
+            })
+            .unwrap();
+        let BeginTurn::Started(_, prepared, lease) = accepted else {
+            panic!()
+        };
+        let binding = prepared.resume_binding;
+        let cancel_task = if round == 0 {
+            let repository = repo.clone();
+            let session_id = session_id.clone();
+            let turn_id = turn_id.clone();
+            Some(tokio::spawn(async move {
+                tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+                let cancelled = repository
+                    .cancel(&session_id, Some(&turn_id))
+                    .unwrap()
+                    .is_some();
+                if cancelled {
+                    crate::process_supervisor::supervisor()
+                        .request_stop(&turn_id, super::STOP_REASON_ABORT)
+                        .unwrap();
+                }
+                cancelled
+            }))
+        } else {
+            None
+        };
+        let result = super::service::run_chat_turn(
+            &repo,
+            &lease,
+            runtime::Request {
+                project_key: repo.project_path().to_string_lossy().into_owned(),
+                session_id: session_id.clone(),
+                turn_id: turn_id.clone(),
+                message_id: assistant.clone(),
+                prepared: prepared.invocation,
+                stdin_text: prepared.stdin_text,
+                limits: runtime::Limits {
+                    timeout: std::time::Duration::from_secs(120),
+                    ..Default::default()
+                },
+            },
+            |_| {},
+        )
+        .await;
+        let cancelled = if let Some(task) = cancel_task {
+            task.await.unwrap()
+        } else {
+            false
+        };
+        let finished = finish_chat_turn(&repo, &lease, &assistant, Some(&binding), result);
+        let snapshot = repo.load(&session_id).unwrap();
+        if round == 0 {
+            assert!(cancelled);
+            assert_eq!(
+                snapshot.turns.last().unwrap().termination_reason.as_deref(),
+                Some(super::STOP_REASON_ABORT)
+            );
+            assert_eq!(finished.status, "aborted");
+        } else {
+            assert_eq!(finished.status, "complete", "{:?}", finished.error_summary);
+            assert_eq!(
+                snapshot.messages.last().unwrap().content.trim(),
+                "STOP-RECOVERED"
+            );
+        }
+        println!(
+            "STOP_CANARY agent={command} round={} status={} persisted_messages={}",
+            round + 1,
+            finished.status,
+            snapshot.messages.len()
+        );
+    }
+    println!("STOP_CANARY evidence={}", project.display());
+}
+
+#[tokio::test]
+#[ignore = "requires LOOM_REAL_CHAT=1 and a working OpenCode CLI"]
+async fn opencode_three_turns_resume_after_repository_reopen() {
+    let command = std::env::var("LOOM_REAL_OPENCODE_COMMAND").unwrap_or_else(|_| "opencode".into());
+    three_turns(&command, crate::agent_adapter::ADAPTER_OPENCODE, false).await;
+}
+#[tokio::test]
+#[ignore = "requires LOOM_REAL_CHAT=1 and a working OpenCode CLI"]
+async fn opencode_stop_then_send() {
+    let command = std::env::var("LOOM_REAL_OPENCODE_COMMAND").unwrap_or_else(|_| "opencode".into());
+    stop_then_send(&command, crate::agent_adapter::ADAPTER_OPENCODE).await;
+}
+#[tokio::test]
+#[ignore = "requires LOOM_REAL_CHAT=1 and a working OpenCode CLI"]
+async fn opencode_file_permissions_in_new_and_resumed_chat() {
+    let command = std::env::var("LOOM_REAL_OPENCODE_COMMAND").unwrap_or_else(|_| "opencode".into());
+    file_permissions(&command, crate::agent_adapter::ADAPTER_OPENCODE, false).await;
 }

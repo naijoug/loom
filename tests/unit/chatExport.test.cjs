@@ -16,14 +16,13 @@ test("export menu invokes production hook once and shows warnings plus an explic
     React.createElement(ChatSessionHeader,{session:samples.chatSession,useBackend:true,canPromote:false,onClearResume(){},onPromote(){},onRename(){},onTitleFromFirstMessage(){},onToggleFlag(){},onArchive(){},onExport:()=>void latest.exportSession(),exporting:latest.busy}),
     React.createElement(ChatExportNotice,{...latest,reveal:async(path)=>{reveals.push(path);}}));}
   await f.render(React.createElement(Harness));
-  await act(async()=>document.querySelector('[aria-haspopup="menu"]').click());
-  await act(async()=>[...document.querySelectorAll('[role="menuitem"]')].find(b=>b.textContent.includes("导出会话")).click());
+    await act(async()=>[...document.querySelectorAll("button")].find(b=>b.textContent.includes("Export chat")).click());
   await act(async()=>{void latest.exportSession();});
   assert.equal(calls.length,1);assert.deepEqual(calls[0],{projectPath:"/project",sessionId:"chat-contract"});
-  assert.match(document.body.textContent,/正在导出/);assert.equal(reveals.length,0);
+  assert.match(document.body.textContent,/Exporting/);assert.equal(reveals.length,0);
   await act(async()=>response.resolve({...samples.chatExportResult,inProgress:true,warnings:["stderr 缺失"]}));
-  assert.match(document.body.textContent,/运行中快照/);assert.match(document.body.textContent,/stderr 缺失/);
-  await act(async()=>[...document.querySelectorAll("button")].find(b=>b.textContent==="在文件夹中显示").click());
+  assert.match(document.body.textContent,/in-progress snapshot/);assert.match(document.body.textContent,/stderr 缺失/);
+  await act(async()=>[...document.querySelectorAll("button")].find(b=>b.textContent==="Show in folder").click());
   assert.deepEqual(reveals,[samples.chatExportResult.directory]);
 });
 
@@ -52,10 +51,10 @@ test("export and folder errors stay visible and export can be retried",async(t)=
 test("damaged or missing log warnings are exposed as incomplete export evidence",async(t)=>{
   const f=await fixture(t);const warnings=["turn-1 stdout：run log contains invalid UTF-8","turn-1 stderr：run log is missing"];
   await f.render(React.createElement(ChatExportNotice,{busy:false,error:null,result:{...samples.chatExportResult,warnings}}));
-  const evidence=document.querySelector('[aria-label="导出不完整证据说明"]');
+  const evidence=document.querySelector('[aria-label="Incomplete evidence"]');
   assert.ok(evidence);
-  assert.match(evidence.textContent,/不完整证据/);
+  assert.match(evidence.textContent,/Warnings/);
   const items=[...evidence.querySelectorAll("li")].map((item)=>item.textContent);
   assert.deepEqual(items,warnings);
-  assert.match(document.body.textContent,/已导出 JSON、Markdown 和可用日志/);
+  assert.match(document.body.textContent,/Exported JSON, Markdown and available logs/);
 });

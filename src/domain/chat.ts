@@ -28,6 +28,12 @@ export type ChatMessagePart =
   | {
       type: "tool";
       name: string;
+      callId?: string;
+      kind?: "read" | "edit" | "write" | "bash" | "search" | "web" | "other";
+      target?: string;
+      exitCode?: number;
+      diffStats?: { added: number; removed: number };
+      diffPreview?: string;
       inputSummary?: string;
       outputSummary?: string;
       status?: "running" | "done" | "error";
@@ -149,6 +155,8 @@ export interface ChatRuntimeError {
 }
 
 export interface ChatSessionSummary {
+  permissionMode?: ChatPermissionMode;
+  turnStatus?: ChatTurnStatus;
   id: string;
   title: string;
   agentId: string;
@@ -348,4 +356,11 @@ export function chatMessageErrorFallbackText(message: {
   if (message.status !== "error" || !message.errorSummary) return undefined;
   if ((message.parts ?? []).some((part) => part.type === "error")) return undefined;
   return `（调用失败）${message.errorSummary}`;
+}
+
+export interface ChatProjectGroup {
+  project: import("./project").ProjectSummary;
+  sessionCount: number;
+  sessions: ChatSessionSummary[];
+  storageError?: string;
 }

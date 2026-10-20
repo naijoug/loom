@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { DEFAULT_APP_SETTINGS, type AppSettings, type ThemeMode } from "../domain";
-import { loadAppSettings, saveAppSettings } from "../hooks/useSettingsBridge";
+import { type ThemeMode } from "../domain";
+import { loadAppSettings, patchAppSettings } from "../hooks/useSettingsBridge";
 
 type Theme = "light" | "dark";
 
@@ -9,6 +9,7 @@ interface ThemeContextType {
   themeMode: ThemeMode;
   setThemeMode: (mode: ThemeMode) => void;
   toggleTheme: () => void;
+  settingsError: string | null;
 }
 
 interface ThemeProviderProps {
@@ -44,7 +45,7 @@ export function effectiveThemeForMode(mode: ThemeMode, system: Theme): Theme {
 }
 
 export function ThemeProvider({ children, forcedTheme }: ThemeProviderProps) {
-  const [settings, setSettings] = useState<AppSettings>({ ...DEFAULT_APP_SETTINGS });
+  const [settingsError, setSettingsError] = useState<string | null>(null);
   const [system, setSystem] = useState<Theme>(systemTheme);
   const [themeMode, setThemeModeState] = useState<ThemeMode>(() => {
     if (forcedTheme) {
@@ -71,9 +72,8 @@ export function ThemeProvider({ children, forcedTheme }: ThemeProviderProps) {
       if (cancelled) {
         return;
       }
-      setSettings(loaded);
       setThemeModeState(resolveThemeMode(loaded.themeMode, localStorage.getItem("loom-theme")));
-    });
+    }).catch(error => { if (!cancelled) setSettingsError(String(error)); });
 
     return () => {
       cancelled = true;
@@ -109,13 +109,11 @@ export function ThemeProvider({ children, forcedTheme }: ThemeProviderProps) {
       return;
     }
 
-    const nextSettings = { ...settings, themeMode: mode };
-    setSettings(nextSettings);
+    setSettingsError(null);
     setThemeModeState(mode);
-    void saveAppSettings(nextSettings).then((saved) => {
-      setSettings(saved);
+    void patchAppSettings({ themeMode: mode }).then((saved) => {
       setThemeModeState(saved.themeMode);
-    });
+    }).catch(error => { setThemeModeState(themeMode); setSettingsError(String(error)); });
   };
 
   const toggleTheme = () => {
@@ -127,7 +125,7 @@ export function ThemeProvider({ children, forcedTheme }: ThemeProviderProps) {
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, themeMode, setThemeMode, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, themeMode, setThemeMode, toggleTheme, settingsError }}>
       {children}
     </ThemeContext.Provider>
   );

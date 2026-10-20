@@ -15,7 +15,7 @@
         "title": "Loom",
         "width": 1280,
         "height": 820,
-        "minWidth": 960,
+        "minWidth": 640,
         "minHeight": 680,
         "titleBarStyle": "Overlay",
         "hiddenTitle": true

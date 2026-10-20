@@ -36,13 +36,21 @@ pub(super) fn agents_path(app: &AppHandle) -> Result<std::path::PathBuf, String>
 }
 
 pub(super) fn discover_default_agents() -> Vec<AgentConfig> {
-    let mut agents = [
+    let agents = [
         ("agent-codex", "Codex", "codex", ADAPTER_CODEX, true, true),
         (
             "agent-claude",
             "Claude Code",
             "claude",
             ADAPTER_CLAUDE_CODE,
+            true,
+            true,
+        ),
+        (
+            "agent-opencode",
+            "OpenCode",
+            "opencode",
+            crate::agent_adapter::ADAPTER_OPENCODE,
             true,
             true,
         ),
@@ -77,19 +85,24 @@ pub(super) fn discover_default_agents() -> Vec<AgentConfig> {
     )
     .collect::<Vec<_>>();
 
-    agents.push(AgentConfig {
-        id: "agent-dummy".to_string(),
-        name: "Dummy Agent (test)".to_string(),
-        command: "dummy".to_string(),
-        args: Vec::new(),
-        working_directory_policy: "project_root".to_string(),
-        capabilities: vec!["planning".to_string()],
-        adapter_type: ADAPTER_DUMMY.to_string(),
-        can_write_files: false,
-        can_run_commands: false,
-        enabled: false,
-        available: true,
-    });
+    #[cfg(any(debug_assertions, test))]
+    let agents = {
+        let mut agents = agents;
+        agents.push(AgentConfig {
+            id: "agent-dummy".to_string(),
+            name: "Dummy Agent (test)".to_string(),
+            command: "dummy".to_string(),
+            args: Vec::new(),
+            working_directory_policy: "project_root".to_string(),
+            capabilities: vec!["planning".to_string()],
+            adapter_type: ADAPTER_DUMMY.to_string(),
+            can_write_files: false,
+            can_run_commands: false,
+            enabled: false,
+            available: true,
+        });
+        agents
+    };
 
     agents
 }
@@ -98,15 +111,18 @@ pub(super) fn merge_missing_default_agents(agents: &mut Vec<AgentConfig>) {
     // Drop retired built-ins (and any custom config on the same adapter) from
     // previously saved files so they stop showing up in the UI.
     agents.retain(|agent| {
-        agent.id != RETIRED_AGENT_AMP_ID && agent.adapter_type != RETIRED_ADAPTER_AMP
+        agent.id != RETIRED_AGENT_AMP_ID
+            && agent.adapter_type != RETIRED_ADAPTER_AMP
+            && (cfg!(any(debug_assertions, test)) || agent.adapter_type != ADAPTER_DUMMY)
     });
 
     for default_agent in discover_default_agents() {
         if let Some(existing) = agents.iter_mut().find(|agent| agent.id == default_agent.id) {
             let preserve_enabled = existing.adapter_type != ADAPTER_DUMMY;
             existing.name = default_agent.name.clone();
-            existing.command = default_agent.command.clone();
-            existing.args = default_agent.args.clone();
+            if existing.command.trim().is_empty() {
+                existing.command = default_agent.command.clone();
+            }
             existing.working_directory_policy = default_agent.working_directory_policy.clone();
             existing.capabilities = default_agent.capabilities.clone();
             existing.adapter_type = default_agent.adapter_type.clone();
@@ -133,7 +149,7 @@ pub(super) fn merge_missing_default_agents(agents: &mut Vec<AgentConfig>) {
 pub(super) fn is_default_agent_id(agent_id: &str) -> bool {
     matches!(
         agent_id,
-        "agent-codex" | "agent-claude" | "agent-grok" | "agent-dummy"
+        "agent-codex" | "agent-claude" | "agent-grok" | "agent-opencode" | "agent-dummy"
     )
 }
 
@@ -144,112 +160,90 @@ pub(super) fn resolve_default_command(basename: &str) -> String {
         return resolved;
     }
     for candidate in default_command_candidates(basename) {
-        if Path::new(&candidate).is_file() {
+        if executable_file(Path::new(&candidate)) {
             return candidate;
         }
     }
     basename.to_string()
 }
 
+pub(crate) fn executable_file(path: &Path) -> bool {
+    if !path.is_file() {
+        return false;
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        path.metadata()
+            .is_ok_and(|meta| meta.permissions().mode() & 0o111 != 0)
+    }
+    #[cfg(not(unix))]
+    {
+        true
+    }
+}
+
 fn which_command(basename: &str) -> Option<String> {
-    #[cfg(windows)]
-    {
-        let output = Command::new("where").arg(basename).output().ok()?;
-        if !output.status.success() {
-            return None;
+    let path = std::env::var_os("PATH")?;
+    std::env::split_paths(&path).find_map(|directory| {
+        let candidate = directory.join(basename);
+        if executable_file(&candidate) {
+            return Some(candidate.to_string_lossy().into_owned());
         }
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        let first = stdout.lines().next()?.trim();
-        if first.is_empty() {
-            None
-        } else {
-            Some(first.to_string())
+        #[cfg(windows)]
+        {
+            for extension in ["exe", "cmd", "bat"] {
+                let candidate = candidate.with_extension(extension);
+                if executable_file(&candidate) {
+                    return Some(candidate.to_string_lossy().into_owned());
+                }
+            }
         }
-    }
-    #[cfg(not(windows))]
-    {
-        let output = Command::new("sh")
-            .arg("-c")
-            .arg(format!("command -v {}", shell_escape(basename)))
-            .output()
-            .ok()?;
-        if !output.status.success() {
-            return None;
-        }
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        let first = stdout.lines().next()?.trim();
-        if first.is_empty() {
-            None
-        } else {
-            Some(first.to_string())
-        }
-    }
+        None
+    })
 }
 
 fn default_command_candidates(basename: &str) -> Vec<String> {
-    let mut out = Vec::new();
-    if let Ok(home) = std::env::var("HOME") {
-        let home = PathBuf::from(home);
-        match basename {
-            "grok" => {
-                out.push(home.join(".grok/bin/grok").display().to_string());
-            }
-            "codex" => {
-                out.push(home.join(".npm-global/bin/codex").display().to_string());
-                out.push(home.join(".local/bin/codex").display().to_string());
-            }
-            "claude" => {
-                out.push(home.join(".local/bin/claude").display().to_string());
-            }
-            _ => {}
+    let mut directories = Vec::new();
+    if let Some(home) = std::env::var_os("HOME") {
+        let root = PathBuf::from(home);
+        for suffix in [
+            ".local/bin",
+            ".npm-global/bin",
+            ".opencode/bin",
+            ".grok/bin",
+        ] {
+            directories.push(root.join(suffix));
         }
     }
-    // Mac dogfood absolute paths (ignored when missing).
-    if basename == "grok" {
-        out.push("/Users/guojian/.grok/bin/grok".to_string());
+    directories.extend([
+        PathBuf::from("/opt/homebrew/bin"),
+        PathBuf::from("/usr/local/bin"),
+    ]);
+    directories
+        .into_iter()
+        .map(|directory| directory.join(basename).to_string_lossy().into_owned())
+        .collect()
+}
+
+pub(crate) fn resolve_executable(command: &str) -> Option<String> {
+    let command = command.trim();
+    if command.is_empty() {
+        return None;
     }
-    if basename == "codex" {
-        out.push("/Users/guojian/.npm-global/bin/codex".to_string());
+    let path = Path::new(command);
+    if path.is_absolute() || path.components().count() > 1 {
+        return executable_file(path).then(|| path.to_string_lossy().into_owned());
     }
-    if basename == "claude" {
-        out.push("/Users/guojian/.local/bin/claude".to_string());
-    }
-    out
+    which_command(command).or_else(|| {
+        default_command_candidates(command)
+            .into_iter()
+            .find(|candidate| executable_file(Path::new(candidate)))
+    })
 }
 
 pub(super) fn command_available(agent: &AgentConfig) -> bool {
-    if agent.adapter_type == ADAPTER_DUMMY {
-        return true;
-    }
-
-    if agent.command.trim().is_empty() {
-        return false;
-    }
-
-    #[cfg(windows)]
-    let available = Command::new("where").arg(&agent.command).output();
-
-    #[cfg(not(windows))]
-    let available = Command::new("sh")
-        .arg("-c")
-        .arg(format!("command -v {}", shell_escape(&agent.command)))
-        .output();
-
-    available
-        .map(|output| output.status.success())
-        .unwrap_or(false)
-}
-
-pub(super) fn stderr_tail(stderr: &str) -> Vec<String> {
-    stderr
-        .lines()
-        .rev()
-        .take(20)
-        .map(str::to_string)
-        .collect::<Vec<_>>()
-        .into_iter()
-        .rev()
-        .collect()
+    agent.adapter_type == ADAPTER_DUMMY || resolve_executable(&agent.command).is_some()
 }
 
 pub(super) fn redact_sensitive_text_inner(input: &str) -> String {
@@ -314,7 +308,41 @@ pub(super) fn redact_bearer_tokens(input: &str) -> String {
     output
 }
 
-#[cfg(not(windows))]
-pub(super) fn shell_escape(value: &str) -> String {
-    format!("'{}'", value.replace('\'', "'\\''"))
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn defaults_include_opencode_and_preserve_command_overrides() {
+        let mut agents = discover_default_agents();
+        assert!(agents.iter().any(|agent| agent.id == "agent-opencode"));
+        let agent = agents
+            .iter_mut()
+            .find(|agent| agent.id == "agent-claude")
+            .unwrap();
+        agent.command = "/custom/claude".into();
+        agent.enabled = false;
+        merge_missing_default_agents(&mut agents);
+        let agent = agents
+            .iter()
+            .find(|agent| agent.id == "agent-claude")
+            .unwrap();
+        assert_eq!(agent.command, "/custom/claude");
+        assert!(!agent.enabled);
+    }
+    #[test]
+    fn resolution_prefers_path_and_candidates_are_home_relative() {
+        if let Some(expected) = which_command("sh") {
+            assert_eq!(resolve_default_command("sh"), expected);
+        }
+        let home = std::env::var_os("HOME").map(PathBuf::from);
+        for candidate in default_command_candidates("opencode") {
+            let path = Path::new(&candidate);
+            assert!(
+                home.as_ref().is_some_and(|home| path.starts_with(home))
+                    || path.starts_with("/opt/homebrew/bin")
+                    || path.starts_with("/usr/local/bin")
+            );
+            assert_eq!(path.file_name().unwrap(), "opencode");
+        }
+    }
 }

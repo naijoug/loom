@@ -4,11 +4,8 @@ const { readFileSync, readdirSync, statSync } = require("node:fs");
 const { join } = require("node:path");
 
 const {
-  COMMAND_RUN_STATUSES,
   MODEL_CONTRACT_SAMPLES,
-  PLAN_TODO_STATUSES,
   STORE_SCHEMA_VERSIONS,
-  TASK_STATUSES,
   TAURI_COMMANDS,
   TAURI_EVENTS,
 } = require("../../.tmp/test-build/src/api/contract.js");
@@ -21,9 +18,6 @@ const fixture = JSON.parse(
 test("frontend command event and schema contract matches the canonical fixture", () => {
   assert.deepEqual(Object.values(TAURI_COMMANDS), fixture.commands);
   assert.deepEqual(Object.values(TAURI_EVENTS), fixture.events);
-  assert.deepEqual([...TASK_STATUSES], fixture.taskStatuses);
-  assert.deepEqual([...COMMAND_RUN_STATUSES], fixture.commandRunStatuses);
-  assert.deepEqual([...PLAN_TODO_STATUSES], fixture.planTodoStatuses);
   assert.deepEqual(STORE_SCHEMA_VERSIONS, fixture.storeSchemaVersions);
   assert.deepEqual(MODEL_CONTRACT_SAMPLES, fixture.modelSamples);
 });
@@ -65,8 +59,8 @@ test("typed Tauri client forwards invoke payloads and unwraps event payloads", a
   assert.deepEqual(invocations, [{ command: "health_check", args: { projectPath: "/tmp/project" } }]);
 
   const payloads = [];
-  const unlisten = await client.listen(TAURI_EVENTS.commandFinished, (payload) => payloads.push(payload));
-  assert.equal(listeners[0].event, "loom://command-finished");
+  const unlisten = await client.listen(TAURI_EVENTS.chatEvent, (payload) => payloads.push(payload));
+  assert.equal(listeners[0].event, "loom://chat-event");
   listeners[0].handler({ payload: { runId: "run-1" } });
   assert.deepEqual(payloads, [{ runId: "run-1" }]);
   unlisten();

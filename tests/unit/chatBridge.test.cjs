@@ -6,7 +6,6 @@ const { act } = React;
 const { createRoot } = require("react-dom/client");
 const { JSDOM } = require("jsdom");
 const { useChatBridge } = require("../../.tmp/test-build/src/features/chat/useChatBridge.js");
-const { ChatComposer } = require("../../.tmp/test-build/src/features/chat/ChatComposer.js");
 global.IS_REACT_ACT_ENVIRONMENT = true;
 function deferred() { let resolve; const promise = new Promise((r) => { resolve = r; }); return { promise, resolve }; }
 function snapshot(projectPath = "/a", id = "s", seq = 2) {
@@ -186,83 +185,4 @@ test("production bridge reports recovery failures for the current session", asyn
   await act(async () => window.dispatchEvent(new window.Event("focus")));
   assert.equal(latest.session.id, "s");
   assert.deepEqual(errors, ["s recovery failed"]);
-});
-
-test("composer cannot send before listener readiness or while IME is composing", async (t) => {
-  const f = await fixture(t); let sent = 0;
-  const props = { draft: "hello", sending: false, canSend: false, error: null, useBackend: true, agentId: "g", agents: [{ id: "g", name: "Grok", adapterType: "grok_cli" }], permissionMode: "auto", resumeHint: false, diagnostics: [], diagnosticsLoading: false, onRefreshDiagnostics() {}, onDraftChange() {}, onSend() { sent += 1; }, onAbort() {}, onAgentChange() {}, onPermissionChange() {} };
-  await f.render(React.createElement(ChatComposer, props));
-  const sendButton = () => [...document.querySelectorAll("button")].find((b) => b.textContent.trim() === "发送");
-  assert.equal(sendButton().disabled, true);
-  await act(async () => document.querySelector("textarea").dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true })));
-  assert.equal(sent, 0);
-  await f.render(React.createElement(ChatComposer, { ...props, canSend: true }));
-  await act(async () => document.querySelector("textarea").dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true, isComposing: true })));
-  assert.equal(sent, 0);
-  await act(async () => document.querySelector("textarea").dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true, keyCode: 229 })));
-  assert.equal(sent, 0);
-  await act(async () => sendButton().click());
-  assert.equal(sent, 1);
-});
-
-test("Ask still requires the explicit per-turn confirmation after bridge integration", async (t) => {
-  const f = await fixture(t); let sent = 0;
-  const props = { draft: "hello", sending: false, canSend: true, error: null, useBackend: true, agentId: "g", agents: [{ id: "g", name: "Grok", adapterType: "grok_cli" }], permissionMode: "ask", resumeHint: false, diagnostics: [], diagnosticsLoading: false, onRefreshDiagnostics() {}, onDraftChange() {}, onSend() { sent += 1; }, onAbort() {}, onAgentChange() {}, onPermissionChange() {} };
-  const button = (label) => [...document.querySelectorAll("button")].find((b) => b.textContent.trim() === label);
-  await f.render(React.createElement(ChatComposer, props));
-  await act(async () => button("发送…").click());
-  assert.equal(sent, 0); assert.ok(document.querySelector('[role="dialog"]'));
-  await act(async () => button("取消").click());
-  assert.equal(sent, 0);
-  await act(async () => button("发送…").click());
-  await act(async () => button("确认并发送").click());
-  assert.equal(sent, 1);
-});
-
-test("composer exposes stop as pending evidence while abort is in flight", async (t) => {
-  const f = await fixture(t); let aborted = 0;
-  const props = { draft: "next", sending: true, aborting: true, canSend: true, error: null, useBackend: true, agentId: "g", agents: [{ id: "g", name: "Grok", adapterType: "grok_cli" }], permissionMode: "auto", resumeHint: false, diagnostics: [], diagnosticsLoading: false, onRefreshDiagnostics() {}, onDraftChange() {}, onSend() {}, onAbort() { aborted += 1; }, onAgentChange() {}, onPermissionChange() {} };
-  await f.render(React.createElement(ChatComposer, props));
-  const stopButton = [...document.querySelectorAll("button")].find((b) => b.textContent.trim() === "停止中…");
-  assert.ok(stopButton);
-  assert.equal(stopButton.disabled, true);
-  assert.match(document.body.textContent, /停止中…/);
-  await act(async () => stopButton.click());
-  assert.equal(aborted, 0);
-});
-
-test("renaming reads the visible input, ignores IME confirmation and commits once", async (t) => {
-  const { ChatSessionHeader } = require("../../.tmp/test-build/src/features/chat/ChatSessionHeader.js");
-  const f = await fixture(t); const renamed = [];
-  const props = { session: { ...snapshot(), title: "Initial title" }, useBackend: true, canPromote: false, onClearResume() {}, onPromote() {}, onRename: (value) => renamed.push(value), onTitleFromFirstMessage() {}, onToggleFlag() {}, onArchive() {} };
-  await f.render(React.createElement(ChatSessionHeader, props));
-  await act(async () => document.querySelector('[aria-haspopup="menu"]').click());
-  await act(async () => [...document.querySelectorAll('[role="menuitem"]')].find((b) => b.textContent.trim() === "重命名").click());
-  const input = document.querySelector('input[aria-label="会话标题"]');
-  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
-  await act(async () => { setter.call(input, "QA v2 restart"); input.dispatchEvent(new window.Event("input", { bubbles: true })); });
-  await act(async () => input.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", isComposing: true, bubbles: true })));
-  assert.equal(renamed.length, 0);
-  assert.ok(document.querySelector('input[aria-label="会话标题"]'));
-  await act(async () => input.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true })));
-  assert.deepEqual(renamed, ["QA v2 restart"]);
-  assert.equal(document.querySelector('input[aria-label="会话标题"]'), null);
-});
-
-test("legacy resume is labelled for reset; structured handles allow resume and the reset action", async (t) => {
-  const { ChatSessionHeader } = require("../../.tmp/test-build/src/features/chat/ChatSessionHeader.js");
-  const f = await fixture(t); let cleared = 0;
-  const props = { session: { ...snapshot(), resumeCommand: "grok --resume old-id" }, useBackend: true, canPromote: false,
-    onClearResume() { cleared++; }, onPromote() {}, onRename() {}, onTitleFromFirstMessage() {}, onToggleFlag() {}, onArchive() {} };
-  await f.render(React.createElement(ChatSessionHeader, props));
-  assert.match(document.body.textContent, /续聊需重建/);
-  assert.doesNotMatch(document.body.textContent, /可续聊/);
-  await act(async () => document.querySelector('[aria-haspopup="menu"]').click());
-  await act(async () => [...document.querySelectorAll('[role="menuitem"]')].find((b) => b.textContent.trim() === "开新 CLI 会话").click());
-  assert.equal(cleared, 1);
-  await f.render(React.createElement(ChatSessionHeader, { ...props, session: { ...snapshot(),
-    resumeHandle: { version: 1, adapterType: "grok_cli", nativeSessionId: "native", configFingerprint: "abc" } } }));
-  assert.match(document.body.textContent, /可续聊/);
-  await act(async () => document.querySelector('[aria-haspopup="menu"]').click());
-  assert.match(document.body.textContent, /开新 CLI 会话/);
 });

@@ -1,4 +1,6 @@
 [workspace]
+# Frozen experimental workspace. The default desktop gate is pnpm check;
+# use pnpm check:core explicitly to validate these preserved crates.
 resolver = "2"
 members = ["crates/loom-core", "crates/loom-runtime"]
 # Preserve the existing desktop build and isolate feasibility experiments.

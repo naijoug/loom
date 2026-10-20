@@ -3,7 +3,6 @@ import type {
   ChatEventPage,
   ChatSession,
   ChatSessionSummary,
-  Task,
 } from "../domain";
 import { TAURI_COMMANDS } from "./contract";
 import { invokeCommand } from "./tauriClient";
@@ -49,19 +48,8 @@ export type ChatAbortArgs = {
   turnId: string;
 };
 
-export type ChatPromoteArgs = {
-  projectPath: string;
-  sessionId: string;
-};
-
 export type ChatSendResult = {
   turnId: string;
-  session: ChatSession;
-};
-
-export type ChatPromoteResult = {
-  taskId: string;
-  task: Task;
   session: ChatSession;
 };
 
@@ -165,12 +153,7 @@ export function chatAbort(args: ChatAbortArgs): Promise<void> {
   );
 }
 
-export function chatPromoteToTask(args: ChatPromoteArgs): Promise<ChatPromoteResult> {
-  return invokeCommand<ChatPromoteResult>(
-    TAURI_COMMANDS.chatPromoteToTask,
-    chatInputEnvelope({
-      projectPath: args.projectPath,
-      sessionId: args.sessionId,
-    }),
-  );
+
+export function chatListProjectGroups(projectPaths?: string[]): Promise<import("../domain/chat").ChatProjectGroup[]> {
+  return invokeCommand(TAURI_COMMANDS.chatListProjectGroups, { projectPaths });
 }

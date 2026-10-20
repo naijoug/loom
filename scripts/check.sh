@@ -15,4 +15,4 @@ cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
 cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features -- -D warnings
 cargo test --manifest-path src-tauri/Cargo.toml
 
-"${SCRIPT_DIR}/check-core.sh"
+# Frozen Workbench remains opt-in through pnpm check:core.

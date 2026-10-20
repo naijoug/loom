@@ -9,12 +9,14 @@ export interface HealthCheckResult {
 export type ThemeMode = "light" | "dark" | "system";
 
 export interface AppSettings {
+  locale: "en" | "zh-CN";
   themeMode: ThemeMode;
   confirmBeforeCommands: boolean;
   commandTimeoutSeconds: number;
 }
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
+  locale: "en",
   themeMode: "system",
   confirmBeforeCommands: true,
   commandTimeoutSeconds: 600,

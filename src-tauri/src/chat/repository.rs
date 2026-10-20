@@ -1680,6 +1680,7 @@ mod tests {
         assert_eq!(event.seq, 3);
         let mut tool = delta(&lease, "");
         tool.part = Some(super::super::ChatMessagePart::Tool {
+            metadata: Default::default(),
             name: "read".into(),
             input_summary: Some("README".into()),
             output_summary: None,

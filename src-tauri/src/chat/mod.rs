@@ -1,8 +1,11 @@
 //! Chat sessions: independent of the advanced Task state machine.
 mod export;
+mod file_changes;
+pub(crate) mod groups;
 mod journal;
 mod logs;
 mod models;
+mod tools;
 pub use models::*;
 #[cfg(test)]
 mod real_agent_tests;
@@ -17,7 +20,6 @@ use crate::agents::load_agents;
 use crate::chat_context::{prepare_chat_invocation, update_execution_config};
 use crate::models::{now_ms, IdGenerator};
 use crate::process_supervisor;
-use crate::tasks;
 use repository::ChatRepository;
 use service::{finish_chat_turn, require_idle};
 use std::path::Path;
@@ -40,7 +42,7 @@ pub fn title_from_user_message(text: &str, max_chars: usize) -> String {
         .unwrap_or_else(|| text.trim());
     let collapsed = first_line.split_whitespace().collect::<Vec<_>>().join(" ");
     if collapsed.is_empty() {
-        return "新对话".to_string();
+        return "New chat".to_string();
     }
     let chars: Vec<char> = collapsed.chars().collect();
     if chars.len() <= max_chars {
@@ -130,6 +132,7 @@ fn permission_to_stage(mode: &str) -> AgentStage {
 /// Parse all tool blocks in a stdout frame; providers may batch parallel results.
 #[derive(Debug, Default, PartialEq, Eq)]
 struct ParsedChatLine {
+    warning: Option<String>,
     delta: String,
     parts: Vec<ChatMessagePart>,
 }
@@ -141,6 +144,7 @@ fn parse_chat_stream_line(output_mode: &str, line: &str) -> ParsedChatLine {
     }
     if output_mode == "plain" {
         return ParsedChatLine {
+            warning: None,
             delta: format!("{line}\n"),
             parts: Vec::new(),
         };
@@ -148,14 +152,36 @@ fn parse_chat_stream_line(output_mode: &str, line: &str) -> ParsedChatLine {
     let Ok(value) = serde_json::from_str::<serde_json::Value>(trimmed) else {
         if !trimmed.starts_with('{') {
             return ParsedChatLine {
+                warning: None,
                 delta: trimmed.to_string(),
                 parts: Vec::new(),
             };
         }
         return ParsedChatLine::default();
     };
+    let reported_failure = (value["type"] == "result" && value["is_error"] == true)
+        || value["type"] == "turn.failed"
+        || (output_mode == "opencode_json" && value["type"] == "error");
+    if reported_failure {
+        let message = value
+            .pointer("/error/data/message")
+            .or_else(|| value.pointer("/error/message"))
+            .or_else(|| value.get("result"))
+            .or_else(|| value.get("errors"))
+            .or_else(|| value.get("error"))
+            .and_then(|value| summarize_json(value, 2000))
+            .unwrap_or_else(|| "CLI reported an error".into());
+        return ParsedChatLine {
+            warning: None,
+            delta: String::new(),
+            parts: vec![ChatMessagePart::Error {
+                message,
+                code: Some("cli_reported_error".into()),
+            }],
+        };
+    }
     let event = unwrap_stream_event(&value);
-    let parts = if let Some(blocks) = event
+    let parts: Vec<ChatMessagePart> = if let Some(blocks) = event
         .pointer("/message/content")
         .or_else(|| event.get("content"))
         .and_then(|v| v.as_array())
@@ -167,8 +193,54 @@ fn parse_chat_stream_line(output_mode: &str, line: &str) -> ParsedChatLine {
     } else {
         extract_tool_or_command_part(&value).into_iter().collect()
     };
-    let delta = extract_assistant_text(output_mode, trimmed);
-    ParsedChatLine { delta, parts }
+    let mut delta = extract_assistant_text(output_mode, trimmed);
+    let kind = value
+        .get("type")
+        .and_then(|value| value.as_str())
+        .unwrap_or("");
+    let known = matches!(
+        kind,
+        "system"
+            | "telemetry"
+            | "assistant"
+            | "user"
+            | "result"
+            | "stream_event"
+            | "rate_limit_event"
+            | "error"
+            | "text"
+            | "step_start"
+            | "step_finish"
+            | "tool_use"
+            | "tool_result"
+            | "tool_call"
+            | "function_call"
+            | "content_block_start"
+            | "content_block_delta"
+            | "content_block_stop"
+            | "message_start"
+            | "message_delta"
+            | "message_stop"
+            | "ping"
+    ) || kind.starts_with("thread.")
+        || kind.starts_with("turn.")
+        || kind.starts_with("item.");
+    let warning = if !known && parts.is_empty() {
+        if delta.is_empty() {
+            delta = summarize_json(&value, 2000).unwrap_or_default();
+        }
+        Some(format!(
+            "Unknown CLI event '{}' preserved as text",
+            kind.chars().take(120).collect::<String>()
+        ))
+    } else {
+        None
+    };
+    ParsedChatLine {
+        warning,
+        delta,
+        parts,
+    }
 }
 
 fn json_event_type(value: &serde_json::Value) -> Option<String> {
@@ -189,21 +261,6 @@ fn json_event_type(value: &serde_json::Value) -> Option<String> {
         })
         .or_else(|| value.get("event").and_then(|v| v.as_str()))
         .map(str::to_string)
-}
-
-fn deep_str<'a>(value: &'a serde_json::Value, keys: &[&str]) -> Option<&'a str> {
-    match value {
-        serde_json::Value::Object(map) => {
-            for key in keys {
-                if let Some(text) = map.get(*key).and_then(|v| v.as_str()) {
-                    return Some(text);
-                }
-            }
-            map.values().find_map(|child| deep_str(child, keys))
-        }
-        serde_json::Value::Array(items) => items.iter().find_map(|child| deep_str(child, keys)),
-        _ => None,
-    }
 }
 
 fn summarize_json(value: &serde_json::Value, max_chars: usize) -> Option<String> {
@@ -236,166 +293,11 @@ fn unwrap_stream_event(value: &serde_json::Value) -> &serde_json::Value {
 }
 
 fn tool_part_from_content_item(item: &serde_json::Value) -> Option<ChatMessagePart> {
-    let item_type = item.get("type").and_then(|v| v.as_str()).unwrap_or("");
-    if item_type == "tool_use" || item_type == "tool_call" || item_type == "function_call" {
-        let name = item
-            .get("name")
-            .or_else(|| item.pointer("/function/name"))
-            .and_then(|v| v.as_str())
-            .unwrap_or("tool")
-            .to_string();
-        let input = item
-            .get("input")
-            .or_else(|| item.get("arguments"))
-            .or_else(|| item.pointer("/function/arguments"));
-        return Some(ChatMessagePart::Tool {
-            name,
-            input_summary: input.and_then(|v| summarize_json(v, 240)),
-            output_summary: None,
-            status: Some("running".to_string()),
-        });
-    }
-    if item_type == "tool_result" {
-        let name = item
-            .get("name")
-            .or_else(|| item.get("tool_use_id"))
-            .and_then(|v| v.as_str())
-            .unwrap_or("tool_result")
-            .to_string();
-        let output = item
-            .get("content")
-            .or_else(|| item.get("output"))
-            .or_else(|| item.get("result"));
-        return Some(ChatMessagePart::Tool {
-            name,
-            input_summary: None,
-            output_summary: output.and_then(|v| summarize_json(v, 240)),
-            status: Some(
-                if item.get("is_error").and_then(|v| v.as_bool()) == Some(true) {
-                    "error"
-                } else {
-                    "done"
-                }
-                .to_string(),
-            ),
-        });
-    }
-    None
+    tools::content_part(item)
 }
 
 fn extract_tool_or_command_part(value: &serde_json::Value) -> Option<ChatMessagePart> {
-    let value = unwrap_stream_event(value);
-    let event = json_event_type(value).unwrap_or_default();
-    let event_l = event.to_ascii_lowercase();
-
-    // Nested content blocks (Claude / Grok streaming-json style).
-    if let Some(parts) = value
-        .pointer("/message/content")
-        .or_else(|| value.pointer("/content"))
-        .and_then(|v| v.as_array())
-    {
-        for item in parts {
-            if let Some(part) = tool_part_from_content_item(item) {
-                return Some(part);
-            }
-        }
-    }
-
-    // Claude content_block_start / content_block_stop (top-level or under stream_event).
-    if let Some(block) = value
-        .get("content_block")
-        .or_else(|| value.pointer("/event/content_block"))
-    {
-        if let Some(part) = tool_part_from_content_item(block) {
-            return Some(part);
-        }
-        let block_type = block.get("type").and_then(|v| v.as_str()).unwrap_or("");
-        if block_type == "tool_use" || block_type == "tool_call" {
-            let name = block
-                .get("name")
-                .and_then(|v| v.as_str())
-                .unwrap_or("tool")
-                .to_string();
-            return Some(ChatMessagePart::Tool {
-                name,
-                input_summary: block.get("input").and_then(|v| summarize_json(v, 240)),
-                output_summary: None,
-                status: Some("running".to_string()),
-            });
-        }
-    }
-
-    if event_l.contains("tool_result")
-        || event_l.contains("tool_use")
-        || event_l.contains("tool_call")
-        || event_l.contains("function_call")
-        || event_l.contains("mcp_tool")
-    {
-        let name = deep_str(value, &["name", "tool_name", "toolName", "function_name"])
-            .unwrap_or("tool")
-            .to_string();
-        let input = value
-            .get("input")
-            .or_else(|| value.get("arguments"))
-            .or_else(|| value.get("params"));
-        let output = value
-            .get("output")
-            .or_else(|| value.get("result"))
-            .or_else(|| value.get("content"));
-        let status = if event_l.contains("result") {
-            Some("done".to_string())
-        } else {
-            Some("running".to_string())
-        };
-        return Some(ChatMessagePart::Tool {
-            name,
-            input_summary: input.and_then(|v| summarize_json(v, 240)),
-            output_summary: output.and_then(|v| summarize_json(v, 240)),
-            status,
-        });
-    }
-
-    let nested_item_type = value
-        .pointer("/item/type")
-        .or_else(|| value.pointer("/msg/type"))
-        .and_then(|v| v.as_str())
-        .unwrap_or("")
-        .to_ascii_lowercase();
-    let commandish = event_l.contains("exec_command")
-        || event_l.contains("command_execution")
-        || event_l.contains("shell")
-        || nested_item_type.contains("command_execution")
-        || nested_item_type.contains("exec_command")
-        || (event_l.contains("command") && !event_l.contains("permission"));
-    if commandish {
-        let command = deep_str(value, &["command", "cmd", "shell_command"])
-            .unwrap_or("command")
-            .to_string();
-        let output = deep_str(value, &["output", "stdout", "text"]);
-        return Some(ChatMessagePart::Tool {
-            name: "command".to_string(),
-            input_summary: Some(command),
-            output_summary: output.map(|text| {
-                if text.chars().count() > 240 {
-                    format!("{}…", text.chars().take(240).collect::<String>())
-                } else {
-                    text.to_string()
-                }
-            }),
-            status: Some(
-                if event_l.contains("end")
-                    || event_l.contains("completed")
-                    || nested_item_type.contains("completed")
-                {
-                    "done".to_string()
-                } else {
-                    "running".to_string()
-                },
-            ),
-        });
-    }
-
-    None
+    tools::event_part(unwrap_stream_event(value))
 }
 
 fn extract_assistant_text(output_mode: &str, raw: &str) -> String {
@@ -416,6 +318,14 @@ fn extract_assistant_text(output_mode: &str, raw: &str) -> String {
         }
         if let Ok(value) = serde_json::from_str::<serde_json::Value>(line) {
             let value = unwrap_stream_event(&value);
+            if output_mode == "opencode_json" {
+                if value["type"] == "text" {
+                    if let Some(text) = value.pointer("/part/text").and_then(|v| v.as_str()) {
+                        chunks.push(text.into());
+                    }
+                }
+                continue;
+            }
             // Codex exec emits assistant text inside an agent_message item.
             if value.pointer("/item/type").and_then(|v| v.as_str()) == Some("agent_message") {
                 if let Some(text) = value.pointer("/item/text").and_then(|v| v.as_str()) {
@@ -552,12 +462,18 @@ pub fn chat_list_sessions(
     project_path: String,
 ) -> Result<Vec<ChatSessionSummary>, String> {
     let repository = open_chat_repository(&app, &project_path)?;
+    list_session_summaries(&repository)
+}
+
+fn list_session_summaries(repository: &ChatRepository) -> Result<Vec<ChatSessionSummary>, String> {
     let mut summaries = Vec::new();
     for (id, entry) in repository.list_entries()? {
         let session = match entry {
             Ok(session) => session,
             Err(error) => {
                 summaries.push(ChatSessionSummary {
+                    permission_mode: None,
+                    turn_status: None,
                     id,
                     title: "无法读取的会话".into(),
                     agent_id: String::new(),
@@ -577,6 +493,8 @@ pub fn chat_list_sessions(
             .map(|message| message.content.chars().take(80).collect::<String>());
         let needs_attention = session_needs_attention(&session);
         summaries.push(ChatSessionSummary {
+            permission_mode: Some(session.permission_mode),
+            turn_status: Some(session.turn_status),
             id: session.id,
             title: session.title,
             agent_id: session.agent_id,
@@ -609,7 +527,7 @@ pub fn chat_create(
             .title
             .map(|value| value.trim().to_string())
             .filter(|value| !value.is_empty())
-            .unwrap_or_else(|| "新对话".to_string()),
+            .unwrap_or_else(|| "New chat".to_string()),
         permission_mode: normalize_permission_mode(
             &input
                 .permission_mode
@@ -695,90 +613,6 @@ pub fn chat_update_meta(app: AppHandle, input: ChatUpdateMetaInput) -> Result<Ch
         Ok(())
     })?;
     publish_chat_session(&app, &repository, session)
-}
-
-fn promote_requirement_from_session(session: &ChatSession) -> (String, String) {
-    let latest_user = session
-        .messages
-        .iter()
-        .rev()
-        .find(|message| message.role == "user")
-        .map(|message| message.content.as_str())
-        .unwrap_or(session.title.as_str());
-    let title = latest_user.chars().take(48).collect::<String>();
-
-    let mut parts = Vec::new();
-    parts.push(format!(
-        "Promoted from Loom chat session `{}` (agent `{}`, permission `{}`).",
-        session.id, session.agent_id, session.permission_mode
-    ));
-    parts.push(String::new());
-    parts.push("## Latest user ask".to_string());
-    parts.push(latest_user.to_string());
-    parts.push(String::new());
-    parts.push("## Recent conversation".to_string());
-
-    let recent: Vec<_> = session
-        .messages
-        .iter()
-        .rev()
-        .take(20)
-        .collect::<Vec<_>>()
-        .into_iter()
-        .rev()
-        .collect();
-    if recent.is_empty() {
-        parts.push("(no messages yet)".to_string());
-    } else {
-        for message in recent {
-            let body = message.content.chars().take(2000).collect::<String>();
-            parts.push(format!("{}: {}", message.role, body));
-        }
-    }
-
-    let mut requirement = parts.join("\n");
-    const MAX_CHARS: usize = 12_000;
-    if requirement.chars().count() > MAX_CHARS {
-        requirement = requirement.chars().take(MAX_CHARS).collect::<String>();
-        requirement.push_str("\n\n…(truncated)");
-    }
-    (title, requirement)
-}
-
-#[tauri::command]
-pub fn chat_promote_to_task(
-    app: AppHandle,
-    ids: State<'_, IdGenerator>,
-    input: ChatPromoteInput,
-) -> Result<ChatPromoteResult, String> {
-    let _operation = process_supervisor::supervisor().begin_operation()?;
-    let repository = open_chat_repository(&app, &input.project_path)?;
-    let mut promoted_task = None;
-    let session = repository.update(&input.session_id, |session| {
-        require_idle(session)?;
-        let (title, raw_requirement) = promote_requirement_from_session(session);
-        let task = tasks::create_task(
-            app.clone(),
-            ids,
-            crate::models::CreateTaskInput {
-                project_path: repository.project_path().to_string_lossy().into_owned(),
-                title,
-                raw_requirement,
-                selected_planning_agent_ids: Vec::new(),
-                primary_agent_id: Some(session.agent_id.clone()),
-            },
-        )?;
-        session.promoted_task_id = Some(task.id.clone());
-        promoted_task = Some(task);
-        Ok(())
-    })?;
-    let task = promoted_task.ok_or("failed to create task")?;
-    let session = publish_chat_session(&app, &repository, session)?;
-    Ok(ChatPromoteResult {
-        task_id: task.id.clone(),
-        task,
-        session,
-    })
 }
 
 #[tauri::command]
@@ -886,8 +720,18 @@ pub async fn chat_send(
             .find(|agent| agent.id == session.agent_id)
             .ok_or_else(|| format!("agent '{}' was not found", session.agent_id))?;
         let stage = permission_to_stage(&session.permission_mode);
+        let canonical = crate::projects::canonical_project_path(&session.project_path)?;
+        if canonical != repository.project_path() {
+            return Err("stored session cwd does not match its registered project".into());
+        }
         let prepared = prepare_chat_invocation(agent, session, text, stage)?;
-        if session.messages.is_empty() && session.title == "新对话" {
+        let invocation_cwd =
+            std::fs::canonicalize(&prepared.invocation.cwd).map_err(|error| error.to_string())?;
+        if !invocation_cwd.starts_with(&canonical) {
+            return Err("agent cwd must remain inside the selected project".into());
+        }
+        if session.messages.is_empty() && matches!(session.title.as_str(), "新对话" | "New chat")
+        {
             session.title = title_from_user_message(text, 48);
         }
         let now = now_ms();
@@ -1060,6 +904,8 @@ mod tests {
             .expect("grok");
             let expected_perm = if mode == "explore" {
                 "plan"
+            } else if mode == "auto" {
+                "auto"
             } else {
                 "acceptEdits"
             };
@@ -1114,7 +960,11 @@ mod tests {
             } else {
                 assert_eq!(
                     arg_pair(&claude.args, "--permission-mode"),
-                    Some("acceptEdits"),
+                    Some(if mode == "auto" {
+                        "auto"
+                    } else {
+                        "acceptEdits"
+                    }),
                     "claude {mode}"
                 );
             }

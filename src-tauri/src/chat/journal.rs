@@ -284,7 +284,7 @@ pub(super) fn apply(session: &mut ChatSession, event: &ChatEvent) -> Result<(), 
                 message.content.push_str(&stream.delta);
             }
             if let Some(part) = &stream.part {
-                message.parts.push(part.clone());
+                super::tools::merge_part(&mut message.parts, part.clone());
             }
             session.updated_at_ms = event.timestamp_ms;
         }
@@ -418,7 +418,7 @@ pub(super) fn stream(
     stream: ChatStreamEvent,
 ) -> Result<ChatEvent, String> {
     validate_stream(session, &stream)?;
-    let event = event(session, ChatEventPayload::Stream(stream))?;
+    let event = event(session, ChatEventPayload::Stream(Box::new(stream)))?;
     append(directory, &event)?;
     apply(session, &event)?;
     Ok(event)

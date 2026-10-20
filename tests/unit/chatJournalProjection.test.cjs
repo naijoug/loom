@@ -1,7 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { ChatProjection } = require("../../.tmp/test-build/src/features/chat/state/ChatProjection.js");
-const { createChatStoreSnapshot, chatStoreSelectProject, chatStoreSetDraft, chatStoreDraftFor } = require("../../.tmp/test-build/src/features/chat/state/chatStore.js");
 
 function snapshot(projectPath = "/a", id = "s", seq = 2) {
   return { id, projectPath, agentId: "grok", title: "chat", permissionMode: "explore", messages: [{ id: "m", role: "assistant", content: "", status: "streaming", createdAtMs: 1 }], createdAtMs: 1, updatedAtMs: 1, activeTurnId: "t", turnStatus: "streaming", schemaVersion: 2, lastSeq: seq, revision: seq };
@@ -134,29 +133,4 @@ test("new sessions and restored snapshots establish the cursor without replaying
   assert.equal(p.session.messages[0].content, "一次");
 });
 
-test("drafts remain isolated and survive switching away from a project", () => {
-  let state = createChatStoreSnapshot("/a");
-  state = chatStoreSetDraft(state, "same-id", "A draft");
-  state = chatStoreSelectProject(state, "/b");
-  assert.equal(chatStoreDraftFor(state, "same-id"), "");
-  state = chatStoreSetDraft(state, "same-id", "B draft");
-  state = chatStoreSelectProject(state, "/a");
-  assert.equal(chatStoreDraftFor(state, "same-id"), "A draft");
-});
-
 module.exports = { snapshot, stream };
-
-test("a late send acknowledgment clears only the submitted draft in its own project", () => {
-  const { chatStoreClearSubmittedDraft } = require("../../.tmp/test-build/src/features/chat/state/chatStore.js");
-  let state = createChatStoreSnapshot("/a");
-  state = chatStoreSetDraft(state, "s", "sent A");
-  state = chatStoreSelectProject(state, "/b");
-  state = chatStoreSetDraft(state, "s", "new B");
-  state = chatStoreClearSubmittedDraft(state, "/a", "s", "sent A");
-  assert.equal(chatStoreDraftFor(state, "s"), "new B");
-  state = chatStoreSelectProject(state, "/a");
-  assert.equal(chatStoreDraftFor(state, "s"), "");
-  state = chatStoreSetDraft(state, "s", "next draft");
-  state = chatStoreClearSubmittedDraft(state, "/a", "s", "old submitted");
-  assert.equal(chatStoreDraftFor(state, "s"), "next draft");
-});

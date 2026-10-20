@@ -13,6 +13,7 @@ function isThemeMode(value: unknown): value is ThemeMode {
 function normalizeSettings(value: Partial<AppSettings> | null | undefined): AppSettings {
   const timeout = Number(value?.commandTimeoutSeconds);
   return {
+    locale: value?.locale === "zh-CN" ? "zh-CN" : "en",
     themeMode: isThemeMode(value?.themeMode) ? value.themeMode : DEFAULT_APP_SETTINGS.themeMode,
     confirmBeforeCommands:
       typeof value?.confirmBeforeCommands === "boolean"
@@ -74,4 +75,13 @@ export function useSettingsBridge() {
   const saveSettings = useCallback((settings: AppSettings) => saveAppSettings(settings), []);
 
   return { loadSettings, saveSettings };
+}
+
+// Serialize partial updates so changing language cannot overwrite a new theme.
+let settingsWrite: Promise<unknown> = Promise.resolve();
+export function patchAppSettings(patch: Partial<AppSettings>): Promise<AppSettings> {
+  const operation = settingsWrite.catch(() => {}).then(async () =>
+    saveAppSettings({ ...await loadAppSettings(), ...patch }));
+  settingsWrite = operation;
+  return operation;
 }

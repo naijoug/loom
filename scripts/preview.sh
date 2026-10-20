@@ -101,7 +101,7 @@ start_preview() {
   elif [[ "${LOOM_PREVIEW_TARGET:-loom}" == "browser-probe" ]]; then
     echo "Browser fixture: http://${HOST}:${PORT}/"
   else
-    echo "URL: http://${HOST}:${PORT}/preview/planning?step=review"
+    echo "URL: http://${HOST}:${PORT}/?fixture=simple-chat"
   fi
   echo "PID: ${pid}"
   echo "Log: ${LOG_FILE}"
@@ -119,7 +119,7 @@ case "${1:-start}" in
     if pid="$(preview_listener_pid)"; then
       echo "${pid}" > "${PID_FILE}"
       echo "Loom preview running: PID ${pid}"
-      echo "URL: http://${HOST}:${PORT}/preview/planning?step=review"
+      echo "URL: http://${HOST}:${PORT}/?fixture=simple-chat"
     else
       echo "Loom preview is not running"
       exit 1

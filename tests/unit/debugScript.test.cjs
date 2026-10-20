@@ -37,25 +37,3 @@ test('unavailable process inspection fails shutdown and preserves the PID hint',
   assert.ok(!result.stdout.includes('FALSE_SUCCESS'));
   assert.ok(!result.stdout.includes('Loom local dev stopped'));
 });
-test('bundled SDK preview configures and validates Bun before launching the app', (t) => {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), 'loom-debug-bundle-'));
-  t.after(() => fs.rmSync(fixture, { recursive: true, force: true }));
-  const binary = path.join(fixture, 'src-tauri/target/debug/bundle/macos/Loom.app/Contents/MacOS/loom');
-  fs.mkdirSync(path.dirname(binary), { recursive: true });
-  fs.writeFileSync(binary, '#!/bin/sh\nexit 0\n', { mode: 0o700 });
-  const bun = path.join(fixture, 'bin/bun');
-  fs.mkdirSync(path.dirname(bun));
-  fs.writeFileSync(bun, '#!/bin/sh\nexit 0\n', { mode: 0o700 });
-  const code = 'stop_all() { :; }; ROOT_DIR="$3"; DESKTOP_PID_FILE=/dev/null; LOOM_PREVIEW_TARGET=workbench-bundle; LOOM_WORKBENCH_SDK=1; LOOM_WORKBENCH_BUN="$2"; exec() { printf "SDK_BUN=%s\\nLAUNCH=%s\\n" "$LOOM_WORKBENCH_BUN" "$1"; }; start_desktop';
-  const valid = run(code, process.execPath, fixture);
-  assert.equal(valid.status, 0, valid.stderr);
-  assert.ok(valid.stdout.includes(`SDK_BUN=${process.execPath}`));
-  assert.ok(valid.stdout.includes(`LAUNCH=${binary}`));
-  const discovered = run('PATH="$3/bin:$PATH"; ' + code, '', fixture);
-  assert.equal(discovered.status, 0, discovered.stderr);
-  assert.ok(discovered.stdout.includes(`SDK_BUN=${bun}`));
-  const invalid = run(code, '/nonexistent/loom-test-bun', fixture);
-  assert.notEqual(invalid.status, 0);
-  assert.match(invalid.stderr, /absolute Bun executable/);
-  assert.ok(!invalid.stdout.includes('LAUNCH='));
-});

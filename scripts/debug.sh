@@ -21,9 +21,6 @@ Environment variables:
   HOST     Dev server host (default: 127.0.0.1)
   LOOM_PREVIEW_TARGET=craft-reference  Run the pinned M0 reference app.
   LOOM_PREVIEW_TARGET=browser-probe    Run the Rust Chromium M0 probe.
-  LOOM_PREVIEW_TARGET=workbench        Run the new Workbench desktop shell.
-  LOOM_WORKBENCH_SDK=1                 Enable the development SDK host (requires Bun).
-  LOOM_PREVIEW_TARGET=workbench-bundle Run its prebuilt debug app bundle (macOS).
 USAGE
 }
 
@@ -136,18 +133,6 @@ start_desktop() {
   echo "Stop: press Ctrl+C, or run scripts/debug.sh stop from another terminal."
 
   cd "${ROOT_DIR}"
-  if [[ "${LOOM_WORKBENCH_SDK:-0}" == "1" ]]; then
-    export LOOM_WORKBENCH_BUN="${LOOM_WORKBENCH_BUN:-$(command -v bun || true)}"
-    [[ "${LOOM_WORKBENCH_BUN}" == /* && -x "${LOOM_WORKBENCH_BUN}" ]] || { echo "SDK runtime needs an absolute Bun executable path." >&2; exit 1; }
-  fi
-  if [[ "${LOOM_PREVIEW_TARGET:-loom}" == "workbench-bundle" ]]; then
-    local bundle="${ROOT_DIR}/src-tauri/target/debug/bundle/macos/Loom.app/Contents/MacOS/loom"
-    [[ -x "${bundle}" ]] || { echo "Build with VITE_LOOM_WORKBENCH=1 pnpm tauri build --debug --bundles app first." >&2; exit 1; }
-    exec "${bundle}"
-  fi
-  if [[ "${LOOM_PREVIEW_TARGET:-loom}" == "workbench" ]]; then
-    export VITE_LOOM_WORKBENCH=1
-  fi
   if [[ "${LOOM_PREVIEW_TARGET:-loom}" == "browser-probe" ]]; then
     "${ROOT_DIR}/scripts/preview.sh" start
     exec node "${ROOT_DIR}/scripts/browser-probe.mjs"

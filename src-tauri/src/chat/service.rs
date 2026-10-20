@@ -183,6 +183,7 @@ pub(super) mod tests {
             })).unwrap();
             repo.create(&session).unwrap();
             let prepared = PreparedAgentInvocation {
+                environment: Default::default(),
                 program: "sh".into(),
                 args: vec![
                     format!(

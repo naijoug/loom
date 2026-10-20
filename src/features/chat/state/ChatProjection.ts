@@ -1,4 +1,4 @@
-import type { ChatEvent, ChatSession } from "../../../domain/chat";
+import type { ChatEvent, ChatSession, ChatMessagePart } from "../../../domain/chat";
 
 const MUTABLE_FIELDS = new Set([
   "title", "agentId", "permissionMode", "updatedAtMs", "resumeCommand",
@@ -92,11 +92,24 @@ function applyEvent(session: ChatSession, event: ChatEvent): ChatSession {
     messages[index] = {
       ...message,
       content: stream.done ? message.content : message.content + stream.delta,
-      parts: stream.part ? [...(message.parts ?? []), stream.part] : message.parts,
+      parts: stream.part ? mergeChatPart(message.parts ?? [], stream.part) : message.parts,
     };
     next = { ...session, messages, updatedAtMs: event.timestampMs };
   } else {
     throw new Error("Duplicate chat creation event");
   }
   return { ...next, lastSeq: event.seq, revision: event.seq };
+}
+
+export function mergeChatPart(parts: ChatMessagePart[], incoming: ChatMessagePart): ChatMessagePart[] {
+  if (incoming.type !== "tool" || !incoming.callId) return [...parts, incoming];
+  const index = parts.findIndex(part => part.type === "tool" && part.callId === incoming.callId);
+  if (index < 0) return [...parts, incoming];
+  const previous = parts[index];
+  if (previous.type !== "tool") return [...parts, incoming];
+  const merged = { ...previous, ...incoming };
+  if (incoming.name === incoming.callId || incoming.name === "tool_result" || incoming.name === "tool") merged.name = previous.name;
+  if (incoming.kind === "other") merged.kind = previous.kind;
+  if (incoming.status === "running" && (previous.status === "done" || previous.status === "error")) merged.status = previous.status;
+  return parts.map((part, offset) => offset === index ? merged : part);
 }

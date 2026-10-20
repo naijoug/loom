@@ -1,3 +1,4 @@
+import { useT } from "../../i18n";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { Download, RefreshCw, X } from "lucide-react";
 import { invokeCommand, listenToEvent } from "../../api/tauriClient";
@@ -14,6 +15,7 @@ interface UpdateContextValue {
 }
 const Context = createContext<UpdateContextValue | null>(null);
 export function UpdateProvider({ children }: { children: ReactNode }) {
+  const t = useT();
   const [state,setState] = useState(initialUpdate);
   const [visible,setVisible] = useState(false);
   const [localError,setLocalError] = useState("");
@@ -31,7 +33,7 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
     writes.current = writes.current.catch(()=>{}).then(async()=>{
       if (!hasTauriRuntime()) return;
       try { await invokeCommand("save_update_drafts",{drafts:value}); draftError.current=""; }
-      catch { draftError.current="草稿保存失败，请重试后再更新。"; }
+      catch { draftError.current=t("updateDraftFailure"); }
     });
   },[]);
   const getDraft = useCallback((scope:string)=>drafts.current[scope],[]);
@@ -54,7 +56,7 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
         ]);
         if(disposed)return;
         apply(snapshot); drafts.current=saved; setInitialDrafts(saved);
-      } catch { if(!disposed)setLocalError("更新状态或草稿读取失败，请重新打开 Loom 后重试。"); }
+      } catch { if(!disposed)setLocalError(t("updateLoadFailure")); }
     })();
     return()=>{disposed=true;mounted.current=false;unlisten?.();clearTimeout(timer.current);};
   },[apply]);
@@ -63,7 +65,7 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
     lock.current=true;setBusy(true);setLocalError("");
     try {
       if(kind==="install"){
-        if(initialDrafts===null)throw new Error("草稿尚未恢复，暂不能安装更新。");
+        if(initialDrafts===null)throw new Error(t("updateDraftPending"));
         clearTimeout(timer.current);persist();await writes.current;
         if(draftError.current)throw new Error(draftError.current);
         await invokeCommand("install_update",{drafts:drafts.current});
@@ -75,12 +77,13 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
   return <Context.Provider value={{state,open:()=>setVisible(true),initialDrafts,setDraft,getDraft}}>{children}{visible&&<UpdateDialog state={state} error={localError||state.error||""} busy={busy||updateBusy(state.phase)} frozen={frozen} onClose={()=>setVisible(false)} onAction={action}/>}</Context.Provider>;
 }
 export function UpdateButton({manual=false}:{manual?:boolean}){
+  const t = useT();
   const context=useContext(Context);
   if(!context)return null;
   const offered=updateOffered(context.state.phase);
   if(!manual&&!offered)return null;
-  return <button type="button" className={`loom-update-button ${offered?"has-update":""} ${manual?"manual":""}`} aria-label={updateLabel(context.state)} title={updateLabel(context.state)} onClick={context.open}>
-    {offered?<Download size={15}/>:<RefreshCw size={15}/>} {manual&&<span>{offered?updateLabel(context.state):"检查更新"}</span>}
+  return <button type="button" className={`loom-update-button ${offered?"has-update":""} ${manual?"manual":""}`} aria-label={updateLabel(context.state, t)} title={updateLabel(context.state, t)} onClick={context.open}>
+    {offered?<Download size={15}/>:<RefreshCw size={15}/>} {manual&&<span>{offered?updateLabel(context.state, t):t("checkUpdates")}</span>}
   </button>;
 }
 export function useUpdateDrafts(scope:string,data:Record<string,string>,restore:(saved:Record<string,string>)=>void){
@@ -101,16 +104,17 @@ export function useUpdateDrafts(scope:string,data:Record<string,string>,restore:
 export function UpdateDialog({state,error,busy,frozen,onClose,onAction}:{state:UpdateSnapshot;error:string;busy:boolean;frozen:boolean;onClose():void;onAction(kind:"check"|"download"|"install"):Promise<void>}){
   const ref=useRef<HTMLDialogElement>(null);
   useEffect(()=>{const dialog=ref.current;dialog?.showModal();return()=>dialog?.close();},[]);
+  const t = useT();
   const percent=downloadPercent(state);
   const disabled=state.phase==="disabled";
   return <dialog ref={ref} className="loom-update-dialog" aria-labelledby="loom-update-title" onCancel={event=>{event.preventDefault();if(!frozen)onClose();}}>
-    <header><div className="loom-update-mark"><Download size={23}/></div><div><h2 id="loom-update-title">Loom 软件更新</h2><p>{state.currentVersion?`当前版本 ${state.currentVersion}`:"应用内更新"}</p></div><button aria-label="关闭更新窗口" disabled={frozen} onClick={onClose}><X size={18}/></button></header>
-    <div role="status" aria-live="polite" className="loom-update-status">{disabled?"此构建暂不支持在线更新":updateLabel(state)}</div>
-    {state.notes&&<section aria-label="更新说明" className="loom-update-notes">{state.notes}</section>}
-    {state.phase==="downloading"&&<progress aria-label="更新下载进度" max={100} value={percent}/>}
-    {state.phase==="ready"&&<p className="loom-update-hint">会先保存对话草稿，再安装并重启。请先结束所有运行中的任务和终端。</p>}
-    {disabled&&<p className="loom-update-hint">请使用已配置更新源的 macOS 安装版。网页预览不会检查或安装更新。</p>}
+    <header><div className="loom-update-mark"><Download size={23}/></div><div><h2 id="loom-update-title">{t("softwareUpdate")}</h2><p>{state.currentVersion?t("currentVersion", { version: state.currentVersion }):t("inAppUpdate")}</p></div><button aria-label={t("closeUpdate")}  disabled={frozen} onClick={onClose}><X size={18}/></button></header>
+    <div role="status" aria-live="polite" className="loom-update-status">{disabled?t("updateUnavailable"):updateLabel(state, t)}</div>
+    {state.notes&&<section aria-label={t("releaseNotes")}  className="loom-update-notes">{state.notes}</section>}
+    {state.phase==="downloading"&&<progress aria-label={t("downloadProgress")}  max={100} value={percent}/>}
+    {state.phase==="ready"&&<p className="loom-update-hint">{t("updateRestartHint")}</p>}
+    {disabled&&<p className="loom-update-hint">{t("updateBuildHint")}</p>}
     {error&&<p role="alert" className="loom-update-error">{error}</p>}
-    <footer><button disabled={frozen} onClick={onClose}>稍后</button>{state.phase==="available"?<button className="primary" disabled={busy} onClick={()=>void onAction("download")}>下载更新</button>:state.phase==="ready"?<button className="primary" disabled={busy} onClick={()=>void onAction("install")}>安装并重启</button>:<button className="primary" disabled={busy||disabled} onClick={()=>void onAction("check")}>{busy?updateLabel(state):"检查更新"}</button>}</footer>
+    <footer><button disabled={frozen} onClick={onClose}>{t("later")}</button>{state.phase==="available"?<button className="primary" disabled={busy} onClick={()=>void onAction("download")}>{t("downloadUpdate")}</button>:state.phase==="ready"?<button className="primary" disabled={busy} onClick={()=>void onAction("install")}>{t("installRestart")}</button>:<button className="primary" disabled={busy||disabled} onClick={()=>void onAction("check")}>{busy?updateLabel(state, t):t("checkUpdates")}</button>}</footer>
   </dialog>;
 }

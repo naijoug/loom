@@ -33,6 +33,8 @@ export class MockChatStore {
         id: session.id,
         title: session.title,
         agentId: session.agentId,
+        permissionMode: session.permissionMode,
+        turnStatus: session.turnStatus,
         updatedAtMs: session.updatedAtMs,
         preview: session.messages.length
           ? session.messages[session.messages.length - 1].content.slice(0, 80)
@@ -58,7 +60,7 @@ export class MockChatStore {
       id: id("chat"),
       projectPath: input.projectPath,
       agentId: input.agentId,
-      title: input.title?.trim() || "新对话",
+      title: input.title?.trim() || "New chat",
       permissionMode: normalizeChatPermissionMode(
         input.permissionMode ?? DEFAULT_CHAT_PERMISSION_MODE,
       ),
@@ -162,13 +164,13 @@ export class MockChatStore {
       id: id("msg"),
       role: "assistant",
       content:
-        "（M1 壳层模拟回复）真实 Codex / Claude / Grok 流式调用会在 M2+ 接通。你刚才说：\n\n" +
+        "Web preview reply. Use the desktop app to run a local Agent. You said:\n\n" +
         trimmed,
       status: "complete",
       createdAtMs: t + 1,
     };
     const title =
-      session.messages.length === 0 && session.title === "新对话"
+      session.messages.length === 0 && session.title === "New chat"
         ? titleFromUserMessage(trimmed)
         : session.title;
     const next: ChatSession = {

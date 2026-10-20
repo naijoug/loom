@@ -12,6 +12,7 @@ export type AgentAdapterType =
   | "codex_cli"
   | "claude_code_cli"
   | "grok_cli"
+  | "opencode_cli"
   | "mcp"
   | "http";
 
@@ -33,45 +34,17 @@ export interface AgentConfig {
 
 export type AgentConfigInput = Omit<AgentConfig, "id" | "available">;
 
-export type AgentStage = AgentCapability;
-
-export interface PrepareAgentInvocationInput {
-  projectPath: string;
-  taskId: string;
-  agentId: string;
-  stage: AgentStage;
-  prompt: string;
-  resumeCommand?: string;
+export interface AgentCapabilities {
+  structuredStream: boolean;
+  toolEvents: boolean;
+  nativeResume: boolean;
+  modes: Array<{ mode: "explore" | "ask" | "auto"; policy: string }>;
 }
-
-export interface PreparedAgentInvocation {
-  program: string;
-  args: string[];
-  cwd: string;
-  stdinPrompt: boolean;
-  outputMode: "plain" | "codex_json" | "claude_stream_json";
-  resumed: boolean;
-}
-
-export interface ProjectAgentPreferences {
-  planningAgentIds: string[];
-  implementationAgentId?: string;
-  reviewAgentIds: string[];
-  debuggingAgentId?: string;
-  testingAgentId?: string;
-  documentationAgentId?: string;
-  updatedAtMs: number;
-}
-
-export const EMPTY_PROJECT_AGENT_PREFERENCES: ProjectAgentPreferences = {
-  planningAgentIds: [],
-  reviewAgentIds: [],
-  updatedAtMs: 0,
-};
 
 export interface AgentDiagnostic {
+  capabilities?: AgentCapabilities;
   agentId: string;
-  status: "ready" | "disabled" | "missing";
+  status: "ready" | "disabled" | "missing" | "unavailable";
   resolvedPath?: string;
   version?: string;
   authStatus: "unknown" | "not_applicable";

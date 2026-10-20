@@ -152,6 +152,7 @@ mod tests {
         let session: ChatSession =
             serde_json::from_value(fixture["modelSamples"]["chatSession"].clone()).unwrap();
         let prepared = PreparedAgentInvocation {
+            environment: Default::default(),
             program: "agent".into(),
             args: vec![
                 "--token".into(),

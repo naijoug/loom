@@ -7,7 +7,6 @@ const {
   chatUpdateMeta,
   chatSend,
   chatAbort,
-  chatPromoteToTask,
   chatListSessions,
   chatGet,
   chatSetAgent,
@@ -21,7 +20,7 @@ test("chatInputEnvelope wraps fields under input", () => {
   });
 });
 
-test("five input-envelope chat commands use chat_* names and input wrapper shape", () => {
+test("four input-envelope chat commands use chat_* names and input wrapper shape", () => {
   const cases = [
     {
       command: TAURI_COMMANDS.chatCreate,
@@ -57,20 +56,13 @@ test("five input-envelope chat commands use chat_* names and input wrapper shape
         turnId: "t1",
       }),
     },
-    {
-      command: TAURI_COMMANDS.chatPromoteToTask,
-      payload: chatInputEnvelope({
-        projectPath: "/proj",
-        sessionId: "s1",
-      }),
-    },
   ];
 
   for (const item of cases) {
     assert.equal(Object.keys(item.payload).join(","), "input");
     assert.match(item.command, /^chat_/);
   }
-  assert.equal(cases.length, 5);
+  assert.equal(cases.length, 4);
 });
 
 test("flat-arg chat commands stay flat (no input wrapper)", () => {
@@ -86,8 +78,7 @@ test("chatClient wrappers are exported", () => {
     chatUpdateMeta,
     chatSend,
     chatAbort,
-    chatPromoteToTask,
-    chatListSessions,
+      chatListSessions,
     chatGet,
     chatSetAgent,
     chatClearResume,
@@ -106,7 +97,6 @@ test("production Chat wrappers invoke the real transport with the correct envelo
     await chatUpdateMeta({ projectPath: "/a", sessionId: "s", title: "new" });
     await chatSend({ projectPath: "/a", sessionId: "s", clientRequestId: "req-1", text: "hi" });
     await chatAbort({ projectPath: "/a", sessionId: "s", turnId: "t" });
-    await chatPromoteToTask({ projectPath: "/a", sessionId: "s" });
     await chatGet("/a", "s");
     await chatReadEvents("/a", "s", 17, 50);
     await chatReadRunLogs("/a", "s", "t", "stderr", 21, 4096);
@@ -116,7 +106,6 @@ test("production Chat wrappers invoke the real transport with the correct envelo
       ["chat_update_meta", { input: { projectPath: "/a", sessionId: "s", title: "new" } }],
       ["chat_send", { input: { projectPath: "/a", sessionId: "s", clientRequestId: "req-1", text: "hi" } }],
       ["chat_abort", { input: { projectPath: "/a", sessionId: "s", turnId: "t" } }],
-      ["chat_promote_to_task", { input: { projectPath: "/a", sessionId: "s" } }],
       ["chat_get", { projectPath: "/a", sessionId: "s" }],
       ["chat_read_events", { projectPath: "/a", sessionId: "s", afterSeq: 17, limit: 50 }],
       ["chat_read_run_logs", { projectPath: "/a", sessionId: "s", turnId: "t", stream: "stderr", offset: 21, limit: 4096 }],

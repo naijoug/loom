@@ -41,15 +41,15 @@ test('update download retries; installation persists drafts and reports active w
   await act(async()=>{root.render(React.createElement(UpdateProvider,null,React.createElement(Draft),React.createElement(UpdateButton,{manual:true})));await flush()});
   assert.equal(restored.session,'未发送的草稿');assert.ok(document.querySelector('.has-update'));
   await act(async()=>document.querySelector('.loom-update-button').click());
-  await act(async()=>{button('下载更新').click();button('下载更新').click();await flush()});
+  await act(async()=>{button('Download update').click();button('Download update').click();await flush()});
   assert.equal(attempt,1);assert.match(document.querySelector('[role="alert"]').textContent,/校验失败/);
-  await act(async()=>{button('下载更新').click();await flush()});
-  await act(async()=>{button('安装并重启').click();button('安装并重启').click();await flush()});
+  await act(async()=>{button('Download update').click();await flush()});
+  await act(async()=>{button('Install and restart').click();button('Install and restart').click();await flush()});
   assert.equal(calls.filter(([c])=>c==='install_update').length,1,JSON.stringify({calls,error:document.querySelector('[role="alert"]')?.textContent}));
   const install=calls.find(([c])=>c==='install_update');assert.equal(install[1].drafts.workbench.session,'未发送的草稿');
   assert.ok(calls.findIndex(([c])=>c==='save_update_drafts')<calls.findIndex(([c])=>c==='install_update'));
   assert.match(document.querySelector('[role="alert"]').textContent,/仍有任务/);
-  assert.equal(button('安装并重启').disabled,false);
+  assert.equal(button('Install and restart').disabled,false);
  }finally{await act(async()=>root.unmount());Object.assign(api,old);delete window.__TAURI_INTERNALS__;}
 });
 test('web preview never invokes native update commands',async()=>{
@@ -58,8 +58,8 @@ test('web preview never invokes native update commands',async()=>{
  try{
   await act(async()=>root.render(React.createElement(UpdateProvider,null,React.createElement(UpdateButton,{manual:true}))));
   assert.equal(document.querySelector('.has-update'),null);
-  await act(async()=>button('检查更新').click());
-  assert.match(document.querySelector('dialog').textContent,/网页预览不会检查或安装更新/);
+  await act(async()=>button('Check for updates').click());
+  assert.match(document.querySelector('dialog').textContent,/Web previews cannot update/);
   assert.equal(document.querySelector('dialog .primary').disabled,true);
  }finally{await act(async()=>root.unmount());Object.assign(api,old);}
 });

@@ -54,6 +54,8 @@ pub struct ProcessMetadata {
     pub started_at_ms: u128,
     pub timeout_ms: Option<u64>,
     pub termination_reason: Option<String>,
+    #[serde(skip)]
+    termination_signal_sent: bool,
 }
 
 impl ProcessMetadata {
@@ -71,6 +73,7 @@ impl ProcessMetadata {
             started_at_ms: now_ms(),
             timeout_ms,
             termination_reason: None,
+            termination_signal_sent: false,
         }
     }
     pub fn new(
@@ -90,6 +93,7 @@ impl ProcessMetadata {
             started_at_ms: now_ms(),
             timeout_ms,
             termination_reason: None,
+            termination_signal_sent: false,
         }
     }
 
@@ -113,6 +117,7 @@ impl ProcessMetadata {
             started_at_ms: now_ms(),
             timeout_ms: Some(timeout_ms),
             termination_reason: None,
+            termination_signal_sent: false,
         }
     }
 }
@@ -302,6 +307,15 @@ impl ProcessSupervisor {
     }
 
     pub fn request_stop(&self, run_id: &str, reason: &str) -> Result<bool, String> {
+        self.request_stop_with(run_id, reason, terminate_process_group)
+    }
+
+    fn request_stop_with(
+        &self,
+        run_id: &str,
+        reason: &str,
+        signal: impl FnOnce(u32) -> Result<(), String>,
+    ) -> Result<bool, String> {
         let mut processes = self
             .processes
             .lock()
@@ -312,7 +326,10 @@ impl ProcessSupervisor {
         process
             .termination_reason
             .get_or_insert_with(|| reason.to_string());
-        terminate_process_group(process.process_id)?;
+        if !process.termination_signal_sent {
+            signal(process.process_id)?;
+            process.termination_signal_sent = true;
+        }
         Ok(true)
     }
 
@@ -377,9 +394,18 @@ fn signal_process_group(process_id: u32, force: bool) -> Result<(), String> {
         let signal = if force { 9 } else { SIGTERM };
         if kill(-(process_id as i32), signal) != 0 {
             let error = std::io::Error::last_os_error();
-            if error.raw_os_error() != Some(3) {
+            // A group can finish exiting between signalling and inspecting the
+            // failure. Only an ESRCH probe proves cleanup is already complete;
+            // a live or inaccessible group must still report the original error.
+            if !group_disappeared(&error, || {
+                if kill(-(process_id as i32), 0) == 0 {
+                    Ok(())
+                } else {
+                    Err(std::io::Error::last_os_error())
+                }
+            }) {
                 return Err(format!(
-                    "failed to terminate process group {process_id}: {error}"
+                    "failed to terminate process group {process_id} with signal {signal}: {error}"
                 ));
             }
         }
@@ -400,9 +426,56 @@ fn signal_process_group(process_id: u32, force: bool) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(unix)]
+fn group_disappeared(
+    error: &std::io::Error,
+    probe: impl FnOnce() -> Result<(), std::io::Error>,
+) -> bool {
+    error.raw_os_error() == Some(3)
+        || (error.raw_os_error() == Some(1)
+            && probe().is_err_and(|error| error.raw_os_error() == Some(3)))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn repeated_stop_sends_term_once_but_retries_a_failed_signal() {
+        let registry = ProcessSupervisor::default();
+        registry
+            .register(ProcessMetadata::chat("stop-once", "/p", "s", 42, 1000))
+            .unwrap();
+        let calls = std::cell::Cell::new(0);
+        assert!(registry
+            .request_stop_with("stop-once", "chat_abort", |_| {
+                calls.set(calls.get() + 1);
+                Err("denied".into())
+            })
+            .is_err());
+        for _ in 0..2 {
+            registry
+                .request_stop_with("stop-once", "chat_abort", |_| {
+                    calls.set(calls.get() + 1);
+                    Ok(())
+                })
+                .unwrap();
+        }
+        assert_eq!(calls.get(), 2, "one failed attempt and one delivered TERM");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn disappearing_group_race_does_not_hide_live_permission_failures() {
+        let denied = std::io::Error::from_raw_os_error(1);
+        assert!(group_disappeared(&denied, || Err(
+            std::io::Error::from_raw_os_error(3)
+        )));
+        assert!(!group_disappeared(&denied, || Ok(())));
+        assert!(!group_disappeared(&denied, || Err(
+            std::io::Error::from_raw_os_error(1)
+        )));
+    }
 
     #[test]
     fn chat_ownership_is_not_a_synthetic_task_and_duplicate_ids_do_not_overwrite() {

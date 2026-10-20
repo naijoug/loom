@@ -5,10 +5,8 @@ export function reduceAppAndAgents(state: AppState, action: AppAction): AppState
     case "app/viewSelected":
       return {
         ...state,
-        app: { ...state.app, currentView: action.view, isCreatingTask: false },
+        app: { ...state.app, currentView: action.view },
       };
-    case "app/stageViewed":
-      return { ...state, app: { ...state.app, viewedStage: action.stage } };
     case "agents/loadStarted":
       return { ...state, app: { ...state.app, isLoadingAgents: true, agentError: null } };
     case "agents/loadFailed":

@@ -32,6 +32,30 @@ fn default_message_parts() -> Vec<ChatMessagePart> {
     Vec::new()
 }
 
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ToolMetadata {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub call_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kind: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub exit_code: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub diff_stats: Option<DiffStats>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub diff_preview: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DiffStats {
+    pub added: usize,
+    pub removed: usize,
+}
+
 /// text | tool | error parts (M0 sketch). Flexible fields for forward-compat JSON.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(
@@ -44,6 +68,8 @@ pub enum ChatMessagePart {
         text: String,
     },
     Tool {
+        #[serde(flatten)]
+        metadata: ToolMetadata,
         name: String,
         #[serde(
             default,
@@ -234,6 +260,10 @@ pub struct ChatExportResult {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChatSessionSummary {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub permission_mode: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub turn_status: Option<String>,
     pub id: String,
     pub title: String,
     pub agent_id: String,
@@ -312,7 +342,7 @@ pub struct ChatSessionPatch {
 pub enum ChatEventPayload {
     SessionCreated(Box<ChatSession>),
     SessionPatch(ChatSessionPatch),
-    Stream(ChatStreamEvent),
+    Stream(Box<ChatStreamEvent>),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -373,21 +403,6 @@ pub struct ChatUpdateMetaInput {
     /// When true, set title from the first user message (smart truncate).
     #[serde(default)]
     pub title_from_first_message: Option<bool>,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ChatPromoteInput {
-    pub project_path: String,
-    pub session_id: String,
-}
-
-#[derive(Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ChatPromoteResult {
-    pub task_id: String,
-    pub task: crate::models::Task,
-    pub session: ChatSession,
 }
 
 #[cfg(test)]

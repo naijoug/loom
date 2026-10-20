@@ -1,3 +1,5 @@
+import { translate } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 export type UpdatePhase = "disabled" | "idle" | "checking" | "current" | "available" | "downloading" | "ready" | "installing" | "restarting";
 export interface UpdateSnapshot {
   revision: number;
@@ -20,7 +22,8 @@ export const updateOffered = (phase: UpdatePhase) => ["available", "downloading"
 export function downloadPercent(state: UpdateSnapshot): number | undefined {
   return state.total && state.total > 0 ? Math.min(100, Math.floor(state.downloaded / state.total * 100)) : undefined;
 }
-export function updateLabel(state: UpdateSnapshot): string {
-  if (state.phase === "downloading") { const percent = downloadPercent(state); return percent === undefined ? "正在下载更新…" : `正在下载更新 ${percent}%`; }
-  return ({ disabled: "检查更新", idle: "检查更新", checking: "正在检查更新…", current: "已是最新版本", available: `发现新版本 ${state.version ?? ""}`, ready: "安装并重启", installing: "正在安装更新…", restarting: "正在重启…" } as Partial<Record<UpdatePhase,string>>)[state.phase] ?? "检查更新";
+export function updateLabel(state: UpdateSnapshot, t: (key: MessageKey, values?: Record<string, string | number>) => string = (key, values) => translate("en", key, values)): string {
+  if (state.phase === "downloading") { const percent = downloadPercent(state); return percent === undefined ? t("updateDownloading") : t("updatePercent", { percent }); }
+  const keys: Record<UpdatePhase, MessageKey> = { disabled: "checkUpdates", idle: "checkUpdates", checking: "updateChecking", current: "updateCurrent", available: "updateAvailable", downloading: "updateDownloading", ready: "installRestart", installing: "updateInstalling", restarting: "updateRestarting" };
+  return t(keys[state.phase], { version: state.version ?? "" });
 }

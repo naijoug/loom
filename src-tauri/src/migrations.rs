@@ -3,11 +3,8 @@ use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
 use std::{fs, path::Path};
 
-pub const TASK_SCHEMA_VERSION: u32 = 1;
 pub const AGENT_STORE_SCHEMA_VERSION: u32 = 1;
 pub const SETTINGS_SCHEMA_VERSION: u32 = 1;
-pub const TERMINAL_STORE_SCHEMA_VERSION: u32 = 1;
-pub const PROJECT_PREFERENCES_SCHEMA_VERSION: u32 = 1;
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]

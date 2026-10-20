@@ -4,7 +4,66 @@ use std::path::Path;
 
 pub const ADAPTER_CODEX: &str = "codex_cli";
 pub const ADAPTER_CLAUDE: &str = "claude_code_cli";
+pub const ADAPTER_OPENCODE: &str = "opencode_cli";
 pub const ADAPTER_GROK: &str = "grok_cli";
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AgentCapabilities {
+    pub structured_stream: bool,
+    pub tool_events: bool,
+    pub native_resume: bool,
+    pub modes: Vec<ModeCapability>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModeCapability {
+    pub mode: String,
+    pub policy: String,
+}
+
+pub fn capabilities(adapter: &str) -> AgentCapabilities {
+    let policies = match adapter {
+        ADAPTER_CODEX => [
+            "--sandbox read-only; approval_policy=never",
+            "--sandbox workspace-write; approval_policy=never",
+            "--sandbox workspace-write; approval_policy=never",
+        ],
+        ADAPTER_CLAUDE | ADAPTER_GROK => [
+            "--permission-mode plan",
+            "--permission-mode acceptEdits",
+            "--permission-mode auto",
+        ],
+        ADAPTER_OPENCODE => [
+            "read tools only; edit/bash/task denied",
+            "build; CLI permissions",
+            "build; automatic permissions; external_directory=deny",
+        ],
+        _ => [
+            "Custom CLI policy",
+            "Custom CLI policy",
+            "Custom CLI policy",
+        ],
+    };
+    let structured = matches!(
+        adapter,
+        ADAPTER_CODEX | ADAPTER_CLAUDE | ADAPTER_GROK | ADAPTER_OPENCODE
+    );
+    AgentCapabilities {
+        structured_stream: structured,
+        tool_events: structured,
+        native_resume: structured,
+        modes: ["explore", "ask", "auto"]
+            .into_iter()
+            .zip(policies)
+            .map(|(mode, policy)| ModeCapability {
+                mode: mode.into(),
+                policy: policy.into(),
+            })
+            .collect(),
+    }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -15,18 +74,6 @@ pub enum AgentStage {
     Debugging,
     Testing,
     Documentation,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PrepareAgentInvocationInput {
-    pub project_path: String,
-    pub task_id: String,
-    pub agent_id: String,
-    pub stage: AgentStage,
-    pub prompt: String,
-    #[serde(default)]
-    pub resume_command: Option<String>,
 }
 
 impl AgentStage {
@@ -74,6 +121,8 @@ impl AdapterInvocationRequest<'_> {
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PreparedAgentInvocation {
+    #[serde(default)]
+    pub environment: std::collections::BTreeMap<String, String>,
     pub program: String,
     pub args: Vec<String>,
     pub cwd: String,
@@ -94,6 +143,7 @@ struct CodexAdapter;
 struct ClaudeAdapter;
 struct GrokAdapter;
 struct CustomCliAdapter;
+struct OpencodeAdapter;
 
 pub fn prepare_invocation(
     agent: &AgentConfig,
@@ -158,6 +208,7 @@ fn adapter_for(agent: &AgentConfig) -> Box<dyn AgentAdapter> {
         ADAPTER_CODEX => Box::new(CodexAdapter),
         ADAPTER_CLAUDE => Box::new(ClaudeAdapter),
         ADAPTER_GROK => Box::new(GrokAdapter),
+        ADAPTER_OPENCODE => Box::new(OpencodeAdapter),
         _ => Box::new(CustomCliAdapter),
     }
 }
@@ -181,6 +232,7 @@ impl AgentAdapter for CodexAdapter {
         let mut args = vec![
             "exec".to_string(),
             "--json".to_string(),
+            "--skip-git-repo-check".to_string(),
             "--cd".to_string(),
             request.project_path.display().to_string(),
             "--sandbox".to_string(),
@@ -218,7 +270,9 @@ impl AgentAdapter for ClaudeAdapter {
         agent: &AgentConfig,
         request: &AdapterInvocationRequest<'_>,
     ) -> Result<PreparedAgentInvocation, String> {
-        let permission_mode = if request.needs_write_access() {
+        let permission_mode = if request.chat_permission_mode == Some("auto") {
+            Some("auto")
+        } else if request.needs_write_access() {
             Some("acceptEdits")
         } else if request.chat_permission_mode.is_some() {
             Some("plan")
@@ -282,7 +336,9 @@ impl AgentAdapter for GrokAdapter {
             "--include-partial-messages".to_string(),
         ]);
 
-        let permission_mode = if request.needs_write_access() {
+        let permission_mode = if request.chat_permission_mode == Some("auto") {
+            "auto"
+        } else if request.needs_write_access() {
             "acceptEdits"
         } else {
             "plan"
@@ -317,6 +373,58 @@ impl AgentAdapter for GrokAdapter {
             resumed,
             request.project_path,
         ))
+    }
+}
+
+impl AgentAdapter for OpencodeAdapter {
+    fn prepare(
+        &self,
+        agent: &AgentConfig,
+        request: &AdapterInvocationRequest<'_>,
+    ) -> Result<PreparedAgentInvocation, String> {
+        let resume = request
+            .resume_command
+            .map(|value| parse_resume_session_id(ADAPTER_OPENCODE, &agent.command, value))
+            .transpose()?;
+        let mut args: Vec<String> = vec![
+            "run".into(),
+            "--format".into(),
+            "json".into(),
+            "--dir".into(),
+            request.project_path.display().to_string(),
+            "--agent".into(),
+            if request.needs_write_access() {
+                "build"
+            } else {
+                "plan"
+            }
+            .into(),
+        ];
+        if let Some(id) = &resume {
+            args.extend(["--session".into(), id.clone()]);
+        }
+        if request.embed_prompt {
+            args.extend(["--".into(), request.prompt.into()]);
+        }
+        let mut invocation = prepared(
+            agent,
+            args,
+            !request.embed_prompt,
+            "opencode_json",
+            resume.is_some(),
+            request.project_path,
+        );
+        let permissions = if !request.needs_write_access() {
+            serde_json::json!({"*":"deny", "read":"allow", "glob":"allow", "grep":"allow", "webfetch":"allow", "websearch":"allow"})
+        } else if request.chat_permission_mode == Some("auto") {
+            serde_json::json!({"*":"allow", "external_directory":"deny"})
+        } else {
+            serde_json::json!({"*":"ask", "read":"allow", "glob":"allow", "grep":"allow", "edit":"allow", "external_directory":"deny"})
+        };
+        invocation
+            .environment
+            .insert("OPENCODE_PERMISSION".into(), permissions.to_string());
+        Ok(invocation)
     }
 }
 
@@ -388,6 +496,7 @@ fn prepared(
     project_path: &Path,
 ) -> PreparedAgentInvocation {
     PreparedAgentInvocation {
+        environment: Default::default(),
         program: agent.command.trim().to_string(),
         args,
         cwd: project_path.display().to_string(),
@@ -411,6 +520,7 @@ pub(crate) fn parse_resume_session_id(
         .ok_or("resume command does not match the configured executable")?;
     let fields: Vec<_> = suffix.split_whitespace().collect();
     let operation = match adapter {
+        ADAPTER_OPENCODE => fields.first().is_some_and(|v| *v == "--session"),
         ADAPTER_CODEX => fields.first().is_some_and(|v| *v == "resume"),
         ADAPTER_CLAUDE => fields.first().is_some_and(|v| *v == "--resume"),
         ADAPTER_GROK => fields
@@ -658,7 +768,7 @@ mod tests {
                         assert_eq!(invocation.stdin_prompt, !embed_prompt);
                     } else {
                         let expected = if stage.needs_write_access() {
-                            "acceptEdits"
+                            "auto"
                         } else {
                             "plan"
                         };
@@ -726,5 +836,53 @@ mod tests {
                 );
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod opencode_tests {
+    use super::*;
+    #[test]
+    fn opencode_maps_modes_without_shell_or_prompt_option_injection() {
+        let agent: AgentConfig = serde_json::from_value(serde_json::json!({
+            "id":"opencode","name":"OpenCode","command":"/tools/opencode","args":[],"workingDirectoryPolicy":"project_root","capabilities":[],"adapterType":ADAPTER_OPENCODE,"canWriteFiles":true,"canRunCommands":true,"enabled":true,"available":true
+        })).unwrap();
+        for mode in ["explore", "ask", "auto"] {
+            let request = AdapterInvocationRequest {
+                project_path: Path::new("/project"),
+                prompt: "--prompt-looking-text",
+                prompt_file: None,
+                stage: AgentStage::Planning,
+                resume_command: Some("/tools/opencode --session ses_123"),
+                chat_permission_mode: Some(mode),
+                embed_prompt: true,
+            };
+            let invocation = prepare_invocation(&agent, &request).unwrap();
+            assert_eq!(invocation.output_mode, "opencode_json");
+            assert!(invocation.resumed);
+            assert!(invocation
+                .args
+                .windows(2)
+                .any(|pair| pair == ["--session", "ses_123"]));
+            assert_eq!(
+                &invocation.args[invocation.args.len() - 2..],
+                &["--", "--prompt-looking-text"]
+            );
+            let policy: serde_json::Value =
+                serde_json::from_str(&invocation.environment["OPENCODE_PERMISSION"]).unwrap();
+            if mode == "explore" {
+                assert_eq!(policy["*"], "deny");
+                assert_eq!(policy["read"], "allow");
+            } else {
+                assert_eq!(policy["external_directory"], "deny");
+            }
+        }
+        assert!(capabilities(ADAPTER_OPENCODE).native_resume);
+        assert!(parse_resume_session_id(
+            ADAPTER_OPENCODE,
+            "/tools/opencode",
+            "/tools/opencode --session ses_123 --auto"
+        )
+        .is_err());
     }
 }

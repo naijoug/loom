@@ -29,7 +29,7 @@ export function draftFromAgent(agent: AgentConfig): AgentConfigInput {
 }
 
 export function isBuiltInAgent(agent: AgentConfig) {
-  return ["agent-codex", "agent-claude", "agent-dummy"].includes(agent.id);
+  return ["agent-codex", "agent-claude", "agent-grok", "agent-opencode", "agent-dummy"].includes(agent.id);
 }
 
 export function profileSummary(agent: AgentConfig) {

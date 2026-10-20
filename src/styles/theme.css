@@ -108,48 +108,6 @@
   --theme-border-subtle: var(--border);
   --theme-border-strong: var(--border-strong);
   --theme-error: var(--red);
-
-  --loom-bg: var(--bg);
-  --loom-bg-2: var(--bg-2);
-  --loom-sidebar: var(--sidebar);
-  --loom-surface: var(--surface);
-  --loom-surface-2: var(--surface-2);
-  --loom-inset: var(--inset);
-  --loom-selected: var(--selected);
-  --loom-hover: var(--hover);
-  --loom-border: var(--border);
-  --loom-border-strong: var(--border-strong);
-  --loom-text: var(--text);
-  --loom-text-2: var(--text-2);
-  --loom-text-3: var(--text-3);
-  --loom-accent: var(--accent);
-  --loom-accent-ink: var(--accent-ink);
-  --loom-accent-fill: var(--accent-fill);
-  --loom-accent-soft: var(--accent-soft);
-  --loom-green: var(--green);
-  --loom-green-soft: var(--green-soft);
-  --loom-amber: var(--amber);
-  --loom-amber-soft: var(--amber-soft);
-  --loom-red: var(--red);
-  --loom-red-soft: var(--red-soft);
-  --loom-add: var(--add);
-  --loom-del: var(--del);
-  --loom-agent-codex: var(--agent-codex);
-  --loom-agent-claude: var(--agent-claude);
-  --loom-agent-hermes: var(--agent-hermes);
-  --loom-shadow: var(--shadow);
-  --loom-font: var(--font);
-  --loom-mono: var(--mono);
-  --loom-fs-title: 15px;
-  --loom-fs-h: var(--fs-h);
-  --loom-fs-body: var(--fs-body);
-  --loom-fs-sm: var(--fs-sm);
-  --loom-fs-xs: var(--fs-xs);
-  --loom-fs-label: var(--fs-label);
-  --loom-fs-mono: var(--fs-mono);
-  --loom-r-card: var(--r-card);
-  --loom-r-ctl: var(--r-ctl);
-  --loom-r-chip: var(--r-chip);
 }
 
 html,
@@ -230,4 +188,17 @@ body {
   background: var(--bg);
   color: var(--text-2);
   font-family: var(--font-body);
+}
+
+:root {
+  --chat-bg: #fafaf8; --chat-sidebar: #f1f2ef; --chat-surface: #fff;
+  --chat-border: #d8dbd7; --chat-text: #202329; --chat-muted: #535b65;
+  --chat-dim: #626975; --chat-accent: #365fae; --chat-ok: #267444;
+  --chat-warn: #855b10; --chat-danger: #b03730;
+}
+[data-theme="dark"] {
+  --chat-bg: #111214; --chat-sidebar: #0c0d0f; --chat-surface: #17181b;
+  --chat-border: #2e3036; --chat-text: #e6e6e3; --chat-muted: #9a9da4;
+  --chat-dim: #8b8e95; --chat-accent: #7aa2f7; --chat-ok: #8fd6ae;
+  --chat-warn: #e5b26b; --chat-danger: #f0948b;
 }

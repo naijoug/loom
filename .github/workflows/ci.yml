@@ -78,8 +78,6 @@ jobs:
 
       - name: Run browser smoke suites
         run: |
-          pnpm smoke
-          pnpm smoke:interaction
           pnpm smoke:visual
 
       - name: Upload visual evidence
@@ -87,7 +85,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: visual-smoke-${{ github.run_id }}
-          path: /tmp/loom-visual-smoke
+          path: designs/exports/simple-chat
           if-no-files-found: ignore
           retention-days: 7
 

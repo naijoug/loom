@@ -89,6 +89,7 @@ mod tests {
         let saved = save_app_settings_to_path(
             &path,
             AppSettings {
+                locale: crate::models::Locale::ZhCn,
                 theme_mode: crate::models::ThemeMode::Dark,
                 confirm_before_commands: false,
                 command_timeout_seconds: 9999,
@@ -150,6 +151,7 @@ mod tests {
             settings.theme_mode,
             crate::models::ThemeMode::Dark
         ));
+        assert_eq!(settings.locale, crate::models::Locale::En);
         assert_eq!(stored["schemaVersion"], SETTINGS_SCHEMA_VERSION);
         assert_eq!(stored["data"]["commandTimeoutSeconds"], 42);
         fs::remove_dir_all(root).ok();

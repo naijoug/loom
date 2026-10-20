@@ -1,6 +1,4 @@
 use crate::models::{now_ms, ProjectMetadata, ProjectSummary, CURRENT_SCHEMA_VERSION};
-#[cfg(test)]
-use serde::de::DeserializeOwned;
 use serde::Serialize;
 use serde_json::Value;
 use std::{
@@ -183,33 +181,6 @@ fn ensure_parent_dir(path: &Path) -> Result<(), String> {
     Ok(())
 }
 
-#[cfg(test)]
-pub fn read_json_file<T>(path: &Path) -> Result<T, String>
-where
-    T: DeserializeOwned,
-{
-    let content = fs::read_to_string(path)
-        .map_err(|error| format!("failed to read {}: {error}", path.display()))?;
-    serde_json::from_str(&content)
-        .map_err(|error| format!("failed to parse {}: {error}", path.display()))
-}
-
-pub fn project_loom_dir(project_path: &Path) -> PathBuf {
-    project_path.join(".loom")
-}
-
-pub fn project_tasks_dir(project_path: &Path) -> PathBuf {
-    project_loom_dir(project_path).join("tasks")
-}
-
-pub fn project_logs_dir(project_path: &Path) -> PathBuf {
-    project_loom_dir(project_path).join("logs")
-}
-
-pub fn project_plans_dir(project_path: &Path) -> PathBuf {
-    project_path.join("docs").join("plans")
-}
-
 pub fn atomic_write_json<T>(path: &Path, value: &T) -> Result<(), String>
 where
     T: Serialize,
@@ -229,21 +200,6 @@ where
     fs::rename(&temp_path, path)
         .map_err(|error| format!("failed to replace {}: {error}", path.display()))?;
 
-    Ok(())
-}
-
-pub fn atomic_write_text(path: &Path, content: &str) -> Result<(), String> {
-    ensure_parent_dir(path)?;
-    let file_name = path
-        .file_name()
-        .and_then(|name| name.to_str())
-        .ok_or_else(|| format!("invalid target file name: {}", path.display()))?;
-    let sequence = TEMP_FILE_SEQUENCE.fetch_add(1, Ordering::Relaxed);
-    let temp_path = path.with_file_name(format!("{file_name}.tmp-{}-{sequence}", now_ms()));
-    fs::write(&temp_path, content)
-        .map_err(|error| format!("failed to write {}: {error}", temp_path.display()))?;
-    fs::rename(&temp_path, path)
-        .map_err(|error| format!("failed to replace {}: {error}", path.display()))?;
     Ok(())
 }
 

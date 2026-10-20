@@ -109,6 +109,7 @@ mod tests {
         fn request(&self, mode: &str) -> Request {
             Request {
                 prepared: PreparedAgentInvocation {
+                    environment: Default::default(),
                     program: "/bin/sh".into(),
                     args: vec![
                         format!(
@@ -480,6 +481,9 @@ impl Lines {
 
 #[derive(Default)]
 struct Output {
+    reported_error: Option<String>,
+    file_changes: Option<super::file_changes::FileChanges>,
+    streamed_text: bool,
     bytes: usize,
     lines: usize,
     stdout: Vec<String>,
@@ -508,7 +512,7 @@ impl Output {
             if self.lines > request.limits.max_lines {
                 return Err("output_limit: CLI emitted too many lines".into());
             }
-            let line = agents::redact_sensitive_text(&line);
+            let line = agents::stream::redact_stream_line(&line);
             observe(Observation::Log {
                 stderr,
                 line: line.clone(),
@@ -517,13 +521,44 @@ impl Output {
                 self.stderr.push(line);
                 continue;
             }
-            let parsed = parse_chat_stream_line(&request.prepared.output_mode, &line);
+            let mut parsed = parse_chat_stream_line(&request.prepared.output_mode, &line);
+            if let Some(warning) = &parsed.warning {
+                observe(Observation::Log {
+                    stderr: true,
+                    line: format!("[warning] {warning}"),
+                })?;
+            }
+            if let Some(snapshot) = &mut self.file_changes {
+                snapshot.enrich(&line, &mut parsed.parts);
+            }
+            if let Ok(value) = serde_json::from_str::<serde_json::Value>(&line) {
+                if value["type"] == "stream_event"
+                    && value.pointer("/event/delta/type").and_then(|v| v.as_str())
+                        == Some("text_delta")
+                {
+                    self.streamed_text = true;
+                } else if value["type"] == "assistant" && !parsed.delta.is_empty() {
+                    if self.streamed_text {
+                        parsed.delta.clear();
+                    }
+                    self.streamed_text = false;
+                }
+            }
             self.stdout.push(line);
             for part in parsed.parts {
+                if let ChatMessagePart::Error {
+                    message,
+                    code: Some(code),
+                } = &part
+                {
+                    if code == "cli_reported_error" {
+                        self.reported_error = Some(message.clone());
+                    }
+                }
                 if self.parts.len() >= 1_000 {
                     return Err("output_limit: CLI emitted too many tool parts".into());
                 }
-                self.parts.push(part.clone());
+                super::tools::merge_part(&mut self.parts, part.clone());
                 emit(event(request, String::new(), Some(part), false))?;
             }
             if !parsed.delta.is_empty() {
@@ -589,9 +624,29 @@ pub(super) async fn run_observed(
     if request.prepared.stdin_prompt && request.stdin_text.is_none() {
         return Err("stdin prompt was requested but no input was supplied".into());
     }
+    let file_changes = if request.prepared.output_mode == "codex_json"
+        && request
+            .prepared
+            .args
+            .windows(2)
+            .any(|pair| pair == ["--sandbox", "workspace-write"])
+    {
+        let root = std::path::PathBuf::from(&request.prepared.cwd);
+        Some(
+            tokio::task::spawn_blocking(move || super::file_changes::FileChanges::capture(&root))
+                .await
+                .map_err(|error| error.to_string())?,
+        )
+    } else {
+        None
+    };
+    if let Some(reason) = cancelled() {
+        return Ok(chat_stop_outcome(Some(reason), String::new(), Vec::new()));
+    }
     let mut command = Command::new(&request.prepared.program);
     command
         .args(&request.prepared.args)
+        .envs(&request.prepared.environment)
         .current_dir(&request.prepared.cwd)
         .kill_on_drop(true)
         .stdout(Stdio::piped())
@@ -634,7 +689,10 @@ pub(super) async fn run_observed(
             stdin.shutdown().await
         }))
     });
-    let mut output = Output::default();
+    let mut output = Output {
+        file_changes,
+        ..Default::default()
+    };
     let (mut out_frame, mut err_frame) = (Lines::default(), Lines::default());
     let (mut out_buf, mut err_buf) = ([0u8; 8192], [0u8; 8192]);
     let (mut out_eof, mut err_eof) = (false, false);
@@ -799,7 +857,26 @@ pub(super) async fn run_observed(
             termination_reason: Some(status.to_string()),
         });
     }
-    let captured = session_capture::capture_session_from_lines(
+    if let Some(error) = output.reported_error {
+        return Ok(ChatTurnOutcome {
+            content: output.content,
+            parts: output.parts,
+            resume_command: None,
+            status: "error".into(),
+            error_summary: Some(error),
+            exit_code: status.code(),
+            termination_reason: Some("agent_reported_error".into()),
+        });
+    }
+    let adapter = match request.prepared.output_mode.as_str() {
+        "codex_json" => crate::agent_adapter::ADAPTER_CODEX,
+        "claude_stream_json" => crate::agent_adapter::ADAPTER_CLAUDE,
+        "streaming_json" => crate::agent_adapter::ADAPTER_GROK,
+        "opencode_json" => crate::agent_adapter::ADAPTER_OPENCODE,
+        _ => "cli",
+    };
+    let captured = session_capture::capture_session_for_adapter(
+        adapter,
         &request.prepared.program,
         &output.stdout,
         &output.stderr,
@@ -817,4 +894,68 @@ pub(super) async fn run_observed(
         exit_code: status.code(),
         termination_reason: None,
     })
+}
+
+#[cfg(test)]
+mod preparing_cancellation {
+    use super::*;
+    #[tokio::test]
+    async fn cancellation_during_file_baseline_prevents_agent_spawn() {
+        let root = std::env::temp_dir()
+            .join(crate::models::IdGenerator::default().next("loom-cancel-before-spawn"));
+        std::fs::create_dir_all(&root).unwrap();
+        let checks = std::cell::Cell::new(0);
+        let request = Request {
+            prepared: PreparedAgentInvocation {
+                program: "loom-nonexistent-must-not-spawn".into(),
+                args: vec!["--sandbox".into(), "workspace-write".into()],
+                cwd: root.to_string_lossy().into_owned(),
+                stdin_prompt: false,
+                output_mode: "codex_json".into(),
+                resumed: false,
+                environment: Default::default(),
+            },
+            project_key: root.to_string_lossy().into_owned(),
+            session_id: "s".into(),
+            turn_id: "t".into(),
+            message_id: "m".into(),
+            stdin_text: None,
+            limits: Default::default(),
+        };
+        let result = run_observed(
+            request,
+            || {
+                checks.set(checks.get() + 1);
+                (checks.get() > 1).then_some(super::super::STOP_REASON_ABORT)
+            },
+            |_| Ok(()),
+            |_| panic!("agent was started after cancellation"),
+        )
+        .await
+        .unwrap();
+        assert_eq!(result.status, "aborted");
+        std::fs::remove_dir_all(root).unwrap();
+    }
+}
+
+#[cfg(all(test, unix))]
+mod structured_failure_tests {
+    use super::*;
+    #[tokio::test]
+    async fn provider_error_with_zero_exit_is_not_success_or_resumable() {
+        let request = Request {
+            prepared: PreparedAgentInvocation { program:"/bin/sh".into(),args:vec!["-c".into(),r#"printf '%s\n' '{"type":"error","error":{"message":"provider unavailable"}}'"#.into()],cwd:std::env::temp_dir().to_string_lossy().into_owned(),stdin_prompt:false,output_mode:"opencode_json".into(),resumed:false,environment:Default::default() },
+            project_key:"/fixture".into(),session_id:"session".into(),turn_id:crate::models::IdGenerator::default().next("structured-failure"),message_id:"message".into(),stdin_text:None,limits:Default::default()
+        };
+        let result = run_observed(request, || None, |_| Ok(()), |_| Ok(()))
+            .await
+            .unwrap();
+        assert_eq!(result.status, "error");
+        assert_eq!(result.exit_code, Some(0));
+        assert_eq!(
+            result.error_summary.as_deref(),
+            Some("provider unavailable")
+        );
+        assert!(result.resume_command.is_none());
+    }
 }

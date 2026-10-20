@@ -3,6 +3,7 @@ use std::path::Path;
 
 pub const ADAPTER_CODEX: &str = "codex_cli";
 pub const ADAPTER_CLAUDE_CODE: &str = "claude_code_cli";
+pub const ADAPTER_OPENCODE: &str = "opencode_cli";
 pub const ADAPTER_GROK: &str = "grok_cli";
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -31,6 +32,20 @@ pub fn capture_session_from_lines(
     }
 }
 
+pub fn capture_session_for_adapter(
+    adapter: &str,
+    command: &str,
+    stdout_lines: &[String],
+    stderr_lines: &[String],
+) -> CapturedSession {
+    let mut captured = capture_session_from_lines(command, stdout_lines, stderr_lines);
+    captured.resume_command = captured
+        .session_id
+        .as_deref()
+        .and_then(|id| resume_command_for_adapter(adapter, command, id));
+    captured
+}
+
 pub fn resume_command_for_adapter(
     adapter_type: &str,
     command: &str,
@@ -40,6 +55,7 @@ pub fn resume_command_for_adapter(
         ADAPTER_CLAUDE_CODE => Some(format!("{command} --resume {session_id}")),
         ADAPTER_CODEX => Some(format!("{command} resume {session_id}")),
         ADAPTER_GROK => Some(format!("{command} --resume {session_id}")),
+        ADAPTER_OPENCODE => Some(format!("{command} --session {session_id}")),
         _ => None,
     }
 }
@@ -54,6 +70,7 @@ pub fn adapter_type_for_command(command: &str) -> Option<&'static str> {
         "codex" => Some(ADAPTER_CODEX),
         "claude" | "claude-code" => Some(ADAPTER_CLAUDE_CODE),
         "grok" => Some(ADAPTER_GROK),
+        "opencode" => Some(ADAPTER_OPENCODE),
         _ => None,
     }
 }
@@ -70,27 +87,13 @@ pub fn find_session_id_in_line(line: &str) -> Option<String> {
         })
 }
 
-pub fn display_log_lines_for_command(command: &str, line: &str) -> Vec<String> {
-    let Some(adapter_type) = adapter_type_for_command(command) else {
-        return vec![line.to_string()];
-    };
-    let Ok(value) = serde_json::from_str::<Value>(line) else {
-        return vec![line.to_string()];
-    };
-
-    match adapter_type {
-        ADAPTER_CODEX => codex_log_lines(&value),
-        ADAPTER_CLAUDE_CODE => claude_log_lines(&value),
-        _ => vec![line.to_string()],
-    }
-}
-
 pub fn find_session_id(value: &Value) -> Option<String> {
     string_field_deep(
         value,
         &[
             "session_id",
             "sessionId",
+            "sessionID",
             "thread_id",
             "threadId",
             "conversation_id",
@@ -98,7 +101,7 @@ pub fn find_session_id(value: &Value) -> Option<String> {
     )
     .map(str::to_string)
     .or_else(|| {
-        let event = event_type(value)?;
+        let event = string_field(value, "type")?;
         if event == "thread.started" {
             string_field_deep(value, &["id"]).map(str::to_string)
         } else {
@@ -107,138 +110,8 @@ pub fn find_session_id(value: &Value) -> Option<String> {
     })
 }
 
-fn event_type(value: &Value) -> Option<String> {
-    string_field(value, "type")
-        .or_else(|| value.get("msg").and_then(|msg| string_field(msg, "type")))
-        .or_else(|| {
-            value
-                .get("event")
-                .and_then(|event| string_field(event, "type"))
-        })
-        .or_else(|| string_field(value, "event"))
-        .map(str::to_string)
-}
-
-fn claude_log_lines(value: &Value) -> Vec<String> {
-    match event_type(value).as_deref() {
-        Some("system") => find_session_id(value)
-            .map(|id| vec![format!("Session started: {id}")])
-            .unwrap_or_default(),
-        Some("assistant") => assistant_text_lines(value),
-        Some("stream_event") => string_field_deep(value, &["text"])
-            .map(split_log_text)
-            .unwrap_or_default(),
-        Some("result") => {
-            if bool_field(value, "is_error") == Some(true) {
-                string_field(value, "result")
-                    .map(split_log_text)
-                    .unwrap_or_default()
-            } else {
-                Vec::new()
-            }
-        }
-        Some(kind) => vec![format!("[{kind}]")],
-        None => Vec::new(),
-    }
-}
-
-fn codex_log_lines(value: &Value) -> Vec<String> {
-    let event = event_type(value).unwrap_or_default();
-    if event == "thread.started" {
-        return find_session_id(value)
-            .map(|id| vec![format!("Session started: {id}")])
-            .unwrap_or_default();
-    }
-    if is_agent_message_event(&event, value) {
-        return assistant_text_lines(value);
-    }
-    if event.contains("exec_command") || event.contains("command") {
-        if let Some(command) = string_field_deep(value, &["command", "cmd"]) {
-            return vec![format!("$ {command}")];
-        }
-        if let Some(output) = string_field_deep(value, &["output", "text", "delta"]) {
-            return split_log_text(output);
-        }
-    }
-    if event.is_empty() {
-        Vec::new()
-    } else {
-        vec![format!("[{event}]")]
-    }
-}
-
-fn is_agent_message_event(event: &str, value: &Value) -> bool {
-    event.contains("agent_message")
-        || event.contains("assistant")
-        || contains_type_value(value, &["agent_message", "assistant"])
-        || string_field_deep(value, &["role"]) == Some("assistant")
-}
-
-fn contains_type_value(value: &Value, expected: &[&str]) -> bool {
-    match value {
-        Value::Object(map) => {
-            map.get("type")
-                .and_then(Value::as_str)
-                .is_some_and(|value| expected.contains(&value))
-                || map
-                    .values()
-                    .any(|child| contains_type_value(child, expected))
-        }
-        Value::Array(items) => items
-            .iter()
-            .any(|child| contains_type_value(child, expected)),
-        _ => false,
-    }
-}
-
-fn assistant_text_lines(value: &Value) -> Vec<String> {
-    assistant_text_chunks(value)
-        .into_iter()
-        .flat_map(|text| split_log_text(&text))
-        .collect()
-}
-
-fn assistant_text_chunks(value: &Value) -> Vec<String> {
-    let mut output = Vec::new();
-    collect_text_values(value, &mut output);
-    output
-        .into_iter()
-        .filter(|text| !text.trim().is_empty())
-        .collect()
-}
-
-fn collect_text_values(value: &Value, output: &mut Vec<String>) {
-    match value {
-        Value::Object(map) => {
-            for (key, child) in map {
-                if matches!(
-                    key.as_str(),
-                    "text" | "message" | "content" | "delta" | "result"
-                ) {
-                    if let Some(text) = child.as_str() {
-                        if !text.trim().is_empty() {
-                            output.push(text.to_string());
-                        }
-                    }
-                }
-                collect_text_values(child, output);
-            }
-        }
-        Value::Array(items) => {
-            for item in items {
-                collect_text_values(item, output);
-            }
-        }
-        _ => {}
-    }
-}
-
 fn string_field<'a>(value: &'a Value, key: &str) -> Option<&'a str> {
     value.get(key).and_then(Value::as_str)
-}
-
-fn bool_field(value: &Value, key: &str) -> Option<bool> {
-    value.get(key).and_then(Value::as_bool)
 }
 
 fn string_field_deep<'a>(value: &'a Value, keys: &[&str]) -> Option<&'a str> {
@@ -257,14 +130,6 @@ fn string_field_deep<'a>(value: &'a Value, keys: &[&str]) -> Option<&'a str> {
             .find_map(|child| string_field_deep(child, keys)),
         _ => None,
     }
-}
-
-fn split_log_text(text: &str) -> Vec<String> {
-    text.lines()
-        .map(str::trim_end)
-        .filter(|line| !line.trim().is_empty())
-        .map(str::to_string)
-        .collect()
 }
 
 #[cfg(test)]
@@ -305,25 +170,5 @@ mod tests {
 
         assert_eq!(captured.session_id.as_deref(), Some("session-1"));
         assert_eq!(captured.resume_command, None);
-    }
-
-    #[test]
-    fn renders_structured_codex_log_lines_for_display() {
-        let lines = display_log_lines_for_command(
-            "codex",
-            r#"{"type":"agent_message","message":"Implemented the fix."}"#,
-        );
-
-        assert_eq!(lines, vec!["Implemented the fix."]);
-    }
-
-    #[test]
-    fn renders_structured_claude_log_lines_for_display() {
-        let lines = display_log_lines_for_command(
-            "claude",
-            r#"{"type":"assistant","message":{"content":[{"type":"text","text":"Checking tests"}]}}"#,
-        );
-
-        assert_eq!(lines, vec!["Checking tests"]);
     }
 }

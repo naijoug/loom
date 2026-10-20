@@ -1,0 +1,24 @@
+.chat-settings { display: flex; height: 100vh; background: var(--chat-bg); color: var(--chat-text); font-family: "Geist Sans", "PingFang SC", sans-serif; font-size: 13px; }
+.chat-settings > aside { width: 230px; flex-shrink: 0; padding: 45px 18px 25px; background: var(--chat-sidebar); border-right: 1px solid var(--chat-border); }
+.chat-settings aside > button { display: flex; gap: 8px; align-items: center; color: var(--chat-muted); }
+.chat-settings h1 { font-size: 22px; margin: 30px 10px 22px; }
+.chat-settings nav button { display: block; width: 100%; text-align: left; margin-bottom: 7px; padding: 10px; }
+.chat-settings [aria-current="page"], .chat-settings [aria-checked="true"] { color: var(--chat-accent); border-color: var(--chat-border); background: var(--chat-surface); }
+.chat-settings > main { flex: 1; min-width: 0; padding: 55px 36px; overflow: auto; }
+.chat-settings h2 { font-size: 24px; font-weight: 500; margin: 0 0 26px; }
+.chat-settings h3 { font-size: 15px; margin: 0 0 16px; }
+.chat-settings section { margin-top: 30px; padding: 24px 0; border-top: 1px solid var(--chat-border); }
+.chat-settings p { color: var(--chat-muted); line-height: 1.7; }
+.settings-actions { display: flex; gap: 10px; margin-bottom: 18px; }
+.settings-actions button { border-color: var(--chat-border); background: var(--chat-surface); }
+.settings-table-wrap { overflow-x: auto; }
+.chat-settings table { border-collapse: collapse; width: 100%; min-width: 650px; }
+.chat-settings th { text-align: left; color: var(--chat-muted); font-size: 11px; font-weight: 500; }
+.chat-settings td, .chat-settings th { padding: 12px 10px; border-bottom: 1px solid var(--chat-border); vertical-align: top; }
+.chat-settings td code { white-space: normal; overflow-wrap: anywhere; }
+.chat-settings td small { display: block; font-size: 10px; margin-top: 6px; color: var(--chat-dim); }
+.settings-agent-form { border: 1px solid var(--chat-border); border-radius: 12px; padding: 22px; max-width: 650px; }
+.settings-agent-form label { display: flex; flex-direction: column; gap: 7px; margin: 14px 0; }
+.settings-agent-form input, .settings-agent-form textarea, .settings-agent-form select { padding: 9px; }
+.chat-settings [role="radiogroup"] { display: flex; gap: 12px; }
+@media (max-width: 759px) { .chat-settings > aside { width: 175px; padding-inline: 8px; } .chat-settings > main { padding: 45px 18px; } }
