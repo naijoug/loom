@@ -1,0 +1,11 @@
+{"type": "thread.started", "thread_id": "fixture-session"}
+{"type": "turn.started"}
+{"type": "item.completed", "item": {"id": "item_0", "type": "agent_message", "text": "I’ll read the instructions and `sample.txt`, then run `pwd` without changing any files.\n"}}
+{"type": "item.started", "item": {"id": "item_1", "type": "command_execution", "command": "/bin/zsh -lc 'rtk read /fixture/home/.codex/RTK.md'", "aggregated_output": "", "exit_code": null, "status": "in_progress"}}
+{"type": "item.completed", "item": {"id": "item_1", "type": "command_execution", "command": "/bin/zsh -lc 'rtk read /fixture/home/.codex/RTK.md'", "aggregated_output": "<!-- rtk-owned: written by `rtk init --codex`, removed by `rtk init --codex --uninstall` -->\n\n# Command output\n\nCommand output here is condensed to save tokens, keeping every signal and\ndropping costly noise. Treat it as the complete result: run commands\nnormally, and batch related commands into one call to avoid extra turns.\nTruncated results state their recovery path in their own output. Re-run a\ncommand as `rtk proxy <cmd>` only when its result is unusable: empty when\noutput was clearly expected, contradicting its exit code, or garbled.\n", "exit_code": 0, "status": "completed"}}
+{"type": "item.started", "item": {"id": "item_2", "type": "command_execution", "command": "/bin/zsh -lc 'rtk read sample.txt'", "aggregated_output": "", "exit_code": null, "status": "in_progress"}}
+{"type": "item.completed", "item": {"id": "item_2", "type": "command_execution", "command": "/bin/zsh -lc 'rtk read sample.txt'", "aggregated_output": "Loom fixture: cobalt 17\n", "exit_code": 0, "status": "completed"}}
+{"type": "item.started", "item": {"id": "item_3", "type": "command_execution", "command": "/bin/zsh -lc pwd", "aggregated_output": "", "exit_code": null, "status": "in_progress"}}
+{"type": "item.completed", "item": {"id": "item_3", "type": "command_execution", "command": "/bin/zsh -lc pwd", "aggregated_output": "/fixture/project\n", "exit_code": 0, "status": "completed"}}
+{"type": "item.completed", "item": {"id": "item_4", "type": "agent_message", "text": "Loom fixture: cobalt 17\n\nREADY"}}
+{"type": "turn.completed", "usage": {"input_tokens": 140242, "cached_input_tokens": 69760, "cache_write_input_tokens": 0, "output_tokens": 172, "reasoning_output_tokens": 14}}

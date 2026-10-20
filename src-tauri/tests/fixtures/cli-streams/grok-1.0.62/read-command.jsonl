@@ -1,0 +1,2 @@
+{"type": "system", "subtype": "init", "session_id": "fixture-session"}
+{"type": "result", "subtype": "error_during_execution", "is_error": true, "session_id": "fixture-session", "errors": ["Internal error: {\n  \"message\": \"API error (status 402 Payment Required): api_error: Grok (SuperGrok): Grok Build usage balance exhausted\",\n  \"http_status\": 402\n}"]}
