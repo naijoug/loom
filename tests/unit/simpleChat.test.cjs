@@ -9,7 +9,7 @@ const {ChatTranscript}=require('../../.tmp/test-build/src/features/chat/ChatTran
 const {ToolCallCard}=require('../../.tmp/test-build/src/features/chat/ToolCallCard.js');
 const {defaultAgentId}=require('../../.tmp/test-build/src/features/chat/AgentPicker.js');
 const {parseSlashCommand,filterSlashCommands}=require('../../.tmp/test-build/src/features/chat/slashCommands.js');
-const {toWorkMode,toPermissionMode}=require('../../.tmp/test-build/src/features/chat/workMode.js');
+const {normalizePermissionMode}=require('../../.tmp/test-build/src/features/chat/permissionMode.js');
 const {mergeChatPart}=require('../../.tmp/test-build/src/features/chat/state/ChatProjection.js');
 const {ErrorBoundary}=require('../../.tmp/test-build/src/components/common/ErrorBoundary.js');
 const {I18nProvider,useLocale,useT,translate,normalizeLocale}=require('../../.tmp/test-build/src/i18n/index.js');
@@ -18,15 +18,15 @@ const agent={id:'claude',name:'Claude Code',adapterType:'claude_code_cli',enable
 const props={draft:'hello',sending:false,error:null,agentId:'claude',agents:[agent],permissionMode:'explore',diagnostics:[],onDraftChange(){},onSend(){},onAbort(){},onAgentChange(){},onPermissionChange(){}};
 async function fixture(t){const root=createRoot(document.getElementById('root'));t.after(async()=>{await act(async()=>root.unmount());localStorage.clear()});return async element=>act(async()=>root.render(element));}
 const key=async(key,extra={})=>act(async()=>document.querySelector('textarea').dispatchEvent(new window.KeyboardEvent('keydown',{key,bubbles:true,...extra})));
-test('work modes normalize legacy and unknown values without granting auto mode',()=>{
- for(const value of ['explore','read_only','unknown',null])assert.equal(toWorkMode(value),'research');
- for(const value of ['ask','auto','read_write'])assert.equal(toWorkMode(value),'code');
- assert.equal(toPermissionMode('code'),'ask');assert.equal(toPermissionMode('code',true),'auto');assert.equal(toPermissionMode('unknown',true),'explore');
+test('permission modes normalize legacy and unknown values without granting auto mode',()=>{
+ for(const value of ['explore','read_only','unknown',null])assert.equal(normalizePermissionMode(value),'explore');
+ assert.equal(normalizePermissionMode('read_write'),'ask');assert.equal(normalizePermissionMode('ask'),'ask');assert.equal(normalizePermissionMode('auto'),'auto');
 });
 test('slash commands validate arguments and never accept trailing tokens',()=>{
  assert.deepEqual(parseSlashCommand('/mode auto'),{command:'mode',argument:'auto'});
+ assert.deepEqual(parseSlashCommand('/mode read-only'),{command:'mode',argument:'explore'});assert.deepEqual(parseSlashCommand('/mode ask'),{command:'mode',argument:'ask'});
  assert.deepEqual(parseSlashCommand('/agent agent-codex'),{command:'agent',argument:'agent-codex'});
- for(const value of ['/mode root','/new extra','/agent','hello','/export now'])assert.equal(parseSlashCommand(value),null);
+ for(const value of ['/mode root','/mode research','/mode code','/mode explore','/mode toString','/new extra','/agent','hello','/export now'])assert.equal(parseSlashCommand(value),null);
  assert.deepEqual(filterSlashCommands('/cl'),['/clear-resume']);
 });
 test('composer respects readiness, IME, newline, and focused Esc; running mode and agent are locked',async t=>{

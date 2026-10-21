@@ -26,7 +26,6 @@ import { EmptySession } from "./EmptySession";
 import type { Confirmation } from "./ConfirmBanner";
 import { LoomMark } from "./icons";
 import { parseSlashCommand } from "./slashCommands";
-import { toPermissionMode } from "./workMode";
 import "./chat.css";
 
 export function ChatPage() {
@@ -198,7 +197,7 @@ export function ChatPage() {
     setDraft("");
     if (parsed.command === "new") { setNewMode("explore"); localStorage.removeItem(`loom-auto-confirmed:${projectPath}:new`); setSelection({ project: projectPath, id: null }); }
     else if (parsed.command === "agent") await changeAgent(parsed.argument);
-    else if (parsed.command === "mode") requestMode(toPermissionMode(parsed.argument === "research" ? "research" : "code", parsed.argument === "auto")); else if (parsed.command === "clear-resume") await clearResume();
+    else if (parsed.command === "mode") requestMode(parsed.argument); else if (parsed.command === "clear-resume") await clearResume();
     else if (parsed.command === "export") await exportState.exportSession();
   }
   const selectedDiagnostic = diagnostics.find(item => item.agentId === session?.agentId);

@@ -106,7 +106,7 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
             <label>{t("outputFormat")}<select value="plain" disabled><option value="plain">{t("plainText")}</option></select></label><p>{t("customHint")}</p></>}
           <div className="settings-form-actions"><button type="button" onClick={() => setFormOpen(false)}>{t("cancel")}</button><button type="submit" className="settings-primary" disabled={busy}>{t("save")}</button></div>
         </form>}
-        <section className="settings-card"><h3>{t("workModes")}</h3><p>{t("cliPermissions")}</p>{!diagnostics.some(diag => diag.capabilities) ? <p className="settings-empty">{t("workModesEmpty")}</p> : <div className="settings-table-wrap settings-modes"><table><thead><tr><th>{t("agents")}</th><th data-mode="research">{t("research")}</th><th data-mode="code">{t("code")}</th><th>{t("autoRun")}</th></tr></thead><tbody>
+        <section className="settings-card"><h3>{t("permissions")}</h3><p>{t("cliPermissions")}</p>{!diagnostics.some(diag => diag.capabilities) ? <p className="settings-empty">{t("permissionsEmpty")}</p> : <div className="settings-table-wrap settings-modes"><table><thead><tr><th>{t("agents")}</th><th data-mode="explore">{t("readOnly")}</th><th data-mode="ask">{t("ask")}</th><th data-mode="auto">{t("auto")}</th></tr></thead><tbody>
           {diagnostics.filter(diag => diag.capabilities).map(diag => <tr key={diag.agentId}><td>{state.agents.find(agent => agent.id === diag.agentId)?.name}</td>{["explore", "ask", "auto"].map(mode => <td key={mode}><code>{diag.capabilities?.modes.find(item => item.mode === mode)?.policy}</code></td>)}</tr>)}
         </tbody></table></div>}</section>
       </>}

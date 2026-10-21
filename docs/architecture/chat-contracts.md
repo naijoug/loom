@@ -136,7 +136,7 @@ adapter 的兼容字符串入口仅解析确切程序前缀、已知 resume 操�
 
 ## 权限与完成边界
 
-Chat 使用独立的 chat_permission_mode。Codex 每轮包括 resume 都明确 sandbox/cwd 和 approval_policy=never；Claude/Grok 明确 plan、acceptEdits 或 auto。OpenCode 使用单次权限环境配置，Research 默认拒绝，仅允许读取/搜索/网页读取。自定义 CLI 依赖自身策略，不能宣称由 Loom 提供只读沙箱。
+Chat 使用独立的 chat_permission_mode。Codex 每轮包括 resume 都明确 sandbox/cwd 和 approval_policy=never；Claude/Grok 明确 plan、acceptEdits 或 auto。OpenCode 使用单次权限环境配置，Read-only 默认拒绝，仅允许读取/搜索/网页读取。自定义 CLI 依赖自身策略，不能宣称由 Loom 提供只读沙箱。
 
 Ask 是 Composer 每回合授权，不是逐工具审批；后端没有独立授权令牌。实际 CLI 权限、工具、停止及宿主退出保证必须与真实证据对应，见 [本轮验收](../dogfood/2026-10-20-simple-chat-acceptance.md)。
 

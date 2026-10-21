@@ -29,8 +29,9 @@
 .settings-card .settings-table-wrap { margin-top: 14px; background: var(--chat-raised); }
 .chat-settings table { border-collapse: collapse; width: 100%; min-width: 680px; }
 .chat-settings th { text-align: left; color: var(--chat-muted); font-size: 12px; font-weight: 500; background: var(--chat-raised); }
-.chat-settings th[data-mode="research"] { color: var(--chat-research); }
-.chat-settings th[data-mode="code"] { color: var(--chat-code); }
+.chat-settings th[data-mode="explore"] { color: var(--chat-read-only); }
+.chat-settings th[data-mode="ask"] { color: var(--chat-writable); }
+.chat-settings th[data-mode="auto"] { color: var(--chat-warn); }
 .chat-settings td, .chat-settings th { padding: 11px 14px; border-bottom: 1px solid var(--chat-border); vertical-align: middle; }
 .chat-settings tbody tr:last-child td { border-bottom: 0; }
 .chat-settings td strong { font-weight: 500; }

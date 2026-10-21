@@ -5,9 +5,9 @@
 用户已授权按 [简化 CLI Chat 重构计划](plans/2026-10-20/00:44-simple-cli-chat-refactor.md) 和 [实施计划](plans/2026-10-20/01:01-simple-chat-implementation.md) 重构，保留 Tauri + React + Rust，收敛为按项目组织的本机 CLI Chat。
 
 - 默认应用仅有 Chat 和 Settings；Task/Board/Planning 不再属于产品。旧 Task 数据原样保留。
-- Research / Code 复用 `explore` / `ask` / `auto`。权限由 CLI 执行；Code 的发送确认是回合授权，非逐工具审批。
+- 输入框只提供一个权限选择器：Read-only / Ask / Auto，对应 `explore` / `ask` / `auto`（2026-10-21 由 Research / Code / Auto-run 改名，工作类型与权限不再混在一层）。权限由 CLI 执行；Ask 的发送确认是回合授权，非逐工具审批。
 - 本机探测 Claude Code、Codex、OpenCode、Grok；支持自定义 CLI。原生续聊、工具事件等按适配器能力与真实证据展示。
-- 新会话只选择模式；Agent 选择器固定在输入框左下，新旧会话一致。流式回复、停止、恢复、工具卡片、Markdown、导出和执行日志保留。
+- 新会话只选择权限；Agent 选择器固定在输入框左下，新旧会话一致。流式回复、停止、恢复、工具卡片、Markdown、导出和执行日志保留。
 - 会话保持项目本地 `.loom/chat/v2`；按项目聚合列表，不跨项目移动会话。
 - 默认英文，Settings → Appearance 支持简体中文和主题，立即生效并持久化。
 - Craft 全功能重建暂停，Workbench / SDK worker 源码冻结并移出默认构建与主门禁；不扩展 Sources/MCP、Skills、Browser、Pages、DAG、远程和分享。

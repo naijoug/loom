@@ -14,7 +14,7 @@ Loom 通过 Rust `agent_adapter.rs` 生成可执行文件、参数、cwd、stdin
 
 ## 权限与续聊
 
-| CLI | Research (`explore`) | Code (`ask`) | Auto-run (`auto`) | 输出 |
+| CLI | Read-only (`explore`) | Ask (`ask`) | Auto (`auto`) | 输出 |
 |---|---|---|---|---|
 | Claude Code | `--permission-mode plan` | `acceptEdits` | `auto` | `stream-json` + partial messages |
 | Codex | `--sandbox read-only` | `workspace-write` | `workspace-write` | `exec --json` |

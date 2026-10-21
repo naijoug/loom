@@ -7,7 +7,7 @@ import { ModePicker } from "./ModePicker";
 import { ConfirmBanner, type Confirmation } from "./ConfirmBanner";
 import { SlashMenu } from "./SlashMenu";
 import { filterSlashCommands } from "./slashCommands";
-import { toWorkMode } from "./workMode";
+import { normalizePermissionMode } from "./permissionMode";
 
 export interface ChatComposerProps {
   draft: string; sending: boolean; aborting?: boolean; canSend?: boolean;
@@ -29,7 +29,7 @@ export function ChatComposer(props: ChatComposerProps) {
   const [askConfirm, setAskConfirm] = useState(false);
   const [selectedCommand, setSelectedCommand] = useState(0);
   const [menuClosed, setMenuClosed] = useState(false);
-  const mode = toWorkMode(permissionMode);
+  const mode = normalizePermissionMode(permissionMode);
   const commands = menuClosed ? [] : filterSlashCommands(draft);
   const commandIndex = Math.min(selectedCommand, Math.max(0, commands.length - 1));
   const selected = agents.find(agent => agent.id === agentId);
@@ -64,7 +64,7 @@ export function ChatComposer(props: ChatComposerProps) {
       {confirmation && <ConfirmBanner {...confirmation} />}
       {askConfirm && !confirmation && <ConfirmBanner className="chat-ask-confirm" title={t("confirmTurn")} body={t("confirmTurnHint")}
         confirmLabel={t("confirmSend")} onConfirm={send} onCancel={() => setAskConfirm(false)} />}
-      <textarea value={draft} readOnly={sending} aria-label={t("messageInput")} placeholder={t(mode === "research" ? "messageResearch" : "messageCode")}
+      <textarea value={draft} readOnly={sending} aria-label={t("messageInput")} placeholder={t(mode === "explore" ? "messageReadOnly" : "messageWritable")}
         aria-controls={commands.length ? "chat-slash-menu" : undefined} aria-activedescendant={commands.length ? `chat-slash-${commandIndex}` : undefined}
         onChange={event => { onDraftChange(event.target.value); setMenuClosed(false); setSelectedCommand(0); }}
         onKeyDown={event => {

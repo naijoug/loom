@@ -5,7 +5,7 @@ import type { ChatProjectGroup } from "../../domain/chat";
 import type { AgentConfig, ProjectSummary } from "../../domain";
 import { useT } from "../../i18n";
 import { mockChatStore } from "./mockStore";
-import { toWorkMode } from "./workMode";
+import { normalizePermissionMode, PERMISSION_LABELS } from "./permissionMode";
 
 export function ProjectTree({ projects, agents, projectPath, sessionId, useBackend, revision, onSelect, onAdd, onSettings, onCollapse }: {
   projects: ProjectSummary[]; agents: AgentConfig[]; projectPath: string | null; sessionId: string | null;
@@ -59,10 +59,10 @@ export function ProjectTree({ projects, agents, projectPath, sessionId, useBacke
         {group?.storageError && <p role="alert" className="chat-storage-error">{group.storageError}</p>}
         {open && <ul>{sessions.map(session => {
           const streaming = session.turnStatus === "streaming";
-          const mode = toWorkMode(session.permissionMode);
+          const mode = normalizePermissionMode(session.permissionMode);
           return <li key={session.id}><button type="button" className="chat-tree-session" data-mode={mode} aria-current={projectPath === project.path && sessionId === session.id ? "page" : undefined}
             title={session.storageError ?? session.title} onClick={() => onSelect(project, session.id)}>
-            <span className="chat-tree-mode" role="img" aria-label={t(mode)} />
+            <span className="chat-tree-mode" role="img" aria-label={t(PERMISSION_LABELS[mode])} />
             <span className="chat-tree-title">{session.title}</span>
             <small>{agents.find(agent => agent.id === session.agentId)?.name ?? session.agentId}</small>
             {streaming && <LoaderCircle size={12} className="chat-spin" role="img" aria-label={t("running")} />}
