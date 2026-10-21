@@ -197,6 +197,16 @@ export const en = {
   appearanceDesc: "Language and theme apply immediately and are saved on this device.",
   status: "Status",
   workModesEmpty: "Detect Agents to see how each CLI maps Research, Code and Auto-run.",
+  experiments: "Experiments",
+  experimentsDesc: "Opt-in features that may change or be removed.",
+  inlineCards: "Inline cards",
+  inlineCardsHint: "Claude Code may add a card (file list, change summary, table or checklist) after its answer. Only Claude Code is affected, and each turn sends about 1k extra prompt tokens. Start a new CLI session after switching.",
+  cardFallback: "This card could not be rendered; showing its source.",
+  cardShowSource: "View source",
+  cardShowCard: "View card",
+  cardCopy: "Copy",
+  cardCopied: "Copied",
+  cardInsert: "Insert into input",
 } as const;
 
 export type MessageKey = keyof typeof en;

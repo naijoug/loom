@@ -134,4 +134,9 @@ export const zhCN: Messages = {
   appearanceDesc: "语言和主题即时生效，并保存在本机。",
   status: "状态",
   workModesEmpty: "探测 Agent 后，这里会显示各 CLI 对调研、Code 和自动运行的权限映射。",
+  experiments: "实验", experimentsDesc: "可选的试验功能，后续可能调整或移除。",
+  inlineCards: "内联卡片",
+  inlineCardsHint: "Claude Code 可在回答后附带卡片（文件清单、变更摘要、表格或检查清单）。仅对 Claude Code 生效，每轮约增加 1k 提示词 token；切换后需开新 CLI 会话。",
+  cardFallback: "卡片无法渲染，已显示源码。", cardShowSource: "查看源码", cardShowCard: "查看卡片",
+  cardCopy: "复制", cardCopied: "已复制", cardInsert: "插入到输入框",
 };

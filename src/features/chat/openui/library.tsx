@@ -124,3 +124,36 @@ export function checkInlineCard(source: string): InlineCardCheck {
   if (result.root && !cardCount) problems.push("empty");
   return { ok: problems.length === 0, problems, cardCount };
 }
+
+interface CardProps {
+  title?: string;
+  files?: Array<{ path: string; note?: string; added?: number; removed?: number }>;
+  points?: string[];
+  columns?: string[];
+  rows?: string[][];
+  items?: Array<{ text: string; done: boolean }>;
+}
+
+function cardText(typeName: string, props: CardProps): string {
+  const lines = props.title ? [props.title] : [];
+  if (typeName === "FileList") lines.push(...(props.files ?? []).map(file => file.note ? `${file.path} — ${file.note}` : file.path));
+  if (typeName === "ChangeSummary") {
+    lines.push(...(props.files ?? []).map(file => `${file.path} +${file.added ?? 0} −${file.removed ?? 0}`));
+    lines.push(...(props.points ?? []).map(point => `- ${point}`));
+  }
+  if (typeName === "DataTable") lines.push((props.columns ?? []).join(" | "), ...(props.rows ?? []).map(row => row.join(" | ")));
+  if (typeName === "Checklist") lines.push(...(props.items ?? []).map(item => `[${item.done ? "x" : " "}] ${item.text}`));
+  return lines.join("\n");
+}
+
+/** Plain text of a valid card, for Loom's copy and insert-into-composer controls. */
+export function inlineCardText(source: string): string {
+  parser ??= createParser(inlineCardLibrary.toJSONSchema(), "CardStack");
+  const cards = parser.parse(source).root?.props.cards;
+  if (!Array.isArray(cards)) return "";
+  return cards
+    .filter((card): card is { typeName: string; props: CardProps } => card != null && typeof card === "object" && "typeName" in card)
+    .map(card => cardText(card.typeName, card.props))
+    .join("\n\n");
+}
+

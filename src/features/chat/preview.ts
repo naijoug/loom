@@ -20,5 +20,17 @@ export function createPreviewState(): AppState {
   ];
   mockChatStore.create({ projectPath: projects[0].path, agentId: "agent-codex", title: "Explore native resume", permissionMode: "explore" });
   mockChatStore.create({ projectPath: projects[1].path, agentId: "agent-codex", title: "Review the publishing flow", permissionMode: "explore" });
+  // `&cards=1` adds an inline card session (one valid card, one fallback); the default fixture stays unchanged for smoke checks.
+  if (new URLSearchParams(window.location.search).has("cards")) addInlineCardPreview(projects[0].path);
   return { ...initialAppState, projects: { current: projects[0], recent: projects }, agents, app: { ...initialAppState.app, activeProjectId: projects[0].id } };
+}
+
+function addInlineCardPreview(projectPath: string) {
+  const cards = mockChatStore.create({ projectPath, agentId: "agent-claude", title: "Inline card preview", permissionMode: "explore" });
+  const card = "root = CardStack([files, todo])\nfiles = FileList([{path: \"src/main.tsx\", note: \"React entry\"}, {path: \"src-tauri/src/lib.rs\", note: \"Tauri commands\"}], \"Entry points\")\ntodo = Checklist([{text: \"pnpm check\", done: true}, {text: \"Desktop smoke\", done: false}], \"Verification\")";
+  cards.messages = [
+    { id: "user-cards", role: "user", content: "Where are the entry points?", status: "complete", createdAtMs: 1 },
+    { id: "assistant-cards", role: "assistant", content: `The app starts in two places.\n\n\`\`\`openui-lang\n${card}\n\`\`\``, status: "complete", createdAtMs: 2 },
+    { id: "assistant-cards-invalid", role: "assistant", content: "A card the renderer rejects:\n\n```openui-lang\nroot = CardStack([chart])\nchart = Chart(\"sizes\", [1, 2])\n```", status: "complete", createdAtMs: 3 },
+  ];
 }

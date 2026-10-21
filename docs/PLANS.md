@@ -3,7 +3,7 @@
 ## 2026-10-20
 
 - 18:25-openui-inline-cards-experiment.md
-  > （O0 可行性探针 passed，见 dogfood/2026-10-20-openui-probe.md：Claude Code 2.1.304（本机后端 GLM-5.3）的 `--append-system-prompt` 每轮须重传，3/3 有效回合产出可解析卡片，每次调用 +1048 token，卡片 chunk gzip 约 60 KB；回退改为依据解析错误；O1 已完成 `b6c4d47`：依赖、devtools 别名、组件库、提示词生成与 `--check`、单测 5/5，不设模型可触发的动作；O2 已完成未提交：设置 `experimentalInlineCards`、能力 `inlineCards`（仅 Claude）、每轮 `--append-system-prompt` 注入、执行记录脱敏、仅生效时计入续聊指纹，`pnpm check` 通过；O3–O5 未执行）以默认关闭的实验开关试点 OpenUI 内联卡片：只引入 `@openuidev/react-lang` 和 `zod`，Loom 自有 4 个组件（文件清单、变更摘要、表格、检查清单）；Claude Code 通过 `--append-system-prompt` 注入编译期生成的内联模式提示词，并把开关状态计入续聊指纹；前端按 ` ```openui-lang ` 代码块懒加载渲染，不传 `toolProvider`，解析失败回退为源码；屏蔽 devtools CDN 与安装遥测；不改 v2 存储和 IPC。
+  > （O0 可行性探针 passed，见 dogfood/2026-10-20-openui-probe.md：Claude Code 2.1.304（本机后端 GLM-5.3）的 `--append-system-prompt` 每轮须重传，3/3 有效回合产出可解析卡片，每次调用 +1048 token，卡片 chunk gzip 约 60 KB；回退改为依据解析错误；O1 已完成 `b6c4d47`：依赖、devtools 别名、组件库、提示词生成与 `--check`、单测 5/5，不设模型可触发的动作；O2 已完成未提交：设置 `experimentalInlineCards`、能力 `inlineCards`（仅 Claude）、每轮 `--append-system-prompt` 注入、执行记录脱敏、仅生效时计入续聊指纹，`e391d51`；O3 已完成未提交：懒加载卡片 chunk（gzip 63 KB，主包 +0.55 KB gzip）、依据解析结果回退源码、Loom 自有查看源码/复制/插入按钮、设置“实验”分区，`pnpm check` 与 `smoke:visual` 通过；O4–O5 未执行）以默认关闭的实验开关试点 OpenUI 内联卡片：只引入 `@openuidev/react-lang` 和 `zod`，Loom 自有 4 个组件（文件清单、变更摘要、表格、检查清单）；Claude Code 通过 `--append-system-prompt` 注入编译期生成的内联模式提示词，并把开关状态计入续聊指纹；前端按 ` ```openui-lang ` 代码块懒加载渲染，不传 `toolProvider`，解析失败回退为源码；屏蔽 devtools CDN 与安装遥测；不改 v2 存储和 IPC。
 
 - 05:55-chat-ui-polish.md
   > （代码完成，合成网页与 smoke:visual 已验证；桌面已由用户确认 Auto-run 与切换 Agent 提示条；已提交）按 Claude Design 画布打磨简化 Chat 的界面：lucide 图标替换文本字符，Research/Code 模式着色，Composer、斜杠菜单与 Agent 菜单补全信息，用应用内提示条替换 Auto-run 与切换 Agent 的 `window.confirm`，新会话页与设置页改为分区卡片；只改前端，不改存储与适配器。

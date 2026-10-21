@@ -9,7 +9,11 @@
 .chat-settings nav [aria-current="page"] svg { color: var(--chat-accent); }
 .chat-settings > main { flex: 1; min-width: 0; padding: 48px 36px; overflow: auto; }
 .settings-content { max-width: 1040px; margin: 0 auto; }
-.settings-content[data-tab="appearance"], .settings-content[data-tab="diagnostics"], .settings-content[data-tab="about"] { max-width: 720px; }
+.settings-content[data-tab="appearance"], .settings-content[data-tab="experiments"], .settings-content[data-tab="diagnostics"], .settings-content[data-tab="about"] { max-width: 720px; }
+.settings-toggle-row { display: flex; align-items: flex-start; gap: 24px; }
+.settings-toggle-row > div { flex: 1; min-width: 0; }
+.settings-toggle-row p { margin: 0; }
+.settings-toggle-row .settings-switch { margin-top: 2px; }
 .settings-header { display: flex; align-items: flex-end; gap: 24px; margin-bottom: 24px; }
 .settings-header > div { flex: 1; min-width: 0; }
 .chat-settings h2 { font-size: 22px; font-weight: 600; letter-spacing: -.3px; margin: 0 0 6px; }

@@ -19,6 +19,7 @@ import { ProjectTree } from "./ProjectTree";
 import { ChatSessionHeader } from "./ChatSessionHeader";
 import { ChatTranscript } from "./ChatTranscript";
 import { ChatComposer } from "./ChatComposer";
+import { useInlineCardsEnabled } from "./openui/inlineCardsSetting";
 import { ChatExportNotice } from "./ChatExportNotice";
 import { EmptySession } from "./EmptySession";
 import type { Confirmation } from "./ConfirmBanner";
@@ -42,6 +43,11 @@ export function ChatPage() {
   const draftKey = JSON.stringify([projectPath, sessionId ?? "new"]);
   const draft = drafts[draftKey] ?? "";
   const setDraft = (value: string) => setDrafts(previous => ({ ...previous, [draftKey]: value }));
+  const inlineCards = useInlineCardsEnabled();
+  const insertText = (text: string) => setDrafts(previous => {
+    const current = previous[draftKey] ?? "";
+    return { ...previous, [draftKey]: current.trim() ? `${current}\n\n${text}` : text };
+  });
   useUpdateDrafts("legacy-chat", drafts, saved => setDrafts(previous => ({ ...saved, ...previous })));
   const [newMode, setNewMode] = useState<ChatPermissionMode>("explore");
   const [newAgent, setNewAgent] = useState("");
@@ -213,7 +219,7 @@ export function ChatPage() {
               return useBackend ? chatUpdateMeta({ projectPath: project.path, sessionId: session.id, status }) : mockChatStore.setStatus(session.id, status) ?? null;
             })} onClearResume={() => void clearResume()} onExport={() => void exportState.exportSession()} exporting={exportState.busy} />
           <ChatExportNotice busy={exportState.busy} error={exportState.error} result={exportState.result} />
-          <ErrorBoundary resetKey={currentKey}><ChatTranscript messages={session.messages} turns={session.turns} projectPath={project.path} sessionId={session.id} toolEvents={selectedDiagnostic?.capabilities?.toolEvents !== false} /></ErrorBoundary>
+          <ErrorBoundary resetKey={currentKey}><ChatTranscript messages={session.messages} turns={session.turns} projectPath={project.path} sessionId={session.id} toolEvents={selectedDiagnostic?.capabilities?.toolEvents !== false} inlineCards={inlineCards} onInsertText={insertText} /></ErrorBoundary>
         </> : sessionId ? <p className="chat-loading" role="status">{error ?? t("loading")}</p> : <EmptySession mode={newMode} onChange={setNewMode} projectName={project.name} projectPath={project.path} />}
         {(!sessionId || session) && <ChatComposer key={draftKey} draft={draft} sending={running} aborting={stopKeys.has(currentKey)} canSend={listenReady && !creating && session?.status !== "archived"}
           error={error || state.app.agentError} useBackend={useBackend} agentId={session?.agentId ?? draftAgent} agents={agents}

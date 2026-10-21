@@ -135,6 +135,26 @@
 .chat-diff { padding: 8px 0 !important; }
 .chat-diff span { display: block; padding: 0 12px; }
 .chat-diff-stats { display: flex; gap: 6px; }
+.chat-inline-card { border: 1px solid var(--chat-border); border-radius: 10px; background: var(--chat-surface); margin: 0 0 12px; overflow: hidden; }
+.chat-inline-card > pre { margin: 0; border-radius: 0; }
+.chat-inline-card-note { margin: 0 !important; padding: 8px 14px; font-size: 12px; color: var(--chat-warn); border-bottom: 1px solid var(--chat-border); }
+.chat-card-stack { display: flex; flex-direction: column; }
+.chat-card { padding: 12px 14px; }
+.chat-card + .chat-card { border-top: 1px solid var(--chat-border); }
+.chat-card h4 { font-size: 13px; font-weight: 600; margin: 0 0 8px; }
+.chat-markdown .chat-card ul { list-style: none; padding: 0; margin: 0; }
+.chat-markdown .chat-card li { display: flex; gap: 10px; align-items: baseline; margin: 0; padding: 3px 0; }
+.chat-card li > span:not(.chat-diff-stats) { color: var(--chat-muted); }
+.chat-card .chat-diff-stats { margin-left: auto; font-size: 12px; }
+.chat-card[data-card="changes"] ul + ul { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--chat-border); }
+.chat-card[data-card="checklist"] li::before { content: "○"; color: var(--chat-dim); }
+.chat-card[data-card="checklist"] li[data-done="true"]::before { content: "✓"; color: var(--chat-ok); }
+.chat-card[data-card="checklist"] li[data-done="true"] { color: var(--chat-muted); }
+.chat-card table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+.chat-card th, .chat-card td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--chat-border); }
+.chat-card th { color: var(--chat-muted); font-weight: 500; }
+.chat-inline-card-actions { display: flex; gap: 6px; padding: 6px 10px; border-top: 1px solid var(--chat-border); background: var(--chat-raised); }
+.chat-inline-card-actions button { font-size: 12px; padding: 3px 8px; color: var(--chat-text-2); }
 .chat-diff-stats b, [data-diff="added"] { color: var(--chat-ok); font-weight: normal; }
 .chat-diff-stats i, [data-diff="removed"] { color: var(--chat-danger); font-style: normal; }
 [data-diff="added"] { background: color-mix(in srgb, var(--chat-ok) 10%, transparent); }

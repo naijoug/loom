@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
-import { Activity, ArrowLeft, Bot, Info, Monitor, Moon, Palette, RefreshCw, Plus, Sun } from "lucide-react";
+import { Activity, ArrowLeft, Bot, FlaskConical, Info, Monitor, Moon, Palette, RefreshCw, Plus, Sun } from "lucide-react";
 import { invokeCommand, TAURI_COMMANDS } from "../../api";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useLocale, useT } from "../../i18n";
@@ -11,11 +11,12 @@ import { useAppState } from "../../state/AppStateContext";
 import { UpdateButton } from "../app-update/UpdateProvider";
 import { defaultAgentDraft, draftFromAgent, isBuiltInAgent } from "./agentDraft";
 import { agentHealth } from "../chat/AgentPicker";
+import { setInlineCardsEnabled, useInlineCardsEnabled } from "../chat/openui/inlineCardsSetting";
 import "../chat/chat.css";
 import "./settings.css";
 
-type SettingsTab = "agents" | "appearance" | "diagnostics" | "about";
-const tabIcons = { agents: Bot, appearance: Palette, diagnostics: Activity, about: Info } as const;
+type SettingsTab = "agents" | "appearance" | "experiments" | "diagnostics" | "about";
+const tabIcons = { agents: Bot, appearance: Palette, experiments: FlaskConical, diagnostics: Activity, about: Info } as const;
 const themeIcons = { system: Monitor, dark: Moon, light: Sun } as const;
 export function SettingsPage({ onBack, initialTab = "agents" }: { onBack: () => void; initialTab?: SettingsTab }) {
   const t = useT();
@@ -34,6 +35,7 @@ export function SettingsPage({ onBack, initialTab = "agents" }: { onBack: () => 
   const [draft, setDraft] = useState(defaultAgentDraft);
   const [args, setArgs] = useState("");
   const [includeLogs, setIncludeLogs] = useState(false);
+  const inlineCards = useInlineCardsEnabled();
   useEffect(() => {
     void loadAgents();
     void diagnoseAgents().then(setDiagnostics).catch(error => setError(String(error)));
@@ -70,10 +72,10 @@ export function SettingsPage({ onBack, initialTab = "agents" }: { onBack: () => 
       setNotice(await invokeCommand<string>(TAURI_COMMANDS.exportDiagnosticBundle, { input: { projectPath: project.path, targetPath: path, includeLogTails: includeLogs } }));
     } catch (error) { setError(String(error)); }
   }
-  const description = tab === "agents" ? t("agentsDesc") : tab === "appearance" ? t("appearanceDesc") : tab === "diagnostics" ? t("diagnosticsHint") : t("aboutHint");
+  const description = tab === "agents" ? t("agentsDesc") : tab === "appearance" ? t("appearanceDesc") : tab === "experiments" ? t("experimentsDesc") : tab === "diagnostics" ? t("diagnosticsHint") : t("aboutHint");
   return <div className="chat-settings">
     <aside><button type="button" className="settings-back" onClick={onBack}><ArrowLeft size={15} aria-hidden="true" />{t("back")}</button><h1>{t("settings")}</h1>
-      <nav>{(["agents", "appearance", "diagnostics", "about"] as const).map(id => {
+      <nav>{(["agents", "appearance", "experiments", "diagnostics", "about"] as const).map(id => {
         const Icon = tabIcons[id];
         return <button type="button" key={id} aria-current={tab === id ? "page" : undefined} onClick={() => setTab(id)}><Icon size={15} aria-hidden="true" />{t(id)}</button>;
       })}</nav>
@@ -115,6 +117,8 @@ export function SettingsPage({ onBack, initialTab = "agents" }: { onBack: () => 
           return <button type="button" role="radio" aria-checked={themeMode === value} key={value} onClick={() => setThemeMode(value)}><Icon size={15} aria-hidden="true" />{t(value)}</button>;
         })}</div></section>
       </>}
+      {tab === "experiments" && <section className="settings-card settings-toggle-row"><div><h3>{t("inlineCards")}</h3><p>{t("inlineCardsHint")}</p></div>
+        <label className="settings-switch"><input type="checkbox" role="switch" aria-label={t("inlineCards")} checked={inlineCards} onChange={event => void setInlineCardsEnabled(event.target.checked).catch(error => setError(String(error)))} /><span aria-hidden="true" /></label></section>}
       {tab === "diagnostics" && <section className="settings-card"><label className="settings-check"><input type="checkbox" checked={includeLogs} onChange={event => setIncludeLogs(event.target.checked)} />{t("includeLogs")}</label><p><button type="button" className="settings-primary" disabled={!state.projects.current || !hasTauriRuntime()} onClick={() => void exportDiagnostics()}>{t("exportDiagnostics")}</button></p>{notice && <p role="status"><code>{notice}</code></p>}</section>}
       {tab === "about" && <section className="settings-card"><h3>Loom {version}</h3><UpdateButton manual /></section>}
     </div></main>

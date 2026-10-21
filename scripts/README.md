@@ -9,7 +9,7 @@ scripts/debug.sh desktop   # 真实 Tauri 桌面
 scripts/debug.sh stop
 ```
 
-固定端口 1420。Web 合成预览地址为 `http://127.0.0.1:1420/?fixture=simple-chat`；合成项目和消息只用于 Vite 开发态，不写入真实项目或调用模型。日志为 `/tmp/loom-preview-vite.log`，PID 为 `/tmp/loom-preview-vite.pid`；桌面 PID 提示文件为 `/tmp/loom-tauri-dev.pid`。
+固定端口 1420。Web 合成预览地址为 `http://127.0.0.1:1420/?fixture=simple-chat`；合成项目和消息只用于 Vite 开发态，不写入真实项目或调用模型。追加 `&cards=1` 会多出一个“Inline card preview”会话（一张有效卡片、一张回退卡片），需在设置“实验”中打开内联卡片才渲染为卡片；默认 fixture 不变，`smoke:visual` 不受影响。日志为 `/tmp/loom-preview-vite.log`，PID 为 `/tmp/loom-preview-vite.pid`；桌面 PID 提示文件为 `/tmp/loom-tauri-dev.pid`。
 
 | 命令 | 范围 |
 |---|---|

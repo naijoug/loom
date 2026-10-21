@@ -1,6 +1,6 @@
 # OpenUI 内联卡片实验计划
 
-- 状态：O0 已通过（2026-10-20，见 [探针记录](../../dogfood/2026-10-20-openui-probe.md)）；O1 已完成（2026-10-20，`b6c4d47`）；O2 已完成（2026-10-20，未提交）；O3–O5 未执行
+- 状态：O0 已通过（2026-10-20，见 [探针记录](../../dogfood/2026-10-20-openui-probe.md)）；O1 已完成（2026-10-20，`b6c4d47`）；O2 已完成（2026-10-20，`e391d51`）；O3 已完成（2026-10-20，未提交）；O4–O5 未执行
 - 基线：`codex/simple-cli-chat` @ `fd6ca41`（[05:55 UI 打磨](05:55-chat-ui-polish.md) 已提交）
 - 调研依据：[thesysdev/openui](https://github.com/thesysdev/openui) @ `9823ec0`（2026-10-19，MIT）；`@openuidev/react-lang` 1.0.1、`@openuidev/lang-core` 1.0.1
 - 范围：实验开关默认关闭，首个 Agent 只开 Claude Code；不改变 [需求文档](../../requirements.md) 的现行范围。实验转正前需先更新需求与 Chat 契约。
@@ -205,7 +205,7 @@ OpenUI 让模型用 OpenUI Lang 这种紧凑格式描述界面，再由前端按
   - `pnpm build` 通过；`library.tsx` 尚未被应用引用，`dist/` 中不含 OpenUI 代码（S4 的独立 chunk 在 O3 验证）。
   - `pnpm openui:prompt --check` 通过。未运行完整 `pnpm check` 和 Rust 检查（本阶段未改 Rust）。
 
-### O2（2026-10-20，passed，未提交）
+### O2（2026-10-20，passed，`e391d51`）
 
 - 设置：`AppSettings.experimental_inline_cards`（前端 `experimentalInlineCards`），`#[serde(default)]` 默认 false，旧设置文件无需迁移；前端 `normalizeSettings` 保留该字段，避免保存设置时丢失。契约样本 `contracts/tauri-contract.json` 与 `src/api/contract.ts` 同步。
 - 能力：`AgentCapabilities.inline_cards` 只对 `ADAPTER_CLAUDE` 为 true，前端类型与诊断样本同步。
@@ -218,3 +218,20 @@ OpenUI 让模型用 OpenUI Lang 这种紧凑格式描述界面，再由前端按
   - 新增 `agent_adapter::tests::only_claude_appends_a_system_prompt_on_every_turn` 与 `chat_context::tests::inline_cards_append_prompt_only_for_claude_and_rebind_resume`：关闭时参数与指纹不变（S1）；打开时仅 Claude 带参数、去掉该参数后与关闭时一致、指纹变化、执行记录不含提示词原文；两种句柄跨开关被拒绝；续聊回合仍带参数；其他适配器参数和指纹不变（S2）。
   - `pnpm check` 通过（含 `openui:prompt --check`、`pnpm test` 87/87、`pnpm build`、`cargo fmt --check`、Clippy `-D warnings`、`cargo test` 150 passed / 16 ignored）。
   - 未运行真实 CLI 验收（`real_agent_tests` 默认忽略）；真实 Claude 回合留到 O4/O5。
+
+### O3（2026-10-20，passed，未提交）
+
+- 渲染：`Markdown` 新增可选参数 `cards`（`streaming`、`onInsert`），开启时 `openui-lang` 代码块渲染为 `InlineCard`，否则仍是原代码块。`ChatTranscript` 按消息状态传入 `streaming`，`ChatPage` 读取开关并提供插入回调。
+- 懒加载：`InlineCard.tsx` 只含 `React.lazy`、Suspense（加载中显示源码）和卡片级错误边界；OpenUI 运行时与组件库在 `InlineCardView.tsx` 独立 chunk 中。
+- 回退：完成后用 `checkInlineCard` 判定，不通过或渲染抛异常时显示“卡片无法渲染，已显示源码”加源码；流式中直接交给 `Renderer` 渐进渲染，不提前回退。中止或出错的消息按“完成”处理，截断的卡片会回退。
+- 外壳按钮（Loom 自有，对应 O1 偏差）：查看源码/查看卡片、复制、插入到输入框。复制和插入的内容由新增的 `inlineCardText` 从解析结果生成纯文本；插入只追加到当前草稿，不发送。仍不传 `toolProvider` 或 `onAction`。
+- 设置：新增“实验”分区（en/zh-CN），开关说明写明仅 Claude Code 生效、每轮约增加 1k token、切换后需开新 CLI 会话。`inlineCardsSetting.ts` 用 `useSyncExternalStore` 在 Chat 和设置页之间共享开关状态，不引入 OpenUI。
+- 预览：`?fixture=simple-chat&cards=1` 增加一个含有效卡片和回退卡片的会话。第一次直接加进默认 fixture 时，`smoke:visual`（要求当前项目 2 个会话）失败，因此改为通过参数显式开启。
+- 与计划的差异：没有新增“动作白名单”，因为卡片没有动作；测试改为验证外壳按钮只插入不发送。
+- 验证：
+  - `pnpm test -- tests/unit/openuiInlineCard.test.cjs`：6/6 通过。覆盖关闭时保持代码块、有效卡片渲染与外壳按钮（插入文本、源码切换）、未知组件/截断/空卡片回退、流式到完成、纯文本生成、开关持久化。
+  - `pnpm check` 通过：前端 93/93、`cargo test` 150 passed / 16 ignored、构建、fmt、Clippy、提示词同步。
+  - 构建产物（S4）：OpenUI 只在 `InlineCardView-*.js`（201.63 kB，gzip 63.09 kB）；主入口 `index-*.js` 从 174.85 kB 增至 176.04 kB（gzip 58.22 → 58.77 kB）。Rollup 对 zod 源码中的注释标注给出无害警告。
+  - Web 合成预览（内置浏览器，`scripts/debug.sh web`）：浅色、深色和中文下卡片与回退显示正常；“插入到输入框”写入草稿且未发送；关闭开关后回到代码块；开发态外部请求为 0（devtools 别名生效，S5 开发部分复验）。
+  - `pnpm smoke:visual` 通过。
+  - 未在 Tauri 桌面和真实 Claude 回合中验证，留给 O4/O5。
