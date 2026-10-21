@@ -1,19 +1,19 @@
 import { useEffect, useState } from "react";
-import { ArrowUp, Lock, Square } from "lucide-react";
+import { ArrowUp, Square } from "lucide-react";
 import type { AgentConfig, AgentDiagnostic, ChatPermissionMode } from "../../domain";
 import { useT } from "../../i18n";
 import { AgentPicker } from "./AgentPicker";
+import { ModePicker } from "./ModePicker";
 import { ConfirmBanner, type Confirmation } from "./ConfirmBanner";
-import { StatusLine } from "./StatusLine";
 import { SlashMenu } from "./SlashMenu";
 import { filterSlashCommands } from "./slashCommands";
 import { toWorkMode } from "./workMode";
 
 export interface ChatComposerProps {
   draft: string; sending: boolean; aborting?: boolean; canSend?: boolean;
-  elapsedHint?: string | null; error: string | null; useBackend: boolean;
+  error: string | null; useBackend: boolean;
   agentId: string; agents: AgentConfig[]; permissionMode: ChatPermissionMode;
-  resumeHint: boolean; diagnostics: AgentDiagnostic[]; diagnosticsLoading: boolean;
+  diagnostics: AgentDiagnostic[]; diagnosticsLoading: boolean;
   onRefreshDiagnostics: () => void; onDraftChange: (value: string) => void;
   onSend: () => void; onAbort: () => void; onAgentChange: (id: string) => void;
   onPermissionChange: (mode: ChatPermissionMode) => void;
@@ -76,19 +76,11 @@ export function ChatComposer(props: ChatComposerProps) {
         }} />
       <div className="chat-composer-actions">
         <AgentPicker agents={agents} diagnostics={diagnostics} value={agentId} onChange={onAgentChange} disabled={sending} />
-        {mode === "research" ? <span className="chat-mode-hint" data-mode="research"><Lock size={12} aria-hidden="true" />{t("readOnly")}</span> : <>
-          <label className="chat-auto">
-            <input type="checkbox" role="switch" checked={permissionMode === "auto"} disabled={sending}
-              onChange={event => onPermissionChange(event.target.checked ? "auto" : "ask")} />
-            <span className="chat-switch" aria-hidden="true" />{t("autoRun")}
-          </label>
-          <span className="chat-mode-hint" data-mode="code">{t(permissionMode === "auto" ? "autoRunHint" : "askHint")}</span>
-        </>}
+        <ModePicker value={permissionMode} onChange={onPermissionChange} disabled={sending} />
         <button type="button" className="chat-send" data-running={sending} aria-label={t(sending ? "stop" : "send")} title={sending ? `${t("stop")} (Esc)` : `${t("send")} (Enter)`}
           disabled={sending ? aborting : !draft.trim() || (!allowed && !draft.startsWith("/"))}
           onClick={sending ? onAbort : send}>{sending ? <Square size={11} fill="currentColor" /> : <ArrowUp size={16} strokeWidth={2.4} />}</button>
       </div>
     </div>
-    <StatusLine running={sending} resume={props.resumeHint} diagnostic={diagnostic} detail={[mode, props.elapsedHint].filter(Boolean).join(" · ")} />
   </div>;
 }

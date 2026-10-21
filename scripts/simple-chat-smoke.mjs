@@ -204,11 +204,12 @@ async function main() {
       if (size.document > size.width + 1) throw Error(`Horizontal overflow on ${name}: ${JSON.stringify(size)}`);
     };
     await client.send('Page.navigate', { url: baseUrl });
-    await waitFor(client, 'Boolean(document.querySelector(".chat-mode-cards"))', 'new chat');
+    await waitFor(client, 'Boolean(document.querySelector(".chat-empty-session h1"))', 'new chat');
     await waitFor(client, 'document.querySelectorAll(".chat-tree-session").length === 2', 'project sessions');
-    if (await evaluate(client, 'document.querySelectorAll(".chat-empty-session .chat-agent-menu").length')) throw Error('Agent selection leaked into mode cards');
+    if (await evaluate(client, 'document.querySelectorAll(".chat-empty-session button").length')) throw Error('New chat page should hold no controls');
     await screenshot('new-chat-light');
-    await click('.chat-mode-cards button:nth-child(2)');
+    await click('.chat-mode-picker > button');
+    await click('.chat-mode-menu [data-mode="ask"]');
     await click('[aria-label="Select Agent"]');
     await evaluate(client, `Array.from(document.querySelectorAll('[role="menuitemradio"]')).find(e => e.textContent.includes('Codex')).click()`);
     await evaluate(client, `(() => { const input = document.querySelector('textarea'); Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(input, 'Preview creation test'); input.dispatchEvent(new Event('input', { bubbles: true })); })()`);
@@ -240,7 +241,7 @@ async function main() {
     await client.send('Emulation.setDeviceMetricsOverride', { width: 700, height: 820, deviceScaleFactor: 1, mobile: false });
     await waitFor(client, '!document.querySelector(".chat-project-tree")', 'collapsed narrow sidebar');
     await screenshot('new-chat-narrow');
-    writeFileSync(join(output, 'result.json'), JSON.stringify({ status: 'passed', kind: 'synthetic-web-only', checks: ['new chat sends with selected Agent and mode', 'project groups', 'new chat mode-only cards', 'tool cards and diff', 'light/dark', 'language persists after reload', 'Settings preserves selected chat', '700px sidebar collapse', 'no horizontal overflow'] }, null, 2));
+    writeFileSync(join(output, 'result.json'), JSON.stringify({ status: 'passed', kind: 'synthetic-web-only', checks: ['new chat sends with selected Agent and mode', 'project groups', 'composer mode picker', 'tool cards and diff', 'light/dark', 'language persists after reload', 'Settings preserves selected chat', '700px sidebar collapse', 'no horizontal overflow'] }, null, 2));
     await inlineCardsSmoke(client, { click, clickText, screenshot });
     console.log(`Simple Chat browser smoke passed: ${output}`);
   } finally { client?.close(); await killAndWait(child); await removeDirWithRetries(userDataDir); }

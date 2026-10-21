@@ -27,7 +27,7 @@ test('default Chat and Settings never load Task data or subscribe to Planning ev
  function Harness(){dispatch=useAppState().dispatch;return React.createElement(AppContent)}
  await act(async()=>root.render(React.createElement(ThemeProvider,null,React.createElement(AppStateProvider,{initialStateOverride:{...initialAppState,projects:{current:project,recent:[project]},app:{...initialAppState.app,activeProjectId:'p'}}},React.createElement(Harness)))));
  assert.ok(document.querySelector('[data-testid="chat-page"]'));
- assert.equal(document.querySelectorAll('[role="radio"]').length,2);
+ assert.equal(document.querySelectorAll('button[aria-haspopup="menu"][aria-label^="Mode"]').length,1);
  await act(async()=>dispatch({type:'app/viewSelected',view:'settings'}));
  assert.match(document.body.textContent,/Appearance/);
  assert.equal(calls.some(call=>/task|planning|command_run/.test(call.command)),false);
