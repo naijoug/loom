@@ -9,6 +9,7 @@ cd "$PROJECT_ROOT"
 
 pnpm docs:release:check
 pnpm docs:release:test
+pnpm openui:prompt --check
 pnpm test
 pnpm build
 cargo fmt --manifest-path src-tauri/Cargo.toml -- --check

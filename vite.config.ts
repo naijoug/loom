@@ -10,6 +10,14 @@ const port = Number(process.env.TAURI_DEV_PORT ?? process.env.PORT ?? 1420);
 export default defineConfig(async () => ({
   plugins: [react()],
 
+  // @openuidev/react-lang auto-mounts its devtools in development and loads a
+  // remote script from jsdelivr; resolve it to a local no-op instead.
+  resolve: {
+    alias: {
+      "@openuidev/devtools": decodeURIComponent(new URL("./src/features/chat/openui/devtoolsStub.ts", import.meta.url).pathname),
+    },
+  },
+
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
   // 1. prevent Vite from obscuring rust errors
