@@ -16,6 +16,7 @@ import { mockChatStore } from "./mockStore";
 import { chatSendController } from "./state/ChatSendController";
 import { defaultAgentId } from "./AgentPicker";
 import { ProjectTree } from "./ProjectTree";
+import { ProjectPicker } from "./ProjectPicker";
 import { ChatSessionHeader } from "./ChatSessionHeader";
 import { ChatTranscript } from "./ChatTranscript";
 import { ChatComposer } from "./ChatComposer";
@@ -98,6 +99,11 @@ export function ChatPage() {
     dispatch({ type: "projects/selected", projectId: target.id });
     setSelection({ project: target.path, id }); setError(null);
     if (window.innerWidth < 760) setCollapsed(true);
+  }
+  /** Switching project from the new-chat composer keeps what was typed. */
+  function switchProject(target: ProjectSummary) {
+    if (draft) setDrafts(previous => ({ ...previous, [JSON.stringify([target.path, "new"])]: draft }));
+    select(target, null);
   }
   async function createAndSend() {
     if (!projectPath || !draft.trim() || !draftAgent || createLock.current || !listenReady) return;
@@ -196,13 +202,15 @@ export function ChatPage() {
     else if (parsed.command === "export") await exportState.exportSession();
   }
   const selectedDiagnostic = diagnostics.find(item => item.agentId === session?.agentId);
-  return <div className={`chat-page${collapsed ? " sidebar-collapsed" : ""}`} data-testid="chat-page">
+  const trafficLights = useBackend && /Mac/.test(navigator.userAgent);
+  const newChat = Boolean(project && !sessionId);
+  return <div className={`chat-page${collapsed ? " sidebar-collapsed" : ""}`} data-traffic-lights={trafficLights || undefined} data-testid="chat-page">
     {!collapsed && <ProjectTree projects={state.projects.recent} agents={state.agents} projectPath={projectPath} sessionId={sessionId}
       useBackend={useBackend} revision={revision} onSelect={select} onAdd={() => setAddProjectOpen(true)}
       onSettings={() => dispatch({ type: "app/viewSelected", view: "settings" })} onCollapse={() => setCollapsed(true)} />}
-    <main className="chat-main">
+    <main className={`chat-main${newChat ? " chat-main-new" : ""}`}>
       <div className="chat-window-bar" data-tauri-drag-region>
-        {collapsed && <button type="button" aria-label={t("expandSidebar")} onClick={() => setCollapsed(false)}><PanelLeftOpen size={16} /></button>}
+        {collapsed && <button type="button" className="chat-icon-button" aria-label={t("expandSidebar")} title={t("expandSidebar")} onClick={() => setCollapsed(false)}><PanelLeftOpen size={16} /></button>}
         <UpdateButton />
       </div>
       {!project ? <div className="chat-empty-session"><div className="chat-empty-inner chat-no-project"><span className="chat-empty-mark"><LoomMark size={26} /></span>
@@ -217,13 +225,14 @@ export function ChatPage() {
             })} onClearResume={() => void clearResume()} onExport={() => void exportState.exportSession()} exporting={exportState.busy} />
           <ChatExportNotice busy={exportState.busy} error={exportState.error} result={exportState.result} />
           <ErrorBoundary resetKey={currentKey}><ChatTranscript messages={session.messages} turns={session.turns} projectPath={project.path} sessionId={session.id} toolEvents={selectedDiagnostic?.capabilities?.toolEvents !== false} inlineCards={inlineCards} onInsertText={insertText} /></ErrorBoundary>
-        </> : sessionId ? <p className="chat-loading" role="status">{error ?? t("loading")}</p> : <EmptySession projectName={project.name} projectPath={project.path} />}
+        </> : sessionId ? <p className="chat-loading" role="status">{error ?? t("loading")}</p> : <EmptySession />}
         {(!sessionId || session) && <ChatComposer key={draftKey} draft={draft} sending={running} aborting={stopKeys.has(currentKey)} canSend={listenReady && !creating && session?.status !== "archived"}
           error={error || state.app.agentError} agentId={session?.agentId ?? draftAgent} agents={agents}
           permissionMode={session?.permissionMode ?? newMode} diagnostics={diagnostics}
           onDraftChange={setDraft}
           onSend={() => void (session ? send() : createAndSend())} onAbort={() => void abort()} onAgentChange={id => void changeAgent(id)}
-          onPermissionChange={requestMode} confirmation={confirmation} onCommand={raw => void command(raw)} sessionKey={`${projectPath}:${sessionId ?? "new"}`} />}
+          onPermissionChange={requestMode} confirmation={confirmation}
+          leading={newChat ? <ProjectPicker projects={state.projects.recent} value={project.path} onChange={switchProject} onAdd={() => setAddProjectOpen(true)} disabled={creating} /> : undefined} onCommand={raw => void command(raw)} sessionKey={`${projectPath}:${sessionId ?? "new"}`} />}
       </>}
     </main>
     {addProjectOpen && <AddProjectModal onClose={() => setAddProjectOpen(false)} />}

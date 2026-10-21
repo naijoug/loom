@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { ArrowUp, Square } from "lucide-react";
 import type { AgentConfig, AgentDiagnostic, ChatPermissionMode } from "../../domain";
 import { useT } from "../../i18n";
@@ -19,6 +19,8 @@ export interface ChatComposerProps {
   onCommand?: (command: string) => void; sessionKey?: string;
   /** Pending Auto-run or Agent switch confirmation owned by the page. */
   confirmation?: Confirmation | null;
+  /** Optional control placed before the Agent picker, such as the new-chat project picker. */
+  leading?: ReactNode;
 }
 export function ChatComposer(props: ChatComposerProps) {
   const { draft, sending, aborting, canSend = true, agentId, agents, permissionMode, diagnostics,
@@ -74,6 +76,7 @@ export function ChatComposer(props: ChatComposerProps) {
           }
         }} />
       <div className="chat-composer-actions">
+        {props.leading}
         <AgentPicker agents={agents} diagnostics={diagnostics} value={agentId} onChange={onAgentChange} disabled={sending} />
         <ModePicker value={permissionMode} onChange={onPermissionChange} disabled={sending} />
         <button type="button" className="chat-send" data-running={sending} aria-label={t(sending ? "stop" : "send")} title={sending ? `${t("stop")} (Esc)` : `${t("send")} (Enter)`}

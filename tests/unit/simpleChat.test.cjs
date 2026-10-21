@@ -89,3 +89,22 @@ test('dictionaries have identical keys, interpolation is text, and locale persis
  await act(async()=>locale.setLocale('zh-CN'));assert.equal(document.documentElement.lang,'zh-CN');assert.match(document.body.textContent,/设置/);
  await render(null);await render(React.createElement(I18nProvider,null,React.createElement(Harness)));assert.equal(locale.locale,'zh-CN');
 });
+test('composer project picker switches project, offers Add project and sits before the Agent picker',async t=>{
+ const {ProjectPicker}=require('../../.tmp/test-build/src/features/chat/ProjectPicker.js');
+ const render=await fixture(t);const changed=[];let added=0;
+ const projects=[{id:'p1',name:'loom',path:'/work/loom'},{id:'p2',name:'other',path:'/work/other'}];
+ const picker=React.createElement(ProjectPicker,{projects,value:'/work/loom',onChange:p=>changed.push(p.path),onAdd:()=>added++,disabled:false});
+ await render(React.createElement(ChatComposer,{...props,leading:picker}));
+ const buttons=[...document.querySelectorAll('.chat-composer-actions > .chat-agent-picker > button')];
+ assert.equal(buttons[0].getAttribute('aria-label'),'Project: loom');
+ await act(async()=>buttons[0].click());
+ const items=[...document.querySelectorAll('.chat-project-menu [role="menuitemradio"]')];
+ assert.deepEqual(items.map(item=>item.getAttribute('aria-checked')),['true','false']);
+ await act(async()=>items[0].click());assert.deepEqual(changed,[]);
+ await act(async()=>buttons[0].click());
+ await act(async()=>document.querySelectorAll('.chat-project-menu [role="menuitemradio"]')[1].click());
+ assert.deepEqual(changed,['/work/other']);
+ await act(async()=>buttons[0].click());
+ await act(async()=>document.querySelector('.chat-project-menu [role="menuitem"]').click());
+ assert.equal(added,1);assert.equal(document.querySelector('.chat-project-menu'),null);
+});

@@ -109,7 +109,9 @@ export const zhCN: Messages = {
   exitCode: "退出码 {code}", logs: "执行日志", mode: "模式", selectAgent: "选择 Agent",
   commands: "命令", invalidCommand: "未知命令或参数无效。", noAgent: "请先在设置中安装或启用本机 Agent。",
   emptyHint: "选择模式并发送第一条消息。", archived: "已归档", active: "进行中", all: "全部", error: "错误",
-  newSessionIn: "在 {project} 中新建对话",
+  newChatTitle: "今天想做点什么？",
+  newChatHint: "在下方选择项目、Agent 和模式，然后发送第一条消息。",
+  project: "项目",
  
   noProjectHint: "添加一个本地文件夹。对话会归在该项目下，Agent 也在其中运行。",
   askHint: "每轮发送前由 Loom 确认",

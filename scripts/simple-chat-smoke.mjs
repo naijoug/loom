@@ -207,6 +207,7 @@ async function main() {
     await waitFor(client, 'Boolean(document.querySelector(".chat-empty-session h1"))', 'new chat');
     await waitFor(client, 'document.querySelectorAll(".chat-tree-session").length === 2', 'project sessions');
     if (await evaluate(client, 'document.querySelectorAll(".chat-empty-session button").length')) throw Error('New chat page should hold no controls');
+    if (!await evaluate(client, 'document.querySelector(".chat-composer-actions > .chat-project-picker > button")?.getAttribute("aria-label")?.startsWith("Project:")')) throw Error('New chat composer should offer the project picker');
     await screenshot('new-chat-light');
     await click('.chat-mode-picker > button');
     await click('.chat-mode-menu [data-mode="ask"]');
@@ -219,6 +220,7 @@ async function main() {
     await clickText('.chat-ask-confirm button', 'Confirm and send');
     await waitFor(client, 'document.querySelector(".chat-session-header h1")?.textContent === "Preview creation test"', 'new chat creation and first send');
     if (!await evaluate(client, 'document.querySelector(".chat-agent-picker > button")?.textContent.includes("Codex")')) throw Error('New chat used the wrong Agent');
+    if (await evaluate(client, 'Boolean(document.querySelector(".chat-project-picker"))')) throw Error('Existing chats keep their project; no picker expected');
     await evaluate(client, `Array.from(document.querySelectorAll('.chat-tree-session')).find(e => e.textContent.includes('Refactor the chat entry')).click()`);
     await waitFor(client, 'document.querySelectorAll(".chat-tool-card").length === 3', 'tool cards');
     await click('.chat-tool-card[data-kind="edit"] > button');
