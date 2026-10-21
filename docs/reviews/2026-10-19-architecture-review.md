@@ -3,7 +3,8 @@
 > **现状说明（2026-10-20 补记）**：本文是简化 Chat 重构（`3dd9a9f`）之前的**历史基线**，以下正文保持原样，不代表当前代码。Task/Board/Planning 已退出产品，Workbench、新内核与 SDK worker 冻结。2026-10-20 在 `codex/simple-cli-chat` 上按文件与关键代码复核的结论：
 >
 > - **已过时**：S1、S2（`execution_policy.rs`、command runner、PTY 已在 `3dd9a9f` 删除）；S3（`src/state/reducers/` 已删除）；S6（已有 `src/components/common/ErrorBoundary.tsx`，`main.tsx` 与 `ChatPage.tsx` 使用）；M2（所列 Planning/Testing 组件已删除，`SettingsPage.tsx` 现约 126 行）；M6（`WorkbenchApp.tsx` 只剩清理类 `.catch`）；M11（仓库已恢复正常提交粒度）。
-> - **仍存在**：S4（`src-tauri/src/chat/export.rs` 仍直接输出 `message.content` 与 parts 原文，未脱敏）；S7（`docs/security-policy.md` 仍无 Workbench 边界章节）；M4（`packages/provider-workers/src/worker.ts` 仍为 `z.literal(1)`）；M7（`diagnostics.rs` 仍只替换 `$HOME` 字面值）。
+> - **已修复**：S4 的 Markdown 部分（2026-10-20：`transcript.md` 的消息正文与分段已套用 `redact_sensitive_text`；`session.json` 按回滚需要保持原文；脱敏规则覆盖面偏窄的问题仍在）。
+> - **仍存在**：S7（`docs/security-policy.md` 仍无 Workbench 边界章节）；M4（`packages/provider-workers/src/worker.ts` 仍为 `z.literal(1)`）；M7（`diagnostics.rs` 仍只替换 `$HOME` 字面值）。
 > - **未复核（冻结代码，文件仍在）**：S5、M1、M3、M5、M8；M9 所指 `core_bridge.rs` 已不存在，审批轮询逻辑需在 `src-tauri/src/workbench/runtime.rs` 重新定位。
 > - M10 的测试缺口需按当前 Chat 范围（停止回收、Auto-run 确认）重新评估；旧 Task 阶段门禁不再适用。
 

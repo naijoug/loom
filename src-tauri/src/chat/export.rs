@@ -84,11 +84,17 @@ fn markdown(
             inline(&message.role),
             inline(&message.status)
         ));
-        out.push_str(&fence(&message.content, "text"));
+        // The readable transcript is meant to be shared, so it is redacted;
+        // session.json stays the exact snapshot needed for rollback.
+        out.push_str(&fence(
+            &crate::agents::redact_sensitive_text(&message.content),
+            "text",
+        ));
         if !message.parts.is_empty() {
             out.push_str("### 消息分段\n\n");
+            let parts = serde_json::to_string_pretty(&message.parts).map_err(|e| e.to_string())?;
             out.push_str(&fence(
-                &serde_json::to_string_pretty(&message.parts).map_err(|e| e.to_string())?,
+                &crate::agents::redact_sensitive_text(&parts),
                 "json",
             ));
         }
@@ -278,7 +284,10 @@ pub(super) fn write(
 mod tests {
     use super::*;
     use crate::{
-        chat::{models::ChatStreamEvent, turns},
+        chat::{
+            models::{ChatMessagePart, ChatStreamEvent},
+            turns,
+        },
         models::IdGenerator,
     };
     struct Fixture {
@@ -378,6 +387,31 @@ mod tests {
 
     fn self_root(f: &Fixture) -> PathBuf {
         f.path.join(".loom/chat/exports")
+    }
+
+    #[test]
+    fn transcript_redacts_message_content_and_parts_while_snapshot_stays_exact() {
+        let f = Fixture::new();
+        let repo = f.repo();
+        let mut session = f.session();
+        session.messages[0].content =
+            "keep this line\napi_key=sk-content-secret\nAuthorization: Bearer content.jwt.value"
+                .into();
+        session.messages[0].parts = vec![ChatMessagePart::Text {
+            text: "password=part-secret".into(),
+        }];
+        repo.create(&session).unwrap();
+        let result = repo
+            .export_session("chat-contract", "export-redacted")
+            .unwrap();
+        let md = fs::read_to_string(&result.markdown_path).unwrap();
+        for secret in ["sk-content-secret", "content.jwt.value", "part-secret"] {
+            assert!(!md.contains(secret), "transcript leaked {secret}");
+        }
+        assert!(md.contains("keep this line"));
+        assert!(md.contains("api_key= [REDACTED]"));
+        let json = fs::read_to_string(&result.json_path).unwrap();
+        assert!(json.contains("sk-content-secret") && json.contains("part-secret"));
     }
 
     #[test]
