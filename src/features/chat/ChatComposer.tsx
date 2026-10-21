@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { ArrowUp, Square } from "lucide-react";
+import { ArrowUp, Lock, Square } from "lucide-react";
 import type { AgentConfig, AgentDiagnostic, ChatPermissionMode } from "../../domain";
 import { useT } from "../../i18n";
 import { AgentPicker } from "./AgentPicker";
+import { ConfirmBanner, type Confirmation } from "./ConfirmBanner";
 import { StatusLine } from "./StatusLine";
 import { SlashMenu } from "./SlashMenu";
 import { filterSlashCommands } from "./slashCommands";
@@ -17,10 +18,12 @@ export interface ChatComposerProps {
   onSend: () => void; onAbort: () => void; onAgentChange: (id: string) => void;
   onPermissionChange: (mode: ChatPermissionMode) => void;
   onCommand?: (command: string) => void; sessionKey?: string;
+  /** Pending Auto-run or Agent switch confirmation owned by the page. */
+  confirmation?: Confirmation | null;
 }
 export function ChatComposer(props: ChatComposerProps) {
   const { draft, sending, aborting, canSend = true, agentId, agents, permissionMode, diagnostics,
-    onDraftChange, onSend, onAbort, onAgentChange, onPermissionChange, onCommand, sessionKey } = props;
+    onDraftChange, onSend, onAbort, onAgentChange, onPermissionChange, onCommand, sessionKey, confirmation } = props;
   const t = useT();
   const [askConfirm, setAskConfirm] = useState(false);
   const [selectedCommand, setSelectedCommand] = useState(0);
@@ -44,31 +47,22 @@ export function ChatComposer(props: ChatComposerProps) {
       onDraftChange(`${command} `); setMenuClosed(true);
     } else { onCommand?.(command); setMenuClosed(true); }
   }
-  function auto(enabled: boolean) {
-    if (sending) return;
-    const key = `loom-auto-confirmed:${sessionKey ?? "new"}`;
-    if (enabled && !localStorage.getItem(key)) {
-      if (!window.confirm(t("autoWarning"))) return;
-      localStorage.setItem(key, "1");
-    }
-    onPermissionChange(enabled ? "auto" : "ask");
-  }
   return <div className="chat-composer-shell">
-    {props.error && <p className="chat-error" role="alert">{props.error}</p>}
-    <div className="chat-composer" data-mode={mode} onKeyDown={event => {
+    {props.error && <p className="chat-error chat-composer-error" role="alert">{props.error}</p>}
+    <div className="chat-composer" data-mode={mode} data-auto={permissionMode === "auto"} onKeyDown={event => {
       if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
       if (event.key === "Escape") {
         event.preventDefault();
         if (commands.length) setMenuClosed(true);
+        else if (confirmation) confirmation.onCancel();
         else if (askConfirm) setAskConfirm(false);
         else if (sending && !aborting) onAbort();
       }
     }}>
       {commands.length > 0 && <SlashMenu commands={commands} selected={commandIndex} onSelect={choose} />}
-      {askConfirm && <div className="chat-ask-confirm" role="dialog" aria-label={t("confirmTurn")}>
-        <p>{t("confirmTurnHint")}</p><button type="button" onClick={() => setAskConfirm(false)}>{t("cancel")}</button>
-        <button type="button" onClick={send}>{t("confirmSend")}</button>
-      </div>}
+      {confirmation && <ConfirmBanner {...confirmation} />}
+      {askConfirm && !confirmation && <ConfirmBanner className="chat-ask-confirm" title={t("confirmTurn")} body={t("confirmTurnHint")}
+        confirmLabel={t("confirmSend")} onConfirm={send} onCancel={() => setAskConfirm(false)} />}
       <textarea value={draft} readOnly={sending} aria-label={t("messageInput")} placeholder={t(mode === "research" ? "messageResearch" : "messageCode")}
         aria-controls={commands.length ? "chat-slash-menu" : undefined} aria-activedescendant={commands.length ? `chat-slash-${commandIndex}` : undefined}
         onChange={event => { onDraftChange(event.target.value); setMenuClosed(false); setSelectedCommand(0); }}
@@ -82,11 +76,17 @@ export function ChatComposer(props: ChatComposerProps) {
         }} />
       <div className="chat-composer-actions">
         <AgentPicker agents={agents} diagnostics={diagnostics} value={agentId} onChange={onAgentChange} disabled={sending} />
-        {mode === "research" ? <span className="chat-readonly">{t("readOnly")}</span> :
-          <label className="chat-auto"><input type="checkbox" checked={permissionMode === "auto"} disabled={sending} onChange={event => auto(event.target.checked)} />{t("autoRun")}</label>}
-        <button type="button" className="chat-send" aria-label={t(sending ? "stop" : "send")} title={sending ? "Esc" : "Enter"}
+        {mode === "research" ? <span className="chat-mode-hint" data-mode="research"><Lock size={12} aria-hidden="true" />{t("readOnly")}</span> : <>
+          <label className="chat-auto">
+            <input type="checkbox" role="switch" checked={permissionMode === "auto"} disabled={sending}
+              onChange={event => onPermissionChange(event.target.checked ? "auto" : "ask")} />
+            <span className="chat-switch" aria-hidden="true" />{t("autoRun")}
+          </label>
+          <span className="chat-mode-hint" data-mode="code">{t(permissionMode === "auto" ? "autoRunHint" : "askHint")}</span>
+        </>}
+        <button type="button" className="chat-send" data-running={sending} aria-label={t(sending ? "stop" : "send")} title={sending ? `${t("stop")} (Esc)` : `${t("send")} (Enter)`}
           disabled={sending ? aborting : !draft.trim() || (!allowed && !draft.startsWith("/"))}
-          onClick={sending ? onAbort : send}>{sending ? <Square size={14} fill="currentColor" /> : <ArrowUp size={17} />}</button>
+          onClick={sending ? onAbort : send}>{sending ? <Square size={11} fill="currentColor" /> : <ArrowUp size={16} strokeWidth={2.4} />}</button>
       </div>
     </div>
     <StatusLine running={sending} resume={props.resumeHint} diagnostic={diagnostic} detail={[mode, props.elapsedHint].filter(Boolean).join(" · ")} />

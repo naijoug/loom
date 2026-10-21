@@ -191,14 +191,24 @@ body {
 }
 
 :root {
-  --chat-bg: #fafaf8; --chat-sidebar: #f1f2ef; --chat-surface: #fff;
-  --chat-border: #d8dbd7; --chat-text: #202329; --chat-muted: #535b65;
-  --chat-dim: #626975; --chat-accent: #365fae; --chat-ok: #267444;
-  --chat-warn: #855b10; --chat-danger: #b03730;
+  --chat-bg: #fafaf8; --chat-sidebar: #f2f2ef; --chat-surface: #ffffff; --chat-raised: #f5f5f2;
+  --chat-input: #ffffff; --chat-border: #e3e4e0; --chat-border-strong: #d0d2cd; --chat-selected: #e8e9e5;
+  --chat-text: #202329; --chat-text-2: #3a3f47; --chat-muted: #535b65; --chat-dim: #686f7a;
+  --chat-accent: #365fae; --chat-ok: #267444; --chat-warn: #855b10; --chat-danger: #b03730;
+  --chat-research: #1b6a78; --chat-research-bg: #eaf4f5; --chat-research-border: #b7d8de;
+  --chat-code: #6a479f; --chat-code-bg: #f3eefa; --chat-code-border: #d5c7ec;
+  --chat-send-bg: #202329; --chat-send-fg: #fafaf8;
+  --chat-banner-bg: #fbf4e8; --chat-banner-border: #e6cd9c; --chat-banner-title: #5f3f07; --chat-banner-text: #6f5323;
+  --chat-shadow: 0 1px 2px #1a1d2310, 0 12px 32px #1a1d2318;
 }
 [data-theme="dark"] {
-  --chat-bg: #111214; --chat-sidebar: #0c0d0f; --chat-surface: #17181b;
-  --chat-border: #2e3036; --chat-text: #e6e6e3; --chat-muted: #9a9da4;
-  --chat-dim: #8b8e95; --chat-accent: #7aa2f7; --chat-ok: #8fd6ae;
-  --chat-warn: #e5b26b; --chat-danger: #f0948b;
+  --chat-bg: #111214; --chat-sidebar: #0c0d0f; --chat-surface: #17181b; --chat-raised: #15161a;
+  --chat-input: #0f1012; --chat-border: #23252a; --chat-border-strong: #2e3036; --chat-selected: #1e2026;
+  --chat-text: #e6e6e3; --chat-text-2: #c9cbcf; --chat-muted: #9a9da4; --chat-dim: #8b8e95;
+  --chat-accent: #7aa2f7; --chat-ok: #8fd6ae; --chat-warn: #e5b26b; --chat-danger: #f0948b;
+  --chat-research: #a9dde8; --chat-research-bg: #14211f; --chat-research-border: #29444b;
+  --chat-code: #dcc4f7; --chat-code-bg: #1c1826; --chat-code-border: #3b3150;
+  --chat-send-bg: #e6e6e3; --chat-send-fg: #111214;
+  --chat-banner-bg: #1e1912; --chat-banner-border: #5a4630; --chat-banner-title: #f1d3a6; --chat-banner-text: #c9b79a;
+  --chat-shadow: 0 1px 2px #0006, 0 16px 40px #0007;
 }

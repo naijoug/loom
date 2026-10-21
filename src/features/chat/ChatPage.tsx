@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { PanelLeftOpen } from "lucide-react";
+import { FolderPlus, PanelLeftOpen } from "lucide-react";
 import type { AgentDiagnostic, ChatPermissionMode, ChatSession, ProjectSummary } from "../../domain";
 import { useAppState } from "../../state/AppStateContext";
 import { useAgentCatalog } from "../../hooks/useAgentCatalog";
@@ -21,6 +21,8 @@ import { ChatTranscript } from "./ChatTranscript";
 import { ChatComposer } from "./ChatComposer";
 import { ChatExportNotice } from "./ChatExportNotice";
 import { EmptySession } from "./EmptySession";
+import type { Confirmation } from "./ConfirmBanner";
+import { LoomMark } from "./icons";
 import { parseSlashCommand } from "./slashCommands";
 import { toPermissionMode } from "./workMode";
 import "./chat.css";
@@ -49,6 +51,7 @@ export function ChatPage() {
   const [revision, setRevision] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [addProjectOpen, setAddProjectOpen] = useState(false);
+  const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
   const [collapsed, setCollapsed] = useState(() => window.innerWidth < 760);
   const pending = useRef(new Set<string>());
   const pendingStops = useRef(new Set<string>());
@@ -76,7 +79,8 @@ export function ChatPage() {
     const resize = (event: MediaQueryListEvent) => { if (event.matches) setCollapsed(true); };
     media.addEventListener("change", resize); return () => media.removeEventListener("change", resize);
   }, []);
-  useEffect(() => { setError(null); }, [projectPath, sessionId]);
+  useEffect(() => { setError(null); setConfirmation(null); }, [projectPath, sessionId]);
+  useEffect(() => { if (running) setConfirmation(null); }, [running]);
   useEffect(() => {
     if (!session?.activeTurnId || !projectPath) return;
     const key = JSON.stringify([projectPath, session.id]);
@@ -156,12 +160,22 @@ export function ChatPage() {
     await mutate(async () => useBackend ? chatUpdateMeta({ projectPath, sessionId: session.id, permissionMode: mode })
       : mockChatStore.setPermissionMode(session.id, mode) ?? null);
   }
+  /** Auto-run asks once per chat; the answer is kept so later toggles stay quiet. */
+  function requestMode(mode: ChatPermissionMode) {
+    if (running) return;
+    const key = `loom-auto-confirmed:${projectPath}:${sessionId ?? "new"}`;
+    if (mode !== "auto" || localStorage.getItem(key)) { void changeMode(mode); return; }
+    setConfirmation({ title: t("autoTitle"), body: t("autoWarning"), confirmLabel: t("autoConfirm"), onCancel: () => setConfirmation(null),
+      onConfirm: () => { localStorage.setItem(key, "1"); setConfirmation(null); void changeMode("auto"); } });
+  }
   async function changeAgent(id: string) {
     if (running) return;
-    if (!agents.some(agent => agent.id === id && agent.available) || diagnostics.some(item => item.agentId === id && ["missing", "unavailable"].includes(item.status))) { setError(t("noAgent")); return; }
+    const target = agents.find(agent => agent.id === id && agent.available);
+    if (!target || diagnostics.some(item => item.agentId === id && ["missing", "unavailable"].includes(item.status))) { setError(t("noAgent")); return; }
     if (!session || !projectPath) { setNewAgent(id); return; }
-    if (id === session.agentId || !window.confirm(t("agentSwitchWarning"))) return;
-    await mutate(async () => useBackend ? chatSetAgent(projectPath, session.id, id) : mockChatStore.setAgent(session.id, id) ?? null);
+    if (id === session.agentId) return;
+    setConfirmation({ title: t("agentSwitchTitle", { agent: target.name }), body: t("agentSwitchWarning"), confirmLabel: t("agentSwitchConfirm"), onCancel: () => setConfirmation(null),
+      onConfirm: () => { setConfirmation(null); void mutate(async () => useBackend ? chatSetAgent(projectPath, session.id, id) : mockChatStore.setAgent(session.id, id) ?? null); } });
   }
   async function clearResume() {
     if (!session || !projectPath || running) return;
@@ -175,14 +189,7 @@ export function ChatPage() {
     setDraft("");
     if (parsed.command === "new") { setNewMode("explore"); localStorage.removeItem(`loom-auto-confirmed:${projectPath}:new`); setSelection({ project: projectPath, id: null }); }
     else if (parsed.command === "agent") await changeAgent(parsed.argument);
-    else if (parsed.command === "mode") {
-      if (parsed.argument === "auto") {
-        const key = `loom-auto-confirmed:${projectPath}:${sessionId ?? "new"}`;
-        if (!localStorage.getItem(key) && !window.confirm(t("autoWarning"))) return;
-        localStorage.setItem(key, "1");
-      }
-      await changeMode(toPermissionMode(parsed.argument === "research" ? "research" : "code", parsed.argument === "auto"));
-    } else if (parsed.command === "clear-resume") await clearResume();
+    else if (parsed.command === "mode") requestMode(toPermissionMode(parsed.argument === "research" ? "research" : "code", parsed.argument === "auto")); else if (parsed.command === "clear-resume") await clearResume();
     else if (parsed.command === "export") await exportState.exportSession();
   }
   const selectedDiagnostic = diagnostics.find(item => item.agentId === session?.agentId);
@@ -195,9 +202,11 @@ export function ChatPage() {
         {collapsed && <button type="button" aria-label={t("expandSidebar")} onClick={() => setCollapsed(false)}><PanelLeftOpen size={16} /></button>}
         <UpdateButton />
       </div>
-      {!project ? <div className="chat-empty-session"><h1>Loom</h1><p>{t("noProject")}</p><button type="button" onClick={() => setAddProjectOpen(true)}>{t("addProject")}</button></div> : <>
+      {!project ? <div className="chat-empty-session"><div className="chat-empty-inner chat-no-project"><span className="chat-empty-mark"><LoomMark size={26} /></span>
+        <h1>{t("noProject")}</h1><p>{t("noProjectHint")}</p>
+        <button type="button" className="chat-primary-button" onClick={() => setAddProjectOpen(true)}><FolderPlus size={15} aria-hidden="true" />{t("addProject")}</button></div></div> : <>
         {session ? <>
-          <ChatSessionHeader session={session} projectName={project.name} running={running} onMode={mode => void changeMode(mode)}
+          <ChatSessionHeader session={session} projectName={project.name} running={running} onMode={requestMode}
             onRename={title => void mutate(async () => useBackend ? chatUpdateMeta({ projectPath: project.path, sessionId: session.id, title }) : mockChatStore.setTitle(session.id, title) ?? null)}
             onArchive={() => void mutate(async () => {
               const status = session.status === "archived" ? "active" : "archived";
@@ -205,13 +214,13 @@ export function ChatPage() {
             })} onClearResume={() => void clearResume()} onExport={() => void exportState.exportSession()} exporting={exportState.busy} />
           <ChatExportNotice busy={exportState.busy} error={exportState.error} result={exportState.result} />
           <ErrorBoundary resetKey={currentKey}><ChatTranscript messages={session.messages} turns={session.turns} projectPath={project.path} sessionId={session.id} toolEvents={selectedDiagnostic?.capabilities?.toolEvents !== false} /></ErrorBoundary>
-        </> : sessionId ? <p role="status">{error ?? t("loading")}</p> : <EmptySession mode={newMode} onChange={setNewMode} />}
+        </> : sessionId ? <p className="chat-loading" role="status">{error ?? t("loading")}</p> : <EmptySession mode={newMode} onChange={setNewMode} projectName={project.name} projectPath={project.path} />}
         {(!sessionId || session) && <ChatComposer key={draftKey} draft={draft} sending={running} aborting={stopKeys.has(currentKey)} canSend={listenReady && !creating && session?.status !== "archived"}
           error={error || state.app.agentError} useBackend={useBackend} agentId={session?.agentId ?? draftAgent} agents={agents}
           permissionMode={session?.permissionMode ?? newMode} resumeHint={Boolean(session?.resumeHandle)} diagnostics={diagnostics}
           diagnosticsLoading={diagnosticsLoading} onRefreshDiagnostics={() => void refreshDiagnostics()} onDraftChange={setDraft}
           onSend={() => void (session ? send() : createAndSend())} onAbort={() => void abort()} onAgentChange={id => void changeAgent(id)}
-          onPermissionChange={mode => void changeMode(mode)} onCommand={raw => void command(raw)} sessionKey={`${projectPath}:${sessionId ?? "new"}`} />}
+          onPermissionChange={requestMode} confirmation={confirmation} onCommand={raw => void command(raw)} sessionKey={`${projectPath}:${sessionId ?? "new"}`} />}
       </>}
     </main>
     {addProjectOpen && <AddProjectModal onClose={() => setAddProjectOpen(false)} />}

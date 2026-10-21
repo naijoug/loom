@@ -2,6 +2,9 @@
 
 ## 2026-10-20
 
+- 05:55-chat-ui-polish.md
+  > （代码完成，合成网页与 smoke:visual 已验证；桌面已由用户确认 Auto-run 与切换 Agent 提示条；已提交）按 Claude Design 画布打磨简化 Chat 的界面：lucide 图标替换文本字符，Research/Code 模式着色，Composer、斜杠菜单与 Agent 菜单补全信息，用应用内提示条替换 Auto-run 与切换 Agent 的 `window.confirm`，新会话页与设置页改为分区卡片；只改前端，不改存储与适配器。
+
 - 01:01-simple-chat-implementation.md
   > （工程与资料收尾完成，待用户桌面验收；代码 `7e1dfcb`/`3dd9a9f`，首版资料 `0acbb10`；check 与 tauri no-bundle 通过；原生验收由用户接手，未合入 main）00:44 重构计划的执行拆解：10 个可独立 Review 的 PR（CLI 实测、入口收敛与 ErrorBoundary、Agent 探测与按项目聚合会话、OpenCode 适配与工具事件配对、会话界面（新会话只选模式）、Composer 斜杠命令与输入框内 Agent 选择、英文优先 i18n（可切简体中文）、设置精简、删除旧工作流、文档与真实验收），对应 Claude Design 初版 UI 画布与设计令牌。
 

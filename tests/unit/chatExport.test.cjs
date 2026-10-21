@@ -16,7 +16,7 @@ test("export menu invokes production hook once and shows warnings plus an explic
     React.createElement(ChatSessionHeader,{session:samples.chatSession,useBackend:true,canPromote:false,onClearResume(){},onPromote(){},onRename(){},onTitleFromFirstMessage(){},onToggleFlag(){},onArchive(){},onExport:()=>void latest.exportSession(),exporting:latest.busy}),
     React.createElement(ChatExportNotice,{...latest,reveal:async(path)=>{reveals.push(path);}}));}
   await f.render(React.createElement(Harness));
-    await act(async()=>[...document.querySelectorAll("button")].find(b=>b.textContent.includes("Export chat")).click());
+    await act(async()=>document.querySelector('button[aria-label="Export chat"]').click());
   await act(async()=>{void latest.exportSession();});
   assert.equal(calls.length,1);assert.deepEqual(calls[0],{projectPath:"/project",sessionId:"chat-contract"});
   assert.match(document.body.textContent,/Exporting/);assert.equal(reveals.length,0);

@@ -17,18 +17,20 @@ export function ChatTranscript({ messages, emptyHint, turns, projectPath, sessio
       const turn = turns?.find(turn => turn.assistantMessageId === message.id);
       const logs = turn && projectPath && sessionId ? <ChatRunDetails projectPath={projectPath} sessionId={sessionId} turn={turn} /> : null;
       const parts = message.parts ?? [];
+      const tools = toolEvents ? parts.filter(part => part.type === "tool") : [];
       const error = chatMessageErrorFallbackText(message);
+      const stoppedEmpty = message.status === "aborted" && !message.content;
       return <article key={message.id} className={message.role === "user" ? "chat-user-row" : "chat-turn"} data-status={message.status} data-role={message.role}>
         <div className={message.role === "user" ? "chat-user-bubble" : "chat-turn-body"}>
           {message.role === "user" ? message.content : <>
             {message.content && <Markdown text={message.content} />}
             {!message.content && parts.filter(part => part.type === "text").map((part, index) => part.type === "text" && <Markdown key={index} text={part.text} />)}
-            {toolEvents && parts.map((part, index) => part.type === "tool" ? <ToolCallCard key={part.callId ?? index} part={part} logs={logs} /> : null)}
+            {tools.length > 0 && <div className="chat-tool-group">{tools.map((part, index) => part.type === "tool" ? <ToolCallCard key={part.callId ?? index} part={part} /> : null)}</div>}
             {parts.map((part, index) => part.type === "error" ? <p className="chat-error" role="alert" key={index}>{part.message}{part.code ? ` (${part.code})` : ""}</p> : null)}
-            {error && <div role="alert" className="chat-error">{error}{logs}</div>}
-            {message.status === "aborted" && !message.content && <div>{t("stopped")}{logs}</div>}
-            {!error && !(message.status === "aborted" && !message.content) && (!toolEvents || !parts.some(part => part.type === "tool")) && logs}
-            {message.status === "streaming" && <span className="chat-streaming" aria-label={t("running")}>●</span>}
+            {error && <div role="alert" className="chat-error">{error}</div>}
+            {stoppedEmpty && <p className="chat-stopped">{t("stopped")}</p>}
+            {message.status === "streaming" && <span className="chat-streaming" role="status" aria-label={t("running")}><i /><i /><i /></span>}
+            {logs}
           </>}
         </div>
       </article>;
