@@ -6,15 +6,15 @@ import { ToolCallCard } from "./ToolCallCard";
 import { chatMessageErrorFallbackText } from "../../domain";
 
 export interface ChatTranscriptProps {
-  messages: ChatMessage[]; emptyHint?: string; turns?: ChatTurn[];
+  messages: ChatMessage[]; turns?: ChatTurn[];
   projectPath?: string; sessionId?: string; toolEvents?: boolean;
   /** Experimental OpenUI cards; insert appends card text to the draft without sending. */
   inlineCards?: boolean; onInsertText?: (text: string) => void;
 }
-export function ChatTranscript({ messages, emptyHint, turns, projectPath, sessionId, toolEvents = true, inlineCards = false, onInsertText }: ChatTranscriptProps) {
+export function ChatTranscript({ messages, turns, projectPath, sessionId, toolEvents = true, inlineCards = false, onInsertText }: ChatTranscriptProps) {
   const t = useT();
   return <div className="chat-transcript" data-testid="chat-messages"><div className="chat-transcript-inner">
-    {!messages.length && <p className="chat-transcript-empty">{emptyHint ?? t("emptyHint")}</p>}
+    {!messages.length && <p className="chat-transcript-empty">{t("emptyHint")}</p>}
     {messages.map(message => {
       const turn = turns?.find(turn => turn.assistantMessageId === message.id);
       const logs = turn && projectPath && sessionId ? <ChatRunDetails projectPath={projectPath} sessionId={sessionId} turn={turn} /> : null;

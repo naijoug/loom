@@ -13,7 +13,7 @@ test("export menu invokes production hook once and shows warnings plus an explic
   const f=await fixture(t);const response=deferred();const calls=[];const reveals=[];let latest;
   const api=async(input)=>{calls.push(input);return response.promise;};
   function Harness(){latest=useChatExport("/project","chat-contract",api);return React.createElement(React.Fragment,null,
-    React.createElement(ChatSessionHeader,{session:samples.chatSession,useBackend:true,canPromote:false,onClearResume(){},onPromote(){},onRename(){},onTitleFromFirstMessage(){},onToggleFlag(){},onArchive(){},onExport:()=>void latest.exportSession(),exporting:latest.busy}),
+    React.createElement(ChatSessionHeader,{session:samples.chatSession,running:false,onClearResume(){},onRename(){},onArchive(){},onExport:()=>void latest.exportSession(),exporting:latest.busy}),
     React.createElement(ChatExportNotice,{...latest,reveal:async(path)=>{reveals.push(path);}}));}
   await f.render(React.createElement(Harness));
     await act(async()=>document.querySelector('button[aria-label="Export chat"]').click());

@@ -11,10 +11,9 @@ import { toWorkMode } from "./workMode";
 
 export interface ChatComposerProps {
   draft: string; sending: boolean; aborting?: boolean; canSend?: boolean;
-  error: string | null; useBackend: boolean;
+  error: string | null;
   agentId: string; agents: AgentConfig[]; permissionMode: ChatPermissionMode;
-  diagnostics: AgentDiagnostic[]; diagnosticsLoading: boolean;
-  onRefreshDiagnostics: () => void; onDraftChange: (value: string) => void;
+  diagnostics: AgentDiagnostic[]; onDraftChange: (value: string) => void;
   onSend: () => void; onAbort: () => void; onAgentChange: (id: string) => void;
   onPermissionChange: (mode: ChatPermissionMode) => void;
   onCommand?: (command: string) => void; sessionKey?: string;

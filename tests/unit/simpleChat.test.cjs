@@ -15,7 +15,7 @@ const {ErrorBoundary}=require('../../.tmp/test-build/src/components/common/Error
 const {I18nProvider,useLocale,useT,translate,normalizeLocale}=require('../../.tmp/test-build/src/i18n/index.js');
 const {en}=require('../../.tmp/test-build/src/i18n/en.js');const {zhCN}=require('../../.tmp/test-build/src/i18n/zh-CN.js');
 const agent={id:'claude',name:'Claude Code',adapterType:'claude_code_cli',enabled:true,available:true};
-const props={draft:'hello',sending:false,error:null,useBackend:true,agentId:'claude',agents:[agent],permissionMode:'explore',resumeHint:false,diagnostics:[],diagnosticsLoading:false,onRefreshDiagnostics(){},onDraftChange(){},onSend(){},onAbort(){},onAgentChange(){},onPermissionChange(){}};
+const props={draft:'hello',sending:false,error:null,agentId:'claude',agents:[agent],permissionMode:'explore',diagnostics:[],onDraftChange(){},onSend(){},onAbort(){},onAgentChange(){},onPermissionChange(){}};
 async function fixture(t){const root=createRoot(document.getElementById('root'));t.after(async()=>{await act(async()=>root.unmount());localStorage.clear()});return async element=>act(async()=>root.render(element));}
 const key=async(key,extra={})=>act(async()=>document.querySelector('textarea').dispatchEvent(new window.KeyboardEvent('keydown',{key,bubbles:true,...extra})));
 test('work modes normalize legacy and unknown values without granting auto mode',()=>{

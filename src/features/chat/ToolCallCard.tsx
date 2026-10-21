@@ -1,8 +1,8 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { Check, ChevronRight, CircleX, LoaderCircle } from "lucide-react";
 import type { ChatMessagePart } from "../../domain";
 import { useT } from "../../i18n";
-export function ToolCallCard({ part, logs }: { part: Extract<ChatMessagePart, { type: "tool" }>; logs?: ReactNode }) {
+export function ToolCallCard({ part }: { part: Extract<ChatMessagePart, { type: "tool" }> }) {
   const running = part.status === "running";
   const [open, setOpen] = useState(running);
   const t = useT();
@@ -24,7 +24,6 @@ export function ToolCallCard({ part, logs }: { part: Extract<ChatMessagePart, { 
       {part.diffPreview ? <pre className="chat-diff">{part.diffPreview.split("\n").map((line, index) =>
         <span key={index} data-diff={line.startsWith("+") ? "added" : line.startsWith("-") ? "removed" : ""}>{line}</span>)}</pre>
         : <pre>{[part.inputSummary, part.outputSummary].filter(Boolean).join("\n")}</pre>}
-      {logs}
     </div>}
   </div>;
 }

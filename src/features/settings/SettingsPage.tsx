@@ -18,13 +18,13 @@ import "./settings.css";
 type SettingsTab = "agents" | "appearance" | "experiments" | "diagnostics" | "about";
 const tabIcons = { agents: Bot, appearance: Palette, experiments: FlaskConical, diagnostics: Activity, about: Info } as const;
 const themeIcons = { system: Monitor, dark: Moon, light: Sun } as const;
-export function SettingsPage({ onBack, initialTab = "agents" }: { onBack: () => void; initialTab?: SettingsTab }) {
+export function SettingsPage({ onBack }: { onBack: () => void }) {
   const t = useT();
   const { state } = useAppState();
   const { themeMode, setThemeMode, settingsError } = useTheme();
   const { locale, setLocale } = useLocale();
   const { loadAgents, diagnoseAgents, createAgent, updateAgent, deleteAgent, setAgentEnabled } = useAgentCatalog();
-  const [tab, setTab] = useState<SettingsTab>(initialTab);
+  const [tab, setTab] = useState<SettingsTab>("agents");
   const [diagnostics, setDiagnostics] = useState<AgentDiagnostic[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");

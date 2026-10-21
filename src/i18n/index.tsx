@@ -31,10 +31,3 @@ export function useT() {
   const { locale } = useLocale();
   return (key: MessageKey, values?: Record<string, string | number>) => translate(locale, key, values);
 }
-export function formatRelativeTime(timestamp: number, locale: Locale, now = Date.now()) {
-  const seconds = Math.round((timestamp - now) / 1000);
-  const [value, unit]: [number, Intl.RelativeTimeFormatUnit] = Math.abs(seconds) < 60
-    ? [seconds, "second"] : Math.abs(seconds) < 3600 ? [Math.round(seconds / 60), "minute"]
-    : Math.abs(seconds) < 86400 ? [Math.round(seconds / 3600), "hour"] : [Math.round(seconds / 86400), "day"];
-  return new Intl.RelativeTimeFormat(locale, { numeric: "auto" }).format(value, unit);
-}

@@ -89,9 +89,9 @@ export const zhCN: Messages = {
   noProject: "未选择项目", projects: "项目", addProject: "添加项目", newSession: "新建会话",
   errorTitle: "出现错误", errorBody: "无法显示此视图，请重新加载。", reload: "重新加载",
   expandSidebar: "展开侧栏", collapseSidebar: "收起侧栏", research: "调研", code: "Code",
-  researchHint: "阅读和探索项目，不修改文件。", codeHint: "修改文件并在项目中运行命令。",
+  researchHint: "阅读和探索项目，不修改文件。",
   send: "发送消息", stop: "停止生成", stopped: "已停止", running: "运行中", ready: "就绪",
-  autoRun: "自动执行", readOnly: "只读", messageResearch: "你想了解这个项目的什么？",
+  autoRun: "自动执行", messageResearch: "你想了解这个项目的什么？",
   messageCode: "你想实现什么？", autoWarning: "CLI 将在此对话中直接修改文件并运行命令，不再逐轮确认。",
   agentSwitchWarning: "原生续聊将被清除，之前的消息会重放给新 Agent。",
   nativeResume: "原生续聊", historyReplay: "历史重放", unavailable: "未安装", installed: "已安装",
@@ -110,7 +110,7 @@ export const zhCN: Messages = {
   commands: "命令", invalidCommand: "未知命令或参数无效。", noAgent: "请先在设置中安装或启用本机 Agent。",
   emptyHint: "选择模式并发送第一条消息。", archived: "已归档", active: "进行中", all: "全部", error: "错误",
   newSessionIn: "在 {project} 中新建对话",
-  slashHint: "输入 / 查看命令",
+ 
   noProjectHint: "添加一个本地文件夹。对话会归在该项目下，Agent 也在其中运行。",
   askHint: "每轮发送前由 Loom 确认",
   autoRunHint: "不再逐轮确认，直接运行",
@@ -118,8 +118,8 @@ export const zhCN: Messages = {
   autoConfirm: "开启",
   agentSwitchTitle: "切换到 {agent}？",
   agentSwitchConfirm: "切换",
-  kbdSend: "发送",
-  kbdCancel: "取消",
+ 
+ 
   kbdSelect: "选择",
   kbdRun: "执行",
   kbdClose: "关闭",

@@ -11,7 +11,6 @@ export type ChatPermissionModeInput = ChatPermissionMode | LegacyChatPermissionM
 export type ChatSessionStatus = "active" | "archived";
 
 /** Inbox filter tabs (status stays active|archived; needs_attention is derived/filter). */
-export type ChatInboxFilter = ChatSessionStatus | "needs_attention";
 
 export type ChatMessageRole = "user" | "assistant" | "system";
 
@@ -108,10 +107,6 @@ export interface ChatExportResult {
   inProgress: boolean; warnings: string[];
 }
 
-export function chatResumeLabel(session: Pick<ChatSession, "resumeHandle" | "resumeCommand">): string {
-  return session.resumeHandle ? "可续聊" : session.resumeCommand ? "续聊需重建" : "新 CLI 会话";
-}
-
 export interface ChatStreamPayload {
   sessionId: string;
   turnId: string;
@@ -169,13 +164,6 @@ export interface ChatSessionSummary {
   storageError?: string;
 }
 
-export interface ChatCreateInput {
-  projectPath: string;
-  agentId: string;
-  title?: string;
-  permissionMode?: ChatPermissionMode;
-}
-
 export interface ChatSendInput {
   projectPath: string;
   sessionId: string;
@@ -218,16 +206,6 @@ export function normalizeChatPermissionMode(
   }
 }
 
-/**
- * True when mode maps to write-capable adapter stage.
- * Phase 2: ask and auto both use Debugging / acceptEdits; ask still requires
- * a per-turn UI confirm before send (see chatPermission.askTurnRequiresConfirm).
- */
-export function chatPermissionAllowsWrite(mode: ChatPermissionModeInput): boolean {
-  const normalized = normalizeChatPermissionMode(mode);
-  return normalized === "ask" || normalized === "auto";
-}
-
 /** Whether an active session should appear under the needs_attention filter. */
 export function chatSessionNeedsAttention(session: {
   status?: ChatSessionStatus | string | null;
@@ -265,81 +243,6 @@ export function titleFromUserMessage(text: string, maxLen = 48): string {
   }
   const sliced = chars.slice(0, cut).join("").trimEnd();
   return `${sliced}…`;
-}
-
-/** Filter inbox summaries for a tab (active includes needs_attention items). */
-export function filterChatSummaries<T extends {
-  status?: ChatSessionStatus | string | null;
-  needsAttention?: boolean | null;
-  flagged?: boolean | null;
-}>(summaries: T[], filter: ChatInboxFilter): T[] {
-  if (filter === "archived") {
-    return summaries.filter((item) => (item.status ?? "active") === "archived");
-  }
-  if (filter === "needs_attention") {
-    return summaries.filter(
-      (item) =>
-        (item.status ?? "active") === "active" &&
-        Boolean(item.needsAttention || item.flagged),
-    );
-  }
-  return summaries.filter((item) => (item.status ?? "active") === "active");
-}
-
-
-/** Case-insensitive visible inbox text filter (empty query = passthrough). */
-export function filterChatSummariesByQuery<T extends {
-  title: string;
-  preview?: string;
-}>(summaries: T[], query: string, getExtraText?: (item: T) => string | undefined): T[] {
-  const q = query.trim().toLowerCase();
-  if (!q) return summaries;
-  return summaries.filter((item) => {
-    const searchable = [item.title, item.preview, getExtraText?.(item)]
-      .filter((value): value is string => Boolean(value))
-      .join("\n")
-      .toLowerCase();
-    return searchable.includes(q);
-  });
-}
-
-/** Agent fallback text is visible only when the inbox row has no preview. */
-export function chatInboxVisibleAgentFallbackText<T extends {
-  preview?: string;
-  agentId: string;
-}>(summary: T, agentNameById: Record<string, string>): string | undefined {
-  if (summary.preview) return undefined;
-  return agentNameById[summary.agentId] ?? summary.agentId;
-}
-
-/** Search hint mirrors the searchable inbox fields. */
-export function chatInboxSearchPlaceholder(): string {
-  return "搜索标题、内容或 Agent…";
-}
-
-/** Accessible label must name the same searchable fields as the visible hint. */
-export function chatInboxSearchAriaLabel(): string {
-  return "搜索会话标题、内容或 Agent";
-}
-
-/** Empty-state copy that distinguishes no sessions from no search matches. */
-export function chatInboxEmptyMessage({
-  filter,
-  searchQuery,
-  useBackend,
-}: {
-  filter: ChatInboxFilter;
-  searchQuery: string;
-  useBackend: boolean;
-}): string {
-  if (searchQuery.trim()) {
-    return "没有匹配的会话。试试换个关键词或清除搜索。";
-  }
-  if (filter === "archived") return "没有已归档会话。";
-  if (filter === "needs_attention") return "没有需要关注的会话。";
-  return `还没有会话。点「新建」开始。${
-    useBackend ? " 将通过本机 Agent CLI 流式回复。" : " （浏览器预览使用模拟回复）"
-  }`;
 }
 
 /**

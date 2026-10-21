@@ -53,7 +53,6 @@ export function ChatPage() {
   const [newAgent, setNewAgent] = useState("");
   const [diagnostics, setDiagnostics] = useState<AgentDiagnostic[]>([]);
   const draftAgent = defaultAgentId(agents.map(agent => diagnostics.some(diagnostic => diagnostic.agentId === agent.id && diagnostic.status === "unavailable") ? { ...agent, available: false } : agent), newAgent || localStorage.getItem("loom-last-agent"));
-  const [diagnosticsLoading, setDiagnosticsLoading] = useState(false);
   const [revision, setRevision] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [addProjectOpen, setAddProjectOpen] = useState(false);
@@ -74,10 +73,8 @@ export function ChatPage() {
   const isCurrent = () => current.current.projectPath === projectPath && current.current.sessionId === sessionId;
   const exportState = useChatExport(useBackend ? projectPath : null, useBackend ? sessionId : null);
   const refreshDiagnostics = useCallback(async () => {
-    setDiagnosticsLoading(true);
     try { setDiagnostics(await diagnoseAgents()); }
     catch (error) { setError(String(error)); }
-    finally { setDiagnosticsLoading(false); }
   }, [diagnoseAgents]);
   useEffect(() => { void loadAgents(); void loadRecentProjects(); void refreshDiagnostics(); }, [loadAgents, loadRecentProjects, refreshDiagnostics]);
   useEffect(() => {
@@ -222,9 +219,9 @@ export function ChatPage() {
           <ErrorBoundary resetKey={currentKey}><ChatTranscript messages={session.messages} turns={session.turns} projectPath={project.path} sessionId={session.id} toolEvents={selectedDiagnostic?.capabilities?.toolEvents !== false} inlineCards={inlineCards} onInsertText={insertText} /></ErrorBoundary>
         </> : sessionId ? <p className="chat-loading" role="status">{error ?? t("loading")}</p> : <EmptySession projectName={project.name} projectPath={project.path} />}
         {(!sessionId || session) && <ChatComposer key={draftKey} draft={draft} sending={running} aborting={stopKeys.has(currentKey)} canSend={listenReady && !creating && session?.status !== "archived"}
-          error={error || state.app.agentError} useBackend={useBackend} agentId={session?.agentId ?? draftAgent} agents={agents}
+          error={error || state.app.agentError} agentId={session?.agentId ?? draftAgent} agents={agents}
           permissionMode={session?.permissionMode ?? newMode} diagnostics={diagnostics}
-          diagnosticsLoading={diagnosticsLoading} onRefreshDiagnostics={() => void refreshDiagnostics()} onDraftChange={setDraft}
+          onDraftChange={setDraft}
           onSend={() => void (session ? send() : createAndSend())} onAbort={() => void abort()} onAgentChange={id => void changeAgent(id)}
           onPermissionChange={requestMode} confirmation={confirmation} onCommand={raw => void command(raw)} sessionKey={`${projectPath}:${sessionId ?? "new"}`} />}
       </>}

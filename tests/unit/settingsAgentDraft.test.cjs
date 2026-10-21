@@ -4,7 +4,6 @@ const {
   defaultAgentDraft,
   draftFromAgent,
   isBuiltInAgent,
-  profileSummary,
 } = require("../../.tmp/test-build/src/features/settings/agentDraft.js");
 
 test("default Agent draft is implementation-capable and safe to edit", () => {
@@ -29,5 +28,4 @@ test("Agent draft round-trips editable fields", () => {
   };
   assert.deepEqual(draftFromAgent(agent).args, ["--json"]);
   assert.equal(isBuiltInAgent(agent), false);
-  assert.equal(profileSummary(agent), "reviewer --json");
 });

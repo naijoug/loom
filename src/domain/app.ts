@@ -25,9 +25,3 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   experimentalInlineCards: false,
 };
 
-export interface WorkflowStage {
-  id: "planning" | "implementation" | "debugging" | "summary";
-  title: string;
-  status: "ready" | "pending" | "blocked";
-  outcome: string;
-}

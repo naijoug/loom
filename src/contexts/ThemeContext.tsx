@@ -8,13 +8,11 @@ interface ThemeContextType {
   theme: Theme;
   themeMode: ThemeMode;
   setThemeMode: (mode: ThemeMode) => void;
-  toggleTheme: () => void;
   settingsError: string | null;
 }
 
 interface ThemeProviderProps {
   children: ReactNode;
-  forcedTheme?: Theme;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -44,29 +42,13 @@ export function effectiveThemeForMode(mode: ThemeMode, system: Theme): Theme {
   return mode === "system" ? system : mode;
 }
 
-export function ThemeProvider({ children, forcedTheme }: ThemeProviderProps) {
+export function ThemeProvider({ children }: ThemeProviderProps) {
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const [system, setSystem] = useState<Theme>(systemTheme);
-  const [themeMode, setThemeModeState] = useState<ThemeMode>(() => {
-    if (forcedTheme) {
-      return forcedTheme;
-    }
-
-    return resolveThemeMode(undefined, localStorage.getItem("loom-theme"));
-  });
-  const theme = forcedTheme ?? effectiveThemeForMode(themeMode, system);
+  const [themeMode, setThemeModeState] = useState<ThemeMode>(() => resolveThemeMode(undefined, localStorage.getItem("loom-theme")));
+  const theme = effectiveThemeForMode(themeMode, system);
 
   useEffect(() => {
-    if (forcedTheme) {
-      setThemeModeState(forcedTheme);
-    }
-  }, [forcedTheme]);
-
-  useEffect(() => {
-    if (forcedTheme) {
-      return;
-    }
-
     let cancelled = false;
     void loadAppSettings().then((loaded) => {
       if (cancelled) {
@@ -78,7 +60,7 @@ export function ThemeProvider({ children, forcedTheme }: ThemeProviderProps) {
     return () => {
       cancelled = true;
     };
-  }, [forcedTheme]);
+  }, []);
 
   // Apply theme to DOM
   useEffect(() => {
@@ -89,26 +71,13 @@ export function ThemeProvider({ children, forcedTheme }: ThemeProviderProps) {
   useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     
-    const handleChange = (e: MediaQueryListEvent) => {
-      if (forcedTheme) {
-        return;
-      }
-
-      setSystem(e.matches ? "dark" : "light");
-      if (themeMode === "system") {
-        setThemeModeState("system");
-      }
-    };
+    const handleChange = (e: MediaQueryListEvent) => setSystem(e.matches ? "dark" : "light");
 
     mediaQuery.addEventListener("change", handleChange);
     return () => mediaQuery.removeEventListener("change", handleChange);
-  }, [forcedTheme, themeMode]);
+  }, []);
 
   const setThemeMode = (mode: ThemeMode) => {
-    if (forcedTheme) {
-      return;
-    }
-
     setSettingsError(null);
     setThemeModeState(mode);
     void patchAppSettings({ themeMode: mode }).then((saved) => {
@@ -116,16 +85,8 @@ export function ThemeProvider({ children, forcedTheme }: ThemeProviderProps) {
     }).catch(error => { setThemeModeState(themeMode); setSettingsError(String(error)); });
   };
 
-  const toggleTheme = () => {
-    if (forcedTheme) {
-      return;
-    }
-
-    setThemeMode(theme === "light" ? "dark" : "light");
-  };
-
   return (
-    <ThemeContext.Provider value={{ theme, themeMode, setThemeMode, toggleTheme, settingsError }}>
+    <ThemeContext.Provider value={{ theme, themeMode, setThemeMode, settingsError }}>
       {children}
     </ThemeContext.Provider>
   );
