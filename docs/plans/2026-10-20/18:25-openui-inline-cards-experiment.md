@@ -1,6 +1,6 @@
 # OpenUI 内联卡片实验计划
 
-- 状态：O0 已通过（2026-10-20，见 [探针记录](../../dogfood/2026-10-20-openui-probe.md)）；O1 已完成（2026-10-20，`b6c4d47`）；O2 已完成（2026-10-20，`e391d51`）；O3 已完成（2026-10-20，`0dff105`）；O4 已完成（2026-10-20）；O5 进行中（验收测试与评分脚本已加入，真实回合运行中）
+- 状态：O0 已通过（2026-10-20，见 [探针记录](../../dogfood/2026-10-20-openui-probe.md)）；O1 已完成（2026-10-20，`b6c4d47`）；O2 已完成（2026-10-20，`e391d51`）；O3 已完成（2026-10-20，`0dff105`）；O4 已完成（2026-10-20，`98fbd2f`）；O5 已完成（2026-10-20，结论：继续实验、不转正，见 [验收记录](../../dogfood/2026-10-20-openui-acceptance.md)）
 - 基线：`codex/simple-cli-chat` @ `fd6ca41`（[05:55 UI 打磨](05:55-chat-ui-polish.md) 已提交）
 - 调研依据：[thesysdev/openui](https://github.com/thesysdev/openui) @ `9823ec0`（2026-10-19，MIT）；`@openuidev/react-lang` 1.0.1、`@openuidev/lang-core` 1.0.1
 - 范围：实验开关默认关闭，首个 Agent 只开 Claude Code；不改变 [需求文档](../../requirements.md) 的现行范围。实验转正前需先更新需求与 Chat 契约。
@@ -236,7 +236,7 @@ OpenUI 让模型用 OpenUI Lang 这种紧凑格式描述界面，再由前端按
   - `pnpm smoke:visual` 通过。
   - 未在 Tauri 桌面和真实 Claude 回合中验证，留给 O4/O5。
 
-### O4（2026-10-20，passed）
+### O4（2026-10-20，passed，`98fbd2f`）
 
 - 示例会话：沿用 O3 的 `preview.ts` 中 `&cards=1` 会话（一张有效卡片、一张回退卡片），不改 `mockStore.ts`；默认 fixture 不变，避免影响现有冒烟对会话数的断言。
 - 冒烟：`scripts/simple-chat-smoke.mjs` 在原有流程后新增 `inlineCardsSmoke`，同一次 `pnpm smoke:visual` 内完成：
@@ -249,3 +249,17 @@ OpenUI 让模型用 OpenUI Lang 这种紧凑格式描述界面，再由前端按
 - 过程问题：首版脚本在设置页渲染前点击“实验”导致落到 Agents 页并误切换 Agent 启用开关；已改为先等待设置页、并用 `.settings-toggle-row` 精确定位实验开关。冷启动 Vite 首次转换 OpenUI chunk 较慢，卡片等待上限放宽到 30 秒。
 - 验证：`pnpm smoke:visual` 通过（原 Simple Chat 冒烟与卡片冒烟均 passed）。运行时工作区含另一会话尚未提交的模式选择器改动（`ModePicker` 等），冒烟脚本 `main()` 已由该会话同步适配；本里程碑只改 `inlineCardsSmoke` 及其辅助参数。
 - 观察：卡片外壳按钮在悬停或键盘聚焦时才显示（O3 设计），静态截图中不可见。
+
+### O5（2026-10-20，S6 not met / 其余 passed；结论：继续实验）
+
+详见 [验收记录](../../dogfood/2026-10-20-openui-acceptance.md)。环境同 O0：Claude Code 2.1.304 + 本地代理 GLM-5.3，用户全局 `CLAUDE.md` 生效。
+
+- 方法：新增忽略测试 `claude_inline_cards_acceptance`，走 `prepare_chat_invocation(..., true)` → `run_chat_turn` 的真实 Loom 链路，10 个固定提问（8 个期望卡片、2 个期望无卡片、1 个续聊）在 Research 与 Code 各跑一遍；`scripts/openui-acceptance.mjs` 用前端解析器评分。
+- 结果：
+  - 完成回合 Research 9/10、Code 9/10（各 1 例 600 秒超时）。
+  - 期望卡片的有效回合产出可解析卡片：Research 5/7、Code 2/7，**S6 未达标**。原因是模型选择 Markdown 表格（4 例）与 GLM-5.3 工具发现失败（Code 5 例），后者与卡片无关。
+  - 出现的 7 个代码块全部解析成功，回退 0；期望无卡片的 4 个回合均未出卡片；项目写入 0；执行记录与运行日志中提示词原文 0 次、脱敏标签 36 个文件。
+- S7：配对测量每次 API 调用 +1.05k token（与 O0 的 1048 一致），约为无工具回合输入的 9%，作为默认关闭的实验判定可接受。
+- 未覆盖：桌面端（`scripts/debug.sh desktop`）的开关切换、续聊句柄失效提示、导出内容未实测，列为人工验收项；Anthropic 官方模型未测；每个用例单样本。
+- 结论：**继续实验，不转正**。开关保持默认关闭，不更新需求与 Chat 契约。后续：在官方模型上用同一测试复跑；如需提高出卡率，再调整提示词触发规则并复跑。
+- 验证：`pnpm check` 在 `98fbd2f` 上通过（前端 93/93、`cargo test` 150 passed / 17 ignored、构建、fmt、Clippy、提示词同步）。
