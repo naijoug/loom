@@ -1,6 +1,6 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { lazy, Suspense, useEffect, useState, type FormEvent } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
-import { Activity, ArrowLeft, Bot, FlaskConical, Info, Monitor, Moon, Palette, RefreshCw, Plus, Sun } from "lucide-react";
+import { Activity, ArrowLeft, BookOpen, Bot, FlaskConical, Info, Monitor, Moon, Palette, RefreshCw, Plus, Sun } from "lucide-react";
 import { invokeCommand, TAURI_COMMANDS } from "../../api";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useLocale, useT } from "../../i18n";
@@ -15,8 +15,10 @@ import { setInlineCardsEnabled, useInlineCardsEnabled } from "../chat/openui/inl
 import "../chat/chat.css";
 import "./settings.css";
 
-type SettingsTab = "agents" | "appearance" | "experiments" | "diagnostics" | "about";
-const tabIcons = { agents: Bot, appearance: Palette, experiments: FlaskConical, diagnostics: Activity, about: Info } as const;
+const SkillsPanel = lazy(() => import("../skills/SkillsPanel").then(module => ({ default: module.SkillsPanel })));
+
+type SettingsTab = "skills" | "agents" | "appearance" | "experiments" | "diagnostics" | "about";
+const tabIcons = { skills: BookOpen, agents: Bot, appearance: Palette, experiments: FlaskConical, diagnostics: Activity, about: Info } as const;
 const themeIcons = { system: Monitor, dark: Moon, light: Sun } as const;
 export function SettingsPage({ onBack }: { onBack: () => void }) {
   const t = useT();
@@ -72,21 +74,22 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
       setNotice(await invokeCommand<string>(TAURI_COMMANDS.exportDiagnosticBundle, { input: { projectPath: project.path, targetPath: path, includeLogTails: includeLogs } }));
     } catch (error) { setError(String(error)); }
   }
-  const description = tab === "agents" ? t("agentsDesc") : tab === "appearance" ? t("appearanceDesc") : tab === "experiments" ? t("experimentsDesc") : tab === "diagnostics" ? t("diagnosticsHint") : t("aboutHint");
+  const description = tab === "skills" ? t("skillsSettingsDesc") : tab === "agents" ? t("agentsDesc") : tab === "appearance" ? t("appearanceDesc") : tab === "experiments" ? t("experimentsDesc") : tab === "diagnostics" ? t("diagnosticsHint") : t("aboutHint");
   return <div className="chat-settings">
     <aside><button type="button" className="settings-back" onClick={onBack}><ArrowLeft size={15} aria-hidden="true" />{t("back")}</button><h1>{t("settings")}</h1>
-      <nav>{(["agents", "appearance", "experiments", "diagnostics", "about"] as const).map(id => {
+      <nav>{(["agents", "skills", "appearance", "experiments", "diagnostics", "about"] as const).map(id => {
         const Icon = tabIcons[id];
         return <button type="button" key={id} aria-current={tab === id ? "page" : undefined} onClick={() => setTab(id)}><Icon size={15} aria-hidden="true" />{t(id)}</button>;
       })}</nav>
     </aside>
-    <main><div className="settings-content" data-tab={tab}>
+    <main className={tab === "skills" ? "settings-skills-main" : undefined}><div className="settings-content" data-tab={tab}>
       <header className="settings-header"><div><h2>{t(tab)}</h2><p>{description}</p></div>
         {tab === "agents" && <div className="settings-actions">
           <button type="button" onClick={() => void detect()} disabled={busy}><RefreshCw size={14} aria-hidden="true" className={busy ? "chat-spin" : ""} />{t("detect")}</button>
           <button type="button" onClick={() => edit()}><Plus size={14} aria-hidden="true" />{t("customCli")}</button></div>}
       </header>
       {(error || state.app.agentError || settingsError) && <p role="alert" className="chat-error">{error || state.app.agentError || settingsError}</p>}
+      {tab === "skills" && <Suspense fallback={<p role="status">{t("loading")}</p>}><SkillsPanel projectName={state.projects.current?.name} /></Suspense>}
       {tab === "agents" && <>
         <div className="settings-table-wrap"><table><thead><tr><th>{t("agents")}</th><th>{t("status")}</th><th>{t("path")}</th><th>{t("capabilities")}</th><th>{t("enabled")}</th><th /></tr></thead>
           <tbody>{state.agents.filter(agent => agent.adapterType !== "dummy").map(agent => {

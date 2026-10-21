@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "fixture-auto": {
+      "mode": "symlink",
+      "source": "/fixture/old-data/repos/fixture--skills/auto/demo",
+      "installedAt": "2026-10-21T12:00:00Z",
+      "updatedAt": "2026-10-21T12:00:00Z"
+    },
+    "fixture-manual": {
+      "mode": "copy",
+      "source": "/fixture/Skills Manager.app/Contents/Resources/skills/manual/demo",
+      "installedAt": "2026-10-21T12:00:00Z",
+      "updatedAt": "2026-10-21T12:00:00Z"
+    }
+  }
+}

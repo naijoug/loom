@@ -21,6 +21,7 @@ Environment variables:
   HOST     Dev server host (default: 127.0.0.1)
   LOOM_PREVIEW_TARGET=craft-reference  Run the pinned M0 reference app.
   LOOM_PREVIEW_TARGET=browser-probe    Run the Rust Chromium M0 probe.
+  LOOM_PREVIEW_BINARY                 Run a built Loom.app binary under src-tauri/target.
 USAGE
 }
 
@@ -67,7 +68,8 @@ is_desktop_dev_command() {
     [[ "${command}" == "node ${ROOT_DIR}/scripts/browser-probe.mjs" ]] ||
     [[ "${command}" == "target/debug/loom" || "${command}" == "target/debug/loom "* ]] ||
     [[ "${command}" == "${ROOT_DIR}/src-tauri/target/debug/loom" || "${command}" == "${ROOT_DIR}/src-tauri/target/debug/loom "* ]] ||
-    [[ "${command}" == "${ROOT_DIR}/src-tauri/target/debug/bundle/macos/Loom.app/Contents/MacOS/loom" || "${command}" == "${ROOT_DIR}/src-tauri/target/debug/bundle/macos/Loom.app/Contents/MacOS/loom "* ]]
+    [[ "${command}" == "${ROOT_DIR}/src-tauri/target/debug/bundle/macos/Loom.app/Contents/MacOS/loom" || "${command}" == "${ROOT_DIR}/src-tauri/target/debug/bundle/macos/Loom.app/Contents/MacOS/loom "* ]] ||
+    [[ "${command}" == "${ROOT_DIR}/src-tauri/target/release/bundle/macos/Loom.app/Contents/MacOS/loom" || "${command}" == "${ROOT_DIR}/src-tauri/target/release/bundle/macos/Loom.app/Contents/MacOS/loom "* ]]
 }
 
 stop_desktop_dev() {
@@ -133,6 +135,13 @@ start_desktop() {
   echo "Stop: press Ctrl+C, or run scripts/debug.sh stop from another terminal."
 
   cd "${ROOT_DIR}"
+  if [[ -n "${LOOM_PREVIEW_BINARY:-}" ]]; then
+    if [[ "${LOOM_PREVIEW_BINARY}" != "${ROOT_DIR}/src-tauri/target/"*"/Loom.app/Contents/MacOS/loom" || ! -x "${LOOM_PREVIEW_BINARY}" ]]; then
+      echo "LOOM_PREVIEW_BINARY must be an executable Loom.app built under this repository's src-tauri/target." >&2
+      return 1
+    fi
+    exec "${LOOM_PREVIEW_BINARY}"
+  fi
   if [[ "${LOOM_PREVIEW_TARGET:-loom}" == "browser-probe" ]]; then
     "${ROOT_DIR}/scripts/preview.sh" start
     exec node "${ROOT_DIR}/scripts/browser-probe.mjs"

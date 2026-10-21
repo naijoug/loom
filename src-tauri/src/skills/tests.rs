@@ -13,9 +13,9 @@ use std::{
 
 static NEXT: AtomicU64 = AtomicU64::new(0);
 
-struct Fixture(PathBuf);
+pub(super) struct Fixture(pub(super) PathBuf);
 impl Fixture {
-    fn new() -> Self {
+    pub(super) fn new() -> Self {
         let root = std::env::temp_dir().join(format!(
             "loom-skills-{}-{}",
             std::process::id(),

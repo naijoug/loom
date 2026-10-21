@@ -3,10 +3,10 @@
 .settings-back { display: flex !important; gap: 8px; align-items: center; color: var(--chat-muted); width: 100%; }
 .settings-back:hover { color: var(--chat-text); }
 .chat-settings h1 { font-size: 13px; font-weight: 500; color: var(--chat-dim); margin: 22px 10px 8px; }
-.chat-settings nav button { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; margin-bottom: 2px; padding: 8px 10px; color: var(--chat-text-2); }
-.chat-settings nav button svg { color: var(--chat-muted); }
-.chat-settings nav [aria-current="page"] { background: var(--chat-selected); color: var(--chat-text); }
-.chat-settings nav [aria-current="page"] svg { color: var(--chat-accent); }
+.chat-settings > aside nav button { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; margin-bottom: 2px; padding: 8px 10px; color: var(--chat-text-2); }
+.chat-settings > aside nav button svg { color: var(--chat-muted); }
+.chat-settings > aside nav [aria-current="page"] { background: var(--chat-selected); color: var(--chat-text); }
+.chat-settings > aside nav [aria-current="page"] svg { color: var(--chat-accent); }
 .chat-settings > main { flex: 1; min-width: 0; padding: 48px 36px; overflow: auto; }
 .settings-content { max-width: 1040px; margin: 0 auto; }
 .settings-content[data-tab="appearance"], .settings-content[data-tab="experiments"], .settings-content[data-tab="diagnostics"], .settings-content[data-tab="about"] { max-width: 720px; }
@@ -69,3 +69,7 @@
   .settings-header { flex-direction: column; align-items: flex-start; gap: 14px; }
 }
 @media (prefers-reduced-motion: reduce) { .settings-switch span, .settings-switch span::after { transition: none; } }
+
+.chat-settings > main.settings-skills-main { display: flex; flex-direction: column; padding: 36px 20px 20px; overflow: hidden; }
+.settings-content[data-tab="skills"] { max-width: none; width: 100%; height: 100%; display: flex; flex-direction: column; min-height: 0; }
+.settings-content[data-tab="skills"] > .settings-header { flex-shrink: 0; margin-bottom: 16px; }

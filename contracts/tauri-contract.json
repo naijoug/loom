@@ -31,12 +31,21 @@
     "save_app_settings",
     "list_recent_projects",
     "remove_recent_project",
-    "register_project"
+    "register_project",
+    "skills_list_library",
+    "skills_get_detail",
+    "skills_add_local_source",
+    "skills_remove_source",
+    "skills_import_repository",
+    "skills_refresh_source",
+    "skills_list_operations",
+    "skills_cancel_operation"
   ],
   "events": [
     "loom-update-state",
     "loom://chat-event",
-    "loom://chat-error"
+    "loom://chat-error",
+    "loom://skills-operation"
   ],
   "storeSchemaVersions": {
     "agents": 1,
@@ -264,6 +273,44 @@
           }
         ]
       }
+    },
+    "skillsLibrary": {
+      "sources": [
+        {
+          "id": "src-fixture",
+          "name": "Fixture skills",
+          "kind": "local",
+          "localPath": "/fixture/skills",
+          "git": null,
+          "revision": null,
+          "updatedAtMs": 1
+        }
+      ],
+      "skills": [
+        {
+          "id": "src-fixture::manual%2Fdemo%2FSKILL.md",
+          "sourceId": "src-fixture",
+          "relativePath": "manual/demo/SKILL.md",
+          "name": "demo",
+          "title": "Demo skill",
+          "description": "A synthetic contract fixture.",
+          "category": "manual",
+          "keywords": "fixture"
+        }
+      ],
+      "issues": []
+    },
+    "skillsOperation": {
+      "operationId": "skills-fixture",
+      "sourceId": "src-fixture",
+      "action": "refresh",
+      "phase": "committed",
+      "stage": "complete",
+      "sequence": 2,
+      "startedAtMs": 1,
+      "updatedAtMs": 2,
+      "error": null,
+      "executions": []
     }
   }
 }

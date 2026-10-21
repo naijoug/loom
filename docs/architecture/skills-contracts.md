@@ -5,14 +5,15 @@
 ## 当前实现
 
 - `src-tauri/src/skills/{error,files,coordination}.rs`：有类型错误、私有/有界/原子元数据、跨进程生命周期 lease 和 writer 锁、带版本 pending 索引。
-- `sources.rs`：GitHub/GitLab URL 与 transport 标准化、旧 ID alias、输入校验；尚无网络拉取。3 项规范化测试已通过。
-- 服务不依赖 AppHandle、窗口或 ChatSession，构造时必须传明确协调根目录。当前尚未接生产路径解析、UI、安装器、CLI binary 或 updater。
+- `sources.rs`：GitHub/GitLab URL 与 transport 标准化、旧 ID alias、输入校验；`operations.rs` 已接受控 Git clone/checkout，真实本地 Git fixture 覆盖导入、刷新、保留旧版本与来源过滤脚本禁用。
+- `catalog.rs`、`repository.rs`：本地目录/根技能/嵌套技能、详情/相关文件、逐项错误、来源登记及重启读取。前端入口为 Settings → Skills，沿用设置侧栏及 Chat/Settings 两个顶层视图。
+- 业务服务不依赖 AppHandle、窗口或 ChatSession，构造时必须传明确协调根目录；`commands.rs` 是负责主窗口校验、路径解析与事件转发的 Tauri 薄层。安装器、CLI binary 和 updater 的跨进程接线仍待实施。
 - 八项定向测试包含两个真实子进程场景：杀死持锁进程后锁释放；子进程不运行析构直接退出后，新客户端仍看到 pending。缺日志、坏 JSON、未知 pending schema、路径穿越和 symlink 也有覆盖。
 - 当前只支持安全阻止未恢复资源的新写入，尚无提交/补偿引擎，因此不暴露随意清除 pending 的接口。不宣称 V-17 的自动恢复或完整 M0 已完成。
 
 ## 路径与锁
 
-生产路径解析的目标契约：库默认位于 Loom app data 的 `skills/`；固定协调目录位于同一 OS 用户的 Loom app data 下 `skills-coordination/`，不受自定义库目录影响。显式测试目录只能经依赖注入提供。
+生产路径解析：库默认位于 Loom app data 的 `skills/`，`LOOM_SKILLS_DATA_DIR` 可指定绝对库目录以隔离验收或迁移；固定协调目录始终为同一 OS 用户的 Loom app data 下 `skills-coordination/`，不受自定义库目录影响。测试协调目录仅经服务依赖注入提供。
 
 `Coordinator::enter` 获取共享生命周期 lease；`Coordinator::writer(&lease)` 获取短时独占 writer。WriterGuard 借用 lease，禁止生命周期提前结束。`try_update` 非阻塞获取独占生命周期 lease，并检查 pending；存在活动操作/待恢复事务时失败，RAII 释放准入。
 
@@ -34,13 +35,19 @@ SharedInstruction v1 放在固定协调目录，键为 canonical 指令文件路
 
 远程来源快照固定 commit；dirty legacy cache 以内容 digest 单独标识，不能冒充上游 commit。刷新目录只更新 latestRevision，symlink 固定指向不可变路径。本地 live symlink 明示行为，不把其变化伪装成版本化安装。
 
-## 前后端（待实现）
+## 只读来源与前后端
 
-按计划第 4.2 节提供 `skills_` 命令族。每个命令实现与 `contracts/tauri-contract.json` 同轮落地；当前不提前注册不存在的 IPC。输入只用已登记身份/经后端验证的用户选取路径；写操作捕获项目与目标，不随 UI 当前项目变化。
+当前已注册 list_library/get_detail/add_local_source/remove_source/import_repository/refresh_source/list_operations/cancel_operation 八个 `skills_` 命令，以及 `loom://skills-operation` 事件。`contracts/tauri-contract.json` 的 SkillsLibrary / SkillsOperation 样本在 Rust 与 TypeScript 双端校验。安装/翻译/迁移命令在实现时再注册。
 
-错误形态为 `{code,message}`；当前 code 为 invalid_input/conflict/lock_busy/updating/recovery_required/permission_denied/io，来源与操作服务新增业务错误时同步契约。前端按 code 判断，不解析消息文字。
+错误形态为 `{code,message}`；当前 code 为 invalid_input/conflict/lock_busy/updating/recovery_required/permission_denied/io/cancelled/timeout/source_unavailable。前端展示错误 message，流程判断不依赖解析自然语言。
 
-operationId 关联持久化进度、目标、终态及幂等请求；事件只是投影，订阅后补查快照。切换 Skills 不卸载 Chat，不创建隐藏 ChatSession 来运行翻译。
+operationId 关联持久化进度、sourceId、序号、终态及脱敏执行记录；进程存活由 OS owner 锁判断，失去 owner 的 running 记录改为 interrupted，不自动重放。UI 订阅事件并补查操作列表，按序号忽略旧事件。切换设置 Skills 不卸载 Chat；详情请求绑定选择，过滤/移除后旧结果不显示。
+
+扫描限制为 20,000 个目录项、32 层，文本预览单文件 256 KiB、相关文件最多 500 个/文本合计 1 MiB。远程快照最多 128 MiB；symlink、submodule 和未物化 LFS 明确拒绝，不把不完整包标成成功。元数据沿用旧 Manager 的 scalar/list YAML 子集并支持常见 folded description，不运行 YAML tag/alias。
+
+Git 在独立进程组执行，有 120 秒单命令超时、取消、输出有界排流及退出清理。clone 不 checkout，之后以 `.git/info/attributes` 的高优先级禁用 filter/encoding 转换，再 checkout 固定 commit；hooks/fsmonitor/submodule 自动动作关闭。依据 [Git attributes 官方说明](https://git-scm.com/docs/gitattributes)，另有真实恶意 smudge fixture 验证没有执行。
+
+来源库只做原子单文件更新；远程快照先完成并校验再发布，刷新只切换目录 latest revision。移除来源保留快照及用户原目录；安装事务、显式安装更新和安全 GC 不由这个只读切片代替。
 
 ## 源功能去向与兼容基线
 

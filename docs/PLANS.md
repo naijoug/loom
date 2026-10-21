@@ -3,7 +3,7 @@
 ## 2026-10-21
 
 - 06:12-skills-module-migration.md
-  > （实施中；M0/M5 基础切片已落地，G1/G2 未验收；Skills 迁移入口）Loom 新增协调锁/pending/私有元数据和 GitHub/GitLab URL 契约，11 项 Skills 定向测试通过；源基线修复 `349d622`、内容工具独立化 `fd7a4ec` 已提交，隔离内容检查 32 项＋旧管理测试 7 项、272 文件哈希验证通过。UI、完整安装事务、CLI/TUI、翻译与旧数据接管待实施；继续按 G1/G2 推进，G2 后移除旧应用。详见 dogfood/2026-10-21-skills-migration.md。
+  > （实施中；Settings → Skills 来源切片已验，G1/G2 未验收）按用户补充要求将 Skills 放入设置侧栏，支持本地来源、Git 固定快照、搜索/详情/文件、进度/取消与执行记录；完整 check 前端 98/Rust 175，原生本地来源及重启/草稿/语言主题已验。源 `349d622`/`fd7a4ec` 已提交；接下来实现该板块内安装到各工具、事务恢复、CLI/TUI、翻译与旧数据接管；G2 后移除旧应用。证据见 dogfood/2026-10-21-skills-migration.md。
 
 ## 2026-10-20
 

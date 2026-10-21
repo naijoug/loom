@@ -89,6 +89,14 @@ pub fn run() {
             projects::list_recent_projects,
             projects::remove_recent_project,
             projects::register_project,
+            skills::commands::skills_list_library,
+            skills::commands::skills_get_detail,
+            skills::commands::skills_add_local_source,
+            skills::commands::skills_remove_source,
+            skills::commands::skills_import_repository,
+            skills::commands::skills_refresh_source,
+            skills::commands::skills_list_operations,
+            skills::commands::skills_cancel_operation,
         ]);
     #[cfg(target_os = "macos")]
     let builder = builder

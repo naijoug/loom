@@ -1,3 +1,4 @@
+import type { SkillsLibrary, SkillsOperation } from "./skills";
 import type { AgentConfig, AgentDiagnostic, AppSettings, ChatSession, ChatEvent, ChatSendInput, ChatSendReceipt, ChatResumeHandle, ChatTurn, ChatLogPage, ChatExportInput, ChatExportResult, ChatMessagePart } from "../domain";
 
 export const TAURI_COMMANDS = {
@@ -32,11 +33,20 @@ export const TAURI_COMMANDS = {
   listRecentProjects: "list_recent_projects",
   removeRecentProject: "remove_recent_project",
   registerProject: "register_project",
+  skillsListLibrary: "skills_list_library",
+  skillsGetDetail: "skills_get_detail",
+  skillsAddLocalSource: "skills_add_local_source",
+  skillsRemoveSource: "skills_remove_source",
+  skillsImportRepository: "skills_import_repository",
+  skillsRefreshSource: "skills_refresh_source",
+  skillsListOperations: "skills_list_operations",
+  skillsCancelOperation: "skills_cancel_operation",
 } as const;
 export const TAURI_EVENTS = {
   updateState: "loom-update-state",
   chatEvent: "loom://chat-event",
   chatError: "loom://chat-error",
+  skillsOperation: "loom://skills-operation",
 } as const;
 export const STORE_SCHEMA_VERSIONS = {"agents": 1, "settings": 1, "chat": 2} as const;
 export type TauriCommand = (typeof TAURI_COMMANDS)[keyof typeof TAURI_COMMANDS];
@@ -263,4 +273,42 @@ export const MODEL_CONTRACT_SAMPLES = {
     ]
   }
 } satisfies AgentDiagnostic,
+  skillsLibrary: {
+  "sources": [
+    {
+      "id": "src-fixture",
+      "name": "Fixture skills",
+      "kind": "local",
+      "localPath": "/fixture/skills",
+      "git": null,
+      "revision": null,
+      "updatedAtMs": 1
+    }
+  ],
+  "skills": [
+    {
+      "id": "src-fixture::manual%2Fdemo%2FSKILL.md",
+      "sourceId": "src-fixture",
+      "relativePath": "manual/demo/SKILL.md",
+      "name": "demo",
+      "title": "Demo skill",
+      "description": "A synthetic contract fixture.",
+      "category": "manual",
+      "keywords": "fixture"
+    }
+  ],
+  "issues": []
+} satisfies SkillsLibrary,
+  skillsOperation: {
+  "operationId": "skills-fixture",
+  "sourceId": "src-fixture",
+  "action": "refresh",
+  "phase": "committed",
+  "stage": "complete",
+  "sequence": 2,
+  "startedAtMs": 1,
+  "updatedAtMs": 2,
+  "error": null,
+  "executions": []
+} satisfies SkillsOperation,
 } as const;

@@ -24,6 +24,7 @@ pub enum ProcessKind {
     Pty,
     /// Chat turns have their own project/session/turn owner, not a Task id.
     Chat,
+    Skills,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -34,6 +35,9 @@ pub enum ProcessKind {
 )]
 pub enum ProcessOwner {
     Unscoped,
+    Skills {
+        operation_id: String,
+    },
     Task {
         task_id: String,
     },

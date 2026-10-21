@@ -37,11 +37,20 @@ const COMMANDS: &[&str] = &[
     "list_recent_projects",
     "remove_recent_project",
     "register_project",
+    "skills_list_library",
+    "skills_get_detail",
+    "skills_add_local_source",
+    "skills_remove_source",
+    "skills_import_repository",
+    "skills_refresh_source",
+    "skills_list_operations",
+    "skills_cancel_operation",
 ];
 const EVENTS: &[&str] = &[
     "loom-update-state",
     "loom://chat-event",
     "loom://chat-error",
+    "loom://skills-operation",
 ];
 fn manifest() -> Value {
     json!({"schemaVersion":1,"commands":COMMANDS,"events":EVENTS,"storeSchemaVersions":{"agents":AGENT_STORE_SCHEMA_VERSION,"settings":SETTINGS_SCHEMA_VERSION,"chat":crate::chat::CHAT_SCHEMA_VERSION}})
@@ -106,6 +115,8 @@ fn persisted_model_samples_round_trip_through_rust_types() {
     assert_model_sample::<crate::chat::ChatExportResult>(samples, "chatExportResult");
     assert_model_sample::<crate::chat::ChatMessagePart>(samples, "chatToolPart");
     assert_model_sample::<crate::agent_diagnostics::AgentDiagnostic>(samples, "agentDiagnostic");
+    assert_model_sample::<crate::skills::repository::LibraryView>(samples, "skillsLibrary");
+    assert_model_sample::<crate::skills::operations::OperationRecord>(samples, "skillsOperation");
 }
 #[test]
 fn chat_send_requires_a_client_request_identity() {
@@ -133,6 +144,7 @@ fn event_manifest_matches_backend_emitters() {
         include_str!("app_update.rs"),
         include_str!("chat/mod.rs"),
         include_str!("chat/service.rs"),
+        include_str!("skills/commands.rs"),
     ]
     .join("\n");
     for event in EVENTS {

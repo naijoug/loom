@@ -1,6 +1,6 @@
 # Skills Manager 迁入 Loom 实施计划
 
-- 状态：实施中；M0 协调基础/基线与 M5 内容工具独立化切片已落地，M1a 来源 URL 契约已开始；G1/G2 均未验收。
+- 状态：实施中；M0 基础、M5 内容工具独立化与 Settings → Skills 的来源/只读管理切片已落地并分项验证；安装到工具尚待 M2a，G1/G2 均未验收。
 - 编写时间：2026-10-21 06:12，America/Los_Angeles。
 - v2 修订时间：2026-10-21 07:19，America/Los_Angeles；依据本对话的实施就绪审查细化。
 - v3 修订时间：2026-10-21 07:29，America/Los_Angeles；补充共享注入块使用者归属、跨客户端未完成事务发现和应用更新准入。
@@ -15,7 +15,7 @@
 
 ### 1.1 最终形态
 
-1. Loom 提供独立 Skills 页面，与 Chat、Settings 共用应用导航、主题、语言和项目上下文。
+1. Loom 在 Settings 侧边栏提供 Skills 板块，进入后完成技能发现、来源管理、详情和安装到各工具等操作；不新增 Chat 同级 Skills 入口。该位置按用户实施中补充要求更新，主题、语言与项目上下文共用 Loom 公共层。
 2. skills 仓库只维护技能内容及其质量工具，能够在没有 Loom 源码、Node workspace 或 Tauri 环境时完成内容检查。
 3. Loom 把 skills 仓库视为普通的可配置来源，同时支持其他本地目录和远程仓库；运行与构建不依赖相邻源码目录。
 4. 文件、进程、网络请求、安装清单和持久化归 Rust 服务；React 仅负责交互、展示和有类型的 IPC。
@@ -28,7 +28,7 @@
 - 独立 Web 产品、本地 HTTP API 和旧桌面壳在功能替代验收后退役。Loom Web 预览继续服务 UI 验证，不获得真实文件写入权限。
 - 默认以本地目录来源接入个人 skills 仓库，不将整个个人技能集合随 Loom 打包。首次使用可以为空库，用户主动添加来源。
 - 保持 Loom 当前 React 主版本，适配迁入组件；不把 React 升级作为迁移前置任务。
-- 本计划不修改现行需求。M0 在开始实施时把 Skills 作为新范围写入需求；原简化 Chat 约束的其余部分仍适用。
+- M0 已把 Skills 写入现行需求；实施中用户进一步明确入口为 Settings → Skills。保留 Chat/Settings 两个顶层视图，原简化 Chat 约束的其余部分仍适用。
 - 采用两个交付门槛：G1 为 Loom Skills 核心可用，G2 为完整替代并允许删除旧应用。翻译账户或 CLI/TUI 分发阻塞 G2，不阻塞已验证核心能力的 G1。
 - 远程技能按不可变 revision 快照安装；刷新来源只发现新版本，更新安装需独立操作。本地 symlink 保留实时开发语义，并在 UI/CLI 明确标记。
 
@@ -79,7 +79,7 @@
 | `skills-linker`、fzf TUI、`ng` | Loom `tools/skills-cli/` | 兼容参数、默认行为、退出码及核心 JSON 字段；来源改为显式参数或已配置来源 |
 | 翻译 summary / markdown | Loom Skills + Rust | 保留 OpenAI、OpenRouter、Local Codex、Local Claude Code；本地翻译进程有超时、取消、脱敏日志 |
 | 复制、导出分享文本、命令面板 | Loom Skills | 保留现有本地操作；复制分享文本不变成自动创建 Gist 或外发内容 |
-| 外观、语言、导航、About | Loom 原有公共层 | 不嵌套旧 Manager Settings，不引入第二套主题和应用壳 |
+| 外观、语言、导航、About | Loom 原有公共层 | Skills 是设置侧边栏的板块，复用 Settings 壳；不嵌套旧 Manager Settings，不引入第二套主题或顶层应用入口 |
 | 元数据、归档、routing 检查 | skills `scripts/quality/`、`tests/quality/` | 在 skills 仓库独立运行，`perfect` 仅表示评分管道验证 |
 | Web/API 服务、旧桌面入口与专属发布脚本 | skills 中退役 | 替代能力及剩余引用检查通过后删除 |
 
@@ -126,7 +126,8 @@ G1 包含本地来源与 Git clone、浏览/详情、copy/symlink 安装与卸�
 
 ```text
 Loom
-  src/features/skills/              页面、组件、展示状态、请求归属
+  src/features/skills/              SkillsPanel、组件、展示状态、请求归属
+  src/features/settings/           设置侧边栏中的 Skills 入口与公共壳
   src/api/skills.ts                 复用现有 tauriClient 的类型化调用
   src-tauri/src/skills/
     models.rs                      Source / Skill / Target / Operation
@@ -318,7 +319,7 @@ skills
 | M1a-01 | `skills/{models,repository,catalog}.rs` | 空库/来源库读写、根/多层扫描、稳定身份和逐项解析错误；脱离原仓库运行 |
 | M1a-02 | `skills/{sources,snapshots}.rs`、进程监督 | GitHub/GitLab URL 和 transport；固定 commit staging、取消、超时、刷新失败保留旧版本；SRC-01–06/09–10 的相应 fixture |
 | M1a-03 | `skills/{service,commands}.rs`、`lib.rs`、`src/api/skills.ts`、IPC 契约 | 类型化库/详情/来源命令与 operation 查询、事件；未实现能力明确返回 unsupported |
-| M1a-04 | `src/features/skills/`、`src/App.tsx`、应用状态、i18n | 列表/搜索/详情/来源管理；导航、英文/中文、主题；Chat 挂载和草稿不变 |
+| M1a-04 | `src/features/skills/SkillsPanel.tsx`、`src/features/settings/SettingsPage.tsx`、i18n | 设置侧边栏 Skills 入口与列表/搜索/详情/来源管理；复用设置壳，保持 Chat/Settings 两个顶层视图；英文/中文、主题、Chat 挂载和草稿正常 |
 | M1a-05 | 来源登记/快照引用、相关测试 | 删除本地来源不删原目录；有引用快照不得清除；重启后库与 operation 状态正确 |
 
 出口：来源添加 → 扫描 → 详情 → 刷新 → 移除登记 → 重启完成一轮；真实桌面只读使用通过；源包脚本不被执行，未加载任何安装 mock 到生产。
@@ -503,7 +504,7 @@ G1 的范围声明不是功能删减：CLI/TUI、翻译和迁移仍在本计划�
 | V-07 | SRC-01–10 按适用阶段完成；GitLab namespace、SSH、旧 group/skill ID 不被 GitHub 逻辑破坏 | M1a/M1b/M4；完整矩阵 G2 |
 | V-08 | 数据目录+旧清单+cache/bundle 链接迁入；重复执行无新增副作用，dirty cache 内容不丢失 | M4-03/04/05，G2 |
 | V-09 | 迁移后用户改文件再回滚；只恢复匹配本次后指纹的项，其他项保留并报告冲突 | M4-04/05，G2 |
-| V-10 | Chat 流式期间切到 Skills、切项目再返回；不串流、不丢草稿；安装目标保持发起时归属 | M1a-04/M2a-05，G1；M6 回归 |
+| V-10 | Chat → Settings → Skills，设置侧栏可见、Chat 无同级 Skills 按钮；流式期间切换设置板块与返回 Chat 不串流/丢草稿；安装目标保持发起时归属 | M1a-04/M2a-05，G1；M6 回归 |
 | V-11 | CLI 与桌面列表、目标、安装/卸载语义一致；`--force` 的安全差异与 JSON/退出码有黄金样本 | M2c-02/05，G2 |
 | V-12 | 翻译取消/超时/切技能/凭据缺失，结果不串写；日志与前端无 secret | M3，G2 |
 | V-13 | 移动构建产物到独立目录，无相邻源码可启动；随后随包 CLI 在无 PATH 配置时可调用 | 桌面在 G1；CLI 在 M2c/G2 |
@@ -556,13 +557,14 @@ G1 的范围声明不是功能删减：CLI/TUI、翻译和迁移仍在本计划�
 |---|---|---|
 | 代码与文档盘点 | 已完成只读检查 | 第 2 节源码入口与本文件基线；未运行应用 |
 | M0-01/02/06 | 已执行 | 两仓基线、需求/架构/安全边界更新；源基线测试修复提交 `349d622`，完整检查通过 |
-| M0-03/04/05 | 部分完成 | 新 Skills 契约、typed error、私有元数据、OS lease/writer/pending 及真实子进程探针；旧格式完整 fixture、安装归属/快照探针尚待补齐 |
-| M1a-02 | 部分完成 | GitHub/GitLab HTTPS/SSH、嵌套 namespace、旧 alias 与输入拒绝的 URL 规范化和 3 项测试；尚未接 Git 拉取或 UI |
+| M0-03/04/05 | 基础与样本已落地，安装集成待后续阶段 | Skills DTO 双端样本、旧 library/JSON/TSV 合成 fixture、lease/writer/pending 和不可变快照探针；完整安装归属/恢复属于 M2/M4 验收 |
+| M1a-01/02/03/05 | 来源切片通过离线/本机验证 | catalog/repository/snapshots/operations 与 8 个 IPC 已接线；22 项 Skills 测试含真实本地 Git clone/refresh、禁用来源 smudge、取消与重启记录；外网 GitHub/GitLab 实测待后续 |
+| M1a-04 | 已按用户补充要求改为设置内板块 | 顶层仍 Chat/Settings；Settings 侧栏 SkillsPanel 原生验证本地来源添加、详情/文件、搜索/刷新、重启、移除保留文件、返回 Chat 保留草稿，中英文/深浅主题观察通过 |
 | M5-01/03/04 | 内容独立化切片通过 | 源提交 `fd7a4ec`；隔离副本无 apps/Node/Tauri/Loom 的 32 项内容测试、7 项旧管理测试通过，272 个技能/归档文件哈希不变 |
 | M5-02、M5 总出口 | 未完成 | 管理测试仍在源项目，等待 M2c；旧路径转发入口留到 M7 |
-| 其余实施；G1/G2 | 未完成/未验收 | 未交付 Skills UI、安装事务引擎、CLI/TUI、翻译、旧数据迁移或应用退役 |
-| v3 文档一致性、相对链接、索引排序 | 通过 | 7 个链接/锚点、索引唯一性与倒序、章节引用、11 阶段/50 任务、SRC-01–10/V-01–18、代码围栏及空白检查通过；人工核对三项补充的契约—任务—验证—门槛对应关系，`git diff --check` 通过 |
-| 应用测试与构建 | 分项通过，详见证据 | Loom 完整 check/no-bundle 在允许进程组信号的环境通过；后续 URL 增量后 Skills 11 项与 Clippy 通过；源 96 应用/24 Rust/39 工具基线通过 |
-| 桌面/真实服务/迁移验收 | 未运行 | 尚无生产 Skills 页面或安装接线，不计 G1/G2 通过 |
+| 其余实施；G1/G2 | 未完成/未验收 | 安装到各工具、完整事务引擎、CLI/TUI、翻译、旧数据接管及源应用退役仍待完成；只读设置板块不能作为 G1 通过证明 |
+| v3 文档一致性、相对链接、索引排序 | 通过 | 链接/锚点、索引唯一性与倒序、章节引用、11 阶段/50 任务、SRC-01–10/V-01–18、代码围栏及空白检查通过；人工核对三项补充的契约—任务—验证—门槛对应关系，`git diff --check` 通过 |
+| 应用测试与构建 | 分项通过，详见证据 | Settings 切片完整 check：前端 98/Rust 175；debug app bundle、原生来源交互通过；源基线 96 应用/24 Rust/39 工具保持历史证据 |
+| 安装/真实服务/迁移验收 | 未完成 | 原生来源只读路径已验；工具安装、外网来源、真实 provider、旧数据迁移与整体 G1/G2 尚未验收 |
 
 实施每个里程碑后更新本表及 [计划索引](../../PLANS.md)，成功标准逐项回填；不以“代码已迁入”代替迁移完成。

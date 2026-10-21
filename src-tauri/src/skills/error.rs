@@ -13,6 +13,9 @@ pub enum ErrorCode {
     RecoveryRequired,
     PermissionDenied,
     Io,
+    Cancelled,
+    Timeout,
+    SourceUnavailable,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

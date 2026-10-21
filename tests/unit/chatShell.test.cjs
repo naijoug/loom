@@ -18,6 +18,8 @@ test('default Chat and Settings never load Task data or subscribe to Planning ev
   if(command==='chat_list_project_groups')return [{project,sessionCount:0,sessions:[]}];
   if(['list_agents','diagnose_agents'].includes(command))return [];
   if(command==='load_app_settings')return {};
+  if(command==='skills_list_library')return {sources:[],skills:[],issues:[]};
+  if(command==='skills_list_operations')return [];
   if(command==='health_check')return {version:'test'};
   if(command.startsWith('plugin:event|'))return 1;
   throw Error(command);
@@ -28,6 +30,19 @@ test('default Chat and Settings never load Task data or subscribe to Planning ev
  await act(async()=>root.render(React.createElement(ThemeProvider,null,React.createElement(AppStateProvider,{initialStateOverride:{...initialAppState,projects:{current:project,recent:[project]},app:{...initialAppState.app,activeProjectId:'p'}}},React.createElement(Harness)))));
  assert.ok(document.querySelector('[data-testid="chat-page"]'));
  assert.equal(document.querySelectorAll('button[aria-haspopup="menu"][aria-label^="Permissions"]').length,1);
+ const mountedChat=document.querySelector('[data-testid="chat-page"]');
+ await act(async()=>dispatch({type:'app/viewSelected',view:'settings'}));
+ const skillsTab=[...document.querySelectorAll('.chat-settings > aside nav button')].find(node=>node.textContent==='Skills');
+ assert.ok(skillsTab);
+ await act(async()=>skillsTab.dispatchEvent(new window.MouseEvent('click',{bubbles:true})));
+ assert.equal(document.querySelector('.settings-content').dataset.tab,'skills');
+ assert.equal([...document.querySelectorAll('.chat-project-tree button')].some(node=>node.textContent==='Skills'),false);
+ assert.ok(document.querySelector('[data-testid="skills-panel"]'));
+ assert.equal(document.querySelector('[data-testid="chat-page"]'),mountedChat);
+ assert.equal(mountedChat.closest('.app-chat-container').hidden,true);
+ await act(async()=>dispatch({type:'app/viewSelected',view:'chat'}));
+ assert.equal(document.querySelector('[data-testid="chat-page"]'),mountedChat);
+ assert.equal(mountedChat.closest('.app-chat-container').hidden,false);
  await act(async()=>dispatch({type:'app/viewSelected',view:'settings'}));
  assert.match(document.body.textContent,/Appearance/);
  assert.equal(calls.some(call=>/task|planning|command_run/.test(call.command)),false);
