@@ -4,13 +4,21 @@
 
 用户已授权按 [简化 CLI Chat 重构计划](plans/2026-10-20/00:44-simple-cli-chat-refactor.md) 和 [实施计划](plans/2026-10-20/01:01-simple-chat-implementation.md) 重构，保留 Tauri + React + Rust，收敛为按项目组织的本机 CLI Chat。
 
-- 默认应用仅有 Chat 和 Settings；Task/Board/Planning 不再属于产品。旧 Task 数据原样保留。
+- 当前应用入口为 Chat 和 Settings；2026-10-21 用户授权按 [Skills 迁移计划](plans/2026-10-21/06:12-skills-module-migration.md) 增加独立 Skills 模块，实施中，尚未交付。Task/Board/Planning 不再属于产品。旧 Task 数据原样保留。
 - 输入框只提供一个权限选择器：Read-only / Ask / Auto，对应 `explore` / `ask` / `auto`（2026-10-21 由 Research / Code / Auto-run 改名，工作类型与权限不再混在一层）。权限由 CLI 执行；Ask 的发送确认是回合授权，非逐工具审批。
 - 本机探测 Claude Code、Codex、OpenCode、Grok；支持自定义 CLI。原生续聊、工具事件等按适配器能力与真实证据展示。
 - 新会话只选择权限；Agent 选择器固定在输入框左下，新旧会话一致。流式回复、停止、恢复、工具卡片、Markdown、导出和执行日志保留。
 - 会话保持项目本地 `.loom/chat/v2`；按项目聚合列表，不跨项目移动会话。
 - 默认英文，Settings → Appearance 支持简体中文和主题，立即生效并持久化。
-- Craft 全功能重建暂停，Workbench / SDK worker 源码冻结并移出默认构建与主门禁；不扩展 Sources/MCP、Skills、Browser、Pages、DAG、远程和分享。
+- Craft 全功能重建暂停，Workbench / SDK worker 源码冻结并移出默认构建与主门禁；除独立 Skills 迁移外，不扩展 Sources/MCP、Browser、Pages、DAG、远程和分享。
+
+### Skills 新增范围（2026-10-21，实施中）
+
+- Loom 承载技能来源、浏览/搜索、安装/更新/卸载、托管指令、CLI/TUI 兼容及翻译。技能内容与质量工具继续留在独立 skills 仓库。
+- G1 交付本地/Git 来源与桌面安装闭环，G2 完成旧数据、CLI/TUI、翻译及完整替代验收后才允许退役源应用。门槛通过与否以实施证据为准。
+- Skills 切页保持 Chat 会话、草稿和活动回合；来源目录与当前项目安装目标独立。文件/网络/进程及权限校验归 Rust，不在前端拼接 CLI。
+- 远程安装固定 revision，刷新库不隐式更新安装；共享注入块按使用者归属管理；跨客户端未完成事务先恢复；应用更新不得打断文件事务。
+- 不内置个人技能集合，不自动注入所有技能到 Chat，不启用冻结 Workbench，不删除技能内容、用户安装、缓存或旧 Task 数据。
 
 验收以 [测试指南](testing.md) 和 [本轮证据](dogfood/2026-10-20-simple-chat-acceptance.md) 为准；实现、合成回归、真实 CLI 和用户桌面验收分别记录。以下范围与第 1–11 节仅为历史产品背景，不覆盖当前目标。
 

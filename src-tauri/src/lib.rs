@@ -15,6 +15,7 @@ pub mod process_supervisor;
 mod projects;
 mod session_capture;
 mod settings;
+pub mod skills;
 mod storage;
 
 use serde::Serialize;

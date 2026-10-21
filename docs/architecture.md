@@ -6,6 +6,8 @@
 
 Task/Board/Planning 的 UI、命令及独占模块已删除。`crates/`、`packages/`、`src/workbench/`、`src-tauri/src/workbench/` 保留冻结；默认应用不挂载这些模块，也不依赖 Bun 或 SDK worker。
 
+独立 Skills 模块自 2026-10-21 开始按 [迁移计划](plans/2026-10-21/06:12-skills-module-migration.md) 实施，契约与当前状态见 [Skills 契约](architecture/skills-contracts.md)。当前仅落地 Rust 协调与元数据基础及进程级测试，尚无 Skills 页面或生产 IPC。该模块不挂载冻结 Workbench。
+
 ## 生产模块
 
 | 模块 | 职责 |

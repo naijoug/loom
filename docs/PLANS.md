@@ -1,5 +1,10 @@
 # 计划文档索引
 
+## 2026-10-21
+
+- 06:12-skills-module-migration.md
+  > （实施中；M0/M5 基础切片已落地，G1/G2 未验收；Skills 迁移入口）Loom 新增协调锁/pending/私有元数据和 GitHub/GitLab URL 契约，11 项 Skills 定向测试通过；源基线修复 `349d622`、内容工具独立化 `fd7a4ec` 已提交，隔离内容检查 32 项＋旧管理测试 7 项、272 文件哈希验证通过。UI、完整安装事务、CLI/TUI、翻译与旧数据接管待实施；继续按 G1/G2 推进，G2 后移除旧应用。详见 dogfood/2026-10-21-skills-migration.md。
+
 ## 2026-10-20
 
 - 18:25-openui-inline-cards-experiment.md

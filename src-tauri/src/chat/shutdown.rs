@@ -357,7 +357,7 @@ mod tests {
                 for repo in repositories {
                     let session = repo.load("session").unwrap();
                     let turn = &session.turns[0];
-                    assert_eq!(turn.status, ChatTurnStatus::Cancelled);
+                    assert_eq!(turn.status, ChatTurnStatus::Cancelled, "{turn:?}");
                     assert_eq!(turn.termination_reason.as_deref(), Some("app_shutdown"));
                     assert!(session.messages[1].content.contains("READY"));
                     assert!(repo
