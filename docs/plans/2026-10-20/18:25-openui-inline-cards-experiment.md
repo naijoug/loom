@@ -1,6 +1,6 @@
 # OpenUI 内联卡片实验计划
 
-- 状态：O0 已通过（2026-10-20，见 [探针记录](../../dogfood/2026-10-20-openui-probe.md)）；O1 已完成（2026-10-20，`b6c4d47`）；O2 已完成（2026-10-20，`e391d51`）；O3 已完成（2026-10-20，未提交）；O4–O5 未执行
+- 状态：O0 已通过（2026-10-20，见 [探针记录](../../dogfood/2026-10-20-openui-probe.md)）；O1 已完成（2026-10-20，`b6c4d47`）；O2 已完成（2026-10-20，`e391d51`）；O3 已完成（2026-10-20，`0dff105`）；O4 已完成（2026-10-20）；O5 进行中（验收测试与评分脚本已加入，真实回合运行中）
 - 基线：`codex/simple-cli-chat` @ `fd6ca41`（[05:55 UI 打磨](05:55-chat-ui-polish.md) 已提交）
 - 调研依据：[thesysdev/openui](https://github.com/thesysdev/openui) @ `9823ec0`（2026-10-19，MIT）；`@openuidev/react-lang` 1.0.1、`@openuidev/lang-core` 1.0.1
 - 范围：实验开关默认关闭，首个 Agent 只开 Claude Code；不改变 [需求文档](../../requirements.md) 的现行范围。实验转正前需先更新需求与 Chat 契约。
@@ -219,7 +219,7 @@ OpenUI 让模型用 OpenUI Lang 这种紧凑格式描述界面，再由前端按
   - `pnpm check` 通过（含 `openui:prompt --check`、`pnpm test` 87/87、`pnpm build`、`cargo fmt --check`、Clippy `-D warnings`、`cargo test` 150 passed / 16 ignored）。
   - 未运行真实 CLI 验收（`real_agent_tests` 默认忽略）；真实 Claude 回合留到 O4/O5。
 
-### O3（2026-10-20，passed，未提交）
+### O3（2026-10-20，passed，`0dff105`）
 
 - 渲染：`Markdown` 新增可选参数 `cards`（`streaming`、`onInsert`），开启时 `openui-lang` 代码块渲染为 `InlineCard`，否则仍是原代码块。`ChatTranscript` 按消息状态传入 `streaming`，`ChatPage` 读取开关并提供插入回调。
 - 懒加载：`InlineCard.tsx` 只含 `React.lazy`、Suspense（加载中显示源码）和卡片级错误边界；OpenUI 运行时与组件库在 `InlineCardView.tsx` 独立 chunk 中。
@@ -235,3 +235,17 @@ OpenUI 让模型用 OpenUI Lang 这种紧凑格式描述界面，再由前端按
   - Web 合成预览（内置浏览器，`scripts/debug.sh web`）：浅色、深色和中文下卡片与回退显示正常；“插入到输入框”写入草稿且未发送；关闭开关后回到代码块；开发态外部请求为 0（devtools 别名生效，S5 开发部分复验）。
   - `pnpm smoke:visual` 通过。
   - 未在 Tauri 桌面和真实 Claude 回合中验证，留给 O4/O5。
+
+### O4（2026-10-20，passed）
+
+- 示例会话：沿用 O3 的 `preview.ts` 中 `&cards=1` 会话（一张有效卡片、一张回退卡片），不改 `mockStore.ts`；默认 fixture 不变，避免影响现有冒烟对会话数的断言。
+- 冒烟：`scripts/simple-chat-smoke.mjs` 在原有流程后新增 `inlineCardsSmoke`，同一次 `pnpm smoke:visual` 内完成：
+  - 实验关闭时 `openui-lang` 仍是代码块；
+  - 经“设置 → 实验”打开开关后，有效卡片渲染、坏卡片显示回退提示与源码；
+  - “插入到输入框”只写入草稿（会话内卡片数不变，未发送）；查看源码/查看卡片切换；
+  - 深色 + 简体中文、700px 窄窗口，无横向溢出；
+  - 通过 CDP `Network.requestWillBeSent` 统计非 `127.0.0.1`/`localhost` 请求，结果为 0（S5 开发态）。
+- 截图与结果：`designs/exports/openui-inline-cards/`（`settings-experiments`、`cards-light`、`cards-source`、`cards-dark-zh`、`cards-narrow`、`result.json`）。
+- 过程问题：首版脚本在设置页渲染前点击“实验”导致落到 Agents 页并误切换 Agent 启用开关；已改为先等待设置页、并用 `.settings-toggle-row` 精确定位实验开关。冷启动 Vite 首次转换 OpenUI chunk 较慢，卡片等待上限放宽到 30 秒。
+- 验证：`pnpm smoke:visual` 通过（原 Simple Chat 冒烟与卡片冒烟均 passed）。运行时工作区含另一会话尚未提交的模式选择器改动（`ModePicker` 等），冒烟脚本 `main()` 已由该会话同步适配；本里程碑只改 `inlineCardsSmoke` 及其辅助参数。
+- 观察：卡片外壳按钮在悬停或键盘聚焦时才显示（O3 设计），静态截图中不可见。

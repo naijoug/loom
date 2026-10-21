@@ -559,3 +559,279 @@ async fn opencode_file_permissions_in_new_and_resumed_chat() {
     let command = std::env::var("LOOM_REAL_OPENCODE_COMMAND").unwrap_or_else(|_| "opencode".into());
     file_permissions(&command, crate::agent_adapter::ADAPTER_OPENCODE, false).await;
 }
+
+/// OpenUI inline cards acceptance (plan O5): fixed prompts through the real Loom path with the
+/// experiment on. Each answer is written as JSON to `LOOM_REAL_CARDS_OUT`; card parsing happens
+/// in `scripts/openui-acceptance.mjs` with the frontend parser. `LOOM_REAL_MODES` picks
+/// `explore` (Research) or `ask` (Code); `LOOM_REAL_CARDS_ONLY` runs one case id.
+#[tokio::test]
+#[ignore = "requires LOOM_REAL_CHAT=1; real Claude inline card acceptance"]
+async fn claude_inline_cards_acceptance() {
+    assert_eq!(std::env::var("LOOM_REAL_CHAT").as_deref(), Ok("1"));
+    let out = std::path::PathBuf::from(
+        std::env::var("LOOM_REAL_CARDS_OUT").expect("LOOM_REAL_CARDS_OUT"),
+    );
+    let mode = std::env::var("LOOM_REAL_MODES").unwrap_or_else(|_| "explore".into());
+    let only = std::env::var("LOOM_REAL_CARDS_ONLY").ok();
+    std::fs::create_dir_all(&out).unwrap();
+    // id, prompt, expects a card, resumes the q1 session
+    let cases = [
+        (
+            "q01",
+            "列出这个项目的入口文件，并说明每个文件的作用。",
+            true,
+            false,
+        ),
+        ("q02", "总结最近一次提交改了什么。", true, false),
+        (
+            "q03",
+            "对比 src/add.js 和 src/sub.js 的实现，用表格说明差异。",
+            true,
+            false,
+        ),
+        ("q04", "给出这个项目发布前的检查清单。", true, false),
+        ("q05", "哪些文件包含测试？分别测了什么？", true, false),
+        (
+            "q06",
+            "package.json 里的每个 script 分别做什么？请对比说明。",
+            true,
+            false,
+        ),
+        ("q07", "总结工作区当前还没提交的改动。", true, false),
+        ("q08", "add 函数返回什么类型？一句话回答。", false, false),
+        ("q09", "用一两句话说明这个项目是做什么的。", false, false),
+        ("q10", "把测试文件也加进刚才的入口文件列表里。", true, true),
+    ];
+    let ids = IdGenerator::default();
+    let agent = AgentConfig {
+        id: "claude-cards".into(),
+        name: "Claude cards".into(),
+        command: "claude".into(),
+        args: vec![],
+        working_directory_policy: "project_root".into(),
+        capabilities: vec![],
+        adapter_type: crate::agent_adapter::ADAPTER_CLAUDE.into(),
+        can_write_files: true,
+        can_run_commands: true,
+        enabled: true,
+        available: true,
+    };
+    for (id, text, expects_card, resumes) in cases {
+        if only
+            .as_deref()
+            .is_some_and(|only| only != id && !(resumes && only == "q01"))
+        {
+            continue;
+        }
+        if resumes && only.as_deref() == Some("q10") {
+            continue; // q10 always runs right after q01 in the same session
+        }
+        let project = if resumes {
+            out.join("project-q01")
+        } else {
+            let project = out.join(format!("project-{id}"));
+            card_fixture(&project);
+            project
+        };
+        let git_before = git(&project, &["status", "--porcelain"]);
+        let session_id = if resumes {
+            std::fs::read_to_string(out.join("q01.session")).unwrap()
+        } else {
+            let session_id = ids.next("session");
+            let repo = ChatRepository::open(&project).unwrap();
+            let session: ChatSession = serde_json::from_value(serde_json::json!({
+                "id": session_id, "projectPath": repo.project_path(), "agentId": agent.id,
+                "title": id, "permissionMode": mode, "messages": [],
+                "createdAtMs": now_ms(), "updatedAtMs": now_ms(), "turnStatus": "idle", "schemaVersion": 2
+            }))
+            .unwrap();
+            repo.create(&session).unwrap();
+            std::fs::write(out.join(format!("{id}.session")), &session_id).unwrap();
+            session_id
+        };
+        let repo = ChatRepository::open(&project).unwrap();
+        let input = ChatSendInput {
+            project_path: project.to_string_lossy().into_owned(),
+            session_id: session_id.clone(),
+            client_request_id: ids.next("request"),
+            text: text.into(),
+            permission_mode: Some(mode.clone()),
+        };
+        let assistant = ids.next("assistant");
+        let turn = ids.next("turn");
+        let accepted = repo
+            .begin_once(&input, &turn, |session| {
+                let stage = super::permission_to_stage(&mode);
+                let prepared = prepare_chat_invocation(&agent, session, text, stage, true)?;
+                assert_eq!(prepared.invocation.resumed, resumes);
+                assert!(prepared
+                    .invocation
+                    .args
+                    .iter()
+                    .any(|arg| arg == "--append-system-prompt"));
+                for (id, role, content, status) in [
+                    (ids.next("user"), "user", text.to_string(), "complete"),
+                    (assistant.clone(), "assistant", String::new(), "streaming"),
+                ] {
+                    session.messages.push(ChatMessage {
+                        id,
+                        role: role.into(),
+                        content,
+                        status: status.into(),
+                        created_at_ms: now_ms(),
+                        error_summary: None,
+                        parts: vec![],
+                    });
+                }
+                session.turns.push(super::turns::new_turn(
+                    &turn,
+                    &input.client_request_id,
+                    &session.messages[session.messages.len() - 2].id,
+                    &assistant,
+                    prepared.logged_invocation.clone(),
+                ));
+                Ok(prepared)
+            })
+            .unwrap();
+        let BeginTurn::Started(_, prepared, lease) = accepted else {
+            panic!()
+        };
+        let binding = prepared.resume_binding;
+        let started = std::time::Instant::now();
+        let result = super::service::run_chat_turn(
+            &repo,
+            &lease,
+            runtime::Request {
+                project_key: repo.project_path().to_string_lossy().into_owned(),
+                session_id: session_id.clone(),
+                turn_id: turn,
+                message_id: assistant.clone(),
+                prepared: prepared.invocation,
+                stdin_text: prepared.stdin_text,
+                limits: runtime::Limits {
+                    timeout: std::time::Duration::from_secs(600),
+                    ..runtime::Limits::default()
+                },
+            },
+            |_| {},
+        )
+        .await;
+        let finished = finish_chat_turn(&repo, &lease, &assistant, Some(&binding), result);
+        drop(lease);
+        let session = repo.load(&session_id).unwrap();
+        let answer = session.messages.last().unwrap();
+        let logged = serde_json::to_string(&session.turns.last().unwrap().invocation).unwrap();
+        let record = serde_json::json!({
+            "id": id, "mode": mode, "prompt": text, "expectsCard": expects_card, "resumed": resumes,
+            "status": finished.status, "error": finished.error_summary, "seconds": started.elapsed().as_secs(),
+            "content": answer.content,
+            "tools": answer.parts.iter().filter_map(|p| match p { super::ChatMessagePart::Tool { name, .. } => Some(name.clone()), _ => None }).collect::<Vec<_>>(),
+            "projectWrites": git(&project, &["status", "--porcelain"]) != git_before,
+            "promptRedacted": logged.contains("[OPENUI_PROMPT sha256:") && !logged.contains("## Inline Mode"),
+            "nativeResume": session.resume_handle.is_some(),
+        });
+        println!("REAL_CARDS {}", record);
+        std::fs::write(
+            out.join(format!("{id}-{mode}.json")),
+            serde_json::to_string_pretty(&record).unwrap(),
+        )
+        .unwrap();
+    }
+}
+
+fn git(project: &std::path::Path, args: &[&str]) -> String {
+    let output = std::process::Command::new("git")
+        .arg("-C")
+        .arg(project)
+        .args(args)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "git {args:?}: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    String::from_utf8_lossy(&output.stdout).into_owned()
+}
+
+/// A small synthetic JS project with two commits and one uncommitted change.
+fn card_fixture(project: &std::path::Path) {
+    let _ = std::fs::remove_dir_all(project);
+    std::fs::create_dir_all(project.join("src")).unwrap();
+    std::fs::create_dir_all(project.join("test")).unwrap();
+    let write = |path: &str, text: &str| std::fs::write(project.join(path), text).unwrap();
+    write(
+        "package.json",
+        r#"{"name":"fixture-calc","version":"0.2.0","type":"module","main":"src/index.js","bin":{"calc":"src/cli.js"},"scripts":{"test":"node --test","lint":"node --check src/index.js","start":"node src/cli.js"}}"#,
+    );
+    write(
+        "README.md",
+        "# fixture-calc\n\nTiny calculator library with a CLI.\n",
+    );
+    write(
+        "src/index.js",
+        "export { add } from './add.js';\nexport { sub } from './sub.js';\n",
+    );
+    write(
+        "src/add.js",
+        "/** @returns {number} */\nexport function add(a, b) {\n  return a + b;\n}\n",
+    );
+    write("src/sub.js", "export const sub = (a, b) => a - b;\n");
+    write("src/cli.js", "#!/usr/bin/env node\nimport { add } from './index.js';\nconst [a, b] = process.argv.slice(2).map(Number);\nconsole.log(add(a, b));\n");
+    write("test/add.test.js", "import test from 'node:test';\nimport assert from 'node:assert';\nimport { add } from '../src/add.js';\ntest('add', () => assert.equal(add(1, 2), 3));\n");
+    git(project, &["init", "-q"]);
+    // Loom keeps chat history in `.loom/`; only changes outside it count as project writes.
+    std::fs::write(project.join(".git/info/exclude"), ".loom/\n").unwrap();
+    git(
+        project,
+        &[
+            "-c",
+            "user.name=fixture",
+            "-c",
+            "user.email=fixture@example.invalid",
+            "add",
+            ".",
+        ],
+    );
+    git(
+        project,
+        &[
+            "-c",
+            "user.name=fixture",
+            "-c",
+            "user.email=fixture@example.invalid",
+            "commit",
+            "-qm",
+            "feat: add and sub",
+        ],
+    );
+    write("test/sub.test.js", "import test from 'node:test';\nimport assert from 'node:assert';\nimport { sub } from '../src/sub.js';\ntest('sub', () => assert.equal(sub(3, 2), 1));\n");
+    write("src/cli.js", "#!/usr/bin/env node\nimport { add, sub } from './index.js';\nconst [op, a, b] = process.argv.slice(2);\nconsole.log(op === 'sub' ? sub(+a, +b) : add(+a, +b));\n");
+    git(
+        project,
+        &[
+            "-c",
+            "user.name=fixture",
+            "-c",
+            "user.email=fixture@example.invalid",
+            "add",
+            ".",
+        ],
+    );
+    git(
+        project,
+        &[
+            "-c",
+            "user.name=fixture",
+            "-c",
+            "user.email=fixture@example.invalid",
+            "commit",
+            "-qm",
+            "feat(cli): support sub and test it",
+        ],
+    );
+    write(
+        "README.md",
+        "# fixture-calc\n\nTiny calculator library with a CLI.\n\nUsage: `calc sub 3 2`\n",
+    );
+}
