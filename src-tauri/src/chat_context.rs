@@ -43,13 +43,15 @@ pub(crate) fn prepare_chat_invocation(
     session: &ChatSession,
     user_text: &str,
     stage: AgentStage,
+    inline_cards: bool,
 ) -> Result<PreparedChatInvocation, String> {
     if user_text.chars().count() > USER_INPUT_CHARS {
         return Err(format!(
             "消息超过 {USER_INPUT_CHARS} 字符，请拆分后发送；内容未被截断。"
         ));
     }
-    let resume_binding = crate::chat::resume::binding(agent, session, stage);
+    let system_append = crate::chat::inline_cards::system_append(inline_cards, agent);
+    let resume_binding = crate::chat::resume::binding(agent, session, stage, system_append);
     let resume_command = crate::chat::resume::resolve(session, &resume_binding)?;
     let request = AdapterInvocationRequest {
         project_path: Path::new(&session.project_path),
@@ -64,6 +66,7 @@ pub(crate) fn prepare_chat_invocation(
             agent.adapter_type.as_str(),
             agent_adapter::ADAPTER_CODEX | agent_adapter::ADAPTER_CLAUDE
         ),
+        system_append,
     };
     // Preparing arguments has no side effects. Let the adapter decide whether
     // this handle is actually usable; an arbitrary stored string is not proof.
@@ -220,6 +223,7 @@ mod tests {
                         &agent(adapter, command),
                         &session,
                         AgentStage::Planning,
+                        None,
                     ),
                     resume,
                 );
@@ -229,6 +233,7 @@ mod tests {
                 &session,
                 "继续检查当前改动",
                 AgentStage::Planning,
+                false,
             )
             .unwrap();
             assert!(prepared.invocation.resumed);
@@ -249,11 +254,13 @@ mod tests {
     fn structured_resume_binds_all_execution_settings_without_storing_them() {
         let configured = agent(ADAPTER_GROK, "grok");
         let mut session = session();
-        let binding = crate::chat::resume::binding(&configured, &session, AgentStage::Planning);
+        let binding =
+            crate::chat::resume::binding(&configured, &session, AgentStage::Planning, None);
         session.resume_handle = crate::chat::resume::capture(&binding, "grok --resume session-123");
         session.resume_command = Some("untrusted diagnostic text --always-approve".into());
         let ready =
-            prepare_chat_invocation(&configured, &session, "next", AgentStage::Planning).unwrap();
+            prepare_chat_invocation(&configured, &session, "next", AgentStage::Planning, false)
+                .unwrap();
         assert!(ready.invocation.resumed);
         assert!(!ready
             .invocation
@@ -291,11 +298,15 @@ mod tests {
                 ..configured.clone()
             },
         ] {
-            assert!(
-                prepare_chat_invocation(&changed, &session, "next", AgentStage::Planning)
-                    .unwrap_err()
-                    .contains("开新 CLI 会话")
-            );
+            assert!(prepare_chat_invocation(
+                &changed,
+                &session,
+                "next",
+                AgentStage::Planning,
+                false
+            )
+            .unwrap_err()
+            .contains("开新 CLI 会话"));
         }
         for field in ["cwd", "permission", "version", "id"] {
             let mut changed = session.clone();
@@ -305,10 +316,14 @@ mod tests {
                 "version" => changed.resume_handle.as_mut().unwrap().version = 99,
                 _ => changed.resume_handle.as_mut().unwrap().native_session_id = "--last".into(),
             }
-            assert!(
-                prepare_chat_invocation(&configured, &changed, "next", AgentStage::Planning)
-                    .is_err()
-            );
+            assert!(prepare_chat_invocation(
+                &configured,
+                &changed,
+                "next",
+                AgentStage::Planning,
+                false
+            )
+            .is_err());
         }
         update_execution_config(&mut session, Some("another-agent"), None).unwrap();
         assert!(session.resume_handle.is_none());
@@ -330,6 +345,7 @@ mod tests {
                 &session,
                 "新的限制",
                 AgentStage::Planning,
+                false,
             )
             .unwrap_err();
             assert!(error.contains("开新 CLI 会话"));
@@ -339,6 +355,7 @@ mod tests {
                 &session,
                 "新的限制",
                 AgentStage::Planning,
+                false,
             )
             .unwrap();
             assert!(!prepared.invocation.resumed);
@@ -406,14 +423,16 @@ mod tests {
             &agent,
             &session(),
             &"中".repeat(USER_INPUT_CHARS),
-            AgentStage::Planning
+            AgentStage::Planning,
+            false
         )
         .is_ok());
         assert!(prepare_chat_invocation(
             &agent,
             &session(),
             &"中".repeat(USER_INPUT_CHARS + 1),
-            AgentStage::Planning
+            AgentStage::Planning,
+            false
         )
         .unwrap_err()
         .contains("内容未被截断"));
@@ -442,6 +461,7 @@ mod tests {
             &session,
             "继续",
             AgentStage::Planning,
+            false,
         )
         .unwrap_err();
         assert!(error.contains("开新 CLI 会话"));
@@ -471,5 +491,81 @@ mod tests {
             session.resume_command.as_deref(),
             Some("codex resume running")
         );
+    }
+
+    #[test]
+    fn inline_cards_append_prompt_only_for_claude_and_rebind_resume() {
+        use crate::chat::{inline_cards, resume};
+        let flag = "--append-system-prompt";
+        let claude = agent(ADAPTER_CLAUDE, "claude");
+        let mut session = session();
+        let prepare = |session: &ChatSession, enabled| {
+            prepare_chat_invocation(&claude, session, "hi", AgentStage::Planning, enabled)
+        };
+        let off = prepare(&session, false).unwrap();
+        assert!(!off.invocation.args.iter().any(|arg| arg == flag));
+        assert_eq!(
+            off.resume_binding.config_fingerprint,
+            resume::binding(&claude, &session, AgentStage::Planning, None).config_fingerprint,
+            "disabled cards keep the existing fingerprint"
+        );
+        let on = prepare(&session, true).unwrap();
+        let at = on
+            .invocation
+            .args
+            .iter()
+            .position(|arg| arg == flag)
+            .unwrap();
+        assert_eq!(on.invocation.args[at + 1], inline_cards::PROMPT);
+        let mut without = on.invocation.args.clone();
+        without.drain(at..at + 2);
+        assert_eq!(without, off.invocation.args);
+        assert_ne!(
+            on.resume_binding.config_fingerprint,
+            off.resume_binding.config_fingerprint
+        );
+        let logged = on.logged_invocation.args.join(" ");
+        assert!(logged.contains(&inline_cards::audit_label()));
+        assert!(!logged.contains("openui-lang"));
+
+        session.resume_handle = resume::capture(&off.resume_binding, "claude --resume session-123");
+        assert!(prepare(&session, false).unwrap().invocation.resumed);
+        assert!(prepare(&session, true)
+            .unwrap_err()
+            .contains("开新 CLI 会话"));
+        session.resume_handle = resume::capture(&on.resume_binding, "claude --resume session-123");
+        assert!(prepare(&session, false)
+            .unwrap_err()
+            .contains("开新 CLI 会话"));
+        let resumed = prepare(&session, true).unwrap();
+        assert!(resumed.invocation.resumed);
+        assert!(
+            resumed.invocation.args.iter().any(|arg| arg == flag),
+            "the appended prompt is not kept by the native session"
+        );
+
+        for (adapter, command) in [
+            (ADAPTER_CODEX, "codex"),
+            (ADAPTER_GROK, "grok"),
+            ("cli", "custom-agent"),
+        ] {
+            let other = agent(adapter, command);
+            let off = prepare_chat_invocation(
+                &other,
+                &self::session(),
+                "hi",
+                AgentStage::Planning,
+                false,
+            )
+            .unwrap();
+            let on =
+                prepare_chat_invocation(&other, &self::session(), "hi", AgentStage::Planning, true)
+                    .unwrap();
+            assert_eq!(on.invocation.args, off.invocation.args, "{adapter}");
+            assert_eq!(
+                on.resume_binding.config_fingerprint,
+                off.resume_binding.config_fingerprint
+            );
+        }
     }
 }

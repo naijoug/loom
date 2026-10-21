@@ -2,6 +2,7 @@
 mod export;
 mod file_changes;
 pub(crate) mod groups;
+pub(crate) mod inline_cards;
 mod journal;
 mod logs;
 mod models;
@@ -707,6 +708,10 @@ pub async fn chat_send(
 ) -> Result<ChatSendResult, String> {
     let operation = process_supervisor::supervisor().begin_operation()?;
     let repository = open_chat_repository(&app, &input.project_path)?;
+    // Unreadable settings keep the experiment off rather than blocking chat.
+    let inline_cards = crate::settings::load_app_settings_for_app(&app)
+        .map(|settings| settings.experimental_inline_cards)
+        .unwrap_or(false);
     let turn_id = ids.next("turn");
     let assistant_id = ids.next("msg");
     let accepted = repository.begin_once(&input, &turn_id, |session| {
@@ -724,7 +729,7 @@ pub async fn chat_send(
         if canonical != repository.project_path() {
             return Err("stored session cwd does not match its registered project".into());
         }
-        let prepared = prepare_chat_invocation(agent, session, text, stage)?;
+        let prepared = prepare_chat_invocation(agent, session, text, stage, inline_cards)?;
         let invocation_cwd =
             std::fs::canonicalize(&prepared.invocation.cwd).map_err(|error| error.to_string())?;
         if !invocation_cwd.starts_with(&canonical) {
@@ -899,6 +904,7 @@ mod tests {
                     resume_command: None,
                     chat_permission_mode: Some(mode),
                     embed_prompt: true,
+                    system_append: None,
                 },
             )
             .expect("grok");
@@ -925,6 +931,7 @@ mod tests {
                     resume_command: None,
                     chat_permission_mode: Some(mode),
                     embed_prompt: true,
+                    system_append: None,
                 },
             )
             .expect("codex");
@@ -949,6 +956,7 @@ mod tests {
                     resume_command: None,
                     chat_permission_mode: Some(mode),
                     embed_prompt: true,
+                    system_append: None,
                 },
             )
             .expect("claude");

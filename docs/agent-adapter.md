@@ -8,7 +8,9 @@ Loom 通过 Rust `agent_adapter.rs` 生成可执行文件、参数、cwd、stdin
 
 内建 Agent 为 Claude Code、Codex、OpenCode、Grok；Dummy 仅在 debug/test 构建出现。已保存的命令路径覆盖和启用状态不被重新探测覆盖。诊断直接执行 `--version`，两秒超时，失败显示 `unknown`；“已安装”只代表找到可执行文件，登录/模型可用性需真实调用验证。
 
-诊断返回 `capabilities { structuredStream, toolEvents, nativeResume, modes }`。每个 mode 含适配器生成的 policy 文本；设置表格不自行拼写参数。单项测试同样仅执行版本探测。
+诊断返回 `capabilities { structuredStream, toolEvents, nativeResume, inlineCards, modes }`。每个 mode 含适配器生成的 policy 文本；设置表格不自行拼写参数。单项测试同样仅执行版本探测。
+
+`inlineCards` 只对 Claude Code 为 true（实验）。设置 `experimentalInlineCards` 打开时，适配器每轮（含续聊）追加 `--append-system-prompt <提示词>`；提示词由 `pnpm openui:prompt` 生成并编译进二进制，执行记录中以 `[OPENUI_PROMPT sha256:…]` 代替原文。其他适配器忽略该字段，参数不变。
 
 ## 权限与续聊
 

@@ -48,6 +48,7 @@
       "themeMode": "system",
       "confirmBeforeCommands": true,
       "commandTimeoutSeconds": 600,
+      "experimentalInlineCards": false,
       "locale": "en"
     },
     "agentConfig": {
@@ -255,6 +256,7 @@
         "structuredStream": true,
         "toolEvents": true,
         "nativeResume": true,
+        "inlineCards": false,
         "modes": [
           {
             "mode": "explore",

@@ -1,6 +1,6 @@
 # OpenUI 内联卡片实验计划
 
-- 状态：O0 已通过（2026-10-20，见 [探针记录](../../dogfood/2026-10-20-openui-probe.md)）；O1 已完成（2026-10-20，未提交）；O2–O5 未执行
+- 状态：O0 已通过（2026-10-20，见 [探针记录](../../dogfood/2026-10-20-openui-probe.md)）；O1 已完成（2026-10-20，`b6c4d47`）；O2 已完成（2026-10-20，未提交）；O3–O5 未执行
 - 基线：`codex/simple-cli-chat` @ `fd6ca41`（[05:55 UI 打磨](05:55-chat-ui-polish.md) 已提交）
 - 调研依据：[thesysdev/openui](https://github.com/thesysdev/openui) @ `9823ec0`（2026-10-19，MIT）；`@openuidev/react-lang` 1.0.1、`@openuidev/lang-core` 1.0.1
 - 范围：实验开关默认关闭，首个 Agent 只开 Claude Code；不改变 [需求文档](../../requirements.md) 的现行范围。实验转正前需先更新需求与 Chat 契约。
@@ -189,7 +189,7 @@ OpenUI 让模型用 OpenUI Lang 这种紧凑格式描述界面，再由前端按
   2. 内联模式的默认说明会诱导模型只输出增量语句，必须保留“每个代码块都是完整程序”的追加规则。
   3. 组件签名把必填参数放前面，例如 `FileList(files, title?)`。
 
-### O1（2026-10-20，passed，未提交）
+### O1（2026-10-20，passed，`b6c4d47`）
 
 - 依赖：`@openuidev/react-lang` 1.0.1 和 `zod` 4.6.7，精确版本。
   - 仓库 `node_modules` 由 pnpm 11.20.0 安装，本机 pnpm 10.29.2 报 store 版本不符，因此用 `npx pnpm@11.20.0 add --save-exact`。
@@ -204,3 +204,17 @@ OpenUI 让模型用 OpenUI Lang 这种紧凑格式描述界面，再由前端按
   - `pnpm test` 全量 87/87 通过；`tsc -p tsconfig.json` 与 `tsc -p tsconfig.node.json` 无错误。
   - `pnpm build` 通过；`library.tsx` 尚未被应用引用，`dist/` 中不含 OpenUI 代码（S4 的独立 chunk 在 O3 验证）。
   - `pnpm openui:prompt --check` 通过。未运行完整 `pnpm check` 和 Rust 检查（本阶段未改 Rust）。
+
+### O2（2026-10-20，passed，未提交）
+
+- 设置：`AppSettings.experimental_inline_cards`（前端 `experimentalInlineCards`），`#[serde(default)]` 默认 false，旧设置文件无需迁移；前端 `normalizeSettings` 保留该字段，避免保存设置时丢失。契约样本 `contracts/tauri-contract.json` 与 `src/api/contract.ts` 同步。
+- 能力：`AgentCapabilities.inline_cards` 只对 `ADAPTER_CLAUDE` 为 true，前端类型与诊断样本同步。
+- 注入：`AdapterInvocationRequest.system_append`；`ClaudeAdapter` 在 `--permission-mode` 之后、`--resume` 之前追加 `--append-system-prompt <text>`，续聊回合同样追加。提示词在 `src-tauri/src/chat/inline_cards.rs` 中用 `include_str!` 编译进二进制。
+- 接线：`chat_send` 读取设置（读取失败按关闭处理，不阻断 Chat），`prepare_chat_invocation` 新增 `inline_cards` 参数，经 `inline_cards::system_append` 结合适配器能力决定是否传入。
+- 脱敏：`turns::snapshot` 把等于提示词的参数替换为 `[OPENUI_PROMPT sha256:<前 16 位>]`。
+- 指纹：只在提示词生效时把 `["system-append", sha256]` 追加到续聊配置，关闭时指纹与现状完全一致，已有句柄不失效；开关切换后旧句柄按现有规则提示“开新 CLI 会话”。
+- 与计划的差异：计划写“开关状态和提示词 sha256 都加入指纹”，实施改为“仅生效时加入提示词 sha256”，以满足 S1（关闭时不变）并避免所有现有会话失效；对 Codex/OpenCode/Grok/自定义 CLI 开关无效果，指纹也不变。
+- 验证：
+  - 新增 `agent_adapter::tests::only_claude_appends_a_system_prompt_on_every_turn` 与 `chat_context::tests::inline_cards_append_prompt_only_for_claude_and_rebind_resume`：关闭时参数与指纹不变（S1）；打开时仅 Claude 带参数、去掉该参数后与关闭时一致、指纹变化、执行记录不含提示词原文；两种句柄跨开关被拒绝；续聊回合仍带参数；其他适配器参数和指纹不变（S2）。
+  - `pnpm check` 通过（含 `openui:prompt --check`、`pnpm test` 87/87、`pnpm build`、`cargo fmt --check`、Clippy `-D warnings`、`cargo test` 150 passed / 16 ignored）。
+  - 未运行真实 CLI 验收（`real_agent_tests` 默认忽略）；真实 Claude 回合留到 O4/O5。

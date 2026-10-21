@@ -93,6 +93,9 @@ pub struct AppSettings {
     pub confirm_before_commands: bool,
     #[serde(default = "default_command_timeout_seconds")]
     pub command_timeout_seconds: u64,
+    /// Opt-in OpenUI inline cards; only adapters with `inline_cards` receive the prompt.
+    #[serde(default)]
+    pub experimental_inline_cards: bool,
 }
 
 impl Default for AppSettings {
@@ -102,6 +105,7 @@ impl Default for AppSettings {
             theme_mode: default_theme_mode(),
             confirm_before_commands: default_confirm_before_commands(),
             command_timeout_seconds: default_command_timeout_seconds(),
+            experimental_inline_cards: false,
         }
     }
 }

@@ -38,6 +38,7 @@ export interface AgentCapabilities {
   structuredStream: boolean;
   toolEvents: boolean;
   nativeResume: boolean;
+  inlineCards: boolean;
   modes: Array<{ mode: "explore" | "ask" | "auto"; policy: string }>;
 }
 

@@ -76,6 +76,7 @@ mod tests {
         ));
         assert!(settings.confirm_before_commands);
         assert_eq!(settings.command_timeout_seconds, 600);
+        assert!(!settings.experimental_inline_cards);
 
         fs::remove_dir_all(root).ok();
     }
@@ -93,6 +94,7 @@ mod tests {
                 theme_mode: crate::models::ThemeMode::Dark,
                 confirm_before_commands: false,
                 command_timeout_seconds: 9999,
+                experimental_inline_cards: true,
             },
         )
         .expect("settings should save");
@@ -102,6 +104,7 @@ mod tests {
         assert!(matches!(loaded.theme_mode, crate::models::ThemeMode::Dark));
         assert!(!loaded.confirm_before_commands);
         assert_eq!(loaded.command_timeout_seconds, MAX_COMMAND_TIMEOUT_SECONDS);
+        assert!(loaded.experimental_inline_cards);
 
         fs::remove_dir_all(root).ok();
     }
@@ -152,6 +155,7 @@ mod tests {
             crate::models::ThemeMode::Dark
         ));
         assert_eq!(settings.locale, crate::models::Locale::En);
+        assert!(!settings.experimental_inline_cards);
         assert_eq!(stored["schemaVersion"], SETTINGS_SCHEMA_VERSION);
         assert_eq!(stored["data"]["commandTimeoutSeconds"], 42);
         fs::remove_dir_all(root).ok();

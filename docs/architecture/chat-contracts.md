@@ -52,7 +52,7 @@
 
 后端在同一写锁内先查回执：重复标识且正文、请求权限完全一致时返回原 turnId 和最新会话，不再次准备/启动 Agent；不同内容或权限报冲突。已完成、停止、中断、归档或配置改变后依然适用。未接收的新请求才检查活动回合/归档限制。重启恢复只标记中断，不重跑副作用。
 
-`ChatTurn` 与用户/助手消息、clientRequestId 关联，接受时原子保存 `starting` 和不可修改的 invocation（Agent、adapter、程序/argv、cwd、权限、输出协议、stdin、配置指纹）。正文参数以 `[PROMPT]` 替代；凭据选项和已知敏感行脱敏。随后记录真实启动时间/PID，进入 running；停止请求记录 cancelling，运行结果分别为 completed/failed/cancelled/timed_out。无本进程归属的未完成回合恢复为 interrupted。终态包含结束时间、可用的退出码、原因/错误；没有得到退出码时保留 null，不猜测为 0。
+`ChatTurn` 与用户/助手消息、clientRequestId 关联，接受时原子保存 `starting` 和不可修改的 invocation（Agent、adapter、程序/argv、cwd、权限、输出协议、stdin、配置指纹）。正文参数以 `[PROMPT]` 替代，内联卡片提示词以 `[OPENUI_PROMPT sha256:…]` 替代；凭据选项和已知敏感行脱敏。随后记录真实启动时间/PID，进入 running；停止请求记录 cancelling，运行结果分别为 completed/failed/cancelled/timed_out。无本进程归属的未完成回合恢复为 interrupted。终态包含结束时间、可用的退出码、原因/错误；没有得到退出码时保留 null，不猜测为 0。
 
 回合配置、消息关联和接收时间不可改写；终态只提交一次。PID 只用于诊断，重启不按历史 PID 盲杀。停止先设置活动 lease 的取消标记，即使保存 cancelling 失败也不阻止 runtime 清理子进程。
 
@@ -128,7 +128,7 @@ JSON 保留完整转录和结构化证据，Markdown 用动态围栏保留字面
 - `prepare_chat_invocation` 以 adapter 的 resumed 为准：原生续聊只传新增输入；fallback 历史最多 12 条、单条 2000 字符、序列化 12000 字符并标截断。最新请求保留，超过 32000 字符先报错，不裁剪原始转录。
 - Codex/Claude 请求已有 stdin 能力，只有 adapter 返回 stdin_prompt 才写入；Grok/自定义 positional 模板使用 argv。Grok 使用 `streaming-messages-json`。
 
-`resumeHandle = { version: 1, adapterType, nativeSessionId, configFingerprint }` 由成功回合的 prepared 配置和解析出的原生 ID 生成。SHA-256 绑定 Agent id/type、程序、参数、工作目录策略、能力、读写/命令开关、项目路径、Chat 权限和当前兼容 stage；不保存指纹原文。标题/显示名称变化不影响它。指纹不检测 CLI 外部设置/登录身份或磁盘二进制替换。
+`resumeHandle = { version: 1, adapterType, nativeSessionId, configFingerprint }` 由成功回合的 prepared 配置和解析出的原生 ID 生成。SHA-256 绑定 Agent id/type、程序、参数、工作目录策略、能力、读写/命令开关、项目路径、Chat 权限和当前兼容 stage；实验内联卡片生效时再加入追加提示词的 SHA-256（关闭时指纹不变，切换开关后需开新 CLI 会话）。不保存指纹原文。标题/显示名称变化不影响它。指纹不检测 CLI 外部设置/登录身份或磁盘二进制替换。
 
 续聊仅使用有效且配置匹配的结构化句柄；`resumeCommand` 作为诊断兼容字段，不作为 Chat 可执行参数。旧记录只有字符串时提示“续聊需重建”，配置变化/无效句柄也拒绝发送，要求用户“开新 CLI 会话”；清除后有预算地重放原有历史。不会在恢复失败时偷偷重跑新调用。
 

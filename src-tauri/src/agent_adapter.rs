@@ -13,6 +13,8 @@ pub struct AgentCapabilities {
     pub structured_stream: bool,
     pub tool_events: bool,
     pub native_resume: bool,
+    /// Accepts an appended system prompt for experimental inline cards.
+    pub inline_cards: bool,
     pub modes: Vec<ModeCapability>,
 }
 
@@ -54,6 +56,7 @@ pub fn capabilities(adapter: &str) -> AgentCapabilities {
         structured_stream: structured,
         tool_events: structured,
         native_resume: structured,
+        inline_cards: adapter == ADAPTER_CLAUDE,
         modes: ["explore", "ask", "auto"]
             .into_iter()
             .zip(policies)
@@ -107,6 +110,8 @@ pub struct AdapterInvocationRequest<'a> {
     /// Chat permissions are independent of the advanced Task stage protocol.
     pub chat_permission_mode: Option<&'a str>,
     pub embed_prompt: bool,
+    /// Extra system prompt text; adapters without `inline_cards` ignore it.
+    pub system_append: Option<&'a str>,
 }
 
 impl AdapterInvocationRequest<'_> {
@@ -292,6 +297,11 @@ impl AgentAdapter for ClaudeAdapter {
         ];
         if let Some(mode) = permission_mode {
             args.extend(["--permission-mode".into(), mode.into()]);
+        }
+        // Claude Code does not persist an appended prompt with the session,
+        // so it is passed on every turn, including resumed ones.
+        if let Some(text) = request.system_append {
+            args.extend(["--append-system-prompt".into(), text.into()]);
         }
         if let Some(id) = &resume_id {
             args.extend(["--resume".into(), id.clone()]);
@@ -591,6 +601,7 @@ mod tests {
                 resume_command: None,
                 chat_permission_mode: None,
                 embed_prompt: true,
+                system_append: None,
             },
         )
         .expect("review invocation");
@@ -609,6 +620,7 @@ mod tests {
                 resume_command: None,
                 chat_permission_mode: None,
                 embed_prompt: true,
+                system_append: None,
             },
         )
         .expect("implementation invocation");
@@ -653,6 +665,7 @@ mod tests {
                 resume_command: None,
                 chat_permission_mode: None,
                 embed_prompt: true,
+                system_append: None,
             },
         )
         .expect("custom invocation");
@@ -676,6 +689,7 @@ mod tests {
                 resume_command: None,
                 chat_permission_mode: None,
                 embed_prompt: true,
+                system_append: None,
             },
         )
         .expect_err("shell wrappers should be rejected");
@@ -696,6 +710,7 @@ mod tests {
                 resume_command: None,
                 chat_permission_mode: None,
                 embed_prompt: true,
+                system_append: None,
             },
         )
         .expect("grok prepare");
@@ -708,6 +723,46 @@ mod tests {
         assert!(prepared.args.iter().any(|arg| arg == "plan"));
         assert_eq!(prepared.output_mode, "streaming_json");
         assert!(!prepared.stdin_prompt);
+    }
+
+    #[test]
+    fn only_claude_appends_a_system_prompt_on_every_turn() {
+        for adapter in [
+            ADAPTER_CODEX,
+            ADAPTER_CLAUDE,
+            ADAPTER_GROK,
+            ADAPTER_OPENCODE,
+            "cli",
+        ] {
+            assert_eq!(
+                capabilities(adapter).inline_cards,
+                adapter == ADAPTER_CLAUDE
+            );
+        }
+        let agent = agent(ADAPTER_CLAUDE);
+        let command = crate::session_capture::resume_command_for_adapter(
+            ADAPTER_CLAUDE,
+            &agent.command,
+            "session-123",
+        )
+        .unwrap();
+        let request = AdapterInvocationRequest {
+            project_path: Path::new("/repo"),
+            prompt: "hi",
+            prompt_file: None,
+            stage: AgentStage::Planning,
+            resume_command: Some(&command),
+            chat_permission_mode: Some("explore"),
+            embed_prompt: false,
+            system_append: Some("CARDS"),
+        };
+        let args = prepare_invocation(&agent, &request).unwrap().args;
+        let at = args
+            .iter()
+            .position(|arg| arg == "--append-system-prompt")
+            .unwrap();
+        assert_eq!(args[at + 1], "CARDS");
+        assert!(at < args.iter().position(|arg| arg == "--resume").unwrap());
     }
 
     #[test]
@@ -738,6 +793,7 @@ mod tests {
                             "explore"
                         }),
                         embed_prompt,
+                        system_append: None,
                     };
                     let invocation = prepare_invocation(&agent, &request).unwrap();
                     assert!(invocation.resumed);
@@ -829,6 +885,7 @@ mod tests {
                             resume_command: Some(&command),
                             chat_permission_mode: None,
                             embed_prompt: true,
+                            system_append: None,
                         }
                     )
                     .is_err(),
@@ -856,6 +913,7 @@ mod opencode_tests {
                 resume_command: Some("/tools/opencode --session ses_123"),
                 chat_permission_mode: Some(mode),
                 embed_prompt: true,
+                system_append: None,
             };
             let invocation = prepare_invocation(&agent, &request).unwrap();
             assert_eq!(invocation.output_mode, "opencode_json");

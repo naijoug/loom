@@ -46,6 +46,7 @@ export const MODEL_CONTRACT_SAMPLES = {
   "themeMode": "system",
   "confirmBeforeCommands": true,
   "commandTimeoutSeconds": 600,
+  "experimentalInlineCards": false,
   "locale": "en"
 } satisfies AppSettings,
   agentConfig: {
@@ -253,6 +254,7 @@ export const MODEL_CONTRACT_SAMPLES = {
     "structuredStream": true,
     "toolEvents": true,
     "nativeResume": true,
+    "inlineCards": false,
     "modes": [
       {
         "mode": "explore",

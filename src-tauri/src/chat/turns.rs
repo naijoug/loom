@@ -21,6 +21,9 @@ pub(crate) fn snapshot(
                 hide_next = false;
                 return "[REDACTED]".into();
             }
+            if arg == super::inline_cards::PROMPT {
+                return super::inline_cards::audit_label();
+            }
             let lower = arg.to_ascii_lowercase();
             if arg.starts_with('-')
                 && [

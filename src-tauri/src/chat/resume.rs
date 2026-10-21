@@ -18,10 +18,11 @@ pub(crate) fn binding(
     agent: &AgentConfig,
     session: &ChatSession,
     stage: AgentStage,
+    system_append: Option<&str>,
 ) -> ResumeBinding {
     let mut capabilities = agent.capabilities.clone();
     capabilities.sort();
-    let config = serde_json::json!([
+    let mut config = serde_json::json!([
         "loom-chat-invocation-v1",
         agent.id,
         agent.adapter_type,
@@ -35,6 +36,14 @@ pub(crate) fn binding(
         session.permission_mode,
         stage,
     ]);
+    // Only an enabled prompt joins the fingerprint, so existing handles stay
+    // valid while the experiment is off and toggling it requires a new session.
+    if let Some(text) = system_append {
+        let digest = format!("{:x}", Sha256::digest(text.as_bytes()));
+        if let Some(items) = config.as_array_mut() {
+            items.push(serde_json::json!(["system-append", digest]));
+        }
+    }
     ResumeBinding {
         adapter_type: agent.adapter_type.clone(),
         program: agent.command.trim().into(),

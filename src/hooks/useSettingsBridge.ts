@@ -23,6 +23,7 @@ function normalizeSettings(value: Partial<AppSettings> | null | undefined): AppS
       Number.isFinite(timeout) && timeout >= 5
         ? Math.min(3600, Math.round(timeout))
         : DEFAULT_APP_SETTINGS.commandTimeoutSeconds,
+    experimentalInlineCards: value?.experimentalInlineCards === true,
   };
 }
 

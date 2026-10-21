@@ -95,7 +95,7 @@ async fn three_turns(command: &str, adapter: &str, switch_agent: bool) {
             .begin_once(&input, &turn_id, |session| {
                 crate::chat_context::update_execution_config(session, Some(&agent.id), None)?;
                 let transport =
-                    prepare_chat_invocation(&agent, session, &prompt, AgentStage::Planning)?;
+                    prepare_chat_invocation(&agent, session, &prompt, AgentStage::Planning, false)?;
                 assert_eq!(
                     transport.invocation.resumed,
                     index > 0 && !(switch_agent && index == 2)
@@ -319,7 +319,7 @@ async fn file_permissions(command: &str, adapter: &str, switch_mode: bool) {
                 .begin_once(&input, &turn, |session| {
                     crate::chat_context::update_execution_config(session, None, Some(mode))?;
                     let stage = super::permission_to_stage(mode);
-                    let prepared = prepare_chat_invocation(&agent, session, &prompt, stage)?;
+                    let prepared = prepare_chat_invocation(&agent, session, &prompt, stage, false)?;
                     assert_eq!(
                         prepared.invocation.resumed,
                         round > 0 && !(switch_mode && round == 1)
@@ -442,7 +442,7 @@ async fn stop_then_send(command: &str, adapter: &str) {
         let accepted = repo
             .begin_once(&input, &turn_id, |session| {
                 let prepared =
-                    prepare_chat_invocation(&agent, session, prompt, AgentStage::Planning)?;
+                    prepare_chat_invocation(&agent, session, prompt, AgentStage::Planning, false)?;
                 let user = ids.next("user");
                 for (id, role, content, status) in [
                     (user.clone(), "user", prompt.to_string(), "complete"),

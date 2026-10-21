@@ -13,6 +13,8 @@ export interface AppSettings {
   themeMode: ThemeMode;
   confirmBeforeCommands: boolean;
   commandTimeoutSeconds: number;
+  /** Opt-in OpenUI inline cards; only adapters with `inlineCards` receive the prompt. */
+  experimentalInlineCards: boolean;
 }
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
@@ -20,6 +22,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   themeMode: "system",
   confirmBeforeCommands: true,
   commandTimeoutSeconds: 600,
+  experimentalInlineCards: false,
 };
 
 export interface WorkflowStage {
