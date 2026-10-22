@@ -1,0 +1,20 @@
+{
+  "kind": "legacy-and-new-cli-local-fixture",
+  "manualListExactMatch": true,
+  "groupVerbIdentityAndSuggestedPromptMatch": true,
+  "commands": [
+    [
+      "list"
+    ],
+    [
+      "plan",
+      "review",
+      "payment module rewrite"
+    ]
+  ],
+  "ngWithoutFzfListsSkills": true,
+  "tuiWithoutFzfFailsClearly": true,
+  "sourceNotRegisteredByReadCommands": true,
+  "agentInvoked": false,
+  "realDependencyInstalled": false
+}

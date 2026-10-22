@@ -879,7 +879,30 @@ pub fn apply(
     plan_id: &str,
     operation: &mut Operation,
 ) -> Result<InstallReceipt> {
-    let plan: InstallPlan = files::read_json(&plan_path(repo, plan_id)?)?;
+    apply_with_prior(repo, context, plan_id, operation, &BTreeMap::new())
+}
+
+fn apply_with_prior(
+    repo: &Repository,
+    context: &TargetContext,
+    plan_id: &str,
+    operation: &mut Operation,
+    prior: &BTreeMap<PathBuf, (EntryState, EntryState)>,
+) -> Result<InstallReceipt> {
+    let mut plan: InstallPlan = files::read_json(&plan_path(repo, plan_id)?)?;
+    // Carry forward only verified writes made by this reviewed batch. Source,
+    // destination and ownership decisions are never regenerated or rewritten.
+    for item in &mut plan.items {
+        rebase_reviewed_state(
+            &item.target.skills_dir.join(MANIFEST),
+            &mut item.manifest_before,
+            prior,
+        )?;
+        for resource in &mut item.resource_changes {
+            rebase_reviewed_state(&resource.path, &mut resource.before, prior)?;
+        }
+    }
+
     if plan.schema_version != 1
         || plan.items.is_empty()
         || plan.items.len() > 12
@@ -1004,6 +1027,94 @@ pub fn apply(
     }
     files::atomic_json(&result_path, &receipt)?;
     Ok(receipt)
+}
+
+fn rebase_reviewed_state(
+    path: &Path,
+    state: &mut EntryState,
+    prior: &BTreeMap<PathBuf, (EntryState, EntryState)>,
+) -> Result<()> {
+    if let Some((before, after)) = prior.get(path) {
+        if state != before && state != after {
+            return Err(SkillsError::new(
+                ErrorCode::Conflict,
+                "Reviewed plan has a different starting resource state",
+            ));
+        }
+        *state = after.clone();
+    }
+    Ok(())
+}
+
+pub struct ReviewedResult {
+    pub plan_id: String,
+    pub result: Result<InstallReceipt>,
+}
+/// Apply a sequence of already reviewed plans without replanning. Metadata
+/// fingerprints may advance only through this batch's verified commit journals.
+pub fn apply_reviewed_batch(
+    repo: &Repository,
+    context: &TargetContext,
+    plan_ids: &[String],
+) -> Vec<ReviewedResult> {
+    let mut prior = BTreeMap::<PathBuf, (EntryState, EntryState)>::new();
+    let mut results = Vec::new();
+    for id in plan_ids {
+        let result = (|| {
+            let plan = load_plan(repo, id)?;
+            let mut operation = Operation::begin(
+                repo,
+                "managed-installations",
+                if plan.action == PlanAction::Install {
+                    "install"
+                } else {
+                    "uninstall"
+                },
+            )?;
+            let result = apply_with_prior(repo, context, id, &mut operation, &prior);
+            let status = match &result {
+                Err(e) => Err(e.clone()),
+                Ok(receipt)
+                    if receipt.items.iter().any(|i| {
+                        !["installed", "uninstalled", "skipped"].contains(&i.status.as_str())
+                    }) =>
+                {
+                    Err(SkillsError::new(
+                        ErrorCode::Conflict,
+                        "Some reviewed changes did not apply",
+                    ))
+                }
+                Ok(_) => Ok(()),
+            };
+            operation.finish(status)?;
+            let receipt = result?;
+            for (index, item) in receipt.items.iter().enumerate() {
+                if !["installed", "uninstalled"].contains(&item.status.as_str()) {
+                    continue;
+                }
+                let transaction = if plan.coordinated {
+                    format!("{}-group", plan.plan_id)
+                } else {
+                    format!("{}-{index}", plan.plan_id)
+                };
+                for change in transactions::committed_changes(&repo.root, &transaction)? {
+                    prior
+                        .entry(change.target)
+                        .and_modify(|state| state.1 = change.after.clone())
+                        .or_insert((change.before, change.after));
+                }
+                if plan.coordinated {
+                    break;
+                }
+            }
+            Ok(receipt)
+        })();
+        results.push(ReviewedResult {
+            plan_id: id.clone(),
+            result,
+        });
+    }
+    results
 }
 
 fn validate_owned_resources(

@@ -137,12 +137,26 @@ M2b 对当前托管安装的出口已通过，允许继续 M2c；旧来源/指�
 
 持久化证据：[CLI 核心进程](samples/skills-migration/cli-core-process.json)、[随包搬移](samples/skills-migration/cli-bundled-process.json)、[实际生命周期锁](samples/skills-migration/cli-lifecycle-lock.json)。辅助日志：`/tmp/loom-skills-cli-core-final-check.log`、`/tmp/loom-skills-cli-json-check.log`、`/tmp/loom-skills-cli-json-clippy.log`、`/tmp/loom-skills-cli-delivery-bundle.log`。锁测试驱动曾混用缓冲读取和 communicate 截断自身收集的 JSON；改为无缓冲读取后完整验证通过，未据此修改 CLI 数据协议。
 
-M2c 仍未整体验收：TUI/ng/fzf 分支、更多旧别名/参数样本、实际桌面与 CLI 的最终交接流程待后续；旧 Manager 保留。源码已把技能安装执行收敛到共用 Rust 服务，继续在此基础迁移交互入口。
+该核心切片交付时交互及双入口交接待补；后续完成证据见下一节。旧 Manager 按 G2/M7 保留，不因 CLI 单项通过提前删除。
+
+## M2c 收尾：TUI/ng、批量预览与双入口交接
+
+- `cli/interactive.rs` 承接 fzf 选择、技能正文预览、动作/目标/策略/多选/重复操作；`ng` 保留 manual 分组、类别说明、group + verb 和额外文本建议，始终不执行 Agent。新增 `tui` / `ng` 薄启动器，与 skills-linker 一起随包。
+- TUI 应用用户已确认的规划。新增共用 `apply_reviewed_batch`，只用同批已验证事务日志推进后续规划的共享文件/清单指纹，避免多技能预览互相制造假冲突；源内容、目标和归属决策不重做。外部编辑、取消预览、只读操作与重复安装/卸载均有回归。
+- fzf 默认缺失时不安装；ng 回退列表，TUI 明确失败。显式安装使用固定 `brew install fzf`、10 分钟超时、取消、进程组清理与执行日志；成功/缺失/超时分支用临时替身验证。没有执行真实 Homebrew 安装。
+- 真实 fzf 发现了 `--with-nth` 与重复匹配字段组合导致输入后无匹配的问题，已修复；随后实际 PTY 完成技能正文预览 → 确认安装 → 切换卸载 → 确认卸载 → 退出，v2 清单、默认 symlink 和源保全已核验。另增真实 fzf 匹配引擎 opt-in 回归并显式通过。[终端证据](samples/skills-migration/tui-real-fzf.json)。
+- 旧 ng 的合成 manual 列表逐字相同，group-verb 身份字段和建议文本一致；缺 fzf 行为通过。对真实 skills/ 内容目录只读对照，旧/新各 25 个技能，ID/路径/分类/manual_group 无差异，未登记真实来源或安装真实技能。[ng 对照](samples/skills-migration/ng-legacy-parity.json)、[真实目录对照](samples/skills-migration/real-catalog-parity.json)。
+- `.app` 复制到含空格目录后，从 checkout 外调用包内 ng/list、ng/group-verb、tui/help 成功；三启动器均保留执行权限。真实随包 TUI 输入含空格/中文的自定义路径，预览后取消，未创建目标目录。[随包证据](samples/skills-migration/tui-ng-bundled.json)。
+- 隔离项目通过随包 CLI 安装 copy + wrapper，原生 Settings → Skills 显示来源、Copy、wrapper 选项及 current；桌面按预览卸载后，真实 CLI status 返回 missing / managed=false，wrapper 已移除，源保留。最初受限终端调用无法访问实际用户协调锁，改用同一已授权运行环境后通过；未改变生产锁策略。[双入口交接](samples/skills-migration/cli-desktop-handoff.json)。
+- 服务在临时项目生成合成中断事务后，实际随包 CLI 使用 data-b 发现 data-a 的 pending 并回滚，原内容恢复、测试标记清理；该 opt-in 验收不会操作既有用户安装。[跨目录恢复](samples/skills-migration/cli-cross-data-recovery.json)。
+- 完整 `pnpm check` 前端 109、Rust 230 项通过，应用 bundle 构建通过；真实 fzf opt-in 和后加入的真实 CLI 恢复 opt-in 各 1 项显式通过。新增恢复验收代码另经全目标 Clippy。辅助日志：`/tmp/loom-skills-tui-full-check.log`、`/tmp/loom-skills-tui-bundle.log`、`/tmp/loom-skills-real-fzf-filter.log`、`/tmp/loom-skills-cli-recovery-acceptance.log`、`/tmp/loom-skills-tui-final-clippy.log`。
+
+M2c 当前保留能力出口通过。计划中“在 M2c 删除源重复业务实现”的句子与 G2 后退役规则冲突，已明确为 Loom 内收敛、源旧实现到 M7 再删除；此项是实施顺序修正，不缩减迁移范围。预览与临时安装均已结束/移除，技能正文和归档未改。
 
 ## 当前限制与后续执行入口
 
 M2a 安装闭环已有上述代码和原生证据，G1 仍待综合关闭：完整 Skills 视觉矩阵与无源码访问条件；远程 A → B 安装更新和更新器准入/失败的服务入口已按上一节补验。搬移运行只证明独立包路径及工作目录；源 checkout 仍在磁盘，不冒充无法访问源码的验收。
 
-M1b GitHub API、M2c 的 TUI/ng 与完整兼容验收、M3 翻译与分享、M4 旧数据接管尚未完成；M2b 当前托管安装出口已通过，共享指令/wrapper/只读诊断/一致更新与恢复均有上述证据。外网 GitHub/GitLab 与真实翻译 provider 验收仍待后续，G2 未通过。
+M1b GitHub API、M3 翻译与分享、M4 旧数据接管尚未完成；M2c 当前范围已通过；M2b 当前托管安装出口已通过，共享指令/wrapper/只读诊断/一致更新与恢复均有上述证据。外网 GitHub/GitLab 与真实翻译 provider 验收仍待后续，G2 未通过。
 
 旧 library/JSON/TSV 合成兼容样本已加入 `src-tauri/tests/fixtures/skills/`，尚未执行真实旧数据接管。M5 的管理测试与过渡入口需等 M2c/M7 移除。旧 Manager 新源码的版本保护不能修补已安装历史二进制，也不能让旧客户端参加 Loom 锁协议；切换期间仍须停止旧 Manager 写入。旧应用与数据保留，不提前退役。

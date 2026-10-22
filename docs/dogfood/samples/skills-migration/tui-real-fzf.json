@@ -1,0 +1,15 @@
+{
+  "kind": "real-fzf-isolated-pty",
+  "projectTargetsOnly": true,
+  "skillContentPreviewed": true,
+  "reviewedPlanConfirmed": true,
+  "installedManifestVersion": 2,
+  "defaultMode": "symlink",
+  "actionChangedToUninstall": true,
+  "reviewedUninstallApplied": true,
+  "successfulPlans": 2,
+  "exitCode": 0,
+  "sourcePreserved": true,
+  "fixtureInstallRemoved": true,
+  "realDependencyInstalled": false
+}

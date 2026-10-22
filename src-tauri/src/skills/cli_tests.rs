@@ -326,3 +326,130 @@ fn doctor_without_an_injection_file_is_not_applicable() {
     assert_eq!(result["results"][0]["status"], "not-applicable");
     assert!(!s.fixture.0.join("project/AGENTS.md").exists());
 }
+
+#[test]
+#[ignore = "explicit acceptance: requires LOOM_SKILLS_ACCEPTANCE_BINARY and briefly uses the real user coordination domain"]
+fn actual_cli_recovers_a_fixture_from_another_data_directory() {
+    use super::{package, transactions};
+    let binary = std::path::PathBuf::from(
+        std::env::var_os("LOOM_SKILLS_ACCEPTANCE_BINARY")
+            .expect("Pass the verified loom-skills binary path"),
+    );
+    assert!(binary.is_absolute() && binary.is_file());
+    let fixture = Fixture::new();
+    let project = fixture.0.join("project");
+    fs::create_dir(&project).unwrap();
+    let paths = RuntimePaths::system(Some(&fixture.0.join("data-a"))).unwrap();
+    let repo = paths.repository().unwrap();
+    let context = TargetContext::new(&paths.home, Some(&project)).unwrap();
+    let target = context
+        .selected(&["codex-project".into()])
+        .unwrap()
+        .remove(0);
+    context.ensure(&target).unwrap();
+    let destination = target.skills_dir.join("cli-recovery-fixture");
+    fs::create_dir(&destination).unwrap();
+    fs::write(destination.join("SKILL.md"), "Original fixture").unwrap();
+    let id = format!(
+        "cli-acceptance-{}-{}",
+        std::process::id(),
+        crate::models::now_ms()
+    );
+    transactions::prepare_storage(&destination, &id).unwrap();
+    let staged = transactions::artifact(&destination, &id, 0, "staged").unwrap();
+    fs::create_dir(&staged).unwrap();
+    fs::write(staged.join("SKILL.md"), "Interrupted replacement").unwrap();
+    let lease = repo.coordinator.enter().unwrap();
+    let writer = repo.coordinator.writer_wait(&lease).unwrap();
+    let pending = transactions::prepare(
+        &repo,
+        &writer,
+        &id,
+        vec![transactions::Change {
+            target: destination.clone(),
+            before: package::state(&destination).unwrap(),
+            after: package::state(&staged).unwrap(),
+            staged,
+            backup: transactions::artifact(&destination, &id, 0, "backup").unwrap(),
+        }],
+    )
+    .unwrap();
+    let interrupted = transactions::commit_observed(
+        &writer,
+        &pending,
+        std::slice::from_ref(&target.skills_dir),
+        |step| {
+            if step == 1 {
+                Err(super::error::SkillsError::invalid(
+                    "acceptance interruption",
+                ))
+            } else {
+                Ok(())
+            }
+        },
+    );
+    drop(writer);
+    drop(lease);
+    let data_b = fixture.0.join("data-b");
+    let result = (|| -> std::result::Result<(), String> {
+        if interrupted.is_ok() {
+            return Err("Failure injection did not interrupt the fixture".into());
+        }
+        let run = |action: &str, operation: Option<&str>| -> std::result::Result<Value, String> {
+            let mut command = std::process::Command::new(&binary);
+            command
+                .args([action, "--scope", "project", "--project-root"])
+                .arg(&project)
+                .arg("--data-dir")
+                .arg(&data_b)
+                .arg("--json");
+            if let Some(id) = operation {
+                command.arg(id);
+            }
+            let output = command.output().map_err(|e| e.to_string())?;
+            if !output.status.success() {
+                return Err(String::from_utf8_lossy(&output.stderr).into_owned());
+            }
+            serde_json::from_slice(&output.stdout).map_err(|e| e.to_string())
+        };
+        let list = run("pending", None)?;
+        if !list.as_array().is_some_and(|items| {
+            items
+                .iter()
+                .any(|p| p["operationId"] == id && p["canRecover"] == true)
+        }) {
+            return Err("CLI did not discover its authorized fixture transaction".into());
+        }
+        if run("recover", Some(&id))?["outcome"] != "rolled_back" {
+            return Err("CLI did not report rollback".into());
+        }
+        if fs::read_to_string(destination.join("SKILL.md")).map_err(|e| e.to_string())?
+            != "Original fixture"
+        {
+            return Err("Fixture contents were not restored".into());
+        }
+        Ok(())
+    })();
+    // Never leave this opt-in fixture's pending marker behind after a failed
+    // executable or assertion. Preserve its files if safe cleanup itself fails.
+    let cleanup = (|| -> super::error::Result<()> {
+        if installers::recovery_items(&repo, &context)?
+            .iter()
+            .any(|p| p.operation_id == id)
+        {
+            installers::recover_one(&repo, &context, &id)?;
+        }
+        Ok(())
+    })();
+    if let Err(error) = cleanup {
+        let root = fixture.0.clone();
+        std::mem::forget(fixture);
+        panic!(
+            "Fixture recovery needs attention at {}: {}",
+            root.display(),
+            error.message
+        );
+    }
+    assert!(result.is_ok(), "{}", result.unwrap_err());
+    println!("M2C_CLI_RECOVERY_OK: real CLI discovered and recovered the isolated transaction from data-b");
+}

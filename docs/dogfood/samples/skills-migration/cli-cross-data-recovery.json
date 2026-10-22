@@ -1,0 +1,12 @@
+{
+  "kind": "service-prepared-interruption-and-real-packaged-cli",
+  "syntheticProjectOnly": true,
+  "fixedUserCoordinationDomain": true,
+  "preparedInDataDirectory": "A",
+  "cliUsedDataDirectory": "B",
+  "cliDiscoveredPending": true,
+  "cliReportedRolledBack": true,
+  "originalFixtureRestored": true,
+  "ownedPendingMarkerCleared": true,
+  "otherUserInstallationsModified": false
+}

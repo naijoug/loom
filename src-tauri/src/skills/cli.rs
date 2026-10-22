@@ -1,5 +1,7 @@
 //! CLI argument/output compatibility over the same catalog and installation service.
 //! No Tauri window, shell evaluation, or independent filesystem installer is used.
+mod interactive;
+
 use super::{
     catalog,
     error::{ErrorCode, Result, SkillsError},
@@ -18,7 +20,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-pub const HELP: &str = "Usage: loom-skills tools|list|detail|install|uninstall|status|doctor|pending|recover [options] [skill ...]\n\nOptions:\n  --skills-root DIR      Explicit local source; otherwise use the Loom library\n  --data-dir DIR         Library override (does not change the user lock domain)\n  --category NAME        global|cron|auto|manual\n  --tool NAME            codex|chatgpt|claude|claude-code|amp|custom (default codex)\n                        Repeat or comma-separate tools for a shared update\n  --scope SCOPE          global|project (default global)\n  --project-root DIR     Explicit project grant (default current directory for project scope)\n  --target-dir DIR       Explicit dedicated skills directory (one tool only)\n  --mode MODE            symlink|copy (default symlink)\n  --force               Replace verified managed installs; never delete unmanaged content\n  --with-slash-commands  Create manual Codex/Claude command wrappers\n  --json                Machine-readable output\n  --preview             Return installation/uninstallation plans without applying\n\nInstall without skill names selects all matching source skills. Uninstall without\nnames selects managed installs in the chosen target/source. Unknown ownership and\nuser-modified uninstalls are refused even with --force. recover takes an operation ID.\n";
+pub const HELP: &str = "Usage: loom-skills tools|list|detail|install|uninstall|status|doctor|pending|recover|tui|ng [options] [skill ...]\n\nOptions:\n  --skills-root DIR      Explicit local source; otherwise use the Loom library\n  --data-dir DIR         Library override (does not change the user lock domain)\n  --category NAME        global|cron|auto|manual\n  --tool NAME            codex|chatgpt|claude|claude-code|amp|custom (default codex)\n                        Repeat or comma-separate tools for a shared update\n  --scope SCOPE          global|project (default global)\n  --project-root DIR     Explicit project grant (default current directory for project scope)\n  --target-dir DIR       Explicit dedicated skills directory (one tool only)\n  --mode MODE            symlink|copy (default symlink)\n  --force               Replace verified managed installs; never delete unmanaged content\n  --with-slash-commands  Create manual Codex/Claude command wrappers\n  --json                Machine-readable output\n  --preview             Return installation/uninstallation plans without applying\n  --auto-install-fzf    Explicitly permit Homebrew fzf installation for tui/ng\n\nInstall without skill names selects all matching source skills. Uninstall without\nnames selects managed installs in the chosen target/source. Unknown ownership and\nuser-modified uninstalls are refused even with --force. recover takes an operation ID.\n\nInteractive entrypoints:\n  loom-skills tui [options]         Select, preview, apply reviewed plans, repeat\n  loom-skills ng [options]          Pick a manual skill (list fallback without fzf)\n  loom-skills ng list|plan          Show manual groups or activation categories\n  loom-skills ng plan review TEXT   Print a suggested prompt; never run an Agent\n";
 
 pub struct Output {
     pub text: String,
@@ -26,7 +28,7 @@ pub struct Output {
     // Keep a real CLI admitted until stdout is flushed and the process exits.
     _lifecycle: Option<super::coordination::LifecycleLease>,
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Options {
     command: String,
     skills_root: Option<PathBuf>,
@@ -41,6 +43,7 @@ pub struct Options {
     slash: bool,
     json: bool,
     preview: bool,
+    auto_install_fzf: bool,
     selected: Vec<String>,
 }
 fn absolute(value: &str) -> Result<PathBuf> {
@@ -68,6 +71,7 @@ impl Options {
             slash: false,
             json: false,
             preview: false,
+            auto_install_fzf: false,
             selected: Vec::new(),
         };
         let mut index = 1;
@@ -116,6 +120,7 @@ impl Options {
                 "--with-slash-commands" => out.slash = true,
                 "--json" => out.json = true,
                 "--preview" => out.preview = true,
+                "--auto-install-fzf" => out.auto_install_fzf = true,
                 "--help" | "-h" => out.command = "help".into(),
                 "--" => {
                     out.selected.extend_from_slice(&args[index..]);
@@ -141,6 +146,8 @@ impl Options {
             "doctor",
             "pending",
             "recover",
+            "tui",
+            "ng",
         ]
         .contains(&out.command.as_str())
         {
@@ -382,6 +389,10 @@ pub fn run(args: &[String]) -> Result<Output> {
 pub fn run_with_paths(options: &Options, paths: &RuntimePaths) -> Result<Output> {
     let repo = paths.repository()?;
     let _lease = repo.coordinator.enter()?;
+    if matches!(options.command.as_str(), "tui" | "ng") {
+        let mut terminal = interactive::SystemTerminal::new(repo.clone());
+        return interactive::run(options, paths, &mut terminal);
+    }
     let project = if let Some(project) = &options.project {
         Some(project.clone())
     } else if options.scope == "project" {

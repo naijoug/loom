@@ -1,0 +1,9 @@
+{
+  "kind": "read-only-real-source-catalog",
+  "legacyCount": 25,
+  "loomCount": 25,
+  "missingIds": [],
+  "extraIds": [],
+  "structuralMismatches": [],
+  "libraryRegistrationWritten": false
+}

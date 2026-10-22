@@ -1,0 +1,14 @@
+{
+  "relocatedAppWithSpaces": true,
+  "cwdOutsideCheckout": true,
+  "pathOverrideUsed": false,
+  "ngListPassed": true,
+  "ngGroupedPromptPassed": true,
+  "tuiHelpPassed": true,
+  "launchersExecutable": true,
+  "agentInvoked": false,
+  "actualTuiCustomPathInputPassed": true,
+  "customPathContainedSpacesAndChinese": true,
+  "customPreviewCancelled": true,
+  "customTargetNotCreated": true
+}

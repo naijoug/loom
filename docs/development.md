@@ -45,4 +45,4 @@ Rust 最低版本为 1.90（见 `src-tauri/Cargo.toml`）；Chat 仓储使用标
 
 ## Skills CLI 开发
 
-无窗口入口：`cargo build --manifest-path src-tauri/Cargo.toml --bin loom-skills`，开发启动器为 `tools/skills-cli/skills-linker`。CLI 共用桌面 Rust 服务和固定用户协调域；隔离验证只指定临时库、临时项目/自定义目标，不能替换 HOME/CODEX_HOME。参数与随包路径见 [Skills CLI](skills-cli.md)。TUI/ng 等剩余迁移以 [计划索引](PLANS.md) 为准。
+无窗口入口：`cargo build --manifest-path src-tauri/Cargo.toml --bin loom-skills`，开发启动器为 `tools/skills-cli/skills-linker`。CLI 共用桌面 Rust 服务和固定用户协调域；隔离验证只指定临时库、临时项目/自定义目标，不能替换 HOME/CODEX_HOME。参数与随包路径见 [Skills CLI](skills-cli.md)。`tools/skills-cli/tui`、`ng` 是同一 binary 的交互/触发建议入口，已随应用资源打包；剩余迁移以 [计划索引](PLANS.md) 为准。

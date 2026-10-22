@@ -1,6 +1,6 @@
 # Skills 命令行
 
-状态：无窗口 CLI 核心已接通；TUI/ng 迁移与完整兼容验收仍在进行。当前 CLI 与 Settings → Skills 共用 Rust 来源、安装、共享指令、诊断和恢复服务，不启动 Tauri 窗口。
+状态：无窗口 CLI、TUI、ng 已接入并完成 M2c 当前范围验收；完整迁移仍等待 GitHub API、翻译、旧数据接管与 G2。当前 CLI 与 Settings → Skills 共用 Rust 来源、安装、共享指令、诊断和恢复服务，不启动 Tauri 窗口。
 
 ## 入口
 
@@ -67,4 +67,38 @@ tools/skills-cli/skills-linker recover --scope project --project-root /path/to/p
 
 库目录解析顺序：`--data-dir` → `LOOM_SKILLS_DATA_DIR` → `LOOM_PROFILE_DIR/skills` → 默认 app data/skills。库覆盖不改变同一用户的固定协调目录。CLI 持生命周期 lease 到输出结束，应用更新独占准入期间拒绝新 CLI 操作；提交与恢复沿用桌面的 writer、指纹和 pending 协议。测试注入独立路径，不替换 HOME/CODEX_HOME。
 
-TUI、ng、fzf 的显式安装选项及更广的旧参数/别名样本仍在 M2c 后续验收范围。旧 Manager 尚未退役；不要让历史管理器同时写 Loom v2 目标。
+旧 Manager 尚未退役；历史管理器不能同时写 Loom v2 目标。旧源码和转发入口在 G2 通过后的 M7 统一移除。
+
+## TUI 与 ng
+
+```bash
+tools/skills-cli/tui --skills-root /path/to/skills --scope project --project-root /path/to/project
+tools/skills-cli/ng --skills-root /path/to/skills list
+tools/skills-cli/ng --skills-root /path/to/skills plan
+tools/skills-cli/ng --skills-root /path/to/skills plan review "payment module rewrite"
+```
+
+TUI 支持切换动作、目标、copy/symlink 与替换策略、manual wrapper、选择/清空/全选技能和重复操作。`preview selected skills` 显示包正文；`execute now` 先展示实际目标和托管文件，只有选择 `Apply reviewed changes` 才应用这些已保存的规划，默认 `Back` 可取消。源文件、目标或归属在预览后变化会冲突；多个规划共享文件时，仅沿用本批次已验证提交的后状态，不重新生成另一份计划。
+
+`ng` 无参数时选择 manual 技能并输出触发建议；`ng list` 按原分组顺序展示，`ng plan` 按激活类别说明用途；`ng <group> <verb> [extra...]` 或直接技能 ID 生成建议。它只输出文本，不执行 Agent、不自动发送提示词。额外文本即使含 shell 语法也按字面处理；以 `-` 开头的文本可放在 `--` 后。
+
+随包入口（无需 checkout 或 PATH 配置）：
+
+```bash
+"/Applications/Loom.app/Contents/Resources/tools/skills-cli/ng" list
+"/Applications/Loom.app/Contents/Resources/tools/skills-cli/tui" --scope project --project-root /path/to/project
+```
+
+TUI 需要本机 fzf；缺失时给出错误，`ng` 无参数则回退为 manual 列表。只有显式 `--auto-install-fzf` 且 fzf 缺失时才调用 `brew install fzf`，不自动安装 Homebrew；有 10 分钟超时、取消和进程组清理，执行记录可从 Skills 操作历史读取。本次依赖安装分支用受控替身验收，没有安装真实软件。
+
+fzf 只返回经过校验的数字条目身份。技能文本不进入 shell 预览命令；显示时移除终端控制字符。为保证选择行为，子进程不继承 FZF_DEFAULT_OPTS、FZF_DEFAULT_OPTS_FILE、FZF_DEFAULT_COMMAND。手动预览由 Rust 读取技能文件。
+
+可选环境验收（默认门禁不要求本机 fzf 或触碰实际用户协调目录）：
+
+```bash
+cargo test --manifest-path src-tauri/Cargo.toml actual_fzf_matches_visible_text -- --ignored
+LOOM_SKILLS_ACCEPTANCE_BINARY=/absolute/path/to/loom-skills \
+  cargo test --manifest-path src-tauri/Cargo.toml actual_cli_recovers_a_fixture -- --ignored --nocapture
+```
+
+第二项只写自行创建的临时项目和事务，用实际用户协调域验证另一 dataDir 的真实 CLI 恢复，并清理自身 pending 标记。

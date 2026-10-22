@@ -111,6 +111,14 @@ pub fn receipt(data: &Path, id: &str) -> Result<Option<Receipt>> {
 /// Used when several items in one batch share a manifest. Carry forward this
 /// transaction's verified postimage, never trust a fresh external edit as ours.
 pub fn committed_state(data: &Path, id: &str, target: &Path) -> Result<EntryState> {
+    committed_changes(data, id)?
+        .into_iter()
+        .find(|c| c.target == target)
+        .map(|c| c.after)
+        .ok_or_else(|| SkillsError::recovery("Committed resource not found"))
+}
+
+pub fn committed_changes(data: &Path, id: &str) -> Result<Vec<Change>> {
     let receipt =
         receipt(data, id)?.ok_or_else(|| SkillsError::recovery("Missing committed receipt"))?;
     if receipt.outcome != Outcome::Committed {
@@ -122,12 +130,10 @@ pub fn committed_state(data: &Path, id: &str, target: &Path) -> Result<EntryStat
     }
     let journal: Prepared = serde_json::from_slice(&bytes)
         .map_err(|_| SkillsError::recovery("Malformed committed journal"))?;
-    journal
-        .changes
-        .into_iter()
-        .find(|c| c.target == target)
-        .map(|c| c.after)
-        .ok_or_else(|| SkillsError::recovery("Committed resource not found"))
+    if journal.schema_version != 1 || journal.operation_id != id {
+        return Err(SkillsError::recovery("Invalid committed journal identity"));
+    }
+    Ok(journal.changes)
 }
 
 pub fn prepare(

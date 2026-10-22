@@ -87,6 +87,8 @@ export const zhCN: Messages = {
   skillsNoFiles: "没有相关文件。",
   skillsSelect: "选择技能查看内容。",
   skillsActivity: "最近操作",
+  skillsInstallFzf: "安装 fzf",
+  skillsCliTools: "命令行工具",
   skillsSourceOperation: "来源操作",
   skillsWorking: "进行中",
   skillsDone: "已完成",

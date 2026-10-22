@@ -1158,3 +1158,65 @@ fn missing_and_malformed_instruction_diagnoses_do_not_write_or_repair() {
     );
     assert_eq!(fs::read_to_string(&file).unwrap(), broken);
 }
+
+#[test]
+fn reviewed_multi_skill_plans_carry_only_their_verified_metadata_changes() {
+    let s = auto_setup();
+    let other = s.fixture.0.join("source/auto/other");
+    fs::create_dir(&other).unwrap();
+    fs::write(other.join("SKILL.md"), "---\nname: other\n---\n# Other\n").unwrap();
+    fs::write(other.join("inject.md"), "Other rule\n").unwrap();
+    let source = s.repo.load().unwrap().sources[0].id.clone();
+    let mut request = s.request(InstallMode::Copy, ConflictPolicy::Fail, &["codex-project"]);
+    let first = installers::plan_install(&s.repo, &s.context, &request).unwrap();
+    request.skill_id = catalog::encode_id(&source, "auto/other/SKILL.md");
+    let second = installers::plan_install(&s.repo, &s.context, &request).unwrap();
+    let results =
+        installers::apply_reviewed_batch(&s.repo, &s.context, &[first.plan_id, second.plan_id]);
+    assert_eq!(results.len(), 2);
+    for result in results {
+        assert!(result
+            .result
+            .unwrap()
+            .items
+            .iter()
+            .all(|i| i.status == "installed"));
+    }
+    let rules = fs::read_to_string(s.fixture.0.join("project/AGENTS.md")).unwrap();
+    assert!(rules.contains("Shared instruction"));
+    assert!(rules.contains("Other rule"));
+    let entries = installers::inventory(&s.repo, &s.context).unwrap();
+    assert_eq!(
+        entries.iter().filter(|e| e.installation.is_some()).count(),
+        2
+    );
+}
+
+#[test]
+fn reviewed_batch_does_not_treat_external_instruction_edits_as_its_own_commit() {
+    let s = auto_setup();
+    let other = s.fixture.0.join("source/auto/other");
+    fs::create_dir(&other).unwrap();
+    fs::write(other.join("SKILL.md"), "---\nname: other\n---\n# Other\n").unwrap();
+    fs::write(other.join("inject.md"), "Other rule\n").unwrap();
+    let source = s.repo.load().unwrap().sources[0].id.clone();
+    let mut request = s.request(InstallMode::Copy, ConflictPolicy::Fail, &["codex-project"]);
+    let first = installers::plan_install(&s.repo, &s.context, &request).unwrap();
+    request.skill_id = catalog::encode_id(&source, "auto/other/SKILL.md");
+    let second = installers::plan_install(&s.repo, &s.context, &request).unwrap();
+    assert_eq!(s.apply(&first.plan_id).items[0].status, "installed");
+    let file = s.fixture.0.join("project/AGENTS.md");
+    let edited = format!(
+        "{}User changed rules after first commit\n",
+        fs::read_to_string(&file).unwrap()
+    );
+    fs::write(&file, &edited).unwrap();
+    let result =
+        installers::apply_reviewed_batch(&s.repo, &s.context, &[first.plan_id, second.plan_id]);
+    assert_eq!(
+        result[1].result.as_ref().unwrap().items[0].status,
+        "conflict"
+    );
+    assert_eq!(fs::read_to_string(file).unwrap(), edited);
+    assert!(!s.fixture.0.join("project/.codex/skills/other").exists());
+}

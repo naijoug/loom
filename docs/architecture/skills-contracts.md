@@ -44,7 +44,7 @@ managedResources 记录 canonical path、marker 和 contentDigest。SharedInstru
 
 选择的安装若共享指令路径，规划标记 `coordinated: true`。规划与执行均核对当前 ledger 的全部使用者；改变共享内容必须选齐使用者且最终正文一致，否则冲突。选中的共享安装（以及该规划中的其他可执行项）复用单目标的暂存/校验函数，以一个 `<planId>-group` prepare journal 提交技能包、各清单、去重后的指令文件和 ledger；同一文件只生成一个一致的最终内容。独立资源保持逐目标提交，卸载按使用者逐项移除。
 
-组内任一目标/指纹变化，在变更前拒绝整组；提交失败按统一日志补偿，若用户在中断后修改内容则保留冲突并标待恢复，不报告部分成功。幂等重试读取同一组回执；应用更新仍由原生命周期 lease/operation guard 协调。这是统一恢复边界，不宣称跨文件系统瞬时原子性。CLI 核心命令与 doctor 已接共用服务；TUI/ng 与更广兼容矩阵继续 M2c，旧归属重建随 M4 完成。
+组内任一目标/指纹变化，在变更前拒绝整组；提交失败按统一日志补偿，若用户在中断后修改内容则保留冲突并标待恢复，不报告部分成功。幂等重试读取同一组回执；应用更新仍由原生命周期 lease/operation guard 协调。这是统一恢复边界，不宣称跨文件系统瞬时原子性。CLI 核心命令与 doctor 已接共用服务；TUI/ng 同样调用该服务，旧归属重建随 M4 完成。
 
 远程来源快照固定 commit；dirty legacy cache 以内容 digest 单独标识，不能冒充上游 commit。刷新目录只更新 latestRevision，symlink 固定指向不可变路径。本地 live symlink 明示行为，不把其变化伪装成版本化安装。
 
@@ -84,3 +84,7 @@ CLI 默认 symlink、桌面默认 copy；Codex/ChatGPT 目标去重；`--force` 
 `skills/cli.rs` 解析参数并映射旧 JSON 字段；`src/bin/loom-skills.rs` 只负责输出/退出码，未调用 Tauri run。桌面与 CLI 使用 `runtime_paths.rs` 统一库覆盖，底层 dirs 6 与 Tauri 使用同一实现；CLI 直接从编译时 app identifier 解析默认 app data。`--data-dir` 不改变协调根。
 
 自定义目录仅通过 CLI 构造 `TargetContext::with_custom`；目录身份仍参与目标前指纹、安装 ID、共享资源授权与恢复，未新增前端任意路径写入口。普通工具的 scope 指令路径保持既有约定，unknown/custom 工具不推断指令路径。无窗口 CLI 已随 Tauri bundle 输出，默认桌面 binary 明确为 loom；命令、行为差异与使用方式见 [CLI 说明](../skills-cli.md)。
+
+TUI/ng 的交互编排位于 `skills/cli/interactive.rs`，无独立文件安装器。fzf 使用固定参数、数字行身份和受控文本输出；默认环境中的执行绑定不继承。TUI 应用保存的 planId，`installers::apply_reviewed_batch` 仅以已验证 commit journal 的后状态推进同批后续规划的 manifest/指令前指纹，源/目标/归属决定不重算；预览原文不改写，外部编辑仍冲突。各技能规划仍有独立结果，共享同一块的多工具更新继续用组级事务。
+
+`tools/skills-cli/{skills-linker,tui,ng}` 仅做进程转发，随资源打包到 `Contents/Resources/tools/skills-cli`。显式 fzf 安装通过监督器运行固定 Homebrew argv，记录开始/结束/退出码、超时与取消；Settings 能识别该操作为 CLI 工具安装。全程持 CLI 生命周期 lease。

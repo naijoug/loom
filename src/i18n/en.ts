@@ -85,6 +85,8 @@ export const en = {
   skillsNoFiles: "No related files.",
   skillsSelect: "Select a skill to view its contents.",
   skillsActivity: "Recent activity",
+  skillsInstallFzf: "Install fzf",
+  skillsCliTools: "CLI tools",
   skillsSourceOperation: "Source operation",
   skillsWorking: "In progress",
   skillsDone: "Complete",

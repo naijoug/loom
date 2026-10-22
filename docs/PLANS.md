@@ -3,7 +3,7 @@
 ## 2026-10-21
 
 - 06:12-skills-module-migration.md
-  > （实施中；M2b 已验收，M2c 无窗口 CLI 核心已落地，G1/G2 未整体验收）Settings → Skills 的来源/安装/指令/诊断/恢复共用 Rust 服务；新增 loom-skills 与兼容启动器、标准/自定义目标、随包运行和实际跨进程更新锁验收。完整 check 前端 109/Rust 220，最终 CLI 字段补充另经 9 项定向/Clippy/随包验证。继续 TUI/ng/fzf、M1b/M3/M4 与 G1 视觉/独立运行余项；G2 后才移除源旧应用。证据见 dogfood/2026-10-21-skills-migration.md，命令见 skills-cli.md。
+  > （实施中；M2b/M2c 当前范围验收通过，G1/G2 未整体验收）Settings → Skills 与 CLI/TUI/ng 共用来源、安装、指令和恢复服务；真实 fzf、25 项目录兼容、随包搬移、CLI/桌面双向交接及跨 dataDir 的真实 CLI 恢复通过。完整 check 前端 109/Rust 230，另两项 opt-in 真实环境检查通过。继续 M1b/M3/M4 与 G1 视觉/独立运行余项；源旧实现保持 v2 写保护，统一在 G2 后的 M7 移除。证据见 dogfood/2026-10-21-skills-migration.md，用法见 skills-cli.md。
 
 ## 2026-10-20
 

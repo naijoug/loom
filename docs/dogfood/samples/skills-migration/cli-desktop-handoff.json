@@ -1,0 +1,13 @@
+{
+  "kind": "real-packaged-cli-and-native-desktop",
+  "profileIsolated": true,
+  "projectTargetOnly": true,
+  "cliInstalledCopyAndWrapper": true,
+  "desktopSawInstalledCopyAndCurrentWrapper": true,
+  "desktopRemovedBothFromReviewedPlan": true,
+  "cliThenReportedMissingAndUnmanaged": true,
+  "sourcePreserved": true,
+  "agentInvoked": false,
+  "fixtureSourceRegistrationRemoved": true,
+  "previewStopped": true
+}
