@@ -24,6 +24,7 @@ pub struct InstallTarget {
 pub struct TargetContext {
     home: PathBuf,
     project: Option<PathBuf>,
+    custom: Option<InstallTarget>,
 }
 
 impl TargetContext {
@@ -39,7 +40,45 @@ impl TargetContext {
         {
             return Err(SkillsError::invalid("Invalid project root"));
         }
-        Ok(Self { home, project })
+        Ok(Self {
+            home,
+            project,
+            custom: None,
+        })
+    }
+    /// CLI-only explicit target grant. It is not accepted as a renderer path.
+    pub fn with_custom(mut self, tool: &str, scope: &str, path: &Path) -> Result<Self> {
+        let path = super::files::resource_path(path)?;
+        if path.parent().is_none()
+            || self.home.starts_with(&path)
+            || self.project.as_ref().is_some_and(|p| p.starts_with(&path))
+            || path.components().any(|c| c.as_os_str() == ".git")
+        {
+            return Err(SkillsError::invalid("Custom target must be a dedicated skills directory, not a filesystem/home/project root"));
+        }
+        if path.exists() && !path.is_dir() {
+            return Err(SkillsError::invalid("Custom target must be a directory"));
+        }
+        if !["codex", "claude-code", "amp", "custom"].contains(&tool)
+            || !["global", "project"].contains(&scope)
+        {
+            return Err(SkillsError::invalid("Invalid custom target tool or scope"));
+        }
+        if scope == "project" && self.project.is_none() {
+            return Err(SkillsError::invalid(
+                "Custom project target requires a project root",
+            ));
+        }
+        self.custom = Some(InstallTarget {
+            id: "custom-explicit".into(),
+            tool_id: tool.into(),
+            label: format!("{tool} (explicit target)"),
+            scope: scope.into(),
+            exists: path.is_dir(),
+            skills_dir: path,
+            blocked_reason: None,
+        });
+        Ok(self)
     }
     fn scope_root(&self, target: &InstallTarget) -> Result<&Path> {
         let selected = self.selected(std::slice::from_ref(&target.id))?.remove(0);
@@ -143,6 +182,16 @@ impl TargetContext {
                 });
             }
         }
+        if let Some(custom) = &self.custom {
+            if let Some(existing) = result
+                .iter_mut()
+                .find(|t| t.skills_dir == custom.skills_dir)
+            {
+                *existing = custom.clone();
+            } else {
+                result.push(custom.clone());
+            }
+        }
         Ok(result)
     }
     pub fn selected(&self, ids: &[String]) -> Result<Vec<InstallTarget>> {
@@ -172,6 +221,21 @@ impl TargetContext {
         let current = self.selected(std::slice::from_ref(&target.id))?.remove(0);
         if current.skills_dir != target.skills_dir {
             return Err(SkillsError::invalid("Installation target changed"));
+        }
+        if target.id == "custom-explicit" {
+            let parent = target
+                .skills_dir
+                .parent()
+                .ok_or_else(|| SkillsError::invalid("Missing custom parent"))?;
+            create_explicit_parent(parent)?;
+            if !target.skills_dir.exists() {
+                fs::create_dir(&target.skills_dir)?;
+                package::set_mode(&target.skills_dir, 0o700)?;
+            }
+            if super::files::resource_path(&target.skills_dir)? != target.skills_dir {
+                return Err(SkillsError::invalid("Custom target changed"));
+            }
+            return Ok(());
         }
         let root = if target.scope == "global" {
             &self.home
@@ -220,4 +284,21 @@ fn safe_child_directory(root: &Path, segments: &[&str], create: bool) -> Result<
         }
     }
     Ok(path)
+}
+
+fn create_explicit_parent(path: &Path) -> Result<()> {
+    if path.is_dir() && !fs::symlink_metadata(path)?.file_type().is_symlink() {
+        return Ok(());
+    }
+    if path.try_exists()? {
+        return Err(SkillsError::invalid(
+            "Custom path traverses a non-directory",
+        ));
+    }
+    create_explicit_parent(
+        path.parent()
+            .ok_or_else(|| SkillsError::invalid("Missing custom parent"))?,
+    )?;
+    fs::create_dir(path)?;
+    package::set_mode(path, 0o700)
 }

@@ -3,7 +3,7 @@
 ## 2026-10-21
 
 - 06:12-skills-module-migration.md
-  > （实施中；M2b 当前托管安装出口通过，G1/G2 未整体验收）Settings → Skills 已支持来源/发现、工具安装/更新/卸载、共享指令与 wrapper、只读诊断、跨 dataDir 恢复和应用更新准入；多使用者内容更新按统一事务提交，少选使用者或目标变化会拒绝整组。最新完整 check 前端 109/Rust 211；原生 A → B 一致更新、部分/批量卸载保全、真实 Codex 调用及 release 搬移启动有分项证据。源 `7dfd89d` 已保护 v2 清单，旧应用仍保留。继续 G1 视觉/独立运行余项与 M1b/M2c/M3/M4，G2 后退役旧应用；证据见 dogfood/2026-10-21-skills-migration.md。
+  > （实施中；M2b 已验收，M2c 无窗口 CLI 核心已落地，G1/G2 未整体验收）Settings → Skills 的来源/安装/指令/诊断/恢复共用 Rust 服务；新增 loom-skills 与兼容启动器、标准/自定义目标、随包运行和实际跨进程更新锁验收。完整 check 前端 109/Rust 220，最终 CLI 字段补充另经 9 项定向/Clippy/随包验证。继续 TUI/ng/fzf、M1b/M3/M4 与 G1 视觉/独立运行余项；G2 后才移除源旧应用。证据见 dogfood/2026-10-21-skills-migration.md，命令见 skills-cli.md。
 
 ## 2026-10-20
 

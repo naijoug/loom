@@ -120,10 +120,29 @@ Settings → Skills 新增详情安装页与 Installed 列表。后端派生 Cod
 
 M2b 对当前托管安装的出口已通过，允许继续 M2c；旧来源/指令归属重建及实际 CLI 入口仍分别受 M4/M2c 门槛约束。统一恢复不等于跨文件系统的瞬时原子提交，中断后发现用户修改会保留待恢复状态。
 
+## M2c 核心切片：无窗口 CLI 与随包执行
+
+新增 `src/bin/loom-skills.rs` 与 `skills/cli.rs`，CLI 直接调用同一个 Repository/TargetContext/安装/指令/恢复服务。`runtime_paths.rs` 与桌面共享库覆盖规则，dirs 6 复用 Tauri 的路径解析；未创建窗口、独立 HTTP 服务或第二套安装器。Cargo default-run 固定 loom。
+
+当前命令 tools/list/detail/install/uninstall/status/doctor/pending/recover 支持旧工具/分类/项目/自定义目标/模式/force/slash/JSON 参数，默认 symlink；新 CLI 可重复/逗号选择工具完成共享更新。list 的核心旧 JSON 字段与源 CLI 在同一合成来源逐字段相等。已验证 symlink 重装同步指令、copy 默认跳过、显式替换、未托管内容与修改过的卸载保护、来源移除后的状态/卸载、临时自定义目标与根目录拒绝。具体行为及兼容差异见 [CLI 使用说明](../skills-cli.md)。
+
+| 验证 | 结果与边界 |
+|---|---|
+| `pnpm check` | 前端 109、Rust 220 项通过，20 ignored；新增 CLI 定向 9 项包含路径注入和共用服务验证。最后补充卸载 JSON target_dir 字段后，CLI 9 项及全目标 Clippy 再次通过 |
+| `pnpm tauri build --bundles app` | 最终源码构建成功；MacOS 目录实际含 loom/loom-skills，Info.plist 主可执行文件仍为 loom |
+| 真实 headless CLI | 临时项目运行 list、双工具 symlink install、doctor、源指令 A → B 后重装、uninstall；用户规则和源包保全，未创建 GUI、未写全局目标、无模型调用；开发兼容启动器可用 |
+| 随包搬移 | `.app` 复制到含空格的新路径，从临时 cwd 运行其 CLI list/install/status/uninstall 成功；主入口仍 loom；不需要 PATH 或相邻 skills 源码 |
+| 实际跨进程锁 | 对固定用户 lifecycle.lock 持独占锁后，随包 CLI 明确返回 update admission 错误；CLI 输出 300 个合成技能并被管道背压阻塞时，外部独占锁仍被拒绝；CLI 退出后可取得锁；自定义库没有隔离锁域，没有实际安装应用更新 |
+| 最终协议与退出码 | 随包 CLI 空命令 2、帮助 0、无效参数 1；未存在普通技能卸载 JSON 含 target_dir/missing 且退出 0；部分失败非零并持久化 failed 操作，stdout JSON 与 stderr 错误分离 |
+
+持久化证据：[CLI 核心进程](samples/skills-migration/cli-core-process.json)、[随包搬移](samples/skills-migration/cli-bundled-process.json)、[实际生命周期锁](samples/skills-migration/cli-lifecycle-lock.json)。辅助日志：`/tmp/loom-skills-cli-core-final-check.log`、`/tmp/loom-skills-cli-json-check.log`、`/tmp/loom-skills-cli-json-clippy.log`、`/tmp/loom-skills-cli-delivery-bundle.log`。锁测试驱动曾混用缓冲读取和 communicate 截断自身收集的 JSON；改为无缓冲读取后完整验证通过，未据此修改 CLI 数据协议。
+
+M2c 仍未整体验收：TUI/ng/fzf 分支、更多旧别名/参数样本、实际桌面与 CLI 的最终交接流程待后续；旧 Manager 保留。源码已把技能安装执行收敛到共用 Rust 服务，继续在此基础迁移交互入口。
+
 ## 当前限制与后续执行入口
 
 M2a 安装闭环已有上述代码和原生证据，G1 仍待综合关闭：完整 Skills 视觉矩阵与无源码访问条件；远程 A → B 安装更新和更新器准入/失败的服务入口已按上一节补验。搬移运行只证明独立包路径及工作目录；源 checkout 仍在磁盘，不冒充无法访问源码的验收。
 
-M1b GitHub API、M2c CLI/TUI、M3 翻译与分享、M4 旧数据接管尚未完成；M2b 当前托管安装出口已通过，共享指令/wrapper/只读诊断/一致更新与恢复均有上述证据。外网 GitHub/GitLab 与真实翻译 provider 验收仍待后续，G2 未通过。
+M1b GitHub API、M2c 的 TUI/ng 与完整兼容验收、M3 翻译与分享、M4 旧数据接管尚未完成；M2b 当前托管安装出口已通过，共享指令/wrapper/只读诊断/一致更新与恢复均有上述证据。外网 GitHub/GitLab 与真实翻译 provider 验收仍待后续，G2 未通过。
 
 旧 library/JSON/TSV 合成兼容样本已加入 `src-tauri/tests/fixtures/skills/`，尚未执行真实旧数据接管。M5 的管理测试与过渡入口需等 M2c/M7 移除。旧 Manager 新源码的版本保护不能修补已安装历史二进制，也不能让旧客户端参加 Loom 锁协议；切换期间仍须停止旧 Manager 写入。旧应用与数据保留，不提前退役。

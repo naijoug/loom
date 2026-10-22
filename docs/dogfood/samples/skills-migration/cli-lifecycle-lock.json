@@ -1,0 +1,10 @@
+{
+  "kind": "real-cli-process-and-os-lock",
+  "libraryOverrideUsed": true,
+  "fixedUserCoordinationDomain": true,
+  "exclusiveUpdateLeaseRejectsCLI": true,
+  "cliHoldsLeaseThroughOutput": true,
+  "leaseReleasedAfterExit": true,
+  "fixtureSourceCount": 300,
+  "installationTargetsWritten": false
+}

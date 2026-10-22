@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -n "${LOOM_SKILLS_CLI:-}" ]]; then
+  exec "${LOOM_SKILLS_CLI}" "$@"
+fi
+for candidate in \
+  "$SCRIPT_DIR/loom-skills" \
+  "$SCRIPT_DIR/../../../MacOS/loom-skills" \
+  "$SCRIPT_DIR/../../src-tauri/target/release/loom-skills" \
+  "$SCRIPT_DIR/../../src-tauri/target/debug/loom-skills"; do
+  if [[ -x "$candidate" ]]; then exec "$candidate" "$@"; fi
+done
+if command -v loom-skills >/dev/null 2>&1; then exec loom-skills "$@"; fi
+printf '%s\n' 'loom-skills was not found. Build it with cargo build --manifest-path src-tauri/Cargo.toml --bin loom-skills, or set LOOM_SKILLS_CLI to its absolute path.' >&2
+exit 127

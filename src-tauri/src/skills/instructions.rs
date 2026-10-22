@@ -565,6 +565,10 @@ pub fn desired(
     source: &ResolvedPackage,
     slash: bool,
 ) -> Result<Vec<DesiredResource>> {
+    // Unknown tools have no authorized instruction or slash-command convention.
+    if target.tool_id == "custom" {
+        return Ok(Vec::new());
+    }
     let content = files::read_metadata_bytes(&source.directory.join("SKILL.md"))?;
     let text =
         String::from_utf8(content).map_err(|_| SkillsError::invalid("Skill must be UTF-8"))?;
@@ -580,21 +584,10 @@ pub fn desired(
     } else {
         BTreeMap::new()
     };
-    let first = source.relative_path.split('/').next().unwrap_or("");
-    let category = if ["auto", "global", "manual", "cron"].contains(&first) {
-        first
-    } else if let Some(category) = metadata.get("category") {
-        category.as_str()
-    } else {
-        match metadata.get("activation").map(String::as_str) {
-            Some("always_on") => "auto",
-            Some("scheduled" | "cron") => "cron",
-            Some("global") => "global",
-            Some("auto") => "auto",
-            _ => "manual",
-        }
-    };
-    if matches!(category, "auto" | "global") && source.directory.join("inject.md").try_exists()? {
+    let category = catalog::activation_category(&source.relative_path, &metadata);
+    if matches!(category.as_str(), "auto" | "global")
+        && source.directory.join("inject.md").try_exists()?
+    {
         let content = String::from_utf8(files::read_metadata_bytes(
             &source.directory.join("inject.md"),
         )?)

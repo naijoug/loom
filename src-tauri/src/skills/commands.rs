@@ -24,19 +24,11 @@ fn repository(app: &AppHandle, window: &WebviewWindow) -> Result<Repository> {
         .path()
         .app_data_dir()
         .map_err(|_| SkillsError::invalid("Application data directory unavailable"))?;
-    let data = std::env::var_os("LOOM_SKILLS_DATA_DIR")
-        .map(PathBuf::from)
-        .or_else(|| {
-            std::env::var_os("LOOM_PROFILE_DIR")
-                .map(|profile| PathBuf::from(profile).join("skills"))
-        })
-        .unwrap_or_else(|| app_data.join("skills"));
-    if !data.is_absolute() {
-        return Err(SkillsError::invalid(
-            "Skills data/profile directory must be absolute",
-        ));
-    }
-    Repository::open(&data, &app_data.join("skills-coordination"))
+    let home = app
+        .path()
+        .home_dir()
+        .map_err(|_| SkillsError::invalid("User home unavailable"))?;
+    super::runtime_paths::RuntimePaths::from_base(home, app_data, None)?.repository()
 }
 
 fn target_context(app: &AppHandle, project_path: Option<&str>) -> Result<TargetContext> {

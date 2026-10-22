@@ -42,3 +42,7 @@ Rust 最低版本为 1.90（见 `src-tauri/Cargo.toml`）；Chat 仓储使用标
 ## 新内核 workspace
 
 根 `Cargo.toml` 管理 `crates/loom-core`；旧 `src-tauri` 和 `experiments/*` 保持独立，不会被根 Cargo 命令隐式重构。新内核已冻结；`pnpm check:core` 仅供显式选择，已移出完整 `pnpm check` 和默认 CI。模型与 API 字段修改后运行 `cargo run -p loom-core --features bindings --bin export-workbench-types`，不要手改 `packages/protocol/src/workbench.ts`。
+
+## Skills CLI 开发
+
+无窗口入口：`cargo build --manifest-path src-tauri/Cargo.toml --bin loom-skills`，开发启动器为 `tools/skills-cli/skills-linker`。CLI 共用桌面 Rust 服务和固定用户协调域；隔离验证只指定临时库、临时项目/自定义目标，不能替换 HOME/CODEX_HOME。参数与随包路径见 [Skills CLI](skills-cli.md)。TUI/ng 等剩余迁移以 [计划索引](PLANS.md) 为准。

@@ -1,0 +1,39 @@
+{
+  "binary": "loom-skills",
+  "kind": "real-headless-process-local-fixture",
+  "legacyListFieldsMatch": true,
+  "defaultMode": "symlink",
+  "sharedRuleUpdated": "A -> B",
+  "twoProjectTargets": true,
+  "sourcePreserved": true,
+  "allFixtureInstallsRemoved": true,
+  "wrapperUsesRustCLI": true,
+  "runs": [
+    {
+      "action": "list",
+      "exitCode": 0,
+      "resultCount": 0
+    },
+    {
+      "action": "install",
+      "exitCode": 0,
+      "resultCount": 2
+    },
+    {
+      "action": "doctor",
+      "exitCode": 0,
+      "resultCount": 2
+    },
+    {
+      "action": "install",
+      "exitCode": 0,
+      "resultCount": 2
+    },
+    {
+      "action": "uninstall",
+      "exitCode": 0,
+      "resultCount": 2
+    }
+  ],
+  "modelInvoked": false
+}

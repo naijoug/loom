@@ -7,7 +7,7 @@
 - `src-tauri/src/skills/{error,files,coordination}.rs`：有类型错误、私有/有界/原子元数据、跨进程生命周期 lease 和 writer 锁、带版本 pending 索引。
 - `sources.rs`：GitHub/GitLab URL 与 transport 标准化、旧 ID alias、输入校验；`operations.rs` 已接受控 Git clone/checkout，真实本地 Git fixture 覆盖导入、刷新、保留旧版本与来源过滤脚本禁用。
 - `catalog.rs`、`repository.rs`：本地目录/根技能/嵌套技能、详情/相关文件、逐项错误、来源登记及重启读取。前端入口为 Settings → Skills，沿用设置侧栏及 Chat/Settings 两个顶层视图。
-- 业务服务不依赖 AppHandle、窗口或 ChatSession，构造时必须传明确协调根目录；`commands.rs` 是负责主窗口校验、路径解析与事件转发的 Tauri 薄层。安装与恢复命令已接 supervisor operation guard，updater 已接跨进程独占 lease；CLI binary 仍待 M2c。
+- 业务服务不依赖 AppHandle、窗口或 ChatSession，构造时必须传明确协调根目录；`commands.rs` 是负责主窗口校验、路径解析与事件转发的 Tauri 薄层。安装与恢复命令已接 supervisor operation guard，updater 已接跨进程独占 lease；`loom-skills` 已直接调用同一服务，无窗口；CLI 项目与自定义目标由参数显式授权，桌面仍按登记项目校验。
 - 八项定向测试包含两个真实子进程场景：杀死持锁进程后锁释放；子进程不运行析构直接退出后，新客户端仍看到 pending。缺日志、坏 JSON、未知 pending schema、路径穿越和 symlink 也有覆盖。
 - `package.rs`、`transactions.rs`、`targets.rs`、`installers.rs` 已实现完整包指纹、目标枚举、预览/执行、逐项提交/回滚与受校验的 pending 恢复。真实子进程异常退出后由另一 dataDir 恢复有测试；`instructions.rs` 已接共享指令使用者集合、manual wrapper、只读诊断与跨文件恢复。
 
@@ -44,7 +44,7 @@ managedResources 记录 canonical path、marker 和 contentDigest。SharedInstru
 
 选择的安装若共享指令路径，规划标记 `coordinated: true`。规划与执行均核对当前 ledger 的全部使用者；改变共享内容必须选齐使用者且最终正文一致，否则冲突。选中的共享安装（以及该规划中的其他可执行项）复用单目标的暂存/校验函数，以一个 `<planId>-group` prepare journal 提交技能包、各清单、去重后的指令文件和 ledger；同一文件只生成一个一致的最终内容。独立资源保持逐目标提交，卸载按使用者逐项移除。
 
-组内任一目标/指纹变化，在变更前拒绝整组；提交失败按统一日志补偿，若用户在中断后修改内容则保留冲突并标待恢复，不报告部分成功。幂等重试读取同一组回执；应用更新仍由原生命周期 lease/operation guard 协调。这是统一恢复边界，不宣称跨文件系统瞬时原子性。CLI doctor 入口、旧归属重建分别随 M2c/M4 完成。
+组内任一目标/指纹变化，在变更前拒绝整组；提交失败按统一日志补偿，若用户在中断后修改内容则保留冲突并标待恢复，不报告部分成功。幂等重试读取同一组回执；应用更新仍由原生命周期 lease/operation guard 协调。这是统一恢复边界，不宣称跨文件系统瞬时原子性。CLI 核心命令与 doctor 已接共用服务；TUI/ng 与更广兼容矩阵继续 M2c，旧归属重建随 M4 完成。
 
 远程来源快照固定 commit；dirty legacy cache 以内容 digest 单独标识，不能冒充上游 commit。刷新目录只更新 latestRevision，symlink 固定指向不可变路径。本地 live symlink 明示行为，不把其变化伪装成版本化安装。
 
@@ -78,3 +78,9 @@ Git 在独立进程组执行，有 120 秒单命令超时、取消、输出有�
 | Web/API/桌面旧壳与专属依赖 | 完整替代验收后移除 | M7 |
 
 CLI 默认 symlink、桌面默认 copy；Codex/ChatGPT 目标去重；`--force` 不绕过未知归属删除保护，安全收紧需在新 CLI help/迁移说明中明确。完整参数/JSON 对照与 provider 实测仍待实施，不能用此表声称所有兼容项通过。
+
+## CLI 核心入口（M2c 进行中）
+
+`skills/cli.rs` 解析参数并映射旧 JSON 字段；`src/bin/loom-skills.rs` 只负责输出/退出码，未调用 Tauri run。桌面与 CLI 使用 `runtime_paths.rs` 统一库覆盖，底层 dirs 6 与 Tauri 使用同一实现；CLI 直接从编译时 app identifier 解析默认 app data。`--data-dir` 不改变协调根。
+
+自定义目录仅通过 CLI 构造 `TargetContext::with_custom`；目录身份仍参与目标前指纹、安装 ID、共享资源授权与恢复，未新增前端任意路径写入口。普通工具的 scope 指令路径保持既有约定，unknown/custom 工具不推断指令路径。无窗口 CLI 已随 Tauri bundle 输出，默认桌面 binary 明确为 loom；命令、行为差异与使用方式见 [CLI 说明](../skills-cli.md)。

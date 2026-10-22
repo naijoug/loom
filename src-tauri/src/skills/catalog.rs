@@ -422,3 +422,21 @@ pub fn decode_id(id: &str) -> Result<(String, String)> {
         .ok_or_else(|| SkillsError::invalid("Invalid skill identity"))?;
     Ok((decode(source)?, decode(relative)?))
 }
+
+/// Activation policy shared by instruction management and CLI filtering.
+pub fn activation_category(relative: &str, metadata: &BTreeMap<String, String>) -> String {
+    let first = relative.split('/').next().unwrap_or("");
+    if ["global", "auto", "manual", "cron"].contains(&first) {
+        return first.into();
+    }
+    if let Some(category) = metadata.get("category") {
+        return category.clone();
+    }
+    match metadata.get("activation").map(String::as_str) {
+        Some("always_on" | "auto") => "auto",
+        Some("scheduled" | "cron") => "cron",
+        Some("global") => "global",
+        _ => "manual",
+    }
+    .into()
+}

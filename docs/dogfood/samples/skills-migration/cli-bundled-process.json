@@ -1,0 +1,27 @@
+{
+  "binary": "Loom.app/Contents/MacOS/loom-skills",
+  "desktopExecutable": "loom",
+  "relocatedBundleWithSpaces": true,
+  "cwdOutsideCheckout": true,
+  "modelInvoked": false,
+  "runs": [
+    {
+      "command": "list",
+      "exitCode": 0
+    },
+    {
+      "command": "install",
+      "exitCode": 0
+    },
+    {
+      "command": "status",
+      "exitCode": 0
+    },
+    {
+      "command": "uninstall",
+      "exitCode": 0
+    }
+  ],
+  "sourcePreserved": true,
+  "fixtureInstallRemoved": true
+}
