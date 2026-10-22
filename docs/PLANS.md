@@ -3,7 +3,7 @@
 ## 2026-10-21
 
 - 06:12-skills-module-migration.md
-  > （实施中；Settings → Skills 安装闭环分项通过，G1/G2 未验收）来源/发现/详情之外已支持工具目标、copy/symlink、显式更新/卸载、跨 dataDir 事务恢复及更新准入接线；完整 check 前端 106/Rust 192，原生 5 次安装规划、真实 Codex 发现/调用及 release 搬移启动通过。源 Manager 三套写入口已补 v2 清单保护，完整 check 应用 99/Rust 25/内容 32/管理 8。共享块使用者、跨客户端恢复、更新准入三项见第 5.5–5.7/9.1 节；G1 余项及 M1b/M2b/M2c/M3/M4 继续推进，G2 后移除旧应用。证据见 dogfood/2026-10-21-skills-migration.md。
+  > （实施中；Settings → Skills 安装闭环分项通过，G1/G2 未验收）来源/发现/详情之外已支持工具目标、copy/symlink、显式更新/卸载、跨 dataDir 事务恢复及更新准入接线；安装阶段 `3448f5d`；补充真实本地 Git 固定安装版本与更新失败准入回归后完整 check 前端 106/Rust 194，原生 5 次安装规划、真实 Codex 发现/调用及 release 搬移启动通过。源 `7dfd89d` 的 Manager 三套写入口已补 v2 清单保护，完整 check 应用 99/Rust 25/内容 32/管理 8。共享块使用者、跨客户端恢复、更新准入三项见第 5.5–5.7/9.1 节；G1 余项及 M1b/M2b/M2c/M3/M4 继续推进，G2 后移除旧应用。证据见 dogfood/2026-10-21-skills-migration.md。
 
 ## 2026-10-20
 

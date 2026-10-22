@@ -355,38 +355,37 @@ pub(crate) async fn install_update(
             .map_err(|_| "更新操作正在进行")?;
         let update = candidate.update.as_ref().ok_or("请先下载更新")?;
         let bytes = candidate.bytes.as_ref().ok_or("请先下载更新")?;
-        // Covers standalone Skills CLI operations as well as desktop work.
-        // Acquire the cross-process lifecycle gate before the local supervisor.
-        let _skills_admission = crate::skills::commands::update_lease(&app).map_err(|error| {
-            service.fail(&app, "ready", &error.message, "installation_deferred")
-        })?;
-        let _admission = supervisor()
-            .begin_update()
-            .map_err(|message| service.fail(&app, "ready", &message, "installation_deferred"))?;
-        // The guard remains live through install/restart; failure releases admission.
-        let prepare = (|| {
-            check_install_location(&std::env::current_exe().map_err(|_| "无法定位应用")?)?;
-            save_drafts(&app, drafts)?;
-            service.record(&app, "install_started")
-        })();
-        if let Err(message) = prepare {
-            return Err(service.fail(&app, "ready", &message, "prepare_failed"));
-        }
-        service.change(&app, |s| {
-            s.phase = "installing";
-            s.error = None;
-        });
-        if update.install(bytes).is_err() {
-            return Err(service.fail(
-                &app,
-                "ready",
-                "安装失败，请检查应用目录权限和磁盘空间后重试。",
-                "install_failed",
-            ));
-        }
-        service.change(&app, |s| s.phase = "restarting");
-        let _ = service.record(&app, "installed");
-        app.restart();
+        with_install_admission(
+            supervisor(),
+            || crate::skills::commands::update_lease(&app).map_err(|error| error.message),
+            |message| service.fail(&app, "ready", &message, "installation_deferred"),
+            || {
+                // The guard remains live through install/restart; failure releases admission.
+                let prepare = (|| {
+                    check_install_location(&std::env::current_exe().map_err(|_| "无法定位应用")?)?;
+                    save_drafts(&app, drafts)?;
+                    service.record(&app, "install_started")
+                })();
+                if let Err(message) = prepare {
+                    return Err(service.fail(&app, "ready", &message, "prepare_failed"));
+                }
+                service.change(&app, |s| {
+                    s.phase = "installing";
+                    s.error = None;
+                });
+                if update.install(bytes).is_err() {
+                    return Err(service.fail(
+                        &app,
+                        "ready",
+                        "安装失败，请检查应用目录权限和磁盘空间后重试。",
+                        "install_failed",
+                    ));
+                }
+                service.change(&app, |s| s.phase = "restarting");
+                let _ = service.record(&app, "installed");
+                app.restart();
+            },
+        )
     })
     .await
     .map_err(|_| {
@@ -398,6 +397,19 @@ pub(crate) async fn install_update(
         )
     })?
 }
+// Shared by the actual updater and a controlled installer in tests. Admission
+// stays alive through preparation, installation and restart; every error releases it.
+fn with_install_admission<T>(
+    supervisor: &crate::process_supervisor::ProcessSupervisor,
+    skills_lease: impl FnOnce() -> Result<crate::skills::coordination::LifecycleLease, String>,
+    deferred: impl Fn(String) -> String,
+    install: impl FnOnce() -> Result<T, String>,
+) -> Result<T, String> {
+    let _skills = skills_lease().map_err(&deferred)?;
+    let _local = supervisor.begin_update().map_err(deferred)?;
+    install()
+}
+
 fn check_install_location(executable: &std::path::Path) -> Result<(), String> {
     if !cfg!(target_os = "macos") {
         return Err("当前仅支持 macOS 应用内更新。".into());
@@ -437,6 +449,65 @@ pub(crate) fn handle_event(app: &AppHandle, event: &tauri::RunEvent) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn skills_admission_blocks_installer_and_reopens_after_failure() {
+        use crate::{process_supervisor::ProcessSupervisor, skills::coordination::Coordinator};
+        use std::{cell::Cell, fs};
+        let root = std::env::temp_dir().join(format!(
+            "loom-updater-skills-{}-{}",
+            std::process::id(),
+            crate::models::now_ms()
+        ));
+        let coordinator = Coordinator::open(&root).unwrap();
+        let supervisor = ProcessSupervisor::default();
+        let called = Cell::new(0);
+        let run = || {
+            with_install_admission(
+                &supervisor,
+                || coordinator.try_update().map_err(|error| error.message),
+                |message| format!("deferred: {message}"),
+                || -> Result<(), String> {
+                    called.set(called.get() + 1);
+                    assert!(supervisor.is_updating());
+                    assert!(supervisor.begin_operation().is_err());
+                    assert!(coordinator.enter().is_err());
+                    Err("controlled installer failure".into())
+                },
+            )
+        };
+        // A pure-file Skills operation need not have a registered child process.
+        let external = coordinator.enter().unwrap();
+        assert!(run().unwrap_err().starts_with("deferred:"));
+        assert_eq!(called.get(), 0);
+        drop(external);
+        // Failure in the local gate must also release the already acquired OS lease.
+        let operation = supervisor.begin_operation().unwrap();
+        assert!(run().unwrap_err().starts_with("deferred:"));
+        assert_eq!(called.get(), 0);
+        assert!(coordinator.enter().is_ok());
+        drop(operation);
+        assert_eq!(run().unwrap_err(), "controlled installer failure");
+        assert_eq!(called.get(), 1);
+        assert!(!supervisor.is_updating());
+        assert!(supervisor.begin_operation().is_ok());
+        assert!(coordinator.enter().is_ok());
+        // A subsequent attempt succeeds and holds both gates for its whole work.
+        with_install_admission(
+            &supervisor,
+            || coordinator.try_update().map_err(|e| e.message),
+            |e| e,
+            || {
+                assert!(supervisor.is_updating());
+                assert!(coordinator.enter().is_err());
+                Ok(())
+            },
+        )
+        .unwrap();
+        assert!(!supervisor.is_updating());
+        assert!(coordinator.enter().is_ok());
+        fs::remove_dir_all(root).unwrap();
+    }
+
     #[test]
     fn rejects_invalid_or_oversized_drafts() {
         assert!(validate_drafts(&BTreeMap::from([("arbitrary".into(), BTreeMap::new())])).is_err());

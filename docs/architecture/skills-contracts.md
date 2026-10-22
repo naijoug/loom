@@ -17,7 +17,7 @@
 
 `Coordinator::enter` 获取共享生命周期 lease；`Coordinator::writer(&lease)` 获取短时独占 writer。WriterGuard 借用 lease，禁止生命周期提前结束。`try_update` 非阻塞获取独占生命周期 lease，并检查 pending；存在活动操作/待恢复事务时失败，RAII 释放准入。
 
-顺序：生命周期 lease → supervisor operation/update guard → writer。安装/恢复和 updater 已遵循此顺序；纯文件工作计入 supervisor。短时 writer 争用最多等待 500ms；取消只写幂等控制标记并持 lifecycle lease，不等待 writer，因此文件提交期间仍可请求取消。提交临界区安全收口后响应取消。
+顺序：生命周期 lease → supervisor operation/update guard → writer。安装/恢复和 updater 已遵循此顺序；纯文件工作计入 supervisor。更新入口的 `with_install_admission` 与安装器替身共用，可验证安装失败和任一层准入失败均释放已取得的 guard。短时 writer 争用最多等待 500ms；取消只写幂等控制标记并持 lifecycle lease，不等待 writer，因此文件提交期间仍可请求取消。提交临界区安全收口后响应取消。
 
 ## 元数据与事务
 

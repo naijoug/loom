@@ -62,7 +62,7 @@ Git checkout 在 `.git/info/attributes` 禁用来源选择的 filter/encoding，
 
 辅助日志：`/tmp/loom-skills-settings-final-check.log`、`/tmp/loom-skills-settings-final-bundle.log`、`/tmp/loom-skills-native-final.log`。原生验证使用临时合成来源；没有导入个人真实技能库或操作用户已安装技能。截图已在本聊天的原生工具结果中观察；本轮未保存为仓库 PNG。
 
-## 第三切片：安装到工具、更新/卸载与恢复（M2a）
+## 第三切片：安装到工具、更新/卸载与恢复（M2a，3448f5d）
 
 Settings → Skills 新增详情安装页与 Installed 列表。后端派生 Codex/ChatGPT、Claude Code、Amp/Codex 的全局/项目目标，支持 copy/symlink、预览后执行、显式更新、来源移除后的按安装身份卸载。新目标默认不勾选；旧 v1/TSV 目标只读提示需要迁移。安装状态与实际 CLI 可发现/调用分别记录。
 
@@ -87,9 +87,16 @@ Settings → Skills 新增详情安装页与 Installed 列表。后端派生 Cod
 
 持久化脱敏证据：[原生安装生命周期](samples/skills-migration/native-install-lifecycle.json)、[真实 Codex 调用](samples/skills-migration/codex-native-invocation.json)、[release 搬移运行](samples/skills-migration/relocated-release.json)。辅助日志：`/tmp/loom-skills-m2a-gate-check.log`、`/tmp/loom-skills-m2a-relocation-rebuild.log`、`/tmp/skills-legacy-fence-check.log`。
 
+## G1 补充回归：固定安装版本与更新失败准入
+
+- `operations::tests::git_refresh_does_not_update_installed_copy_or_symlink_until_reviewed` 使用真实本地 Git 与 URL rewrite 贯通来源导入、copy/symlink 安装、刷新、显式更新、上游移除和孤立安装卸载：刷新到 B 时两种安装仍读 A，显式更新才读 B；旧 A 快照保留；上游不再包含该技能及移除来源登记后，B 链接仍有效并可按 installationId 卸载。没有外网或个人安装写入。
+- 首次用例误把空来源刷新预期为成功，实际实现拒绝无技能快照。用例已分别验证“空来源刷新失败并保留最后成功版本”和“来源仍有其他技能时，被移除技能的旧安装有效”；不为通过测试降低快照完整性要求。
+- 应用更新入口抽取 `with_install_admission`，实际 updater 与可控安装器替身共用生命周期 lease → supervisor 准入路径。测试验证纯文件工作阻止安装器执行、本地准入失败释放先取得的 OS lease、更新中拒绝新操作、安装失败释放两层准入、随后重试成功。未实际安装应用更新。
+- 定向 Git 回归 1 项、updater 3 项及全目标 Clippy 通过；随后 `pnpm check` 前端 106/Rust 194 与 `pnpm tauri build --no-bundle` 均通过。辅助日志 `/tmp/loom-skills-g1-pinned-update.log`、`/tmp/loom-skills-g1-updater.log`、`/tmp/loom-skills-g1-extra-check.log`。
+
 ## 当前限制与后续执行入口
 
-M2a 安装闭环已有上述代码和原生证据，G1 仍待综合关闭：核对远程 A → B 显式安装更新的端到端场景、更新器失败/拒绝准入的实际入口替身、完整 Skills 视觉矩阵与无源码访问条件。搬移运行只证明独立包路径及工作目录；源 checkout 仍在磁盘，不冒充无法访问源码的验收。
+M2a 安装闭环已有上述代码和原生证据，G1 仍待综合关闭：完整 Skills 视觉矩阵与无源码访问条件；远程 A → B 安装更新和更新器准入/失败的服务入口已按上一节补验。搬移运行只证明独立包路径及工作目录；源 checkout 仍在磁盘，不冒充无法访问源码的验收。
 
 M1b GitHub API、M2b 共享指令/doctor/wrapper、M2c CLI/TUI、M3 翻译与分享、M4 旧数据接管尚未完成。M2a 对 managedResources 非空的安装拒绝修改，以免提前破坏共享资源归属。外网 GitHub/GitLab 与真实翻译 provider 验收仍待后续，G2 未通过。
 

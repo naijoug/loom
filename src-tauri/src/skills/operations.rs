@@ -550,6 +550,235 @@ mod tests {
 
     #[cfg(unix)]
     #[tokio::test]
+    async fn git_refresh_does_not_update_installed_copy_or_symlink_until_reviewed() {
+        use crate::skills::{
+            installers::{self, ConflictPolicy, InstallMode, InstallRequest, UninstallRequest},
+            targets::TargetContext,
+        };
+        let f = Fixture::new();
+        let remote = f.0.join("remote");
+        fs::create_dir_all(remote.join("demo/references")).unwrap();
+        fs::create_dir(f.0.join("home")).unwrap();
+        fs::create_dir(f.0.join("project")).unwrap();
+        local_git(&remote, &["init", "-q"]);
+        fs::write(
+            remote.join("demo/SKILL.md"),
+            "---\nname: pinned-demo\n---\n# Demo\n",
+        )
+        .unwrap();
+        fs::write(remote.join("demo/references/version.txt"), "A").unwrap();
+        local_git(&remote, &["add", "."]);
+        local_git(&remote, &["commit", "-qm", "revision A"]);
+        let a = local_git(&remote, &["rev-parse", "HEAD"]);
+        let source = normalize_git_url("https://github.com/fixture/pinned-skills").unwrap();
+        let runner = || GitRunner {
+            extra_args: vec![
+                "-c".into(),
+                format!("url.{}.insteadOf={}", remote.display(), source.clone_url),
+            ],
+        };
+        let repo = Repository::open(&f.0.join("data"), &f.0.join("coord")).unwrap();
+        let context = TargetContext::new(&f.0.join("home"), Some(&f.0.join("project"))).unwrap();
+        let op = Operation::begin(&repo, &source.source_id, "import").unwrap();
+        import_using(repo.clone(), op, source.clone(), None, |_| {}, runner()).await;
+        assert_eq!(list(&repo).unwrap()[0].phase, Phase::Committed);
+        let skill_id = repo.list().unwrap().skills[0].id.clone();
+        let apply = |plan_id: &str| {
+            let mut operation = Operation::begin(&repo, &source.source_id, "install").unwrap();
+            let receipt = installers::apply(&repo, &context, plan_id, &mut operation).unwrap();
+            operation.finish(Ok(())).unwrap();
+            receipt
+        };
+        for (mode, target) in [
+            (InstallMode::Copy, "codex-project"),
+            (InstallMode::Symlink, "amp-project"),
+        ] {
+            let plan = installers::plan_install(
+                &repo,
+                &context,
+                &InstallRequest {
+                    skill_id: skill_id.clone(),
+                    mode,
+                    conflict_policy: ConflictPolicy::Fail,
+                    target_ids: vec![target.into()],
+                    project_path: None,
+                },
+            )
+            .unwrap();
+            assert_eq!(apply(&plan.plan_id).items[0].status, "installed");
+        }
+        let installed = installers::statuses(&repo, &context, &skill_id).unwrap();
+        let installed: Vec<_> = installed
+            .iter()
+            .filter(|s| s.installation.is_some())
+            .collect();
+        assert_eq!(installed.len(), 2);
+        let link = installed
+            .iter()
+            .find(|s| s.target.id == "amp-project")
+            .unwrap();
+        let a_link = fs::read_link(&link.destination).unwrap();
+        for status in &installed {
+            assert_eq!(
+                status.installation.as_ref().unwrap().revision.as_deref(),
+                Some(a.as_str())
+            );
+        }
+        // A new source commit changes only the library, including package reference files.
+        fs::write(remote.join("demo/references/version.txt"), "B").unwrap();
+        local_git(&remote, &["add", "."]);
+        local_git(&remote, &["commit", "-qm", "revision B"]);
+        let b = local_git(&remote, &["rev-parse", "HEAD"]);
+        let op = Operation::begin(&repo, &source.source_id, "refresh").unwrap();
+        import_using(
+            repo.clone(),
+            op,
+            source.clone(),
+            Some(a.clone()),
+            |_| {},
+            runner(),
+        )
+        .await;
+        assert_eq!(list(&repo).unwrap()[0].phase, Phase::Committed);
+        for status in installers::statuses(&repo, &context, &skill_id)
+            .unwrap()
+            .iter()
+            .filter(|s| s.installation.is_some())
+        {
+            assert!(status.update_available);
+            assert_eq!(
+                fs::read_to_string(status.destination.join("references/version.txt")).unwrap(),
+                "A"
+            );
+            assert_eq!(
+                status.installation.as_ref().unwrap().revision.as_deref(),
+                Some(a.as_str())
+            );
+        }
+        assert_eq!(fs::read_link(&link.destination).unwrap(), a_link);
+        // Only explicitly planned installation updates switch the selected targets to B.
+        for (mode, target) in [
+            (InstallMode::Copy, "codex-project"),
+            (InstallMode::Symlink, "amp-project"),
+        ] {
+            let plan = installers::plan_install(
+                &repo,
+                &context,
+                &InstallRequest {
+                    skill_id: skill_id.clone(),
+                    mode,
+                    conflict_policy: ConflictPolicy::Overwrite,
+                    target_ids: vec![target.into()],
+                    project_path: None,
+                },
+            )
+            .unwrap();
+            assert_eq!(apply(&plan.plan_id).items[0].status, "installed");
+        }
+        for status in installers::statuses(&repo, &context, &skill_id)
+            .unwrap()
+            .iter()
+            .filter(|s| s.installation.is_some())
+        {
+            assert!(!status.update_available);
+            assert_eq!(
+                fs::read_to_string(status.destination.join("references/version.txt")).unwrap(),
+                "B"
+            );
+            assert_eq!(
+                status.installation.as_ref().unwrap().revision.as_deref(),
+                Some(b.as_str())
+            );
+        }
+        assert_ne!(fs::read_link(&link.destination).unwrap(), a_link);
+        assert_eq!(
+            fs::read_to_string(a_link.join("references/version.txt")).unwrap(),
+            "A"
+        );
+        // Upstream removal and library removal cannot invalidate installed snapshot links.
+        fs::remove_dir_all(remote.join("demo")).unwrap();
+        fs::write(remote.join("README.md"), "Skill removed upstream").unwrap();
+        local_git(&remote, &["add", "-A"]);
+        local_git(&remote, &["commit", "-qm", "remove skill"]);
+        let op = Operation::begin(&repo, &source.source_id, "refresh").unwrap();
+        import_using(
+            repo.clone(),
+            op,
+            source.clone(),
+            Some(b.clone()),
+            |_| {},
+            runner(),
+        )
+        .await;
+        // An entirely empty upstream is rejected, preserving the last successful revision.
+        assert_eq!(list(&repo).unwrap()[0].phase, Phase::Failed);
+        assert_eq!(
+            repo.get_source(&source.source_id)
+                .unwrap()
+                .revision
+                .as_deref(),
+            Some(b.as_str())
+        );
+        assert_eq!(
+            fs::read_to_string(link.destination.join("references/version.txt")).unwrap(),
+            "B"
+        );
+        fs::create_dir(remote.join("other")).unwrap();
+        fs::write(
+            remote.join("other/SKILL.md"),
+            "---\nname: other\n---\n# Other skill\n",
+        )
+        .unwrap();
+        local_git(&remote, &["add", "."]);
+        local_git(&remote, &["commit", "-qm", "retain a different skill"]);
+        let op = Operation::begin(&repo, &source.source_id, "refresh").unwrap();
+        import_using(repo.clone(), op, source.clone(), Some(b), |_| {}, runner()).await;
+        let record = list(&repo).unwrap().remove(0);
+        assert_eq!(record.phase, Phase::Committed, "{:?}", record.error);
+        assert!(repo
+            .list()
+            .unwrap()
+            .skills
+            .iter()
+            .all(|skill| skill.id != skill_id));
+        repo.remove_source(&source.source_id).unwrap();
+        let inventory = installers::inventory(&repo, &context).unwrap();
+        let mut ids = Vec::new();
+        for status in inventory.iter().filter(|s| s.installation.is_some()) {
+            assert_eq!(
+                fs::read_to_string(status.destination.join("references/version.txt")).unwrap(),
+                "B"
+            );
+            ids.push(
+                status
+                    .installation
+                    .as_ref()
+                    .unwrap()
+                    .installation_id
+                    .clone(),
+            );
+        }
+        assert_eq!(ids.len(), 2);
+        let removal = installers::plan_uninstall(
+            &repo,
+            &context,
+            &UninstallRequest {
+                installation_ids: ids,
+                project_path: None,
+            },
+        )
+        .unwrap();
+        assert!(apply(&removal.plan_id)
+            .items
+            .iter()
+            .all(|i| i.status == "uninstalled"));
+        for status in installed {
+            assert!(fs::symlink_metadata(&status.destination).is_err());
+        }
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
     async fn checkout_does_not_run_source_selected_smudge_filters() {
         use std::os::unix::fs::PermissionsExt;
         let f = Fixture::new();
