@@ -476,6 +476,31 @@
         }
       ],
       "coordinated": true
+    },
+    "skillsGithubApiSource": {
+      "id": "src-6394f5f031b445239b1374a0469f29d9",
+      "name": "fixture/skills",
+      "kind": "github_api",
+      "localPath": null,
+      "git": {
+        "sourceId": "src-f1da8c300522c1ed4540ca8381f35a9d",
+        "provider": "github",
+        "namespace": "fixture/skills",
+        "url": "https://github.com/fixture/skills",
+        "cloneUrl": "https://github.com/fixture/skills.git",
+        "legacyId": "github:fixture/skills"
+      },
+      "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "updatedAtMs": 1,
+      "defaultBranch": "trunk"
+    },
+    "skillsHttpRequest": {
+      "method": "GET",
+      "url": "https://api.github.com/repos/fixture/skills",
+      "startedAtMs": 1,
+      "finishedAtMs": 2,
+      "status": 200,
+      "error": null
     }
   }
 }

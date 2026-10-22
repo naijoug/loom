@@ -124,6 +124,11 @@ fn persisted_model_samples_round_trip_through_rust_types() {
     assert_model_sample::<crate::chat::ChatMessagePart>(samples, "chatToolPart");
     assert_model_sample::<crate::agent_diagnostics::AgentDiagnostic>(samples, "agentDiagnostic");
     assert_model_sample::<crate::skills::repository::LibraryView>(samples, "skillsLibrary");
+    assert_model_sample::<crate::skills::repository::Source>(samples, "skillsGithubApiSource");
+    assert_model_sample::<crate::skills::operations::HttpRequestRecord>(
+        samples,
+        "skillsHttpRequest",
+    );
     assert_model_sample::<crate::skills::operations::OperationRecord>(samples, "skillsOperation");
     assert_model_sample::<crate::skills::targets::InstallTarget>(samples, "skillsInstallTarget");
     assert_model_sample::<crate::skills::installers::Installation>(samples, "skillsInstallation");

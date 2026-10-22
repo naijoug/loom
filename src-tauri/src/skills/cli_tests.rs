@@ -453,3 +453,47 @@ fn actual_cli_recovers_a_fixture_from_another_data_directory() {
     assert!(result.is_ok(), "{}", result.unwrap_err());
     println!("M2C_CLI_RECOVERY_OK: real CLI discovered and recovered the isolated transaction from data-b");
 }
+
+#[test]
+fn copy_source_updates_are_visible_without_marking_installed_instructions_broken() {
+    let s = Setup::new();
+    assert_eq!(s.run("install", &["--mode", "copy", "demo"], true).0, 0);
+    let rules = s.fixture.0.join("project/AGENTS.md");
+    let original = fs::read(&rules).unwrap();
+    fs::write(
+        s.fixture.0.join("source/auto/demo/inject.md"),
+        "New source rule\n",
+    )
+    .unwrap();
+    let (code, diagnosis) = s.run("doctor", &["demo"], true);
+    assert_eq!(code, 0);
+    assert_eq!(diagnosis["results"][0]["status"], "current");
+    assert_eq!(diagnosis["results"][0]["update_available"], true);
+    assert_eq!(fs::read(&rules).unwrap(), original);
+    assert_eq!(
+        s.run("status", &["demo"], true).1["results"][0]["update_available"],
+        true
+    );
+    assert_eq!(
+        s.run("install", &["--mode", "copy", "--force", "demo"], true)
+            .0,
+        0
+    );
+    assert!(fs::read_to_string(rules)
+        .unwrap()
+        .contains("New source rule"));
+    assert_eq!(
+        s.run("doctor", &["demo"], true).1["results"][0]["update_available"],
+        false
+    );
+}
+#[test]
+fn doctor_missing_target_does_not_create_instruction_or_install_directories() {
+    let s = Setup::new();
+    let (code, diagnosis) = s.run("doctor", &["demo"], true);
+    assert_eq!(code, 1);
+    assert_eq!(diagnosis["results"][0]["status"], "missing");
+    assert!(!s.fixture.0.join("project/AGENTS.md").exists());
+    assert!(!s.fixture.0.join("project/.codex").exists());
+    assert!(!s.paths.library.join("library.json").exists());
+}

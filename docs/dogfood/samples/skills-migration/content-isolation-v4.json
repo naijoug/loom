@@ -1,0 +1,17 @@
+{
+  "kind": "isolated-content-only-checkout-copy",
+  "withoutApps": true,
+  "withoutLoom": true,
+  "nodePnpmCargoTauriBlocked": true,
+  "qualityExitCode": 0,
+  "contentUnitTests": 32,
+  "routingPlumbingCases": 326,
+  "managerTestsExcludedFromContentEntry": true,
+  "trackedSkillAndArchiveFiles": 271,
+  "allRemainingTrackedContentHashesMatchOriginalBaseline": true,
+  "modelInvoked": false,
+  "baselineOnlyUntrackedMetadata": [
+    "skills/.DS_Store"
+  ],
+  "baselineRecordedFiles": 272
+}

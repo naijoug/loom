@@ -6,6 +6,7 @@ pub mod commands;
 pub mod coordination;
 pub mod error;
 pub mod files;
+pub mod github_api;
 pub mod installers;
 pub mod instructions;
 pub mod operations;

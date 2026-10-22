@@ -1,6 +1,6 @@
 # Skills 命令行
 
-状态：无窗口 CLI、TUI、ng 已接入并完成 M2c 当前范围验收；完整迁移仍等待 GitHub API、翻译、旧数据接管与 G2。当前 CLI 与 Settings → Skills 共用 Rust 来源、安装、共享指令、诊断和恢复服务，不启动 Tauri 窗口。
+状态：无窗口 CLI、TUI、ng 已接入并完成 M2c 当前范围验收；GitHub API 来源已接入，完整迁移仍等待翻译、旧数据接管与 G2。当前 CLI 与 Settings → Skills 共用 Rust 来源、安装、共享指令、诊断和恢复服务，不启动 Tauri 窗口。
 
 ## 入口
 
@@ -47,6 +47,7 @@ CLI 的项目路径是用户通过参数或当前工作目录作出的显式授�
 - 已有 copy 默认跳过；`--force` 只允许显式替换受管安装并保留备份。已验证且仍指向同一来源的 symlink 重装会同步指令；远程固定快照切换仍需显式替换。
 - `--with-slash-commands` 为 manual 技能生成 Codex/Claude wrapper。auto/global 的 inject.md 自动纳入安装规划；cron 不注入。
 - status 和 doctor 共用清单与只读诊断；doctor 的 current/not-applicable 为成功，missing/stale/malformed 为失败，不自动修复文件。
+- doctor 判断已安装版本的指令健康；copy 来源更新但安装未更新时仍可为 current。JSON 的 `update_available` 独立表示可更新（无法确定或未安装时为 null），`source_available` 表示来源可读；文本输出也标明来源更新/不可用。自动化应读取这些字段，不能用 doctor 退出码判断来源是否有新版。local-live symlink 的注入变化仍报告 stale，重装同步后恢复。
 - uninstall 可凭保存的安装名、来源身份或 installationId 工作，来源移除后仍可卸载。显式请求已不存在的普通安装名返回 missing；无受管归属的现存内容和用户修改过的安装即使加 `--force` 也不删除。
 
 ```bash

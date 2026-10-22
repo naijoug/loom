@@ -1,0 +1,19 @@
+{
+  "repository": "https://github.com/tobi/qmd",
+  "kind": "github_api",
+  "revision": "86d2365d17fc682e491c2c53d1e4a884aee8682a",
+  "defaultBranch": "main",
+  "httpRequests": 9,
+  "gitProcesses": 0,
+  "projectTargetOnly": true,
+  "copyMatchesEveryPackageFile": true,
+  "installedPackageFiles": 2,
+  "credentialsExcludedFromLogShape": true,
+  "authentication": "anonymous",
+  "agentInvoked": false,
+  "sourceRegistrationRemoved": true,
+  "orphanInstallationRemovedThroughDesktop": true,
+  "snapshotPreserved": true,
+  "nativeHttpLogVisible": true,
+  "githubTokenEnvironmentCleared": true
+}

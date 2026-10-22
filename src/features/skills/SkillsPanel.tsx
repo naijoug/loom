@@ -27,6 +27,7 @@ export function SkillsPanel({ projectName, projectPath = null, api = skillsApi, 
   const [detailError, setDetailError] = useState("");
   const [localPath, setLocalPath] = useState("");
   const [url, setUrl] = useState("");
+  const [sourceMode, setSourceMode] = useState<"git" | "github-api">("git");
   const [adding, setAdding] = useState(false);
   const [tab, setTab] = useState<"overview" | "markdown" | "files" | "install">("overview");
   const [view, setView] = useState<"library" | "installed">("library");
@@ -122,7 +123,7 @@ export function SkillsPanel({ projectName, projectPath = null, api = skillsApi, 
   }
   async function importRepo() {
     await action(async () => {
-      const operation = await api.importRepository(url.trim());
+      const operation = await api.importRepository(url.trim(), sourceMode);
       if (mounted.current) { setRequestedImport(operation.operationId); setOperations(previous => mergeOperation(previous, operation)); setAdding(false); setUrl(""); }
     });
   }
@@ -142,17 +143,18 @@ export function SkillsPanel({ projectName, projectPath = null, api = skillsApi, 
       <aside className="skills-sources" aria-label={t("skillsSources")}>
         <div className="skills-section-heading"><h2>{t("skillsSources")}</h2><button type="button" aria-label={t("skillsAddSource")} disabled={!desktop || busy} onClick={() => setAdding(!adding)}><FolderPlus size={17} /></button></div>
         <button type="button" aria-pressed={!sourceId} onClick={() => setSourceId("")}>{t("skillsAll")}<span>{library.skills.length}</span></button>
-        {library.sources.map(item => <button type="button" key={item.id} aria-pressed={sourceId === item.id} onClick={() => { setSourceId(item.id); setQuery(""); }}><span className="skills-source-name">{item.kind === "git" && <GitBranch size={14} />}{item.name}</span><span>{library.skills.filter(skill => skill.sourceId === item.id).length}</span></button>)}
+        {library.sources.map(item => <button type="button" key={item.id} aria-pressed={sourceId === item.id} onClick={() => { setSourceId(item.id); setQuery(""); }}><span className="skills-source-name">{item.kind !== "local" && <GitBranch size={14} />}{item.name}{item.kind === "github_api" && <small> · API</small>}</span><span>{library.skills.filter(skill => skill.sourceId === item.id).length}</span></button>)}
         {!library.sources.length && <p>{t("skillsSourceHint")}</p>}
-        {source && <div className="skills-source-actions"><code>{source.git?.url ?? source.localPath}</code>{source.revision && <small>{source.revision.slice(0, 12)}</small>}
+        {source && <div className="skills-source-actions"><code>{source.git?.url ?? source.localPath}</code>{source.revision && <small>{source.revision.slice(0, 12)}</small>}{source.defaultBranch && <small>{t("skillsDefaultBranch")}: {source.defaultBranch}</small>}
           <button type="button" disabled={busy || operations.some(op => op.sourceId === source.id && op.phase === "running")} onClick={() => { void action(async () => { const operation = await api.refresh(source.id); if (mounted.current) setOperations(previous => mergeOperation(previous, operation)); }); }}><RefreshCw size={14} />{t("skillsRefresh")}</button>
           <button type="button" disabled={busy} onClick={() => { void action(async () => { await adopt(await api.remove(source.id)); if (mounted.current) setSourceId(""); }); }}><Trash2 size={14} />{t("skillsRemoveSource")}</button><small>{t("skillsRemoveHint")}</small></div>}
       </aside>
       <main className="skills-library">
         {adding && <section className="skills-add-source" aria-label={t("skillsAddSource")}>
           <h2>{t("skillsAddSource")}</h2><div className="skills-source-field"><label htmlFor="skills-local-path">{t("skillsLocalFolder")}</label><div><input id="skills-local-path" value={localPath} onChange={event => setLocalPath(event.target.value)} placeholder="/path/to/skills" /><button type="button" disabled={busy} onClick={() => { void browse(); }}>{t("browse")}</button><button type="button" disabled={busy || !localPath.trim()} onClick={() => { void addLocal(); }}>{t("skillsAdd")}</button></div></div>
-          <div className="skills-source-field"><label htmlFor="skills-git-url">{t("skillsGitUrl")}</label><div><input id="skills-git-url" value={url} onChange={event => setUrl(event.target.value)} placeholder="https://github.com/owner/repository" /><button type="button" disabled={busy || !url.trim()} onClick={() => { void importRepo(); }}>{t("skillsImport")}</button></div></div>
-          <p>{t("skillsRefreshHint")}</p>
+          <div className="skills-source-field"><label htmlFor="skills-source-mode">{t("skillsSourceMode")}</label><select id="skills-source-mode" value={sourceMode} disabled={busy} onChange={event => setSourceMode(event.target.value as "git" | "github-api")}><option value="git">{t("skillsGitCloneMode")}</option><option value="github-api">{t("skillsGithubApiMode")}</option></select></div>
+          <div className="skills-source-field"><label htmlFor="skills-git-url">{t(sourceMode === "github-api" ? "skillsGithubUrl" : "skillsGitUrl")}</label><div><input id="skills-git-url" value={url} onChange={event => setUrl(event.target.value)} placeholder="https://github.com/owner/repository" /><button type="button" disabled={busy || !url.trim()} onClick={() => { void importRepo(); }}>{t("skillsImport")}</button></div></div>
+          <p>{t("skillsRefreshHint")}</p>{sourceMode === "github-api" && <p>{t("skillsGithubApiHint")}</p>}
         </section>}
         <label className="skills-search"><Search size={17} /><input ref={searchInput} value={query} onChange={event => setQuery(event.target.value)} placeholder={t("skillsSearch")} aria-label={t("skillsSearch")} /><span>{filtered.length}</span></label>
         {!!library.issues.length && <details className="skills-issues"><summary>{t("skillsIssues", { count: library.issues.length })}</summary>{library.issues.map((issue, index) => <p key={index}><strong>{library.sources.find(item => item.id === issue.sourceId)?.name}</strong> {issue.relativePath}: {issue.message}</p>)}</details>}
@@ -175,6 +177,6 @@ export function SkillsPanel({ projectName, projectPath = null, api = skillsApi, 
         </div>
       </main>
     </div>}
-    {!!operations.length && <section className="skills-operations" aria-label={t("skillsActivity")}><h2>{t("skillsActivity")}</h2>{operations.slice(0, 4).map(operation => <div key={operation.operationId} role="status"><span>{t(operationActionKey(operation.action))} · {library.sources.find(item => item.id === operation.sourceId)?.name ?? t(operation.action === "install-fzf" ? "skillsCliTools" : ["install", "uninstall", "recover"].includes(operation.action) ? "skillsManagedInstallations" : "skillsSources")} · {t(operation.phase === "running" ? "skillsWorking" : operation.phase === "committed" ? "skillsDone" : operation.phase === "cancelled" ? "skillsCancelled" : "skillsFailed")}</span>{operation.error && <span className="skills-error">{operation.error.message}</span>}{!!operation.executions?.length && <details><summary>{t("skillsExecutionLog")}</summary>{operation.executions.map((execution, index) => <pre key={index}>{[execution.program + " " + execution.args.join(" "), execution.cwd, t("exitCodeLabel") + ": " + (execution.exitCode ?? "—"), execution.error].filter(Boolean).join("\n")}</pre>)}</details>}{operation.phase === "running" && <button type="button" onClick={() => { void action(() => api.cancel(operation.operationId)); }}>{t("skillsCancel")}</button>}</div>)}</section>}
+    {!!operations.length && <section className="skills-operations" aria-label={t("skillsActivity")}><h2>{t("skillsActivity")}</h2>{operations.slice(0, 4).map(operation => <div key={operation.operationId} role="status"><span>{t(operationActionKey(operation.action))} · {library.sources.find(item => item.id === operation.sourceId)?.name ?? t(operation.action === "install-fzf" ? "skillsCliTools" : ["install", "uninstall", "recover"].includes(operation.action) ? "skillsManagedInstallations" : "skillsSources")} · {t(operation.phase === "running" ? "skillsWorking" : operation.phase === "committed" ? "skillsDone" : operation.phase === "cancelled" ? "skillsCancelled" : "skillsFailed")}</span>{operation.error && <span className="skills-error">{operation.error.message}</span>}{!!operation.executions?.length && <details><summary>{t("skillsExecutionLog")}</summary>{operation.executions.map((execution, index) => <pre key={index}>{[execution.program + " " + execution.args.join(" "), execution.cwd, t("exitCodeLabel") + ": " + (execution.exitCode ?? "—"), execution.error].filter(Boolean).join("\n")}</pre>)}</details>}{!!operation.requests?.length && <details><summary>{t("skillsHttpLog")} ({operation.requests.length})</summary>{operation.requests.slice(-50).map((request, index) => <pre key={index}>{[request.method + " " + request.url, t("skillsHttpStatus") + ": " + (request.status ?? "—"), request.error].filter(Boolean).join("\n")}</pre>)}</details>}{operation.phase === "running" && <button type="button" onClick={() => { void action(() => api.cancel(operation.operationId)); }}>{t("skillsCancel")}</button>}</div>)}</section>}
   </div>;
 }

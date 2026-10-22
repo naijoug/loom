@@ -1,3 +1,4 @@
+import type { SkillSource, SkillsHttpRequest } from "./skills";
 import type { InstructionCheck, ResourcePreview } from "./skills";
 import type { SkillsLibrary, SkillsOperation, InstallTarget, Installation, InstallPlan, InstallReceipt } from "./skills";
 import type { AgentConfig, AgentDiagnostic, AppSettings, ChatSession, ChatEvent, ChatSendInput, ChatSendReceipt, ChatResumeHandle, ChatTurn, ChatLogPage, ChatExportInput, ChatExportResult, ChatMessagePart } from "../domain";
@@ -477,4 +478,29 @@ skillsCoordinatedInstallPlan: {
   ],
   "coordinated": true
 } satisfies InstallPlan,
+skillsGithubApiSource: {
+  "id": "src-6394f5f031b445239b1374a0469f29d9",
+  "name": "fixture/skills",
+  "kind": "github_api",
+  "localPath": null,
+  "git": {
+    "sourceId": "src-f1da8c300522c1ed4540ca8381f35a9d",
+    "provider": "github",
+    "namespace": "fixture/skills",
+    "url": "https://github.com/fixture/skills",
+    "cloneUrl": "https://github.com/fixture/skills.git",
+    "legacyId": "github:fixture/skills"
+  },
+  "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "updatedAtMs": 1,
+  "defaultBranch": "trunk"
+} satisfies SkillSource,
+skillsHttpRequest: {
+  "method": "GET",
+  "url": "https://api.github.com/repos/fixture/skills",
+  "startedAtMs": 1,
+  "finishedAtMs": 2,
+  "status": 200,
+  "error": null
+} satisfies SkillsHttpRequest,
 } as const;

@@ -1220,3 +1220,125 @@ fn reviewed_batch_does_not_treat_external_instruction_edits_as_its_own_commit() 
     assert_eq!(fs::read_to_string(file).unwrap(), edited);
     assert!(!s.fixture.0.join("project/.codex/skills/other").exists());
 }
+
+#[test]
+fn malformed_owned_block_refuses_update_and_uninstall_without_changes() {
+    let s = auto_setup();
+    install_auto(&s, &["codex-project"], ConflictPolicy::Fail);
+    let rules = s.fixture.0.join("project/AGENTS.md");
+    let broken = "User rules\n<!-- skills-linker:fixture-demo:begin -->\nMissing end\n";
+    fs::write(&rules, broken).unwrap();
+    let target = s.destination("codex", "project");
+    let before = package::state(&target).unwrap();
+    let manifest = target
+        .parent()
+        .unwrap()
+        .join(".skills-linker-manifest.json");
+    let bytes = fs::read(&manifest).unwrap();
+    let plan = installers::plan_install(
+        &s.repo,
+        &s.context,
+        &s.request(
+            InstallMode::Copy,
+            ConflictPolicy::Overwrite,
+            &["codex-project"],
+        ),
+    )
+    .unwrap();
+    assert_eq!(plan.items[0].decision, "blocked");
+    assert_eq!(s.apply(&plan.plan_id).items[0].status, "conflict");
+    assert_eq!(
+        remove_target(&s, &s.repo, "codex-project").items[0].status,
+        "conflict"
+    );
+    assert_eq!(fs::read_to_string(&rules).unwrap(), broken);
+    assert_eq!(package::state(&target).unwrap(), before);
+    assert_eq!(fs::read(&manifest).unwrap(), bytes);
+}
+#[cfg(unix)]
+#[test]
+fn future_malformed_and_symlink_manifests_block_replacement_and_uninstall() {
+    use std::os::unix::fs::symlink;
+    let s = auto_setup();
+    install_auto(&s, &["codex-project"], ConflictPolicy::Fail);
+    let target = s.destination("codex", "project");
+    let manifest = target
+        .parent()
+        .unwrap()
+        .join(".skills-linker-manifest.json");
+    let before = package::state(&target).unwrap();
+    let rules = s.fixture.0.join("project/AGENTS.md");
+    let original = fs::read(&rules).unwrap();
+    let id = installers::inventory(&s.repo, &s.context)
+        .unwrap()
+        .into_iter()
+        .find_map(|e| e.installation.map(|i| i.installation_id))
+        .unwrap();
+    for bad in ["future", "malformed", "symlink"] {
+        fs::remove_file(&manifest).unwrap();
+        match bad {
+            "future" => fs::write(&manifest, r#"{"version":99,"skills":{}}"#).unwrap(),
+            "malformed" => fs::write(&manifest, "broken json").unwrap(),
+            _ => symlink(s.fixture.0.join("absent-manifest"), &manifest).unwrap(),
+        };
+        let state = package::state(&manifest).unwrap();
+        let plan = installers::plan_install(
+            &s.repo,
+            &s.context,
+            &s.request(
+                InstallMode::Copy,
+                ConflictPolicy::Overwrite,
+                &["codex-project"],
+            ),
+        )
+        .unwrap();
+        assert_eq!(plan.items[0].decision, "blocked");
+        assert_eq!(s.apply(&plan.plan_id).items[0].status, "conflict");
+        assert!(installers::plan_uninstall(
+            &s.repo,
+            &s.context,
+            &UninstallRequest {
+                installation_ids: vec![id.clone()],
+                project_path: None
+            }
+        )
+        .is_err());
+        assert_eq!(package::state(&manifest).unwrap(), state);
+        assert_eq!(package::state(&target).unwrap(), before);
+        assert_eq!(fs::read(&rules).unwrap(), original);
+        assert!(!s.fixture.0.join("absent-manifest").exists());
+    }
+}
+
+#[test]
+fn unmanaged_auto_skill_conflict_never_adds_instructions() {
+    let s = auto_setup();
+    let target = s.destination("codex", "project");
+    fs::create_dir_all(&target).unwrap();
+    fs::write(target.join("SKILL.md"), "Unmanaged user skill").unwrap();
+    let rules = s.fixture.0.join("project/AGENTS.md");
+    fs::write(&rules, "User rules\n").unwrap();
+    for (policy, decision, status) in [
+        (ConflictPolicy::Skip, "skip", "skipped"),
+        (ConflictPolicy::Overwrite, "blocked", "conflict"),
+    ] {
+        let plan = installers::plan_install(
+            &s.repo,
+            &s.context,
+            &s.request(InstallMode::Copy, policy, &["codex-project"]),
+        )
+        .unwrap();
+        assert_eq!(plan.items[0].decision, decision);
+        assert_eq!(s.apply(&plan.plan_id).items[0].status, status);
+        assert_eq!(fs::read_to_string(&rules).unwrap(), "User rules\n");
+        assert_eq!(
+            fs::read_to_string(target.join("SKILL.md")).unwrap(),
+            "Unmanaged user skill"
+        );
+        assert!(!target
+            .parent()
+            .unwrap()
+            .join(".skills-linker-manifest.json")
+            .exists());
+    }
+}

@@ -16,6 +16,7 @@ use std::{
 pub enum SourceKind {
     Local,
     Git,
+    GithubApi,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -28,6 +29,8 @@ pub struct Source {
     pub git: Option<GitSource>,
     pub revision: Option<String>,
     pub updated_at_ms: u128,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub default_branch: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -94,15 +97,32 @@ impl Repository {
                         .as_ref()
                         .is_some_and(|p| p.is_absolute() && p.parent().is_some())
                         && source.git.is_none()
-                        && source.revision.is_none() => {}
-                SourceKind::Git if source.local_path.is_none() => {
+                        && source.revision.is_none()
+                        && source.default_branch.is_none() => {}
+                SourceKind::Git | SourceKind::GithubApi if source.local_path.is_none() => {
                     let git = source
                         .git
                         .as_ref()
                         .ok_or_else(|| SkillsError::recovery("Git source metadata missing"))?;
                     let normalized = super::sources::normalize_git_url(&git.clone_url)?;
-                    if normalized != *git || source.id != git.source_id {
+                    let expected_id = if source.kind == SourceKind::GithubApi {
+                        super::github_api::source_id(git)?
+                    } else {
+                        git.source_id.clone()
+                    };
+                    if normalized != *git || source.id != expected_id {
                         return Err(SkillsError::recovery("Git source identity mismatch"));
+                    }
+                    if source.kind == SourceKind::GithubApi {
+                        super::github_api::validate_branch(
+                            source.default_branch.as_deref().ok_or_else(|| {
+                                SkillsError::recovery("GitHub API default branch missing")
+                            })?,
+                        )?;
+                    } else if source.default_branch.is_some() {
+                        return Err(SkillsError::recovery(
+                            "Unexpected API metadata on a Git source",
+                        ));
                     }
                     files::validate_id(
                         source
@@ -126,10 +146,13 @@ impl Repository {
             issues: vec![],
         };
         for source in &result.sources {
-            match self
-                .source_directory(source)
-                .and_then(|directory| catalog::scan(&source.id, &directory))
-            {
+            match self.source_directory(source).and_then(|directory| {
+                if source.kind == SourceKind::GithubApi {
+                    catalog::scan_repository(&source.id, &directory)
+                } else {
+                    catalog::scan(&source.id, &directory)
+                }
+            }) {
                 Ok(catalog) => {
                     result.skills.extend(catalog.skills);
                     result.issues.extend(catalog.issues);
@@ -156,7 +179,7 @@ impl Repository {
                 .local_path
                 .clone()
                 .ok_or_else(|| SkillsError::recovery("Local source path missing"))?),
-            SourceKind::Git => {
+            SourceKind::Git | SourceKind::GithubApi => {
                 let revision = source
                     .revision
                     .as_deref()
@@ -175,7 +198,11 @@ impl Repository {
         let _lease = self.coordinator.enter()?;
         let (source_id, relative) = catalog::decode_id(skill_id)?;
         let source = self.get_source(&source_id)?;
-        catalog::detail(&source.id, &self.source_directory(&source)?, &relative)
+        if source.kind == SourceKind::GithubApi {
+            catalog::detail_repository(&source.id, &self.source_directory(&source)?, &relative)
+        } else {
+            catalog::detail(&source.id, &self.source_directory(&source)?, &relative)
+        }
     }
 
     pub fn get_source(&self, id: &str) -> Result<Source> {
@@ -204,6 +231,7 @@ impl Repository {
             git: None,
             revision: None,
             updated_at_ms: crate::models::now_ms(),
+            default_branch: None,
         };
         // Validate before persisting; individual malformed packages remain visible
         // as issues when other packages are usable, including a valid empty folder.
@@ -242,6 +270,40 @@ impl Repository {
         staging: &Path,
         snapshot: &snapshots::Snapshot,
     ) -> Result<()> {
+        let git = source
+            .git
+            .as_ref()
+            .ok_or_else(|| SkillsError::invalid("Remote source metadata missing"))?;
+        let normalized = super::sources::normalize_git_url(&git.clone_url)?;
+        let expected_id = match source.kind {
+            SourceKind::Git => git.source_id.clone(),
+            SourceKind::GithubApi => super::github_api::source_id(git)?,
+            SourceKind::Local => {
+                return Err(SkillsError::invalid(
+                    "Cannot publish a remote snapshot as a local source",
+                ))
+            }
+        };
+        if normalized != *git
+            || source.id != expected_id
+            || source.local_path.is_some()
+            || snapshot.source_id != source.id
+            || source.revision.as_deref() != Some(snapshot.revision.as_str())
+        {
+            return Err(SkillsError::invalid(
+                "Remote source and snapshot identities do not match",
+            ));
+        }
+        if source.kind == SourceKind::GithubApi {
+            super::github_api::validate_branch(
+                source
+                    .default_branch
+                    .as_deref()
+                    .ok_or_else(|| SkillsError::invalid("GitHub default branch missing"))?,
+            )?;
+        } else if source.default_branch.is_some() {
+            return Err(SkillsError::invalid("Unexpected API branch metadata"));
+        }
         let lease = self.coordinator.enter()?;
         let writer = self.coordinator.writer_wait(&lease)?;
         writer.check_write_set(&[self.library_path()])?;
@@ -255,6 +317,7 @@ impl Repository {
         }
         if let Some(other) = library.sources.iter().find(|s| {
             s.id != source.id
+                && s.kind == source.kind
                 && s.git.as_ref().is_some_and(|g| {
                     source
                         .git

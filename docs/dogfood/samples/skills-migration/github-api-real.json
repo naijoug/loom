@@ -1,0 +1,12 @@
+{
+  "agentInvoked": false,
+  "authentication": "anonymous",
+  "defaultBranch": "main",
+  "gitProcesses": 0,
+  "httpRequests": 31,
+  "installedAndRemovedInTemporaryProject": true,
+  "repository": "https://github.com/vercel-labs/agent-browser",
+  "revision": "468c0526c884722afd9c10bcc0d5b09ed4c0c5d1",
+  "skillCount": 10,
+  "snapshotFiles": 45
+}

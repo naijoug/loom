@@ -124,26 +124,55 @@ pub async fn skills_import_repository(
     app: AppHandle,
     window: WebviewWindow,
     url: String,
+    source_mode: Option<String>,
 ) -> Result<OperationRecord> {
     let repo = repository(&app, &window)?;
     let source = sources::normalize_git_url(&url)?;
+    let api = match source_mode.as_deref().unwrap_or("git") {
+        "git" => false,
+        "github-api" => true,
+        _ => return Err(SkillsError::invalid("Unsupported repository source mode")),
+    };
+    let id = if api {
+        super::github_api::source_id(&source)?
+    } else {
+        source.source_id.clone()
+    };
     let expected = repo
         .load()?
         .sources
         .iter()
-        .find(|s| s.id == source.source_id)
+        .find(|s| s.id == id)
         .and_then(|s| s.revision.clone());
-    let op = Operation::begin(&repo, &source.source_id, "import")?;
+    let client = if api {
+        Some(super::github_api::Client::from_environment()?)
+    } else {
+        None
+    };
+    let op = Operation::begin(&repo, &id, "import")?;
     let record = op.record.clone();
-    tauri::async_runtime::spawn(operations::import_git(
-        repo,
-        op,
-        source,
-        expected,
-        move |event| {
-            let _ = app.emit("loom://skills-operation", event);
-        },
-    ));
+    if let Some(client) = client {
+        tauri::async_runtime::spawn(super::github_api::import(
+            repo,
+            op,
+            source,
+            expected,
+            client,
+            move |event| {
+                let _ = app.emit("loom://skills-operation", event);
+            },
+        ));
+    } else {
+        tauri::async_runtime::spawn(operations::import_git(
+            repo,
+            op,
+            source,
+            expected,
+            move |event| {
+                let _ = app.emit("loom://skills-operation", event);
+            },
+        ));
+    }
     Ok(record)
 }
 #[tauri::command]
@@ -154,9 +183,28 @@ pub async fn skills_refresh_source(
 ) -> Result<OperationRecord> {
     let repo = repository(&app, &window)?;
     let source = repo.get_source(&source_id)?;
+    let client = if source.kind == SourceKind::GithubApi {
+        Some(super::github_api::Client::from_environment()?)
+    } else {
+        None
+    };
     let op = Operation::begin(&repo, &source_id, "refresh")?;
     let record = op.record.clone();
-    if source.kind == SourceKind::Git {
+    if let Some(client) = client {
+        let git = source
+            .git
+            .ok_or_else(|| SkillsError::recovery("GitHub API source metadata missing"))?;
+        tauri::async_runtime::spawn(super::github_api::import(
+            repo,
+            op,
+            git,
+            source.revision,
+            client,
+            move |event| {
+                let _ = app.emit("loom://skills-operation", event);
+            },
+        ));
+    } else if source.kind == SourceKind::Git {
         let git = source
             .git
             .ok_or_else(|| SkillsError::recovery("Git source metadata missing"))?;

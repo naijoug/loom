@@ -73,3 +73,24 @@ test('overview removes frontmatter while ordinary separators and raw source rema
  assert.equal(skillBody('# Body\n\n---\n'), '# Body\n\n---\n');
  assert.equal(raw.startsWith('---'),true);
 });
+
+test('API import explicitly forwards its mode and source identity stays separate from Git',async t=>{
+ const calls=[];const backend=api({importRepository:async(url,mode)=>{calls.push({url,mode});return{operationId:'api-import',sourceId:'src-api',action:'import',phase:'running',stage:'reading-github-api',sequence:1,startedAtMs:1,updatedAtMs:1,error:null,executions:[],requests:[]};}});
+ await mount(t,backend);await click(document.querySelector('button[aria-label="Add source"]'));
+ const mode=document.querySelector('#skills-source-mode');assert.equal(mode.value,'git');
+ await act(async()=>{mode.value='github-api';mode.dispatchEvent(new window.Event('change',{bubbles:true}));});
+ await input(document.querySelector('#skills-git-url'),'https://github.com/fixture/skills');
+ await click([...document.querySelectorAll('button')].find(b=>b.textContent==='Import repository'));
+ assert.deepEqual(calls,[{url:'https://github.com/fixture/skills',mode:'github-api'}]);
+});
+
+test('API sources show their branch and only bounded HTTP diagnostics',async t=>{
+ const apiSource={...source,id:'src-api',name:'fixture/skills',kind:'github_api',localPath:null,git:{url:'https://github.com/fixture/skills'},revision:'a'.repeat(40),defaultBranch:'trunk'};
+ const apiSkill={...alpha,id:'api-skill',sourceId:apiSource.id};
+ const requests=Array.from({length:70},(_,i)=>({method:'GET',url:`https://api.github.com/repos/fixture/skills/git/blobs/${i}`,startedAtMs:1,finishedAtMs:2,status:200,error:null}));
+ const record={operationId:'api-import',sourceId:apiSource.id,action:'import',phase:'committed',stage:'complete',sequence:2,startedAtMs:1,updatedAtMs:2,error:null,executions:[],requests};
+ await mount(t,api({list:async()=>({sources:[source,apiSource],skills:[apiSkill],issues:[]}),detail:async()=>detail(apiSkill),operations:async()=>[record]}));
+ await click([...document.querySelectorAll('.skills-sources > button')].find(b=>b.textContent.includes('fixture/skills')));
+ assert.match(document.querySelector('.skills-source-actions').textContent,/Default branch: trunk/);assert.match(document.querySelector('.skills-sources').textContent,/API/);
+ assert.equal(document.querySelectorAll('.skills-operations pre').length,50);assert.doesNotMatch(document.querySelector('.skills-operations').textContent,/Authorization|Bearer/);
+});

@@ -358,13 +358,17 @@ pub fn resolve(repo: &Repository, skill_id: &str) -> Result<ResolvedPackage> {
     let (source_id, relative) = catalog::decode_id(skill_id)?;
     let source = repo.get_source(&source_id)?;
     let source_root = repo.source_directory(&source)?;
-    let root = catalog::scan_root(&source_root)?;
+    let root = if source.kind == SourceKind::GithubApi {
+        source_root.clone()
+    } else {
+        catalog::scan_root(&source_root)?
+    };
     let file = catalog::resolve_file(&root, &relative)?;
     if file.file_name().is_none_or(|n| n != "SKILL.md") {
         return Err(SkillsError::invalid("Not a skill entry"));
     }
     let directory = file.parent().unwrap().to_path_buf();
-    let detail = catalog::detail(&source_id, &source_root, &relative)?;
+    let detail = repo.detail(skill_id)?;
     let front = catalog::frontmatter(&detail.content)?.0;
     let fallback = if relative == "SKILL.md" {
         source
@@ -394,7 +398,7 @@ pub fn resolve(repo: &Repository, skill_id: &str) -> Result<ResolvedPackage> {
         name,
         digest: package::tree_digest(&directory, true)?,
         directory,
-        revision: if source.kind == SourceKind::Git {
+        revision: if source.kind != SourceKind::Local {
             source.revision
         } else {
             None

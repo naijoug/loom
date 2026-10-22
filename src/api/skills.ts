@@ -2,9 +2,9 @@ import { TAURI_COMMANDS, TAURI_EVENTS } from "./contract";
 import { invokeCommand, listenToEvent } from "./tauriClient";
 
 export interface SkillSource {
-  id: string; name: string; kind: "local" | "git"; localPath: string | null;
+  id: string; name: string; kind: "local" | "git" | "github_api"; localPath: string | null;
   git: { sourceId: string; provider: string; namespace: string; url: string; cloneUrl: string; legacyId: string } | null;
-  revision: string | null; updatedAtMs: number;
+  revision: string | null; updatedAtMs: number; defaultBranch?: string;
 }
 export interface SkillSummary {
   id: string; sourceId: string; relativePath: string; name: string;
@@ -18,11 +18,13 @@ export interface SkillsLibrary {
   sources: SkillSource[]; skills: SkillSummary[];
   issues: { sourceId: string; relativePath: string; message: string }[];
 }
+export interface SkillsHttpRequest { method: string; url: string; startedAtMs: number; finishedAtMs: number | null; status: number | null; error: string | null; }
 export interface SkillsOperation {
   operationId: string; sourceId: string; action: string;
   phase: "running" | "committed" | "failed" | "cancelled" | "interrupted";
   stage: string; sequence: number; startedAtMs: number; updatedAtMs: number;
   error: { code: string; message: string } | null;
+  requests?: SkillsHttpRequest[];
   executions: { program: string; args: string[]; cwd: string; startedAtMs: number; finishedAtMs: number | null; exitCode: number | null; error: string | null }[];
 }
 export type InstallMode = "copy" | "symlink";
@@ -51,7 +53,7 @@ export interface SkillsApi {
   detail(skillId: string): Promise<SkillDetail>;
   addLocal(path: string): Promise<SkillsLibrary>;
   remove(sourceId: string): Promise<SkillsLibrary>;
-  importRepository(url: string): Promise<SkillsOperation>;
+  importRepository(url: string, sourceMode?: "git" | "github-api"): Promise<SkillsOperation>;
   refresh(sourceId: string): Promise<SkillsOperation>;
   operations(): Promise<SkillsOperation[]>;
   cancel(operationId: string): Promise<void>;
@@ -70,7 +72,7 @@ export const skillsApi: SkillsApi = {
   detail: skillId => invokeCommand(TAURI_COMMANDS.skillsGetDetail, { skillId }),
   addLocal: path => invokeCommand(TAURI_COMMANDS.skillsAddLocalSource, { path }),
   remove: sourceId => invokeCommand(TAURI_COMMANDS.skillsRemoveSource, { sourceId }),
-  importRepository: url => invokeCommand(TAURI_COMMANDS.skillsImportRepository, { url }),
+  importRepository: (url, sourceMode = "git") => invokeCommand(TAURI_COMMANDS.skillsImportRepository, { url, sourceMode }),
   refresh: sourceId => invokeCommand(TAURI_COMMANDS.skillsRefreshSource, { sourceId }),
   operations: () => invokeCommand(TAURI_COMMANDS.skillsListOperations),
   cancel: operationId => invokeCommand(TAURI_COMMANDS.skillsCancelOperation, { operationId }),

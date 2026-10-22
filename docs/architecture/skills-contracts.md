@@ -52,7 +52,7 @@ managedResources 记录 canonical path、marker 和 contentDigest。SharedInstru
 
 当前已注册 list_library/get_detail/add_local_source/remove_source/import_repository/refresh_source/list_operations/cancel_operation 八个 `skills_` 命令，以及 `loom://skills-operation` 事件。`contracts/tauri-contract.json` 的 SkillsLibrary / SkillsOperation 样本在 Rust 与 TypeScript 双端校验。安装阶段新增 list_install_targets/get_install_status/list_installations/plan_install/plan_uninstall/apply_install/list_pending/recover_installation 八个 `skills_` 命令，共 16 个；InstallTarget/Installation/InstallPlan/InstallReceipt 同样有双端样本。翻译/迁移命令在实现时再注册。
 
-错误形态为 `{code,message}`；当前 code 为 invalid_input/conflict/lock_busy/updating/recovery_required/permission_denied/io/cancelled/timeout/source_unavailable。前端展示错误 message，流程判断不依赖解析自然语言。
+错误形态为 `{code,message}`；当前 code 为 invalid_input/conflict/lock_busy/updating/recovery_required/permission_denied/io/cancelled/timeout/source_unavailable/auth_required/rate_limited。前端展示错误 message，流程判断不依赖解析自然语言。
 
 operationId 关联持久化进度、sourceId、序号、终态及脱敏执行记录；进程存活由 OS owner 锁判断，失去 owner 的 running 记录改为 interrupted，不自动重放。UI 订阅事件并补查操作列表，按序号忽略旧事件。切换设置 Skills 不卸载 Chat；详情请求绑定选择，过滤/移除后旧结果不显示。
 
@@ -79,7 +79,7 @@ Git 在独立进程组执行，有 120 秒单命令超时、取消、输出有�
 
 CLI 默认 symlink、桌面默认 copy；Codex/ChatGPT 目标去重；`--force` 不绕过未知归属删除保护，安全收紧需在新 CLI help/迁移说明中明确。完整参数/JSON 对照与 provider 实测仍待实施，不能用此表声称所有兼容项通过。
 
-## CLI 核心入口（M2c 进行中）
+## CLI 核心入口（M2c 当前范围验收通过）
 
 `skills/cli.rs` 解析参数并映射旧 JSON 字段；`src/bin/loom-skills.rs` 只负责输出/退出码，未调用 Tauri run。桌面与 CLI 使用 `runtime_paths.rs` 统一库覆盖，底层 dirs 6 与 Tauri 使用同一实现；CLI 直接从编译时 app identifier 解析默认 app data。`--data-dir` 不改变协调根。
 
@@ -88,3 +88,17 @@ CLI 默认 symlink、桌面默认 copy；Codex/ChatGPT 目标去重；`--force` 
 TUI/ng 的交互编排位于 `skills/cli/interactive.rs`，无独立文件安装器。fzf 使用固定参数、数字行身份和受控文本输出；默认环境中的执行绑定不继承。TUI 应用保存的 planId，`installers::apply_reviewed_batch` 仅以已验证 commit journal 的后状态推进同批后续规划的 manifest/指令前指纹，源/目标/归属决定不重算；预览原文不改写，外部编辑仍冲突。各技能规划仍有独立结果，共享同一块的多工具更新继续用组级事务。
 
 `tools/skills-cli/{skills-linker,tui,ng}` 仅做进程转发，随资源打包到 `Contents/Resources/tools/skills-cli`。显式 fzf 安装通过监督器运行固定 Homebrew argv，记录开始/结束/退出码、超时与取消；Settings 能识别该操作为 CLI 工具安装。全程持 CLI 生命周期 lease。
+
+## GitHub API 来源与 SSH 配置（M1b）
+
+`github_api.rs` 接受 GitHub 来源，以独立 `github_api` kind/sourceId 保存模式与默认分支。同仓库 Git/API 两种模式不静默合并；`skills_import_repository` 的可选 sourceMode 为 `git` 或 `github-api`，省略仍是 Git。刷新按原 kind 分派，CLI 列表/安装保留 API 的仓库相对路径。
+
+HTTP 仅访问固定 HTTPS `api.github.com`，禁用重定向，不跟随响应中的下载地址。默认分支只解析一次 commit，再读取该 commit 的树和 blob；二进制 base64 解码后验证长度与 Git blob SHA1（身份校验，不是单独的安全签名）。协议依据 [Git trees](https://docs.github.com/en/rest/git/trees?apiVersion=2022-11-28) 和 [Git blobs](https://docs.github.com/en/rest/git/blobs?apiVersion=2022-11-28)。API 版本为仍受支持的 2022-11-28。
+
+只物化规范扫描器可发现的完整技能包，保留包内脚本/agents/references/二进制和可执行位；归档/隐藏/生成目录不作为技能入口。这修正旧 API 无差别列举 SKILL.md 的行为，不删除源仓库内容。树截断、意外分页、路径/大小写冲突、symlink/submodule、LFS 指针、blob 缺失或损坏均拒绝发布。上限为 20,000 树项、128 MiB 技能包、2,048 请求；连接 10 秒、单请求 30 秒、整次 300 秒，支持在请求中取消。网络期间不持 writer 锁，成功后复核来源预期 revision 并发布不可变快照。
+
+认证仅读取后端 GITHUB_TOKEN/GH_TOKEN 环境，header 标记敏感；操作 requests 仅保存 method/url/时间/status/受控错误，不保存 header 或 body。UI 最多展示最近 50 条，同时显示总数。401/403 认证与主/次限流分别处理，不回显服务端错误正文。真实公开匿名读取已验，真实私有仓库认证未验。
+
+Git 显式 SSH transport 保留 GIT_SSH_COMMAND、GIT_SSH、GIT_SSH_VARIANT 和有效 core.sshCommand。未配置环境通路时以受监督的 `git config --name-only --get-regexp` 只查询键名；仅确认用户未配置才补 `ssh -oBatchMode=yes`，配置读取错误即失败。不关闭 host key 校验。自定义 SSH 原始 stderr 不进入持久日志，只保存受控分类/退出码，避免 wrapper 打印秘密。
+
+`legacy_remote_descriptor` 只读取旧 API/server-cache/desktop-local 元数据，保留默认分支、模式、alias、cachePath/cacheSlug；类型与路径校验失败不默默回退。它没有授权缓存路径，也不执行数据接管；实际导入属于 M4。

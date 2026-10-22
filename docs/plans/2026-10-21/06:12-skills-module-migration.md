@@ -1,9 +1,12 @@
 # Skills Manager 迁入 Loom 实施计划
 
-- 状态：实施中；M0 基础、M5 内容工具独立化、Settings → Skills 来源、M2a 安装闭环及 M2b 共享指令/wrapper/诊断已落地并分项验证；G1 综合关闭及后续完整替代尚未完成，G1/G2 均未验收。
+- 状态：实施中；M0 基础、M1a 来源切片、M1b API 来源与 SSH 配置保护、M2a 安装、M2b 指令及源 8 项测试等价对照、M2c CLI/TUI/ng、M5 内容独立出口已分项通过。G1 仍待完整视觉矩阵、无源码访问与外网 GitHub/GitLab 验收；M3/M4/M6/M7 未完成，G1/G2 均未整体验收。
 - 编写时间：2026-10-21 06:12，America/Los_Angeles。
 - v2 修订时间：2026-10-21 07:19，America/Los_Angeles；依据本对话的实施就绪审查细化。
 - v3 修订时间：2026-10-21 07:29，America/Los_Angeles；补充共享注入块使用者归属、跨客户端未完成事务发现和应用更新准入。
+- v4 修订时间：2026-10-21 22:44，America/Los_Angeles；依据 `0b63aad` 的进度审查：解除 M5 出口与 M7 的循环依赖，明确 M2b 等价对照要求，§4 改为实际模块表，补 SRC-09 用户 SSH 配置要求并回填 §9.2。
+- 三项补充复核：2026-10-22 00:56，America/Los_Angeles；共享注入块归属、跨客户端事务发现、应用更新准入已对应到 §5.5–5.7、实施任务与 V-16–18；统一入口见 §9.1。本次仅更新计划与索引，不改变阶段验收状态。
+- v5 修订日期：2026-10-22，America/Los_Angeles；按实际 API/SSH 验收与源测试逐项对照关闭 M1b、M2b 等价记录及 M5 内容出口，保留 v4 的依赖修正和 G1/G2 边界。证据见 [本轮验收](../../dogfood/2026-10-22-skills-migration-review.md)。
 - 用户目标：把 skills 项目的 Skills Manager 功能迁入 Loom，作为 Skills 模块；从 skills 仓库移除管理应用代码与功能。
 - 当前交付与验证见 [实施证据](../../dogfood/2026-10-21-skills-migration.md)；两仓均已修改，源项目已有阶段提交。未接管真实用户安装或删除旧应用。
 - Loom 基线：`codex/simple-cli-chat` @ `c8313dd60aa50831bce3d7a66ae3fbc20e72f273`，工作区另有未提交的 Chat Markdown、消息分隔、权限文档等改动。
@@ -99,7 +102,7 @@ G1 包含本地来源与 Git clone、浏览/详情、copy/symlink 安装与卸�
 | SRC-06 | 旧 `github:*` / `gitlab:*` group ID 与 `encodeURIComponent(groupId)::encodeURIComponent(relativePath)` skill ID | 保存旧 ID alias 到新 source/skill identity；迁移后仍能识别原安装，重名不自动合并 | 旧 JSON/路径编码/同名跨来源 fixture |
 | SRC-07 | Web `github-api`、`server-cache`、桌面本地 cache 记录 | 保留 provider、模式、默认分支和来源身份；同仓库多模式只生成明确的合并建议 | M1b/M4 旧库对照，不静默丢记录 |
 | SRC-08 | GitHub API 默认分支变更、truncated tree、分页、二进制相关文件 | 固定到同一 commit 读取树及文件；不完整包拒绝发布快照/安装，保留上一成功版本 | 合成 API 响应和代表性真实读取 |
-| SRC-09 | 私有仓库、SSH key/agent 不可用、未知 host key、超时、限流 | 使用已有凭据通路，失败可诊断；不弹出无限等待、不关闭 SSH host 校验、不记录凭据 | 错误 fixture，具备权限时真实验证 |
+| SRC-09 | 私有仓库、SSH key/agent 不可用、未知 host key、超时、限流 | 使用已有凭据通路，失败可诊断；不弹出无限等待、不关闭 SSH host 校验、不记录凭据；保留用户已有的 `GIT_SSH_COMMAND`/`core.sshCommand`（自定义 key、ProxyJump 等），仅在用户未配置时补 `BatchMode=yes` 防交互。M1b 已修复 `0b63aad` 的无条件覆盖：环境通路优先，有效 core.sshCommand 键名探测失败即拒绝，不回退覆盖用户配置 | 错误 fixture；自定义 sshCommand fixture 验证不被覆盖；具备权限时真实验证 |
 | SRC-10 | 非支持 host、自建 GitLab、任意 shell 片段 | 不把泛称 Git 支持解释为新增任意远程协议支持；未支持输入清晰失败，无 shell 拼接 | 输入校验与注入测试 |
 
 身份标准化兼容旧大小写处理，但保存原始 namespace；遇到归一化碰撞显式冲突，不合并两个可区分来源。URL 中的 token/userinfo 不持久化为普通来源字段，凭据由后端单独处理。
@@ -112,9 +115,9 @@ G1 包含本地来源与 Git clone、浏览/详情、copy/symlink 安装与卸�
 - `skills-installers`：迁移测试语义到 Rust 安装服务；Node 文件系统安装实现不进入浏览器包。
 - `skills-translation`、API 中特有能力：按实际注册能力迁入 Rust；未注册 Amp 翻译实现不自动升级为新产品功能。
 - `skills-manager-desktop`：迁出业务与测试，退役旧 Tauri 壳、标识、打包资源与专属依赖。
-- `skills-manager-tui/{skills-linker,tui,ng,managed_instructions.py}`：管理能力迁入 Loom。迁移中可短期保留原实现用于对照，M6 前收敛到共同 Rust 服务；不留跨仓库运行依赖。
+- `skills-manager-tui/{skills-linker,tui,ng,managed_instructions.py}`：管理能力迁入 Loom。Loom 内部在 M2c 已收敛到桌面/CLI 共用的 Rust 服务；源仓库旧实现仅作对照并保持 v2 写保护，G2 后在 M7 随旧应用一并删除；Loom 不留跨仓库运行依赖。
 - `trigger_examples_tool.py`、`run_trigger_eval.sh`、`trigger_eval_report.py`、`predictor_adapter_template.py`、`check-skill-metadata.py`：移入 skills 的质量工具目录。
-- `test_managed_instructions.py` 的管理行为用例迁入 Loom；`test_skill_metadata.py`、`test_skill_lifecycle.py`、`test_trigger_tools.py`、`test_who_am_i.py` 留在内容仓库并更新 `support.py` 和引用。
+- `test_managed_instructions.py` 的管理行为用例在 Loom 建立逐项等价测试（M2b 出口），源文件随旧应用在 M7 删除；`test_skill_metadata.py`、`test_skill_lifecycle.py`、`test_trigger_tools.py`、`test_who_am_i.py` 留在内容仓库并更新 `support.py` 和引用。
 - `apps/scripts/skills-quality-check`：改为 skills 根目录的 `scripts/skills-quality-check`；不再要求应用 workspace 或 Loom 可用。
 - `scripts/skills-manager-*`、`start-local.sh`、`preview.sh`、`debug.sh`、`package-macos.sh`：逐个核对调用方，仅删除 Manager 专属入口。
 - `apps/package.json`、workspace、lockfile、tsconfig 及包依赖：消费者迁出后移除；技能自身资源目录里的 `package.json` 不在删除范围。
@@ -122,28 +125,35 @@ G1 包含本地来源与 Git clone、浏览/详情、copy/symlink 安装与卸�
 
 ## 4. 目标架构与契约
 
-建议新增路径，均为待实现设计，不是当前文件清单：
+下表按 `0b63aad` 及 M1b 切片的实际模块记录；标“待新增”的仍为拟定路径。数据模型分散在各模块，未设集中 `models.rs`；没有独立 `service.rs`，桌面 `commands.rs` 与 CLI `cli.rs` 共同调用 repository/installers/instructions/operations，只有 `commands.rs` 依赖 Tauri。
 
 ```text
 Loom
-  src/features/skills/              SkillsPanel、组件、展示状态、请求归属
+  src/features/skills/              SkillsPanel、InstallPanel、InstalledSkills、展示状态与请求归属
   src/features/settings/           设置侧边栏中的 Skills 入口与公共壳
   src/api/skills.ts                 复用现有 tauriClient 的类型化调用
   src-tauri/src/skills/
-    models.rs                      Source / Skill / Target / Operation
+    error.rs                       有类型错误码
+    files.rs                       私有、有界、原子元数据读写
+    coordination.rs                用户级生命周期 lease、writer 锁、PendingTransaction 索引
+    runtime_paths.rs               桌面/CLI 共用库目录与固定协调目录解析
+    repository.rs                  来源库持久化与来源目录解析
+    sources.rs                     GitHub/GitLab URL、transport、身份与旧来源只读映射
+    github_api.rs                  固定主机 API、commit/tree/blob 完整包读取与校验
+    snapshots.rs                   revision 快照发布与校验
+    operations.rs                  长操作记录、取消、Git 进程执行与 HTTP 脱敏日志
     catalog.rs                     扫描、解析、检索、详情
-    sources.rs                     本地、GitHub/GitLab、GitHub API
-    snapshots.rs                   revision 快照、引用与显式更新
-    installers.rs                  安装、卸载、清单与冲突检查
-    instructions.rs                托管注入、wrapper、doctor
-    translation.rs                 provider 与翻译任务
-    repository.rs                  版本化存储、锁、原子写入
-    locks.rs                       跨进程共用 writer 锁与写入校验
-    migration.rs                   旧数据规划、导入、恢复
-    service.rs                     共用用例，不依赖窗口/AppHandle
+    targets.rs                     工具/作用域目标、指令与 wrapper 路径授权
+    package.rs                     技能包状态、指纹、复制与链接
+    transactions.rs                prepare journal、提交、回执与恢复
+    installers.rs                  安装/更新/卸载规划与执行、清单 v2、恢复入口
+    instructions.rs                托管注入、wrapper、共享使用者 ledger、诊断
+    cli.rs、cli/interactive.rs     无窗口 CLI 与 tui/ng 交互
     commands.rs                    Tauri 输入校验与薄封装
-  src-tauri/src/bin/loom-skills.rs  无窗口 CLI，共用上述服务
-  tools/skills-cli/                 skills-linker / tui / ng 兼容入口
+    translation.rs                 待新增（M3）：provider 与翻译任务
+    migration.rs                   待新增（M4）：旧数据规划、导入、恢复
+  src-tauri/src/bin/loom-skills.rs  无窗口 CLI 入口
+  tools/skills-cli/                 skills-linker / tui / ng 启动器
 
 skills
   skills/                          技能包与技能自身运行资源
@@ -291,7 +301,7 @@ skills
 | M2c | M2b | CLI/TUI/ng 兼容及分发 | 否 |
 | M3 | M1a；集成验收要求 M2a | 翻译、复制/分享文本、命令面板 | 否 |
 | M4 | M1b、M2b、M3 的 schema 稳定 | 旧数据导入、接管与回滚 | 否 |
-| M5 | M0；完整出口要求 M2c | 内容质量工具脱离应用 | 否 |
+| M5 | M0；M5-02 出口要求 M2b 等价对照已记录 | 内容质量工具脱离应用 | 否 |
 | M6/G2 | M1b、M2b、M2c、M3、M4、M5，G1 已通过 | 完整替代验收、切换 | 否 |
 | M7 | G2 | 源应用移除、双仓收尾 | 否 |
 
@@ -330,10 +340,10 @@ skills
 
 | 任务 | 文件范围 | 可验证产出 |
 |---|---|---|
-| M2a-01 | `skills/{locks,installers}.rs`、models | 后端目标枚举/路径校验、alias 去重、完整 write set、用户 writer 锁；写入前检查共用 PendingTransaction，未知 target 失败 |
+| M2a-01 | `skills/{coordination,targets,package,installers}.rs` | 后端目标枚举/路径校验、alias 去重、完整 write set、用户 writer 锁；写入前检查共用 PendingTransaction，未知 target 失败 |
 | M2a-02 | installers/repository/operation journal | 新安装 copy/symlink、冲突 fail/skip/显式替换、目标 skills 目录同级、同文件系统的私有 staging/backup（避免被技能发现），manifest 与文件一致；批量逐项结果 |
 | M2a-03 | snapshots/installers | A → 刷新 B 仍使用 A → 显式更新 B；本地 live 清晰标记；删除来源后凭安装记录卸载 |
-| M2a-04 | repository/协调目录/启动恢复 | 在 staging、替换、manifest 写入和索引清除前后故障注入；另一 dataDir 的客户端先恢复或拒绝重叠写入；缺日志/坏索引/未知 schema 不能当成空状态；不留下假 installed |
+| M2a-04 | `skills/{transactions,coordination,installers}.rs`、启动恢复 | 在 staging、替换、manifest 写入和索引清除前后故障注入；另一 dataDir 的客户端先恢复或拒绝重叠写入；缺日志/坏索引/未知 schema 不能当成空状态；不留下假 installed |
 | M2a-05 | Skills 安装面板与状态请求 | 默认 copy、作用域/路径/版本可见；无隐式勾选新目标；切项目/技能时旧响应与旧选择不污染 |
 | M2a-06 | 定向 Rust/前端、`process_supervisor.rs`、`app_update.rs`、桌面和 G1 证据 | Codex/Claude/Amp 目标 fixture、copy/symlink、冲突/卸载/重启、Chat 切页；纯文件 operation guard 与更新延后/拒绝新操作/失败恢复；跨进程 lease 用测试进程验证；至少一个真实 Agent CLI 发现与显式调用 |
 
@@ -350,6 +360,7 @@ skills
 | M1b-01 | sources/snapshots/provider HTTP 封装 | 从默认分支解析一次 commit，树/blob 均绑定该 commit；认证/限流/分页/truncated 明确结果 |
 | M1b-02 | 完整包校验、安装入口 | references、agents、脚本及二进制资源完整物化；不以缺文件的 Markdown 预览结果直接安装 |
 | M1b-03 | 旧来源 fixture/迁移 alias | `github-api`、`server-cache` 和桌面记录映射无丢失；源码中 GitLab clone 用例迁入；SRC-07–08 通过 |
+| M1b-04 | operations/SSH 配置兼容与日志 | SRC-09 保留环境及 core.sshCommand；只在未配置时补 BatchMode；配置读取错误拒绝、诊断不泄露 wrapper 输出 |
 
 出口：API 来源浏览/刷新/安装与错误路径通过；真实 GitHub API 路径单独记录，环境阻塞只阻塞相应能力与 G2。
 
@@ -361,10 +372,10 @@ skills
 |---|---|---|
 | M2b-01 | `skills/instructions.rs`、installers、协调目录 | auto/global 注入和 cron 排除；manual wrapper 与显式调用策略；SharedInstruction 使用者集合与清单共同提交，最后使用者移除才删块；同 marker 内容冲突及坏块拒绝写入 |
 | M2b-02 | doctor/安装 UI/API | current/stale/malformed/missing 等诊断；doctor 不写文件；安装/卸载影响清单在操作前可见 |
-| M2b-03 | 多进程 fixture、locks、共享归属 | Codex/Amp 共享 AGENTS 并发、同技能多使用者部分卸载保块、最后使用者删除、重复安装/版本冲突、反向操作、不同 dataDir 同锁、杀进程解锁全部通过 |
+| M2b-03 | 多进程 fixture、coordination、共享归属 | Codex/Amp 共享 AGENTS 并发、同技能多使用者部分卸载保块、最后使用者删除、重复安装/版本冲突、反向操作、不同 dataDir 同锁、杀进程解锁全部通过 |
 | M2b-04 | journal/恢复测试 | 在技能文件、wrapper、注入、使用者记录和 manifest 各阶段失败；共用索引可发现，共享归属与正文一同恢复或明确逐项待恢复，不覆盖后续用户编辑 |
 
-出口：完整指令行为和安全恢复通过，再启用相应 UI/IPC。将源 `test_managed_instructions.py` 中行为迁为目标测试，并记录等价关系。
+出口：完整指令行为和安全恢复通过，再启用相应 UI/IPC；并在实施证据中记录源 `test_managed_instructions.py` 8 个用例（`test_sync_update_remove_preserve_user_bytes_and_other_blocks`、`test_malformed_block_leaves_file_unchanged`、`test_crlf_and_symlink_are_preserved`、`test_status_does_not_create_files`、`test_unsupported_manifest_blocks_force_install_and_uninstall`、`test_copy_refresh_requires_force_and_preserves_local_edits`、`test_symlink_reinstall_syncs_injection_and_uninstall_retains_user_rules`、`test_unmanaged_conflict_does_not_gain_instructions`）到 Loom 测试的逐项对照：每项写明目标测试名与断言差异；按设计不再适用的行为写明理由和替代保护。对照未记录前，M2b 状态为“功能通过、等价记录待补”，不计入 G2。
 
 ### M2c：CLI/TUI/ng 兼容与分发
 
@@ -376,7 +387,7 @@ skills
 | M2c-02 | skills-linker 参数适配、golden fixture | tools/list/install/uninstall/status/doctor、category/scope/target-dir/skills-root、JSON/退出码；CLI 默认 symlink、桌面 copy |
 | M2c-03 | tui/ng 包装层 | manual 选择、预览、快捷触发文本和重复操作；fzf 缺失可诊断，不在后台自动安装；显式 `--auto-install-fzf` 的去向在 M0 兼容表说明 |
 | M2c-04 | 构建/打包配置、使用文档 | 开发源码入口和随包 CLI 的明确定位/调用方法；移动 `.app` 后可运行，未设置 PATH 也有完整调用路径 |
-| M2c-05 | 双入口对照、locks、更新准入与跨进程验证 | 桌面/CLI 状态一致；实际 CLI 使用共享生命周期 lease，活动时更新延后，更新期间新 CLI 拒绝，失败后恢复；另一 dataDir 的 CLI 可发现待恢复事务；无隐藏窗口或另一套安装实现 |
+| M2c-05 | 双入口对照、coordination、更新准入与跨进程验证 | 桌面/CLI 状态一致；实际 CLI 使用共享生命周期 lease，活动时更新延后，更新期间新 CLI 拒绝，失败后恢复；另一 dataDir 的 CLI 可发现待恢复事务；无隐藏窗口或另一套安装实现 |
 
 `--force` 等旧行为不能被“完全兼容”掩盖安全变更：M0 明确哪些操作仍允许显式替换、哪些旧的未托管删除被拒绝，并更新帮助和测试。迁移期原脚本可保存为 fixture/参考或隔离环境的兼容入口，不与新服务同时管理同一目标；M2c 出口要求 Loom 内只有共用 Rust 服务及薄交互入口；源仓库旧实现保持 v2 写入保护并用于兼容对照，统一在 G2 后的 M7 删除，避免与旧数据接管顺序冲突。
 
@@ -412,7 +423,7 @@ skills
 
 ### M5：技能内容工具脱离 Manager
 
-依赖：M0 的文件映射；内容工具移动可先执行，完整出口要求 M2c 管理测试已迁出。
+依赖：M0 的文件映射；内容工具移动可先执行。M5-02 依赖 M2b 等价对照：Loom 已有等价测试后，内容检查入口（`scripts/skills-quality-check` 与内容测试发现）不再运行管理测试即可关闭；源管理测试文件不在 M5 删除，随旧应用在 M7 删除，避免 G2 依赖 M7。
 
 - [ ] 在 skills 仓库迁移第 3.3 节的内容检查、routing 工具和测试，更新相对路径、`support.py` 与测试发现入口。
 - [ ] 更新 README、AGENTS、skill-authoring、技能中引用的管理命令；需要安装时指向 Loom CLI，内容检查不依赖该 CLI。
@@ -421,7 +432,7 @@ skills
 
 产出：独立内容仓库工具链。出口：元数据、归档完整性、routing 管道和技能自有测试通过；无 Manager 运行依赖。
 
-任务拆分：M5-01 移动工具及 support 导入；M5-02 拆分管理测试/内容测试；M5-03 文档与命令引用；M5-04 干净内容仓库检查与哈希对照。每次移动先修调用方再删除旧入口；过渡包装脚本必须有在 M7 移除的清单。
+任务拆分：M5-01 移动工具及 support 导入；M5-02 内容检查入口排除管理测试并引用 Loom 等价对照（不删除源管理测试）；M5-03 文档与命令引用；M5-04 干净内容仓库检查与哈希对照。每次移动先修调用方再删除旧入口；过渡包装脚本必须有在 M7 移除的清单。
 
 ### M6：完整替代验收与切换（G2）
 
@@ -439,7 +450,7 @@ skills
 
 依赖：M6/G2 验收通过，并具备目标交付可恢复版本。
 
-- [ ] 按映射逐项删除 skills 的旧应用、专属包、测试、启动/打包脚本及无消费者依赖；禁止直接 `rm -rf apps` 跳过核查。
+- [ ] 按映射逐项删除 skills 的旧应用、专属包、测试（含 `test_managed_instructions.py` 等管理测试）、启动/打包脚本及无消费者依赖；禁止直接 `rm -rf apps` 跳过核查。
 - [ ] 扫描活动源码/脚本/文档中的 `skills-manager`、`skills-linker`、旧 `apps/` 引用，逐项区分残留依赖与合法迁移说明/兼容 marker。
 - [ ] 更新源仓库 README、AGENTS 和迁移说明；保留质量入口与归档。旧历史链接按重定位或明确退役处理。
 - [ ] 从干净 skills checkout 再跑内容质量检查；从不含 skills checkout 的环境运行 Loom 构建/启动验证。
@@ -549,7 +560,13 @@ G1 的范围声明不是功能删减：CLI/TUI、翻译和迁移仍在本计划�
 | P1 跨客户端无法发现未完成事务 | v3 第 5.6 节、PendingTransaction；M0-05 探针、M2a-04 恢复、M2c-05 实际 CLI、M6 集成；V-17 | G1 前通过 A 崩溃后另一 dataDir 的 B 恢复或拒绝重叠写入，缺日志/损坏索引拒绝写入，committed 残留只收尾；G2 补实际 CLI 入口证据 |
 | P2 应用更新准入缺少 Skills 验收 | v3 第 5.7 节；M2a-06 桌面与测试进程、M2c-05 实际 CLI、M4-05 迁移/回滚、M6 集成；V-18 | G1 前通过纯文件操作期间更新延后、更新期间拒绝新操作、更新失败恢复准入及跨进程 lease；G2 补实际 CLI 和迁移/回滚证据，使用更新器替身验证 |
 
-以上三项均已纳入正文契约、实施任务和验证矩阵，属于必需验收项。计划补充完成不等于运行验收通过；按第 9.2 节与实施证据逐项回填。V-16 不阻塞不提供自动注入的 G1，但阻塞 G2；V-17、V-18 的核心场景阻塞 G1，实际 CLI 与迁移集成场景阻塞 G2。
+上述 v3 三项补充均已纳入正文契约、实施任务和验证矩阵，属于必需验收项。实施与 Review 时按以下对应关系核对：
+
+- **共享注入块归属**：§5.5 → M0-03、M2b-01/03/04、M4-03 → V-16；检查正文、使用者集合和安装清单一致。阻塞 G2，不阻塞不提供自动注入的 G1。
+- **跨客户端事务发现**：§5.6 → M0-05、M2a-04、M2c-05、M6 → V-17；不同 dataDir 的客户端必须先恢复或拒绝重叠写入。服务级场景阻塞 G1，实际 CLI 集成阻塞 G2。
+- **应用更新准入**：§5.7 → M2a-06、M2c-05、M4-05、M6 → V-18；覆盖纯文件操作、外部 CLI、更新失败与迁移/回滚。桌面及测试进程场景阻塞 G1，实际 CLI 和迁移集成阻塞 G2。
+
+计划补充完成不等于运行验收通过；按第 9.2 节与实施证据逐项回填，不以本文中的验收要求代替通过记录。
 
 “可从 M0 开始”只表示计划已具备执行入口，不表示探针、迁移或任何应用验收已通过。
 
@@ -560,14 +577,17 @@ G1 的范围声明不是功能删减：CLI/TUI、翻译和迁移仍在本计划�
 | 代码与文档盘点 | 已完成只读检查 | 第 2 节源码入口与本文件基线；未运行应用 |
 | M0-01/02/06 | 已执行 | 两仓基线、需求/架构/安全边界更新；源基线测试修复提交 `349d622`，完整检查通过 |
 | M0-03/04/05 | 基础与样本已落地，安装集成待后续阶段 | Skills DTO 双端样本、旧 library/JSON/TSV 合成 fixture、lease/writer/pending 和不可变快照探针；完整安装归属/恢复属于 M2/M4 验收 |
-| M1a-01/02/03/05 | 来源切片通过离线/本机验证 | catalog/repository/snapshots/operations 与 8 个 IPC 已接线；22 项 Skills 测试含真实本地 Git clone/refresh、禁用来源 smudge、取消与重启记录；外网 GitHub/GitLab 实测待后续 |
+| M1a-01/02/03/05 | 来源切片通过离线/本机验证 | catalog/repository/snapshots/operations 与 8 个 IPC 已接线；22 项 Skills 测试含真实本地 Git clone/refresh、禁用来源 smudge、取消与重启记录；外网 GitHub/GitLab 实测待后续（测试/IPC 数为该切片当时计数，当前总数见“应用测试与构建”行） |
 | M1a-04 | 已按用户补充要求改为设置内板块 | 顶层仍 Chat/Settings；Settings 侧栏 SkillsPanel 原生验证本地来源添加、详情/文件、搜索/刷新、重启、移除保留文件、返回 Chat 保留草稿，中英文/深浅主题观察通过 |
-| M2b-01/02/03/04 | 当前托管安装范围出口通过；旧归属迁移归 M4 | auto/global、manual wrapper、只读诊断、使用者 ledger、跨文件事务及多使用者一致更新已接线；独立进程并发、整组 12 个 rename 故障点恢复、原生 A → B 一致更新/卸载保全、临时 HOME 的全局路径通过；真实 CLI 接线按 M2c 复验 |
+| M2a 安装闭环 | 已实现并分项验证，待 G1 综合关闭 | 16 个 Skills IPC、v2 清单、copy/symlink/显式更新/卸载、跨 dataDir 事务恢复、安装与 updater lease 接线；原生 5 次规划、真实 Codex 发现/调用通过；备份避开技能发现且 Git 忽略 |
+| M2b-01/02/03/04 | 功能与 8 项等价对照通过；旧归属迁移归 M4 | auto/global、manual wrapper、只读诊断、使用者 ledger、跨文件事务及多使用者一致更新已接线；独立进程并发、整组 12 个 rename 故障点恢复、原生 A → B 一致更新/卸载保全、临时 HOME 的全局路径通过；真实 CLI 接线按 M2c 复验 |
 | M2c-01–05 | 当前保留能力出口通过 | CLI/TUI/ng 同一 Rust 服务；真实 fzf 预览/重复安装卸载、自定义含空格/中文路径取消、搬移后的启动器、25 项真实目录身份/分类对照、CLI → 桌面 → CLI 交接、另一 dataDir 的真实 CLI 恢复通过；fzf 显式安装使用受控替身，未下载真实软件；旧源实现仍按 G2/M7 退役 |
 | M5-01/03/04 | 内容独立化切片通过 | 源提交 `fd7a4ec`；隔离副本无 apps/Node/Tauri/Loom 的 32 项内容测试、7 项旧管理测试通过，272 个技能/归档文件哈希不变 |
-| M5-02、M5 总出口 | 未完成 | 管理测试仍在源项目，等待 M2c；旧路径转发入口留到 M7 |
-| M2a 安装闭环 | 已实现并分项验证，待 G1 综合关闭 | 16 个 Skills IPC、v2 清单、copy/symlink/显式更新/卸载、跨 dataDir 事务恢复、安装与 updater lease 接线；原生 5 次规划、真实 Codex 发现/调用通过；备份避开技能发现且 Git 忽略 |
-| 其余实施；G1/G2 | 未完成/未验收 | G1 已补真实本地 Git 的固定安装版本全链与更新器失败准入回归，仍待视觉矩阵/无源码访问验收；M1b/M2b/M2c/M3/M4 及源应用退役待完成，详见实施证据 |
+| M5-02、M5 总出口 | 内容独立出口通过 | 8 项源管理测试已逐项映射目标测试与安全/doctor 差异；根内容入口不运行管理测试。新隔离副本 32 项内容测试、326 个管道用例通过；271 个受管技能/归档哈希不变（原 272 记录含未受管 .DS_Store）；源管理测试与旧转发入口仍留到 M7 |
+| 其余实施；G1/G2 | 未完成/未验收 | G1 已补真实本地 Git 的固定安装版本全链与更新器失败准入回归，仍待视觉矩阵、无源码访问验收、外网 GitHub/GitLab 实测；M3/M4、M6/G2 与 M7 源应用退役待完成；M1b API/SSH 与 M2b/M5 本轮证据见 2026-10-22 验收记录，详见实施证据 |
+| M1b-01–04 | API 切片与 SSH 配置兼容通过 | 固定 commit 完整包、默认分支/旧模式映射、错误/限流/取消及 SSH 配置 7 场景；真实匿名 API 与原生临时安装/来源移除后卸载通过；私有认证及外网 Git clone 另按矩阵验收 |
+| v5 本轮工程门禁 | 通过，整体未完成 | `pnpm check` 前端 111/Rust 246（23 项忽略）；最终 release app bundle 通过；源测试 8 项对照和内容隔离证据见 [本轮验收](../../dogfood/2026-10-22-skills-migration-review.md) |
+| v4 进度审查修订 | 已修正计划 | 依据 `0b63aad` 两轮审查：M5/M7 依赖、M2b 等价对照要求、状态行、§4 实际模块表、M2a-01/04 文件范围、SRC-09、本表过期行；仅文档修改，未运行应用测试 |
 | v3 文档一致性、相对链接、索引排序 | 通过 | 链接/锚点、索引唯一性与倒序、章节引用、11 阶段/50 任务、SRC-01–10/V-01–18、代码围栏及空白检查通过；人工核对三项补充的契约—任务—验证—门槛对应关系，`git diff --check` 通过 |
 | 应用测试与构建 | 分项通过，详见证据 | M2c 收尾完整 check：前端 109/Rust 230；真实 fzf 和真实 CLI 恢复两个 opt-in 检查另显式通过；release no-bundle 与 debug app bundle 通过；release app bundle、搬移后独立 cwd 原生运行通过；旧 Manager 版本保护后完整 check：应用 99/Rust 25/内容 32/管理 8 |
 | 安装/真实服务/迁移验收 | 安装分项通过，整体未完成 | 临时项目 copy/更新/卸载与孤立 symlink 卸载、真实 Codex 调用通过；外网来源、真实翻译 provider、旧数据迁移和整体 G1/G2 未验收 |

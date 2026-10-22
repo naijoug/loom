@@ -40,6 +40,8 @@ pub struct OperationRecord {
     pub error: Option<SkillsError>,
     #[serde(default)]
     pub executions: Vec<ExecutionRecord>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub requests: Vec<HttpRequestRecord>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -54,9 +56,45 @@ pub struct ExecutionRecord {
     pub error: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HttpRequestRecord {
+    pub method: String,
+    pub url: String,
+    pub started_at_ms: u128,
+    pub finished_at_ms: Option<u128>,
+    pub status: Option<u16>,
+    pub error: Option<String>,
+}
+
 #[derive(Default)]
 struct GitRunner {
     extra_args: Vec<String>,
+    environment: Vec<(String, Option<std::ffi::OsString>)>,
+}
+impl GitRunner {
+    fn has_environment(&self, key: &str) -> bool {
+        self.environment
+            .iter()
+            .rev()
+            .find(|(name, _)| name == key)
+            .map(|(_, value)| value.is_some())
+            .unwrap_or_else(|| std::env::var_os(key).is_some())
+    }
+    fn configure_environment(&self, command: &mut Command) {
+        for (key, value) in &self.environment {
+            if let Some(value) = value {
+                command.env(key, value);
+            } else {
+                command.env_remove(key);
+            }
+        }
+    }
+}
+#[derive(Default)]
+struct GitPolicy {
+    default_ssh: bool,
+    missing_config_ok: bool,
 }
 
 struct ReaderTask(tokio::task::JoinHandle<std::io::Result<Vec<u8>>>);
@@ -119,6 +157,7 @@ impl Operation {
                 updated_at_ms: now,
                 error: None,
                 executions: Vec::new(),
+                requests: Vec::new(),
             },
             _lifecycle: lifecycle,
             _admission: admission,
@@ -244,6 +283,54 @@ async fn drain(mut reader: impl tokio::io::AsyncRead + Unpin) -> std::io::Result
 }
 
 async fn git(op: &mut Operation, cwd: &Path, args: &[&str], runner: &GitRunner) -> Result<String> {
+    let ssh_transport = args
+        .iter()
+        .any(|arg| arg.starts_with("git@") || arg.starts_with("ssh://"));
+    let configured = ["GIT_SSH_COMMAND", "GIT_SSH", "GIT_SSH_VARIANT"]
+        .iter()
+        .any(|key| runner.has_environment(key));
+    let default_ssh = if ssh_transport && !configured {
+        // Query names only, never the user's command value or private key flags.
+        let configured = git_recorded(
+            op,
+            cwd,
+            &[
+                "config",
+                "--name-only",
+                "--get-regexp",
+                r"^core\.sshcommand$",
+            ],
+            runner,
+            &GitPolicy {
+                default_ssh: false,
+                missing_config_ok: true,
+            },
+        )
+        .await?;
+        configured.is_empty()
+    } else {
+        false
+    };
+    git_recorded(
+        op,
+        cwd,
+        args,
+        runner,
+        &GitPolicy {
+            default_ssh,
+            missing_config_ok: false,
+        },
+    )
+    .await
+}
+
+async fn git_recorded(
+    op: &mut Operation,
+    cwd: &Path,
+    args: &[&str],
+    runner: &GitRunner,
+    policy: &GitPolicy,
+) -> Result<String> {
     op.record.executions.push(ExecutionRecord {
         program: "git".into(),
         args: args
@@ -257,7 +344,7 @@ async fn git(op: &mut Operation, cwd: &Path, args: &[&str], runner: &GitRunner) 
         error: None,
     });
     op.save()?;
-    let result = git_raw(op, cwd, args, runner).await;
+    let result = git_raw(op, cwd, args, runner, policy).await;
     let execution = op.record.executions.last_mut().unwrap();
     execution.finished_at_ms = Some(crate::models::now_ms());
     execution.error = result
@@ -273,6 +360,7 @@ async fn git_raw(
     cwd: &Path,
     args: &[&str],
     runner: &GitRunner,
+    policy: &GitPolicy,
 ) -> Result<String> {
     op.check_cancelled()?;
     let run_id = crate::models::IdGenerator::default().next("skills-git");
@@ -280,6 +368,10 @@ async fn git_raw(
         .begin_operation()
         .map_err(|e| SkillsError::new(ErrorCode::Updating, e))?;
     let mut command = Command::new("git");
+    runner.configure_environment(&mut command);
+    if policy.default_ssh {
+        command.env("GIT_SSH_COMMAND", "ssh -oBatchMode=yes");
+    }
     command
         .args(&runner.extra_args)
         .args([
@@ -301,7 +393,6 @@ async fn git_raw(
         .args(args)
         .current_dir(cwd)
         .env("GIT_TERMINAL_PROMPT", "0")
-        .env("GIT_SSH_COMMAND", "ssh -oBatchMode=yes")
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -350,15 +441,26 @@ async fn git_raw(
         .map_err(|_| SkillsError::new(ErrorCode::Timeout, "Git error output did not close"))?
         .map_err(|_| SkillsError::invalid("Git output task failed"))??;
     let status = result?;
-    if !status.success() {
-        return Err(SkillsError::new(
-            ErrorCode::SourceUnavailable,
-            format!(
-                "Git failed ({}): {}",
-                status,
-                crate::agents::redact_sensitive_text(&String::from_utf8_lossy(&stderr))
-            ),
-        ));
+    if !(status.success() || policy.missing_config_ok && status.code() == Some(1)) {
+        let diagnostic = String::from_utf8_lossy(&stderr).to_ascii_lowercase();
+        let message = if diagnostic.contains("host key verification failed")
+            || diagnostic.contains("remote host identification has changed")
+        {
+            "SSH host verification failed; review known_hosts without disabling verification"
+        } else if diagnostic.contains("permission denied")
+            || diagnostic.contains("authentication failed")
+        {
+            "Git authentication failed; check the configured credential or SSH identity"
+        } else if diagnostic.contains("could not resolve host")
+            || diagnostic.contains("could not resolve hostname")
+        {
+            "Git host lookup failed"
+        } else {
+            "Git command failed; check repository access and local Git configuration"
+        };
+        // Arbitrary SSH wrappers may print secrets; persist only a controlled
+        // diagnostic and the already-recorded exit status, never raw stderr.
+        return Err(SkillsError::new(ErrorCode::SourceUnavailable, message));
     }
     Ok(String::from_utf8_lossy(&stdout).trim().into())
 }
@@ -442,6 +544,7 @@ async fn import_using(
                 id: source.source_id.clone(),
                 name: source.namespace.clone(),
                 kind: SourceKind::Git,
+                default_branch: None,
                 local_path: None,
                 git: Some(source.clone()),
                 revision: Some(revision),
@@ -515,6 +618,7 @@ mod tests {
                 "-c".into(),
                 format!("url.{}.insteadOf={}", remote.display(), source.clone_url),
             ],
+            ..Default::default()
         };
         let repo = Repository::open(&f.0.join("data"), &f.0.join("coord")).unwrap();
         let op = Operation::begin(&repo, &source.source_id, "import").unwrap();
@@ -576,6 +680,7 @@ mod tests {
                 "-c".into(),
                 format!("url.{}.insteadOf={}", remote.display(), source.clone_url),
             ],
+            ..Default::default()
         };
         let repo = Repository::open(&f.0.join("data"), &f.0.join("coord")).unwrap();
         let context = TargetContext::new(&f.0.join("home"), Some(&f.0.join("project"))).unwrap();
@@ -810,6 +915,7 @@ mod tests {
                 "-c".into(),
                 "filter.untrusted.required=true".into(),
             ],
+            ..Default::default()
         };
         import_using(repo.clone(), op, source, None, |_| {}, runner).await;
         let record = list(&repo).unwrap().remove(0);
@@ -839,5 +945,127 @@ mod tests {
         drop(op);
         assert_eq!(list(&repo).unwrap()[0].phase, Phase::Interrupted);
         assert!(list(&repo).unwrap()[0].sequence > sequence);
+    }
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn ssh_configuration_is_preserved_and_default_is_only_used_when_unconfigured() {
+        use std::os::unix::fs::PermissionsExt;
+        for mode in [
+            "environment",
+            "config",
+            "binary",
+            "variant",
+            "default",
+            "invalid-config",
+            "failed-command",
+        ] {
+            let f = Fixture::new();
+            let remote = f.0.join("remote");
+            fs::create_dir(&remote).unwrap();
+            local_git(&remote, &["init", "-q"]);
+            fs::write(
+                remote.join("SKILL.md"),
+                "---\nname: ssh-fixture\n---\n# SSH fixture\n",
+            )
+            .unwrap();
+            local_git(&remote, &["add", "."]);
+            local_git(&remote, &["commit", "-qm", "fixture"]);
+            let bin = f.0.join("fake bin");
+            fs::create_dir(&bin).unwrap();
+            let script = bin.join("ssh");
+            fs::write(
+                &script,
+                r#"#!/bin/sh
+for arg in "$@"; do [ "$arg" = '-G' ] && exit 0; done
+printf '%s\n' "$@" >> "$LOOM_SSH_FIXTURE_LOG"
+if [ "$LOOM_SSH_FIXTURE_MODE" = 'failed-command' ]; then echo 'fixture-ssh-secret' >&2; exit 19; fi
+exec git -c core.hooksPath=/dev/null upload-pack "$LOOM_SSH_FIXTURE_REPO"
+"#,
+            )
+            .unwrap();
+            fs::set_permissions(&script, fs::Permissions::from_mode(0o700)).unwrap();
+            let config = f.0.join("gitconfig");
+            if mode == "config" {
+                fs::write(
+                    &config,
+                    format!(
+                        "[core]\n sshCommand = '{}' --identity-config-secret\n",
+                        script.display()
+                    ),
+                )
+                .unwrap();
+            } else if mode == "invalid-config" {
+                fs::write(&config, "[core\nnot-valid\n").unwrap();
+            } else {
+                fs::write(&config, "").unwrap();
+            }
+            let mut path = vec![bin.clone()];
+            path.extend(std::env::split_paths(
+                &std::env::var_os("PATH").unwrap_or_default(),
+            ));
+            let mut runner = GitRunner {
+                extra_args: Vec::new(),
+                environment: vec![
+                    ("PATH".into(), Some(std::env::join_paths(path).unwrap())),
+                    ("GIT_CONFIG_GLOBAL".into(), Some(config.into_os_string())),
+                    ("GIT_CONFIG_NOSYSTEM".into(), Some("1".into())),
+                    ("GIT_CONFIG_COUNT".into(), None),
+                    ("GIT_CONFIG_PARAMETERS".into(), None),
+                    ("GIT_SSH_COMMAND".into(), None),
+                    ("GIT_SSH".into(), None),
+                    ("GIT_SSH_VARIANT".into(), None),
+                    (
+                        "LOOM_SSH_FIXTURE_LOG".into(),
+                        Some(f.0.join("ssh-args").into_os_string()),
+                    ),
+                    (
+                        "LOOM_SSH_FIXTURE_REPO".into(),
+                        Some(remote.into_os_string()),
+                    ),
+                    ("LOOM_SSH_FIXTURE_MODE".into(), Some(mode.into())),
+                ],
+            };
+            match mode {
+                "environment" | "failed-command" => runner.environment.push((
+                    "GIT_SSH_COMMAND".into(),
+                    Some(format!("'{}' --identity-environment-secret", script.display()).into()),
+                )),
+                "binary" => runner
+                    .environment
+                    .push(("GIT_SSH".into(), Some(script.into_os_string()))),
+                "variant" => runner
+                    .environment
+                    .push(("GIT_SSH_VARIANT".into(), Some("ssh".into()))),
+                _ => (),
+            }
+            let source = normalize_git_url("git@gitlab.com:fixture/nested/skills.git").unwrap();
+            let repo = Repository::open(&f.0.join("data"), &f.0.join("coord")).unwrap();
+            let op = Operation::begin(&repo, &source.source_id, "import").unwrap();
+            import_using(repo.clone(), op, source, None, |_| {}, runner).await;
+            let record = list(&repo).unwrap().remove(0);
+            let encoded = serde_json::to_string(&record).unwrap();
+            assert!(!encoded.contains("identity-environment-secret"));
+            assert!(!encoded.contains("identity-config-secret"));
+            assert!(!encoded.contains("fixture-ssh-secret"));
+            if matches!(mode, "invalid-config" | "failed-command") {
+                assert_eq!(record.phase, Phase::Failed, "{mode}");
+                assert!(repo.load().unwrap().sources.is_empty());
+                continue;
+            }
+            assert_eq!(record.phase, Phase::Committed, "{mode}: {:?}", record.error);
+            let args = fs::read_to_string(f.0.join("ssh-args")).unwrap();
+            assert_eq!(
+                args.contains("-oBatchMode=yes"),
+                mode == "default",
+                "{mode}: {args}"
+            );
+            if mode == "environment" {
+                assert!(args.contains("--identity-environment-secret"));
+            }
+            if mode == "config" {
+                assert!(args.contains("--identity-config-secret"));
+            }
+            assert!(!args.contains("StrictHostKeyChecking=no"));
+        }
     }
 }

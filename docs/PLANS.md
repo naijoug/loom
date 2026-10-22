@@ -3,7 +3,8 @@
 ## 2026-10-21
 
 - 06:12-skills-module-migration.md
-  > （实施中；M2b/M2c 当前范围验收通过，G1/G2 未整体验收）Settings → Skills 与 CLI/TUI/ng 共用来源、安装、指令和恢复服务；真实 fzf、25 项目录兼容、随包搬移、CLI/桌面双向交接及跨 dataDir 的真实 CLI 恢复通过。完整 check 前端 109/Rust 230，另两项 opt-in 真实环境检查通过。继续 M1b/M3/M4 与 G1 视觉/独立运行余项；源旧实现保持 v2 写保护，统一在 G2 后的 M7 移除。证据见 dogfood/2026-10-21-skills-migration.md，用法见 skills-cli.md。
+  > 2026-10-22 补充复核：共享注入块归属、跨客户端未完成事务发现、应用更新准入已列为必需验收项；契约、任务、V-16–18 与 G1/G2 门槛对应关系见计划 §9.1。文档补充不代表验收通过。
+  > （实施中；v5 已完成 M1b API/SSH、M2b 源 8 项测试等价记录与 M5 内容独立出口；G1/G2 未整体验收）Settings → Skills 与 CLI/TUI/ng 共用服务；真实匿名 API 与原生临时安装/孤立卸载通过，SSH 用户配置保留，完整 check 前端 111/Rust 246、release app bundle 通过。继续 M3/M4、G1 视觉/无源码/外网 Git 余项及 M6/G2；源旧实现、管理测试与转发入口统一在 G2 后的 M7 移除。证据见 dogfood/2026-10-22-skills-migration-review.md，用法见 skills-cli.md。
 
 ## 2026-10-20
 

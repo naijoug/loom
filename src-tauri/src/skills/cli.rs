@@ -208,6 +208,9 @@ fn local_identity(root: &Path) -> Result<(String, PathBuf)> {
 }
 fn item(root: &Path, skill: &catalog::SkillSummary) -> Result<Item> {
     let detail = catalog::detail(&skill.source_id, root, &skill.relative_path)?;
+    item_from_detail(skill, detail)
+}
+fn item_from_detail(skill: &catalog::SkillSummary, detail: catalog::SkillDetail) -> Result<Item> {
     let front = catalog::frontmatter(&detail.content)?.0;
     let path = skill
         .relative_path
@@ -227,7 +230,9 @@ fn item(root: &Path, skill: &catalog::SkillSummary) -> Result<Item> {
         .unwrap_or_else(|| leaf.clone());
     let category = catalog::activation_category(&skill.relative_path, &detail.manifest);
     let group = if category == "manual" {
-        path.strip_prefix("manual/")
+        path.strip_prefix("skills/")
+            .unwrap_or(&path)
+            .strip_prefix("manual/")
             .and_then(|p| p.split('/').next())
             .map(str::to_owned)
             .or_else(|| detail.manifest.get("manual_group").cloned())
@@ -283,8 +288,7 @@ fn catalog_items(repo: &Repository, options: &Options) -> Result<(Vec<Item>, Vec
     } else {
         let library = repo.list()?;
         for skill in library.skills {
-            let source = repo.get_source(&skill.source_id)?;
-            items.push(item(&repo.source_directory(&source)?, &skill)?);
+            items.push(item_from_detail(&skill, repo.detail(&skill.id)?)?);
         }
         for issue in library.issues {
             issues.push(serde_json::to_value(issue).unwrap());
@@ -349,14 +353,21 @@ fn format_output(value: Value, json_mode: bool, exit_code: i32) -> Result<Output
             .iter()
             .map(|r| {
                 format!(
-                    "{}: {}{}\n",
+                    "{}: {}{}{}\n",
                     r["skill"].as_str().unwrap_or(""),
                     r["status"].as_str().unwrap_or(""),
                     r["reason"]
                         .as_str()
                         .filter(|s| !s.is_empty())
                         .map(|s| format!(" ({s})"))
-                        .unwrap_or_default()
+                        .unwrap_or_default(),
+                    if r.get("update_available").and_then(Value::as_bool) == Some(true) {
+                        " [source update available]"
+                    } else if r.get("source_available").and_then(Value::as_bool) == Some(false) {
+                        " [source unavailable]"
+                    } else {
+                        ""
+                    }
                 )
             })
             .collect()
@@ -606,6 +617,7 @@ pub fn run_with_paths(options: &Options, paths: &RuntimePaths) -> Result<Output>
             }
         } else {
             let inventory = installers::inventory(&repo, &context)?;
+            let version = current_source_version(&repo, options, &selected)?;
             for target in &targets {
                 let entry = inventory.iter().find(|s| {
                     s.target.id == target.id
@@ -624,6 +636,16 @@ pub fn run_with_paths(options: &Options, paths: &RuntimePaths) -> Result<Output>
                     .map(|s| s.destination.clone())
                     .unwrap_or_else(|| target.skills_dir.join(&selected.id));
                 let state = package::state(&destination)?;
+                let update_available =
+                    entry
+                        .and_then(|e| e.installation.as_ref())
+                        .and_then(|installed| {
+                            version.as_ref().map(|(revision, digest)| {
+                                installed.revision != *revision
+                                    || (installed.mode == InstallMode::Copy
+                                        && installed.source_digest != *digest)
+                            })
+                        });
                 if options.command == "status" {
                     let status = match state {
                         EntryState::Missing => "missing",
@@ -631,7 +653,7 @@ pub fn run_with_paths(options: &Options, paths: &RuntimePaths) -> Result<Output>
                         EntryState::Directory { .. } => "directory",
                         EntryState::File { .. } => "file",
                     };
-                    results.push(json!({"skill":selected.id,"status":status,"reason":format!("managed={}",entry.is_some()),"target_id":target.id,"installation":entry.and_then(|e|e.installation.as_ref()),"diagnostics":entry.map(|e|&e.instruction_checks)}));
+                    results.push(json!({"skill":selected.id,"status":status,"reason":format!("managed={}",entry.is_some()),"target_id":target.id,"installation":entry.and_then(|e|e.installation.as_ref()),"diagnostics":entry.map(|e|&e.instruction_checks),"update_available":update_available,"source_available":version.is_some()}));
                 } else {
                     let checks = entry
                         .map(|s| s.instruction_checks.as_slice())
@@ -653,7 +675,7 @@ pub fn run_with_paths(options: &Options, paths: &RuntimePaths) -> Result<Output>
                         "not-applicable"
                     };
                     failed |= !["current", "not-applicable"].contains(&status);
-                    results.push(json!({"skill":selected.id,"status":status,"target_id":target.id,"diagnostics":checks}));
+                    results.push(json!({"skill":selected.id,"status":status,"target_id":target.id,"diagnostics":checks,"update_available":update_available,"source_available":version.is_some()}));
                 }
             }
         }
@@ -664,6 +686,29 @@ pub fn run_with_paths(options: &Options, paths: &RuntimePaths) -> Result<Output>
         if failed { 1 } else { 0 },
     )
 }
+fn current_source_version(
+    repo: &Repository,
+    options: &Options,
+    item: &Item,
+) -> Result<Option<(Option<String>, String)>> {
+    if let Some(root) = &options.skills_root {
+        let root = catalog::scan_root(root)?;
+        let relative = if item.path.is_empty() {
+            "SKILL.md".into()
+        } else {
+            format!("{}/SKILL.md", item.path)
+        };
+        let file = catalog::resolve_file(&root, &relative)?;
+        return Ok(Some((
+            None,
+            package::tree_digest(file.parent().unwrap(), true)?,
+        )));
+    }
+    Ok(installers::resolve(repo, &item.source_skill_id)
+        .ok()
+        .map(|source| (source.revision, source.digest)))
+}
+
 fn uninstall(
     repo: &Repository,
     context: &TargetContext,

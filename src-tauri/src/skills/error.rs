@@ -16,6 +16,8 @@ pub enum ErrorCode {
     Cancelled,
     Timeout,
     SourceUnavailable,
+    AuthRequired,
+    RateLimited,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

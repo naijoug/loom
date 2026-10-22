@@ -134,6 +134,14 @@ pub fn resolve_file(root: &Path, relative: &str) -> Result<PathBuf> {
 pub fn scan(source_id: &str, directory: &Path) -> Result<Catalog> {
     files::validate_id(source_id)?;
     let root = scan_root(directory)?;
+    scan_repository(source_id, &root)
+}
+
+/// GitHub API identities retain full repository-relative paths, including
+/// sources that have both a conventional skills/ folder and other packages.
+pub fn scan_repository(source_id: &str, directory: &Path) -> Result<Catalog> {
+    files::validate_id(source_id)?;
+    let root = directory.canonicalize()?;
     let mut result = Catalog::default();
     let mut count = 0;
     walk(&root, &root, 0, &mut count, &mut |path| {
@@ -198,6 +206,11 @@ fn walk(
 
 pub fn detail(source_id: &str, directory: &Path, relative: &str) -> Result<SkillDetail> {
     let root = scan_root(directory)?;
+    detail_repository(source_id, &root, relative)
+}
+
+pub fn detail_repository(source_id: &str, directory: &Path, relative: &str) -> Result<SkillDetail> {
+    let root = directory.canonicalize()?;
     let path = resolve_file(&root, relative)?;
     if path.file_name().is_none_or(|name| name != "SKILL.md") {
         return Err(SkillsError::invalid("Expected a SKILL.md entry"));
@@ -289,12 +302,7 @@ fn read_summary(source_id: &str, root: &Path, relative: &str) -> Result<SkillSum
                 .collect::<Vec<_>>()
                 .join(" ")
         });
-    let dirs: Vec<&str> = relative.split('/').collect();
-    let category = if dirs.len() > 2 {
-        dirs[..dirs.len() - 2].join("/")
-    } else {
-        "uncategorized".into()
-    };
+    let category = category_for(relative);
     Ok(SkillSummary {
         id: encode_id(source_id, relative),
         source_id: source_id.into(),
@@ -423,9 +431,29 @@ pub fn decode_id(id: &str) -> Result<(String, String)> {
     Ok((decode(source)?, decode(relative)?))
 }
 
+/// Preserve the old Manager's display category while retaining full source IDs.
+pub fn category_for(relative: &str) -> String {
+    let relative = relative.strip_prefix("skills/").unwrap_or(relative);
+    let mut parts = relative.split('/').collect::<Vec<_>>();
+    parts.pop();
+    if parts.len() > 1 {
+        parts.pop();
+    }
+    if parts.is_empty() {
+        "uncategorized".into()
+    } else {
+        parts.join("/")
+    }
+}
+
 /// Activation policy shared by instruction management and CLI filtering.
 pub fn activation_category(relative: &str, metadata: &BTreeMap<String, String>) -> String {
-    let first = relative.split('/').next().unwrap_or("");
+    let first = relative
+        .strip_prefix("skills/")
+        .unwrap_or(relative)
+        .split('/')
+        .next()
+        .unwrap_or("");
     if ["global", "auto", "manual", "cron"].contains(&first) {
         return first.into();
     }
