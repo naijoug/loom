@@ -45,6 +45,14 @@ const COMMANDS: &[&str] = &[
     "skills_refresh_source",
     "skills_list_operations",
     "skills_cancel_operation",
+    "skills_list_install_targets",
+    "skills_get_install_status",
+    "skills_list_installations",
+    "skills_plan_install",
+    "skills_plan_uninstall",
+    "skills_apply_install",
+    "skills_list_pending",
+    "skills_recover_installation",
 ];
 const EVENTS: &[&str] = &[
     "loom-update-state",
@@ -117,6 +125,13 @@ fn persisted_model_samples_round_trip_through_rust_types() {
     assert_model_sample::<crate::agent_diagnostics::AgentDiagnostic>(samples, "agentDiagnostic");
     assert_model_sample::<crate::skills::repository::LibraryView>(samples, "skillsLibrary");
     assert_model_sample::<crate::skills::operations::OperationRecord>(samples, "skillsOperation");
+    assert_model_sample::<crate::skills::targets::InstallTarget>(samples, "skillsInstallTarget");
+    assert_model_sample::<crate::skills::installers::Installation>(samples, "skillsInstallation");
+    assert_model_sample::<crate::skills::installers::InstallPlan>(samples, "skillsInstallPlan");
+    assert_model_sample::<crate::skills::installers::InstallReceipt>(
+        samples,
+        "skillsInstallReceipt",
+    );
 }
 #[test]
 fn chat_send_requires_a_client_request_identity() {

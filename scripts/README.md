@@ -11,7 +11,7 @@ scripts/debug.sh stop
 
 固定端口 1420。Web 合成预览地址为 `http://127.0.0.1:1420/?fixture=simple-chat`；合成项目和消息只用于 Vite 开发态，不写入真实项目或调用模型。追加 `&cards=1` 会多出一个“Inline card preview”会话（一张有效卡片、一张回退卡片），需在设置“实验”中打开内联卡片才渲染为卡片；默认 fixture 不变，`smoke:visual` 不受影响。日志为 `/tmp/loom-preview-vite.log`，PID 为 `/tmp/loom-preview-vite.pid`；桌面 PID 提示文件为 `/tmp/loom-tauri-dev.pid`。
 
-Skills 原生验收可先用 `pnpm tauri build --debug --bundles app` 构建，再通过 `LOOM_PREVIEW_BINARY=/absolute/repo/src-tauri/target/debug/bundle/macos/Loom.app/Contents/MacOS/loom scripts/debug.sh desktop` 启动准确的本地包；仅接受本仓库 target 下的 Loom.app，不覆盖系统安装版本。`LOOM_SKILLS_DATA_DIR=/absolute/temporary/data` 隔离技能库，协调锁域仍使用当前用户固定目录。开始前及结束后照常 `scripts/debug.sh stop`。这个入口用于解决原生自动化按名称误选旧安装包的问题，不改变应用名或标识。
+Skills 原生验收可先用 `pnpm tauri build --debug --bundles app` 构建，再通过 `LOOM_PREVIEW_BINARY=/absolute/repo/src-tauri/target/debug/bundle/macos/Loom.app/Contents/MacOS/loom scripts/debug.sh desktop` 启动准确的本地包；仅接受本仓库 target 下的 Loom.app，不覆盖系统安装版本。`LOOM_SKILLS_DATA_DIR=/absolute/temporary/data` 隔离技能库，`LOOM_PROFILE_DIR=/absolute/temporary/profile` 另行隔离设置、Agent 配置和最近项目；未显式设置技能库时使用该 profile 的 skills 子目录。两个变量均不改变 HOME、全局安装目标或用户固定协调锁域；原生安装验收仅选择临时项目目标。开始前及结束后照常 `scripts/debug.sh stop`。这个入口用于解决原生自动化按名称误选旧安装包的问题，不改变应用名或标识。该入口也接受复制到本仓库 target 下的 release Loom.app，并从其 Contents/MacOS 启动，便于验证不依赖源码工作目录。
 
 | 命令 | 范围 |
 |---|---|

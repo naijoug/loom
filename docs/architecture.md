@@ -6,7 +6,7 @@
 
 Task/Board/Planning 的 UI、命令及独占模块已删除。`crates/`、`packages/`、`src/workbench/`、`src-tauri/src/workbench/` 保留冻结；默认应用不挂载这些模块，也不依赖 Bun 或 SDK worker。
 
-Skills 模块自 2026-10-21 开始按 [迁移计划](plans/2026-10-21/06:12-skills-module-migration.md) 实施。用户已明确入口位于 Settings 侧边栏，顶层仍为 Chat / Settings。当前已接通只读管理面板、本地目录与 Git 来源、固定快照和操作记录；工具安装及完整迁移仍待实施。契约与状态见 [Skills 契约](architecture/skills-contracts.md)，不挂载冻结 Workbench。
+Skills 模块自 2026-10-21 开始按 [迁移计划](plans/2026-10-21/06:12-skills-module-migration.md) 实施。用户已明确入口位于 Settings 侧边栏，顶层仍为 Chat / Settings。当前已接通本地/Git 来源、固定快照、操作记录，以及 copy/symlink 安装、显式更新/卸载和事务恢复；完整替代仍待后续阶段。契约与状态见 [Skills 契约](architecture/skills-contracts.md)，不挂载冻结 Workbench。
 
 ## 生产模块
 
@@ -18,7 +18,7 @@ Skills 模块自 2026-10-21 开始按 [迁移计划](plans/2026-10-21/06:12-skil
 | `ChatComposer` / `AgentPicker` / `ModeSwitch` | 发送、停止、IME 保护、斜杠命令、模式和 Agent 选择 |
 | `ChatTranscript` / `ToolCallCard` / `MarkdownView` | 纯文本安全渲染、工具 ID 配对投影、差异预览 |
 | `src/i18n/` | 英文源字典、受类型约束的简体中文、locale 持久化 |
-| `src/features/settings/SettingsPage.tsx` / `src/features/skills/SkillsPanel.tsx` | 设置侧边栏 Skills 板块，来源/搜索/详情/文件与操作状态；设置切换保留 Chat 挂载 |
+| `src/features/settings/SettingsPage.tsx` / `src/features/skills/SkillsPanel.tsx` | 设置侧边栏 Skills 板块，来源/搜索/详情/文件、安装到工具、已安装清单和恢复状态；设置切换保留 Chat 挂载 |
 | `skills/{catalog,repository,snapshots,operations,commands}.rs` | 有界扫描、来源登记、不可变快照、受控 Git 子进程与 typed IPC；来源移除只取消登记 |
 | `agents/config.rs` / `agent_diagnostics.rs` | PATH 优先、通用安装目录、命令覆盖、限时版本探测与能力声明 |
 | `agent_adapter.rs` / `chat_context.rs` | CLI 参数、权限、原生续聊和有界历史重放 |

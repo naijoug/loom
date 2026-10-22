@@ -190,3 +190,13 @@ fn old_percent_encoded_id_roundtrips_and_invalid_ids_fail() {
         assert!(catalog::decode_id(id).is_err());
     }
 }
+
+#[test]
+fn empty_conventional_skills_directory_does_not_hide_other_packages() {
+    let f = Fixture::new();
+    fs::create_dir(f.0.join("skills")).unwrap();
+    skill(&f.0, "manual/demo", "demo", "Visible outside empty folder");
+    let result = catalog::scan("src-fixture", &f.0).unwrap();
+    assert_eq!(result.skills.len(), 1);
+    assert_eq!(result.skills[0].relative_path, "manual/demo/SKILL.md");
+}

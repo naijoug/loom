@@ -1,4 +1,10 @@
 import type { SkillsLibrary, SkillsOperation } from "../../api/skills";
+import type { MessageKey } from "../../i18n/en";
+
+export function operationActionKey(action: string): MessageKey {
+  const keys: Record<string, MessageKey> = { import: "skillsImport", refresh: "skillsRefresh", install: "skillsInstall", uninstall: "skillsUninstall", recover: "skillsRecover" };
+  return keys[action] ?? "skillsSourceOperation";
+}
 
 export function visibleSkills(library: SkillsLibrary, sourceId: string, query: string) {
   const needle = query.trim().toLocaleLowerCase();

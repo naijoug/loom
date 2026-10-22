@@ -1,4 +1,4 @@
-import type { SkillsLibrary, SkillsOperation } from "./skills";
+import type { SkillsLibrary, SkillsOperation, InstallTarget, Installation, InstallPlan, InstallReceipt } from "./skills";
 import type { AgentConfig, AgentDiagnostic, AppSettings, ChatSession, ChatEvent, ChatSendInput, ChatSendReceipt, ChatResumeHandle, ChatTurn, ChatLogPage, ChatExportInput, ChatExportResult, ChatMessagePart } from "../domain";
 
 export const TAURI_COMMANDS = {
@@ -41,6 +41,14 @@ export const TAURI_COMMANDS = {
   skillsRefreshSource: "skills_refresh_source",
   skillsListOperations: "skills_list_operations",
   skillsCancelOperation: "skills_cancel_operation",
+  skillsListInstallTargets: "skills_list_install_targets",
+  skillsGetInstallStatus: "skills_get_install_status",
+  skillsListInstallations: "skills_list_installations",
+  skillsPlanInstall: "skills_plan_install",
+  skillsPlanUninstall: "skills_plan_uninstall",
+  skillsApplyInstall: "skills_apply_install",
+  skillsListPending: "skills_list_pending",
+  skillsRecoverInstallation: "skills_recover_installation",
 } as const;
 export const TAURI_EVENTS = {
   updateState: "loom-update-state",
@@ -311,4 +319,84 @@ export const MODEL_CONTRACT_SAMPLES = {
   "error": null,
   "executions": []
 } satisfies SkillsOperation,
+  skillsInstallTarget: {
+  "id": "codex-project",
+  "toolId": "codex",
+  "label": "Codex / ChatGPT",
+  "scope": "project",
+  "skillsDir": "/fixture/project/.codex/skills",
+  "exists": false,
+  "blockedReason": null
+} satisfies InstallTarget,
+  skillsInstallation: {
+  "installationId": "installed-f29f41cc641f79c6ff7319ece84f20b9",
+  "skillId": "src-fixture::manual%2Fdemo%2FSKILL.md",
+  "sourceId": "src-fixture",
+  "relativePath": "manual/demo/SKILL.md",
+  "installName": "fixture-demo",
+  "sourceDir": "/fixture/source/manual/demo",
+  "mode": "copy",
+  "revision": null,
+  "sourceDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "installedState": {
+    "kind": "directory",
+    "digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "installedAtMs": 1,
+  "updatedAtMs": 2,
+  "managedResources": []
+} satisfies Installation,
+  skillsInstallPlan: {
+  "schemaVersion": 1,
+  "planId": "install-fixture",
+  "action": "install",
+  "projectPath": "/fixture/project",
+  "mode": "copy",
+  "createdAtMs": 1,
+  "source": {
+    "skillId": "src-fixture::manual%2Fdemo%2FSKILL.md",
+    "sourceId": "src-fixture",
+    "relativePath": "manual/demo/SKILL.md",
+    "name": "fixture-demo",
+    "directory": "/fixture/source/manual/demo",
+    "revision": null,
+    "digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "items": [
+    {
+      "target": {
+        "id": "codex-project",
+        "toolId": "codex",
+        "label": "Codex / ChatGPT",
+        "scope": "project",
+        "skillsDir": "/fixture/project/.codex/skills",
+        "exists": false,
+        "blockedReason": null
+      },
+      "installName": "fixture-demo",
+      "destination": "/fixture/project/.codex/skills/fixture-demo",
+      "before": {
+        "kind": "missing"
+      },
+      "manifestBefore": {
+        "kind": "missing"
+      },
+      "previous": null,
+      "decision": "install",
+      "message": null
+    }
+  ]
+} satisfies InstallPlan,
+  skillsInstallReceipt: {
+  "planId": "install-fixture",
+  "operationId": "skills-fixture",
+  "items": [
+    {
+      "targetId": "codex-project",
+      "destination": "/fixture/project/.codex/skills/fixture-demo",
+      "status": "installed",
+      "message": null
+    }
+  ]
+} satisfies InstallReceipt,
 } as const;

@@ -62,8 +62,35 @@ Git checkout 在 `.git/info/attributes` 禁用来源选择的 filter/encoding，
 
 辅助日志：`/tmp/loom-skills-settings-final-check.log`、`/tmp/loom-skills-settings-final-bundle.log`、`/tmp/loom-skills-native-final.log`。原生验证使用临时合成来源；没有导入个人真实技能库或操作用户已安装技能。截图已在本聊天的原生工具结果中观察；本轮未保存为仓库 PNG。
 
+## 第三切片：安装到工具、更新/卸载与恢复（M2a）
+
+Settings → Skills 新增详情安装页与 Installed 列表。后端派生 Codex/ChatGPT、Claude Code、Amp/Codex 的全局/项目目标，支持 copy/symlink、预览后执行、显式更新、来源移除后的按安装身份卸载。新目标默认不勾选；旧 v1/TSV 目标只读提示需要迁移。安装状态与实际 CLI 可发现/调用分别记录。
+
+新增 v2 安装清单、完整包指纹、同文件系统逐项事务、不可变 prepare 日志、终态回执和跨 dataDir 恢复。备份放在工具目录 `.loom-skill-transactions/`，不在 skills 扫描目录，目录自带 `.gitignore`。用户修改、失效预览、未知清单及缺失备份拒绝覆盖。纯文件安装/恢复计入 supervisor，updater 先取得固定协调域的独占生命周期 lease。
+
+| 验证 | 结果与边界 |
+|---|---|
+| 最终 `pnpm check` | 前端 106 项、Rust 192 项通过；19 ignored 含真实模型 opt-in 和父测试实际启动的子进程入口；fmt/Clippy/typecheck/build/契约门禁通过 |
+| release 构建 | `pnpm tauri build --bundles app` 通过；原产物后续不在 target 中，重新构建再次成功，用重新生成的包完成下面原生验收；不代表发布签名/公证 |
+| 安装/事务回归 | 多工具 copy、symlink、移除来源后卸载、修改保护、用户明确替换与备份、旧清单拒绝接管、目标逃逸、目录指纹结构、共用 manifest 批量卸载、预览失效、取消/更新互斥、备份 Git 忽略均覆盖 |
+| 故障恢复 | 每个目标 rename 故障、真实子进程无析构退出、另一 dataDir 恢复、用户事后编辑保全、committed 标记残留收尾通过；不是共享指令资源的 M2b 验收 |
+| 原生安装生命周期 | 临时项目 Codex + Claude copy → 修改合成来源后显式更新 → 批量卸载；再安装共享 `.agents/skills` symlink → 移除来源登记 → Installed 中卸载。5 个规划均成功，合成源保全、测试安装全部移除 |
+| 真实 Codex 发现与调用 | codex-cli 0.163.0 的 `skills/list` 能发现本次 copy 和 symlink；Loom Read-only 回合显式调用 `$loom-acceptance`，返回仅存在于技能正文的 `LOOM_SKILL_ACCEPTED`，exit 0；用户提示未含该标记 |
+| 卸载后发现 | `skills/list` 找不到合成技能，保留的备份没有被当成已安装技能；不是对所有 CLI 的通用发现证明 |
+| Chat/UI 回归 | 合成流式回合在设置 Skills 可见时继续更新，返回 Chat 保留内容；安装请求绑定发起项目，切换技能/项目不污染新面板；并发刷新合并排队、临时读锁错误可重载 |
+| 搬移后的原生启动 | release 包复制到独立 target 子目录，通过统一脚本从包内 Contents/MacOS 启动；Settings → Skills 来源/Installed 可用，历史操作保留，旧全局目标显示 Migration required；进程 cwd 已核验，结束后 stop |
+| 源 Manager 兼容保护（`7dfd89d`） | Node、Rust、CLI/TUI 的写入口在任何目标变更前检查清单；v2、损坏 JSON、symlink（含悬空链接）拒绝写入；全选目标先预检，`--force` 不绕过。源完整 check：应用 99、Rust 25、内容 32、旧管理测试 8 项通过 |
+
+原生测试使用 `LOOM_PROFILE_DIR` 与 `LOOM_SKILLS_DATA_DIR` 隔离设置/库，只向临时项目安装；没有修改全局安装或旧 Task 数据。Codex 的实际发现探针还确认本机版本同时识别 `.codex/skills` 和 `.agents/skills`，因此共享目标标注 Amp / Codex，提示避免重复安装。
+
+原生验收发现并修复：操作事件和初始状态读取争用 writer 锁；UI 改为排队读取，后端提供有界等锁与独立取消控制；同批卸载多个技能时共用 manifest 的指纹需随每次已验证提交更新；备份必须置于技能发现目录外。新增回归覆盖这些行为。
+
+持久化脱敏证据：[原生安装生命周期](samples/skills-migration/native-install-lifecycle.json)、[真实 Codex 调用](samples/skills-migration/codex-native-invocation.json)、[release 搬移运行](samples/skills-migration/relocated-release.json)。辅助日志：`/tmp/loom-skills-m2a-gate-check.log`、`/tmp/loom-skills-m2a-relocation-rebuild.log`、`/tmp/skills-legacy-fence-check.log`。
+
 ## 当前限制与后续执行入口
 
-本次是来源/只读管理切片，未实现工具安装面板和完整安装事务，不能标记 G1 通过。仍需 M2a 的目标枚举、copy/symlink 安装/更新/卸载及恢复；随后在同一 Settings → Skills 板块补齐共享指令、CLI/TUI、翻译和迁移。外网 GitHub/GitLab、真实 provider、安装后 CLI 发现/调用及窄窗口原生验收仍待完成。
+M2a 安装闭环已有上述代码和原生证据，G1 仍待综合关闭：核对远程 A → B 显式安装更新的端到端场景、更新器失败/拒绝准入的实际入口替身、完整 Skills 视觉矩阵与无源码访问条件。搬移运行只证明独立包路径及工作目录；源 checkout 仍在磁盘，不冒充无法访问源码的验收。
 
-旧 library/JSON/TSV 合成兼容样本已加入 `src-tauri/tests/fixtures/skills/`，M4 尚未对它们执行实际接管。M5 的管理测试与过渡入口需等 M2c/M7 移除；保留旧 Manager，不提前退役。
+M1b GitHub API、M2b 共享指令/doctor/wrapper、M2c CLI/TUI、M3 翻译与分享、M4 旧数据接管尚未完成。M2a 对 managedResources 非空的安装拒绝修改，以免提前破坏共享资源归属。外网 GitHub/GitLab 与真实翻译 provider 验收仍待后续，G2 未通过。
+
+旧 library/JSON/TSV 合成兼容样本已加入 `src-tauri/tests/fixtures/skills/`，尚未执行真实旧数据接管。M5 的管理测试与过渡入口需等 M2c/M7 移除。旧 Manager 新源码的版本保护不能修补已安装历史二进制，也不能让旧客户端参加 Loom 锁协议；切换期间仍须停止旧 Manager 写入。旧应用与数据保留，不提前退役。

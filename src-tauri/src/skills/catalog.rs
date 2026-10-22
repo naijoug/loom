@@ -78,11 +78,21 @@ pub fn scan_root(root: &Path) -> Result<PathBuf> {
     let nested = root.join("skills");
     if !root.join("SKILL.md").exists()
         && fs::symlink_metadata(&nested).is_ok_and(|m| m.is_dir() && !m.file_type().is_symlink())
+        && contains_skill(&nested)?
     {
         Ok(nested)
     } else {
         Ok(root)
     }
+}
+
+fn contains_skill(root: &Path) -> Result<bool> {
+    let mut found = false;
+    walk(root, root, 0, &mut 0, &mut |path| {
+        found |= path.file_name().is_some_and(|name| name == "SKILL.md");
+        Ok(())
+    })?;
+    Ok(found)
 }
 
 pub fn text(path: &Path) -> Result<String> {
@@ -303,7 +313,7 @@ fn read_summary(source_id: &str, root: &Path, relative: &str) -> Result<SkillSum
     })
 }
 
-fn frontmatter(content: &str) -> Result<(BTreeMap<String, String>, String)> {
+pub(crate) fn frontmatter(content: &str) -> Result<(BTreeMap<String, String>, String)> {
     let mut lines = content.lines();
     if lines.next().map(str::trim) != Some("---") {
         return Ok((BTreeMap::new(), content.into()));

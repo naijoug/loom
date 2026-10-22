@@ -97,6 +97,14 @@ pub fn run() {
             skills::commands::skills_refresh_source,
             skills::commands::skills_list_operations,
             skills::commands::skills_cancel_operation,
+            skills::commands::skills_list_install_targets,
+            skills::commands::skills_get_install_status,
+            skills::commands::skills_list_installations,
+            skills::commands::skills_plan_install,
+            skills::commands::skills_plan_uninstall,
+            skills::commands::skills_apply_install,
+            skills::commands::skills_list_pending,
+            skills::commands::skills_recover_installation,
         ]);
     #[cfg(target_os = "macos")]
     let builder = builder

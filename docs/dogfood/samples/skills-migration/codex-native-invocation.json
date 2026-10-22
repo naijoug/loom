@@ -1,0 +1,27 @@
+{
+  "cliVersion": "0.163.0",
+  "sessionId": "chat-1792633915961-4",
+  "adapterType": "codex_cli",
+  "permissionMode": "explore",
+  "turnStatus": "completed",
+  "exitCode": 0,
+  "answer": "LOOM_SKILL_ACCEPTED",
+  "expectedMarkerMatches": true,
+  "promptContainedMarker": false,
+  "projectTargets": [
+    ".codex/skills/loom-acceptance",
+    ".claude/skills/loom-acceptance"
+  ],
+  "copiesMatchSource": true,
+  "discovery": {
+    "cli": "codex-cli 0.163.0",
+    "method": "skills/list",
+    "modelInvoked": false,
+    "matches": [
+      {
+        "name": "loom-acceptance",
+        "path": "/fixture/project/.codex/skills/loom-acceptance/SKILL.md"
+      }
+    ]
+  }
+}

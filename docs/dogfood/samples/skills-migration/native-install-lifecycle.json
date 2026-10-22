@@ -1,0 +1,109 @@
+{
+  "profileIsolated": true,
+  "installedTargetsWereProjectOnly": true,
+  "nativePlans": [
+    {
+      "planId": "install-1792633308035-2-28473",
+      "action": "install",
+      "mode": "copy",
+      "items": [
+        {
+          "targetId": "codex-project",
+          "destination": ".codex/skills/loom-acceptance",
+          "status": "installed",
+          "backupOutsideSkillDirectory": null
+        },
+        {
+          "targetId": "claude-code-project",
+          "destination": ".claude/skills/loom-acceptance",
+          "status": "installed",
+          "backupOutsideSkillDirectory": null
+        }
+      ]
+    },
+    {
+      "planId": "install-1792634494862-1-42304",
+      "action": "install",
+      "mode": "copy",
+      "items": [
+        {
+          "targetId": "codex-project",
+          "destination": ".codex/skills/loom-acceptance",
+          "status": "installed",
+          "backupOutsideSkillDirectory": true
+        },
+        {
+          "targetId": "claude-code-project",
+          "destination": ".claude/skills/loom-acceptance",
+          "status": "installed",
+          "backupOutsideSkillDirectory": true
+        }
+      ]
+    },
+    {
+      "planId": "install-1792634547049-3-42304",
+      "action": "uninstall",
+      "mode": "copy",
+      "items": [
+        {
+          "targetId": "codex-project",
+          "destination": ".codex/skills/loom-acceptance",
+          "status": "uninstalled",
+          "backupOutsideSkillDirectory": true
+        },
+        {
+          "targetId": "claude-code-project",
+          "destination": ".claude/skills/loom-acceptance",
+          "status": "uninstalled",
+          "backupOutsideSkillDirectory": true
+        }
+      ]
+    },
+    {
+      "planId": "install-1792634669070-5-42304",
+      "action": "install",
+      "mode": "symlink",
+      "items": [
+        {
+          "targetId": "amp-project",
+          "destination": ".agents/skills/loom-acceptance",
+          "status": "installed",
+          "backupOutsideSkillDirectory": null
+        }
+      ]
+    },
+    {
+      "planId": "install-1792634766595-7-42304",
+      "action": "uninstall",
+      "mode": "copy",
+      "items": [
+        {
+          "targetId": "amp-project",
+          "destination": ".agents/skills/loom-acceptance",
+          "status": "uninstalled",
+          "backupOutsideSkillDirectory": true
+        }
+      ]
+    }
+  ],
+  "sourcePreserved": true,
+  "libraryEntryRemoved": true,
+  "allTestInstallationsRemoved": true,
+  "symlinkDiscovery": {
+    "cli": "codex-cli 0.163.0",
+    "method": "skills/list",
+    "modelInvoked": false,
+    "matches": [
+      {
+        "name": "loom-acceptance",
+        "path": "/fixture/source/SKILL.md"
+      }
+    ]
+  },
+  "afterUninstallDiscovery": {
+    "cli": "codex-cli 0.163.0",
+    "method": "skills/list",
+    "modelInvoked": false,
+    "matches": []
+  }
+}

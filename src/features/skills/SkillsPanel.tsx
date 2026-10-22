@@ -5,13 +5,15 @@ import { skillsApi, type SkillsApi, type SkillDetail, type SkillsLibrary, type S
 import { hasTauriRuntime } from "../../hooks/runtime";
 import { useT } from "../../i18n";
 import { Markdown } from "../chat/MarkdownView";
-import { mergeOperation, skillBody, skillsError, visibleSkills } from "./model";
+import { mergeOperation, operationActionKey, skillBody, skillsError, visibleSkills } from "./model";
+import { InstallPanel } from "./InstallPanel";
+import { InstalledSkills } from "./InstalledSkills";
 import "./skills.css";
 
 const emptyLibrary: SkillsLibrary = { sources: [], skills: [], issues: [] };
 
-export function SkillsPanel({ projectName, api = skillsApi, desktop = hasTauriRuntime() }: {
-  projectName?: string; api?: SkillsApi; desktop?: boolean;
+export function SkillsPanel({ projectName, projectPath = null, api = skillsApi, desktop = hasTauriRuntime() }: {
+  projectName?: string; projectPath?: string | null; api?: SkillsApi; desktop?: boolean;
 }) {
   const t = useT();
   const [library, setLibrary] = useState<SkillsLibrary>(emptyLibrary);
@@ -26,7 +28,9 @@ export function SkillsPanel({ projectName, api = skillsApi, desktop = hasTauriRu
   const [localPath, setLocalPath] = useState("");
   const [url, setUrl] = useState("");
   const [adding, setAdding] = useState(false);
-  const [tab, setTab] = useState<"overview" | "markdown" | "files">("overview");
+  const [tab, setTab] = useState<"overview" | "markdown" | "files" | "install">("overview");
+  const [view, setView] = useState<"library" | "installed">("library");
+  const [installRevision, setInstallRevision] = useState(0);
   const [operations, setOperations] = useState<SkillsOperation[]>([]);
   const [requestedImport, setRequestedImport] = useState<string | null>(null);
   const libraryRequest = useRef(0);
@@ -66,7 +70,8 @@ export function SkillsPanel({ projectName, api = skillsApi, desktop = hasTauriRu
       setOperations(previous => mergeOperation(previous, operation));
       if (operation.phase !== "running" && !terminalSeen.current.has(operation.operationId)) {
         terminalSeen.current.add(operation.operationId);
-        if (operation.phase === "committed") void load();
+        if (operation.phase === "committed" && ["import", "refresh"].includes(operation.action)) void load();
+        if (["install", "uninstall", "recover"].includes(operation.action)) setInstallRevision(value => value + 1);
       }
     };
     const poll = async () => {
@@ -132,7 +137,8 @@ export function SkillsPanel({ projectName, api = skillsApi, desktop = hasTauriRu
     {projectName && <div className="skills-context">{t("skillsProjectContext", { project: projectName })}</div>}
     {!desktop && <p className="skills-notice" role="status">{t("skillsDesktopOnly")}</p>}
     {error && <p className="skills-error" role="alert">{error}<button type="button" onClick={() => { void load(); }}>{t("skillsRetry")}</button></p>}
-    <div className="skills-workspace">
+    <nav className="skills-view-tabs" aria-label={t("skills")}><button type="button" aria-pressed={view === "library"} onClick={() => setView("library")}>{t("skillsLibraryView")}</button><button type="button" aria-pressed={view === "installed"} disabled={!desktop} onClick={() => setView("installed")}>{t("skillsInstalledView")}</button></nav>
+    {view === "installed" ? <InstalledSkills api={api} projectPath={projectPath} revision={installRevision} /> : <div className="skills-workspace">
       <aside className="skills-sources" aria-label={t("skillsSources")}>
         <div className="skills-section-heading"><h2>{t("skillsSources")}</h2><button type="button" aria-label={t("skillsAddSource")} disabled={!desktop || busy} onClick={() => setAdding(!adding)}><FolderPlus size={17} /></button></div>
         <button type="button" aria-pressed={!sourceId} onClick={() => setSourceId("")}>{t("skillsAll")}<span>{library.skills.length}</span></button>
@@ -159,15 +165,16 @@ export function SkillsPanel({ projectName, api = skillsApi, desktop = hasTauriRu
             {detailBusy && <p role="status"><LoaderCircle size={16} className="chat-spin" />{t("loading")}</p>}
             {detailError && <p className="skills-error" role="alert">{detailError}</p>}
             {validDetail ? <><header><small>{validDetail.summary.category}</small><h2>{validDetail.summary.title}</h2><p>{validDetail.summary.description}</p><code>{validDetail.summary.relativePath}</code></header>
-              <nav className="skills-tabs" aria-label={t("skillsDetailTabs")}>{(["overview", "markdown", "files"] as const).map(value => <button type="button" aria-pressed={tab === value} key={value} onClick={() => setTab(value)}>{t(value === "overview" ? "skillsOverview" : value === "markdown" ? "skillsMarkdown" : "skillsFiles")}</button>)}</nav>
+              <nav className="skills-tabs" aria-label={t("skillsDetailTabs")}>{(["overview", "markdown", "files", "install"] as const).map(value => <button type="button" aria-pressed={tab === value} key={value} onClick={() => setTab(value)}>{t(value === "overview" ? "skillsOverview" : value === "markdown" ? "skillsMarkdown" : value === "files" ? "skillsFiles" : "skillsInstallTab")}</button>)}</nav>
               {tab === "overview" && <div className="skills-markdown"><Markdown text={skillBody(validDetail.content)} /></div>}
               {tab === "markdown" && <pre>{validDetail.content}</pre>}
+              {tab === "install" && <InstallPanel api={api} skillId={activeId} projectPath={projectPath} revision={installRevision} />}
               {tab === "files" && <div>{validDetail.relatedFiles.map(file => <details key={file.relativePath}><summary>{file.relativePath} <small>{file.sizeBytes} B</small></summary>{file.content === null ? <p>{t("skillsNoPreview")}</p> : <pre>{file.content}</pre>}</details>)}{!validDetail.relatedFiles.length && <p>{t("skillsNoFiles")}</p>}</div>}
             </> : !detailBusy && <div className="skills-empty"><p>{t("skillsSelect")}</p></div>}
           </article>
         </div>
       </main>
-    </div>
-    {!!operations.length && <section className="skills-operations" aria-label={t("skillsActivity")}><h2>{t("skillsActivity")}</h2>{operations.slice(0, 4).map(operation => <div key={operation.operationId} role="status"><span>{library.sources.find(item => item.id === operation.sourceId)?.name ?? t("skillsSourceOperation")} · {t(operation.phase === "running" ? "skillsWorking" : operation.phase === "committed" ? "skillsDone" : operation.phase === "cancelled" ? "skillsCancelled" : "skillsFailed")}</span>{operation.error && <span className="skills-error">{operation.error.message}</span>}{!!operation.executions?.length && <details><summary>{t("skillsExecutionLog")}</summary>{operation.executions.map((execution, index) => <pre key={index}>{[execution.program + " " + execution.args.join(" "), execution.cwd, t("exitCodeLabel") + ": " + (execution.exitCode ?? "—"), execution.error].filter(Boolean).join("\n")}</pre>)}</details>}{operation.phase === "running" && <button type="button" onClick={() => { void action(() => api.cancel(operation.operationId)); }}>{t("skillsCancel")}</button>}</div>)}</section>}
+    </div>}
+    {!!operations.length && <section className="skills-operations" aria-label={t("skillsActivity")}><h2>{t("skillsActivity")}</h2>{operations.slice(0, 4).map(operation => <div key={operation.operationId} role="status"><span>{t(operationActionKey(operation.action))} · {library.sources.find(item => item.id === operation.sourceId)?.name ?? t(["install", "uninstall", "recover"].includes(operation.action) ? "skillsManagedInstallations" : "skillsSources")} · {t(operation.phase === "running" ? "skillsWorking" : operation.phase === "committed" ? "skillsDone" : operation.phase === "cancelled" ? "skillsCancelled" : "skillsFailed")}</span>{operation.error && <span className="skills-error">{operation.error.message}</span>}{!!operation.executions?.length && <details><summary>{t("skillsExecutionLog")}</summary>{operation.executions.map((execution, index) => <pre key={index}>{[execution.program + " " + execution.args.join(" "), execution.cwd, t("exitCodeLabel") + ": " + (execution.exitCode ?? "—"), execution.error].filter(Boolean).join("\n")}</pre>)}</details>}{operation.phase === "running" && <button type="button" onClick={() => { void action(() => api.cancel(operation.operationId)); }}>{t("skillsCancel")}</button>}</div>)}</section>}
   </div>;
 }

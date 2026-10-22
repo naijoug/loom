@@ -1,9 +1,14 @@
 use super::{
     catalog::SkillDetail,
     error::{ErrorCode, Result, SkillsError},
+    installers::{
+        self, InstallPlan, InstallReceipt, InstallRequest, InstallStatus, RecoveryItem,
+        UninstallRequest,
+    },
     operations::{self, Operation, OperationRecord},
     repository::{LibraryView, Repository, SourceKind},
     sources,
+    targets::{InstallTarget, TargetContext},
 };
 use std::{path::PathBuf, sync::Arc};
 use tauri::{AppHandle, Emitter, Manager, WebviewWindow};
@@ -21,13 +26,48 @@ fn repository(app: &AppHandle, window: &WebviewWindow) -> Result<Repository> {
         .map_err(|_| SkillsError::invalid("Application data directory unavailable"))?;
     let data = std::env::var_os("LOOM_SKILLS_DATA_DIR")
         .map(PathBuf::from)
+        .or_else(|| {
+            std::env::var_os("LOOM_PROFILE_DIR")
+                .map(|profile| PathBuf::from(profile).join("skills"))
+        })
         .unwrap_or_else(|| app_data.join("skills"));
     if !data.is_absolute() {
         return Err(SkillsError::invalid(
-            "LOOM_SKILLS_DATA_DIR must be absolute",
+            "Skills data/profile directory must be absolute",
         ));
     }
     Repository::open(&data, &app_data.join("skills-coordination"))
+}
+
+fn target_context(app: &AppHandle, project_path: Option<&str>) -> Result<TargetContext> {
+    let home = app
+        .path()
+        .home_dir()
+        .map_err(|_| SkillsError::invalid("User home unavailable"))?;
+    let project = project_path
+        .map(|path| crate::projects::canonical_project_path(path).map_err(SkillsError::invalid))
+        .transpose()?;
+    if let Some(project) = &project {
+        let registered = crate::storage::load_recent_projects(app).map_err(SkillsError::invalid)?;
+        if !registered
+            .iter()
+            .any(|entry| std::path::Path::new(&entry.path) == project)
+        {
+            return Err(SkillsError::new(
+                ErrorCode::PermissionDenied,
+                "Open this project in Loom before installing project skills",
+            ));
+        }
+    }
+    TargetContext::new(&home, project.as_deref())
+}
+
+pub(crate) fn update_lease(app: &AppHandle) -> Result<super::coordination::LifecycleLease> {
+    let root = app
+        .path()
+        .app_data_dir()
+        .map_err(|_| SkillsError::invalid("Application data directory unavailable"))?;
+    super::coordination::Coordinator::open(&root.join("skills-coordination"))?.try_update()
 }
 
 async fn blocking<T: Send + 'static>(
@@ -166,6 +206,167 @@ pub async fn skills_cancel_operation(
 ) -> Result<()> {
     blocking(repository(&app, &window)?, move |repo| {
         operations::cancel(&repo, &operation_id)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn skills_list_install_targets(
+    app: AppHandle,
+    window: WebviewWindow,
+    project_path: Option<String>,
+) -> Result<Vec<InstallTarget>> {
+    let repo = repository(&app, &window)?;
+    let context = target_context(&app, project_path.as_deref())?;
+    blocking(repo, move |_| context.targets()).await
+}
+#[tauri::command]
+pub async fn skills_get_install_status(
+    app: AppHandle,
+    window: WebviewWindow,
+    skill_id: String,
+    project_path: Option<String>,
+) -> Result<Vec<InstallStatus>> {
+    let repo = repository(&app, &window)?;
+    let context = target_context(&app, project_path.as_deref())?;
+    blocking(repo, move |repo| {
+        installers::statuses(&repo, &context, &skill_id)
+    })
+    .await
+}
+#[tauri::command]
+pub async fn skills_list_installations(
+    app: AppHandle,
+    window: WebviewWindow,
+    project_path: Option<String>,
+) -> Result<Vec<InstallStatus>> {
+    let repo = repository(&app, &window)?;
+    let context = target_context(&app, project_path.as_deref())?;
+    blocking(repo, move |repo| installers::inventory(&repo, &context)).await
+}
+#[tauri::command]
+pub async fn skills_plan_install(
+    app: AppHandle,
+    window: WebviewWindow,
+    input: InstallRequest,
+) -> Result<InstallPlan> {
+    let repo = repository(&app, &window)?;
+    let context = target_context(&app, input.project_path.as_deref())?;
+    blocking(repo, move |repo| {
+        installers::plan_install(&repo, &context, &input)
+    })
+    .await
+}
+#[tauri::command]
+pub async fn skills_plan_uninstall(
+    app: AppHandle,
+    window: WebviewWindow,
+    input: UninstallRequest,
+) -> Result<InstallPlan> {
+    let repo = repository(&app, &window)?;
+    let context = target_context(&app, input.project_path.as_deref())?;
+    blocking(repo, move |repo| {
+        installers::plan_uninstall(&repo, &context, &input)
+    })
+    .await
+}
+#[tauri::command]
+pub async fn skills_apply_install(
+    app: AppHandle,
+    window: WebviewWindow,
+    plan_id: String,
+    project_path: Option<String>,
+) -> Result<InstallReceipt> {
+    let repo = repository(&app, &window)?;
+    let context = target_context(&app, project_path.as_deref())?;
+    blocking(repo, move |repo| {
+        let plan = installers::load_plan(&repo, &plan_id)?;
+        let source_id = plan
+            .source
+            .as_ref()
+            .map(|s| s.source_id.as_str())
+            .unwrap_or("installed");
+        let mut operation = Operation::begin(
+            &repo,
+            source_id,
+            if plan.action == installers::PlanAction::Install {
+                "install"
+            } else {
+                "uninstall"
+            },
+        )?;
+        operation.stage("applying")?;
+        let _ = app.emit("loom://skills-operation", &operation.record);
+        let result = installers::apply(&repo, &context, &plan_id, &mut operation);
+        let terminal = match &result {
+            Ok(receipt)
+                if receipt.items.iter().all(|i| {
+                    matches!(i.status.as_str(), "installed" | "uninstalled" | "skipped")
+                }) =>
+            {
+                Ok(())
+            }
+            Ok(receipt)
+                if receipt.items.iter().all(|item| {
+                    matches!(
+                        item.status.as_str(),
+                        "installed" | "uninstalled" | "skipped" | "cancelled"
+                    )
+                }) =>
+            {
+                Err(SkillsError::new(
+                    ErrorCode::Cancelled,
+                    "Installation cancelled at a safe checkpoint",
+                ))
+            }
+            Ok(_) => Err(SkillsError::new(
+                ErrorCode::Conflict,
+                "Some installation actions did not complete; inspect their results",
+            )),
+            Err(error) => Err(error.clone()),
+        };
+        operation.finish(terminal)?;
+        let _ = app.emit("loom://skills-operation", &operation.record);
+        result
+    })
+    .await
+}
+#[tauri::command]
+pub async fn skills_list_pending(
+    app: AppHandle,
+    window: WebviewWindow,
+    project_path: Option<String>,
+) -> Result<Vec<RecoveryItem>> {
+    let repo = repository(&app, &window)?;
+    let context = target_context(&app, project_path.as_deref())?;
+    blocking(repo, move |repo| {
+        installers::recovery_items(&repo, &context)
+    })
+    .await
+}
+#[tauri::command]
+pub async fn skills_recover_installation(
+    app: AppHandle,
+    window: WebviewWindow,
+    operation_id: String,
+    project_path: Option<String>,
+) -> Result<String> {
+    let repo = repository(&app, &window)?;
+    let context = target_context(&app, project_path.as_deref())?;
+    blocking(repo, move |repo| {
+        let mut operation = Operation::begin(&repo, "installed", "recover")?;
+        let _ = app.emit("loom://skills-operation", &operation.record);
+        let result = installers::recover_one(&repo, &context, &operation_id);
+        operation.finish(result.as_ref().map(|_| ()).map_err(Clone::clone))?;
+        let _ = app.emit("loom://skills-operation", &operation.record);
+        result.map(|outcome| {
+            if outcome == super::transactions::Outcome::Committed {
+                "committed"
+            } else {
+                "rolled_back"
+            }
+            .into()
+        })
     })
     .await
 }

@@ -209,7 +209,7 @@ impl Repository {
         // as issues when other packages are usable, including a valid empty folder.
         catalog::scan(&source.id, source.local_path.as_ref().unwrap())?;
         let lease = self.coordinator.enter()?;
-        let writer = self.coordinator.writer(&lease)?;
+        let writer = self.coordinator.writer_wait(&lease)?;
         writer.check_write_set(&[self.library_path()])?;
         let mut library = self.load()?;
         if let Some(existing) = library.sources.iter().find(|s| s.id == source.id) {
@@ -222,7 +222,7 @@ impl Repository {
 
     pub fn remove_source(&self, id: &str) -> Result<()> {
         let lease = self.coordinator.enter()?;
-        let writer = self.coordinator.writer(&lease)?;
+        let writer = self.coordinator.writer_wait(&lease)?;
         writer.check_write_set(&[self.library_path()])?;
         let mut library = self.load()?;
         if !library.sources.iter().any(|s| s.id == id) {
@@ -243,7 +243,7 @@ impl Repository {
         snapshot: &snapshots::Snapshot,
     ) -> Result<()> {
         let lease = self.coordinator.enter()?;
-        let writer = self.coordinator.writer(&lease)?;
+        let writer = self.coordinator.writer_wait(&lease)?;
         writer.check_write_set(&[self.library_path()])?;
         let mut library = self.load()?;
         let existing = library.sources.iter().find(|s| s.id == source.id);

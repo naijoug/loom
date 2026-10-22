@@ -68,8 +68,7 @@ is_desktop_dev_command() {
     [[ "${command}" == "node ${ROOT_DIR}/scripts/browser-probe.mjs" ]] ||
     [[ "${command}" == "target/debug/loom" || "${command}" == "target/debug/loom "* ]] ||
     [[ "${command}" == "${ROOT_DIR}/src-tauri/target/debug/loom" || "${command}" == "${ROOT_DIR}/src-tauri/target/debug/loom "* ]] ||
-    [[ "${command}" == "${ROOT_DIR}/src-tauri/target/debug/bundle/macos/Loom.app/Contents/MacOS/loom" || "${command}" == "${ROOT_DIR}/src-tauri/target/debug/bundle/macos/Loom.app/Contents/MacOS/loom "* ]] ||
-    [[ "${command}" == "${ROOT_DIR}/src-tauri/target/release/bundle/macos/Loom.app/Contents/MacOS/loom" || "${command}" == "${ROOT_DIR}/src-tauri/target/release/bundle/macos/Loom.app/Contents/MacOS/loom "* ]]
+    [[ "${command}" == "${ROOT_DIR}/src-tauri/target/"*"/Loom.app/Contents/MacOS/loom" || "${command}" == "${ROOT_DIR}/src-tauri/target/"*"/Loom.app/Contents/MacOS/loom "* ]]
 }
 
 stop_desktop_dev() {
@@ -140,6 +139,8 @@ start_desktop() {
       echo "LOOM_PREVIEW_BINARY must be an executable Loom.app built under this repository's src-tauri/target." >&2
       return 1
     fi
+    # A bundled preview must not accidentally depend on the repository cwd.
+    cd "$(dirname "${LOOM_PREVIEW_BINARY}")"
     exec "${LOOM_PREVIEW_BINARY}"
   fi
   if [[ "${LOOM_PREVIEW_TARGET:-loom}" == "browser-probe" ]]; then

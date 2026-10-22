@@ -130,7 +130,7 @@ impl Operation {
     fn save(&mut self) -> Result<()> {
         self.record.sequence += 1;
         self.record.updated_at_ms = crate::models::now_ms();
-        let writer = self.repository.coordinator.writer(&self._lifecycle)?;
+        let writer = self.repository.coordinator.writer_wait(&self._lifecycle)?;
         let path = operation_path(&self.repository, &self.record.operation_id, "json")?;
         writer.check_write_set(std::slice::from_ref(&path))?;
         files::atomic_json(&path, &self.record)
@@ -204,7 +204,7 @@ pub fn list(repository: &Repository) -> Result<Vec<OperationRecord>> {
                     "Operation interrupted; inspect source state before retrying",
                 ));
                 let lease = repository.coordinator.enter()?;
-                let writer = repository.coordinator.writer(&lease)?;
+                let writer = repository.coordinator.writer_wait(&lease)?;
                 writer.check_write_set(std::slice::from_ref(&path))?;
                 files::atomic_json(&path, &record)?;
                 let _ = owner.unlock();
@@ -222,10 +222,10 @@ pub fn cancel(repository: &Repository, id: &str) -> Result<()> {
     if record.phase != Phase::Running {
         return Ok(());
     }
-    let lease = repository.coordinator.enter()?;
-    let writer = repository.coordinator.writer(&lease)?;
+    let _lease = repository.coordinator.enter()?;
     let cancel_path = operation_path(repository, id, "cancel")?;
-    writer.check_write_set(std::slice::from_ref(&cancel_path))?;
+    // This idempotent control signal does not modify a target, journal, or
+    // receipt. It must remain writable while an installer owns the writer lock.
     files::atomic_json(&cancel_path, &true)
 }
 

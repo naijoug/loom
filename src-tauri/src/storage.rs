@@ -155,6 +155,15 @@ fn recent_projects_path(app: &AppHandle) -> Result<PathBuf, String> {
 }
 
 pub fn global_config_dir(app: &AppHandle) -> Result<PathBuf, String> {
+    // An explicit profile lets native acceptance use disposable projects and
+    // settings without replacing HOME or changing the Skills coordination domain.
+    if let Some(profile) = std::env::var_os("LOOM_PROFILE_DIR") {
+        let profile = PathBuf::from(profile);
+        if !profile.is_absolute() {
+            return Err("LOOM_PROFILE_DIR must be an absolute path".into());
+        }
+        return crate::skills::files::private_directory(&profile).map_err(|error| error.message);
+    }
     let dir = app
         .path()
         .app_data_dir()

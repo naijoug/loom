@@ -25,6 +25,25 @@ export interface SkillsOperation {
   error: { code: string; message: string } | null;
   executions: { program: string; args: string[]; cwd: string; startedAtMs: number; finishedAtMs: number | null; exitCode: number | null; error: string | null }[];
 }
+export type InstallMode = "copy" | "symlink";
+export type EntryState = { kind: "missing" } | { kind: "directory"; digest: string } | { kind: "file"; digest: string; mode: number } | { kind: "symlink"; target: string };
+export interface InstallTarget { id: string; toolId: string; label: string; scope: "global" | "project"; skillsDir: string; exists: boolean; blockedReason: string | null; }
+export interface Installation {
+  installationId: string; skillId: string; sourceId: string; relativePath: string; installName: string;
+  sourceDir: string; mode: InstallMode; revision: string | null; sourceDigest: string;
+  installedState: EntryState; installedAtMs: number; updatedAtMs: number;
+  managedResources: { path: string; marker: string; contentDigest: string }[];
+}
+export interface InstallStatus { target: InstallTarget; skillId: string; destination: string; state: string; installation: Installation | null; updateAvailable: boolean; message: string | null; }
+export interface InstallPlan {
+  schemaVersion: number; planId: string; action: "install" | "uninstall"; projectPath: string | null;
+  mode: InstallMode; createdAtMs: number;
+  source: { skillId: string; sourceId: string; relativePath: string; name: string; directory: string; revision: string | null; digest: string } | null;
+  items: { target: InstallTarget; installName: string; destination: string; before: EntryState; manifestBefore: EntryState; previous: Installation | null; decision: string; message: string | null }[];
+}
+export interface InstallReceipt { planId: string; operationId: string; items: { targetId: string; destination: string; status: string; message: string | null; backupDirectory?: string }[]; }
+export interface RecoveryItem { operationId: string; resources: string[]; canRecover: boolean; message: string | null; }
+export interface InstallRequest { skillId: string; targetIds: string[]; mode: InstallMode; conflictPolicy: "fail" | "skip" | "overwrite"; projectPath: string | null; }
 export interface SkillsApi {
   list(): Promise<SkillsLibrary>;
   detail(skillId: string): Promise<SkillDetail>;
@@ -35,6 +54,14 @@ export interface SkillsApi {
   operations(): Promise<SkillsOperation[]>;
   cancel(operationId: string): Promise<void>;
   subscribe(handler: (operation: SkillsOperation) => void): Promise<() => void>;
+  targets(projectPath: string | null): Promise<InstallTarget[]>;
+  installStatus(skillId: string, projectPath: string | null): Promise<InstallStatus[]>;
+  installations(projectPath: string | null): Promise<InstallStatus[]>;
+  planInstall(input: InstallRequest): Promise<InstallPlan>;
+  planUninstall(installationIds: string[], projectPath: string | null): Promise<InstallPlan>;
+  applyInstall(planId: string, projectPath: string | null): Promise<InstallReceipt>;
+  pending(projectPath: string | null): Promise<RecoveryItem[]>;
+  recover(operationId: string, projectPath: string | null): Promise<string>;
 }
 export const skillsApi: SkillsApi = {
   list: () => invokeCommand(TAURI_COMMANDS.skillsListLibrary),
@@ -46,4 +73,12 @@ export const skillsApi: SkillsApi = {
   operations: () => invokeCommand(TAURI_COMMANDS.skillsListOperations),
   cancel: operationId => invokeCommand(TAURI_COMMANDS.skillsCancelOperation, { operationId }),
   subscribe: handler => listenToEvent(TAURI_EVENTS.skillsOperation, handler),
+  targets: projectPath => invokeCommand(TAURI_COMMANDS.skillsListInstallTargets, { projectPath }),
+  installStatus: (skillId, projectPath) => invokeCommand(TAURI_COMMANDS.skillsGetInstallStatus, { skillId, projectPath }),
+  installations: projectPath => invokeCommand(TAURI_COMMANDS.skillsListInstallations, { projectPath }),
+  planInstall: input => invokeCommand(TAURI_COMMANDS.skillsPlanInstall, { input }),
+  planUninstall: (installationIds, projectPath) => invokeCommand(TAURI_COMMANDS.skillsPlanUninstall, { input: { installationIds, projectPath } }),
+  applyInstall: (planId, projectPath) => invokeCommand(TAURI_COMMANDS.skillsApplyInstall, { planId, projectPath }),
+  pending: projectPath => invokeCommand(TAURI_COMMANDS.skillsListPending, { projectPath }),
+  recover: (operationId, projectPath) => invokeCommand(TAURI_COMMANDS.skillsRecoverInstallation, { operationId, projectPath }),
 };

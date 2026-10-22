@@ -171,17 +171,39 @@ impl Coordinator {
             ));
         }
         let file = self.lock_file("writer.lock")?;
-        file.try_lock().map_err(|_| {
-            SkillsError::new(
+        file.try_lock().map_err(|error| match error {
+            std::fs::TryLockError::WouldBlock => SkillsError::new(
                 ErrorCode::LockBusy,
                 "Another Skills client is committing changes",
-            )
+            ),
+            other => SkillsError::new(
+                ErrorCode::Io,
+                format!("Cannot acquire Skills writer lock: {other}"),
+            ),
         })?;
         Ok(WriterGuard {
             coordinator: self,
             _lease: lease,
             file,
         })
+    }
+
+    /// Serialize short concurrent status/commit requests without reporting a
+    /// transient collision as a failed installation. Never wait indefinitely.
+    pub fn writer_wait<'a>(&'a self, lease: &'a LifecycleLease) -> Result<WriterGuard<'a>> {
+        let started = std::time::Instant::now();
+        loop {
+            match self.writer(lease) {
+                Ok(guard) => return Ok(guard),
+                Err(error)
+                    if error.code == ErrorCode::LockBusy
+                        && started.elapsed() < std::time::Duration::from_millis(500) =>
+                {
+                    std::thread::sleep(std::time::Duration::from_millis(5))
+                }
+                Err(error) => return Err(error),
+            }
+        }
     }
 
     /// An update never waits holding one lock for another active operation.
@@ -265,8 +287,7 @@ impl WriterGuard<'_> {
     }
 
     /// Journal and backups must be durable before calling this, and no target
-    /// may be mutated until it succeeds. Recovery clearing is intentionally not
-    /// exposed until the transaction engine can verify a terminal receipt.
+    /// may be mutated until it succeeds.
     pub fn publish(&self, record: &PendingTransaction) -> Result<()> {
         record.validate()?;
         let prepared = files::read_metadata_bytes(&record.journal_path)?;
@@ -289,5 +310,23 @@ impl WriterGuard<'_> {
             ));
         }
         files::atomic_json(&path, record)
+    }
+
+    /// Called only after the transaction engine verifies its terminal receipt
+    /// and actual resources. A missing owner/PID alone is never sufficient.
+    pub(crate) fn clear_verified(&self, record: &PendingTransaction) -> Result<()> {
+        let path = self
+            .coordinator
+            .root
+            .join("pending")
+            .join(format!("{}.json", record.operation_id));
+        let current: PendingTransaction = files::read_json(&path)?;
+        if current != *record {
+            return Err(SkillsError::recovery(
+                "Pending marker changed before completion",
+            ));
+        }
+        std::fs::remove_file(&path)?;
+        files::sync_directory(path.parent().unwrap())
     }
 }

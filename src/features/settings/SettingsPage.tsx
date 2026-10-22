@@ -89,7 +89,7 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
           <button type="button" onClick={() => edit()}><Plus size={14} aria-hidden="true" />{t("customCli")}</button></div>}
       </header>
       {(error || state.app.agentError || settingsError) && <p role="alert" className="chat-error">{error || state.app.agentError || settingsError}</p>}
-      {tab === "skills" && <Suspense fallback={<p role="status">{t("loading")}</p>}><SkillsPanel projectName={state.projects.current?.name} /></Suspense>}
+      {tab === "skills" && <Suspense fallback={<p role="status">{t("loading")}</p>}><SkillsPanel projectName={state.projects.current?.name} projectPath={state.projects.current?.path ?? null} /></Suspense>}
       {tab === "agents" && <>
         <div className="settings-table-wrap"><table><thead><tr><th>{t("agents")}</th><th>{t("status")}</th><th>{t("path")}</th><th>{t("capabilities")}</th><th>{t("enabled")}</th><th /></tr></thead>
           <tbody>{state.agents.filter(agent => agent.adapterType !== "dummy").map(agent => {

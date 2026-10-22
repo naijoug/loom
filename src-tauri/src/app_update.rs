@@ -355,6 +355,11 @@ pub(crate) async fn install_update(
             .map_err(|_| "更新操作正在进行")?;
         let update = candidate.update.as_ref().ok_or("请先下载更新")?;
         let bytes = candidate.bytes.as_ref().ok_or("请先下载更新")?;
+        // Covers standalone Skills CLI operations as well as desktop work.
+        // Acquire the cross-process lifecycle gate before the local supervisor.
+        let _skills_admission = crate::skills::commands::update_lease(&app).map_err(|error| {
+            service.fail(&app, "ready", &error.message, "installation_deferred")
+        })?;
         let _admission = supervisor()
             .begin_update()
             .map_err(|message| service.fail(&app, "ready", &message, "installation_deferred"))?;

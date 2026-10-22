@@ -1,0 +1,10 @@
+{
+  "bundle": "src-tauri/target/skills-m2a-relocated/Loom.app",
+  "cwd": "bundle Contents/MacOS",
+  "profileIsolated": true,
+  "uiOrigin": "tauri://localhost",
+  "settingsSkillsLoaded": true,
+  "persistedOperationHistoryVisible": true,
+  "legacyGlobalsReadOnly": true,
+  "limitation": "Source checkout remained on disk; this proves bundle relocation and independent working directory, not denial of all source-file access."
+}

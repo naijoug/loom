@@ -7,37 +7,40 @@
 - `src-tauri/src/skills/{error,files,coordination}.rs`：有类型错误、私有/有界/原子元数据、跨进程生命周期 lease 和 writer 锁、带版本 pending 索引。
 - `sources.rs`：GitHub/GitLab URL 与 transport 标准化、旧 ID alias、输入校验；`operations.rs` 已接受控 Git clone/checkout，真实本地 Git fixture 覆盖导入、刷新、保留旧版本与来源过滤脚本禁用。
 - `catalog.rs`、`repository.rs`：本地目录/根技能/嵌套技能、详情/相关文件、逐项错误、来源登记及重启读取。前端入口为 Settings → Skills，沿用设置侧栏及 Chat/Settings 两个顶层视图。
-- 业务服务不依赖 AppHandle、窗口或 ChatSession，构造时必须传明确协调根目录；`commands.rs` 是负责主窗口校验、路径解析与事件转发的 Tauri 薄层。安装器、CLI binary 和 updater 的跨进程接线仍待实施。
+- 业务服务不依赖 AppHandle、窗口或 ChatSession，构造时必须传明确协调根目录；`commands.rs` 是负责主窗口校验、路径解析与事件转发的 Tauri 薄层。安装与恢复命令已接 supervisor operation guard，updater 已接跨进程独占 lease；CLI binary 仍待 M2c。
 - 八项定向测试包含两个真实子进程场景：杀死持锁进程后锁释放；子进程不运行析构直接退出后，新客户端仍看到 pending。缺日志、坏 JSON、未知 pending schema、路径穿越和 symlink 也有覆盖。
-- 当前只支持安全阻止未恢复资源的新写入，尚无提交/补偿引擎，因此不暴露随意清除 pending 的接口。不宣称 V-17 的自动恢复或完整 M0 已完成。
+- `package.rs`、`transactions.rs`、`targets.rs`、`installers.rs` 已实现完整包指纹、目标枚举、预览/执行、逐项提交/回滚与受校验的 pending 恢复。真实子进程异常退出后由另一 dataDir 恢复有测试；共享指令使用者集合仍待 M2b。
 
 ## 路径与锁
 
-生产路径解析：库默认位于 Loom app data 的 `skills/`，`LOOM_SKILLS_DATA_DIR` 可指定绝对库目录以隔离验收或迁移；固定协调目录始终为同一 OS 用户的 Loom app data 下 `skills-coordination/`，不受自定义库目录影响。测试协调目录仅经服务依赖注入提供。
+生产路径解析：库默认位于 Loom app data 的 `skills/`，`LOOM_SKILLS_DATA_DIR` 可指定绝对库目录以隔离验收或迁移；未指定时可使用 `LOOM_PROFILE_DIR/skills`，否则使用默认 app data/skills。绝对 `LOOM_PROFILE_DIR` 同时隔离 settings/agents/recent-projects；固定协调目录始终为同一 OS 用户的 Loom app data 下 `skills-coordination/`，不受自定义库目录影响。测试协调目录仅经服务依赖注入提供。
 
 `Coordinator::enter` 获取共享生命周期 lease；`Coordinator::writer(&lease)` 获取短时独占 writer。WriterGuard 借用 lease，禁止生命周期提前结束。`try_update` 非阻塞获取独占生命周期 lease，并检查 pending；存在活动操作/待恢复事务时失败，RAII 释放准入。
 
-顺序：生命周期 lease → supervisor operation/update guard → writer。生产接线前必须验证真实更新入口不会绕开该顺序，纯文件工作也计入 supervisor。
+顺序：生命周期 lease → supervisor operation/update guard → writer。安装/恢复和 updater 已遵循此顺序；纯文件工作计入 supervisor。短时 writer 争用最多等待 500ms；取消只写幂等控制标记并持 lifecycle lease，不等待 writer，因此文件提交期间仍可请求取消。提交临界区安全收口后响应取消。
 
 ## 元数据与事务
 
 - 私有元数据最大 8 MiB；读坏/超限明确失败。原子写在相同目录 staging，先文件 `sync_all`，rename 后同步父目录（Unix）。这不是多文件原子提交。
 - PendingTransaction v1：operationId、canonical writeSet、dataDir、journalPath、preparedDigest。journal 必须位于 dataDir 内；准备日志先持久化，发布前检查 digest 未变。
 - 索引位于固定协调目录 `pending/<operationId>.json`；严格 schema/身份验证。重叠包括同一路径及父子目录；损坏索引阻止新写入，不相交且可判定的未完成资源不阻止无关写入。
-- 后续事务引擎需生成不可变准备日志和另行终态回执，核验实际资源后才能清除 marker；不能因锁已释放或 PID 消失清除。
+- `transactions.rs` 保存不可变 prepare 日志与独立 committed/rolled_back 回执，核验实际资源后清除 marker；不能因锁已释放或 PID 消失清除。用户在崩溃后编辑的内容和缺失备份均导致拒绝自动回滚，保留待恢复状态。
+- staging/backup 位于目标 skills 目录的同级 `.loom-skill-transactions/<transactionId>/`，必须同文件系统；避开 Agent 技能发现目录，并用该目录内 `.gitignore` 忽略备份。备份保留供恢复，回执展示位置，不自动 GC。
 - 操作/日志不含凭据、完整环境或用户技能正文；必要备份仅存本机受限目录，错误输出不回显解析原文。
 
-## 安装与共享指令（待实现）
+## 安装与共享指令
 
-目标目录的 `.skills-linker-manifest.json` 是安装归属权威记录。新写入采用 version 2，记录 installationId、sourceId、relativePath、installName、mode、revision/local-live、contentDigest 和 managedResources；v1/TSV 只读识别，M4 验证归属并备份后显式升级。旧 Manager 不能继续写 v2，回退必须恢复备份。
+目标目录的 `.skills-linker-manifest.json` 是安装归属权威记录。新写入采用 version 2，记录 installationId、skillId、sourceId、relativePath、installName、sourceDir、mode、revision、sourceDigest、installedState、时间戳和 managedResources；本地 symlink 的 revision 为空，UI 标记 live；v1/TSV 只读识别，M4 验证归属并备份后显式升级。旧 Manager 不能继续写 v2，回退必须恢复备份。
 
-SharedInstruction v1 放在固定协调目录，键为 canonical 指令文件路径与 marker；保存内容 digest 和安装使用者集合（含清单定位）。相同内容可共享，最后一个已核实使用者移除才删块；不同内容明确冲突。旧 marker 无使用者集合不得默认归当前安装。
+安装规划有效期 10 分钟，捕获 source/目标/manifest 指纹和项目上下文；执行前复核，拒绝过期或目标变化。重复执行读取已有回执；同批多个安装共用 manifest 时使用前一提交后的校验状态。未托管同名内容禁止覆盖，用户修改过的受管 copy 需显式替换并保留备份；卸载修改过的内容默认拒绝。移除来源登记后仍可按 installationId 卸载。
+
+目前 managedResources 必须为空；存在指令资源的安装不由 M2a 修改，以免丢失尚未实现的资源归属。SharedInstruction v1 待 M2b 实现，放在固定协调目录，键为 canonical 指令文件路径与 marker；保存内容 digest 和安装使用者集合（含清单定位）。相同内容可共享，最后一个已核实使用者移除才删块；不同内容明确冲突。旧 marker 无使用者集合不得默认归当前安装。
 
 远程来源快照固定 commit；dirty legacy cache 以内容 digest 单独标识，不能冒充上游 commit。刷新目录只更新 latestRevision，symlink 固定指向不可变路径。本地 live symlink 明示行为，不把其变化伪装成版本化安装。
 
-## 只读来源与前后端
+## 来源、安装与前后端
 
-当前已注册 list_library/get_detail/add_local_source/remove_source/import_repository/refresh_source/list_operations/cancel_operation 八个 `skills_` 命令，以及 `loom://skills-operation` 事件。`contracts/tauri-contract.json` 的 SkillsLibrary / SkillsOperation 样本在 Rust 与 TypeScript 双端校验。安装/翻译/迁移命令在实现时再注册。
+当前已注册 list_library/get_detail/add_local_source/remove_source/import_repository/refresh_source/list_operations/cancel_operation 八个 `skills_` 命令，以及 `loom://skills-operation` 事件。`contracts/tauri-contract.json` 的 SkillsLibrary / SkillsOperation 样本在 Rust 与 TypeScript 双端校验。安装阶段新增 list_install_targets/get_install_status/list_installations/plan_install/plan_uninstall/apply_install/list_pending/recover_installation 八个 `skills_` 命令，共 16 个；InstallTarget/Installation/InstallPlan/InstallReceipt 同样有双端样本。翻译/迁移命令在实现时再注册。
 
 错误形态为 `{code,message}`；当前 code 为 invalid_input/conflict/lock_busy/updating/recovery_required/permission_denied/io/cancelled/timeout/source_unavailable。前端展示错误 message，流程判断不依赖解析自然语言。
 
@@ -47,7 +50,7 @@ operationId 关联持久化进度、sourceId、序号、终态及脱敏执行记
 
 Git 在独立进程组执行，有 120 秒单命令超时、取消、输出有界排流及退出清理。clone 不 checkout，之后以 `.git/info/attributes` 的高优先级禁用 filter/encoding 转换，再 checkout 固定 commit；hooks/fsmonitor/submodule 自动动作关闭。依据 [Git attributes 官方说明](https://git-scm.com/docs/gitattributes)，另有真实恶意 smudge fixture 验证没有执行。
 
-来源库只做原子单文件更新；远程快照先完成并校验再发布，刷新只切换目录 latest revision。移除来源保留快照及用户原目录；安装事务、显式安装更新和安全 GC 不由这个只读切片代替。
+来源库只做原子单文件更新；远程快照先完成并校验再发布，刷新只切换目录 latest revision。移除来源保留快照及用户原目录；显式安装更新经安装规划/事务执行；安全 GC 尚未实现。
 
 ## 源功能去向与兼容基线
 
