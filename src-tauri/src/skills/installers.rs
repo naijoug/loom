@@ -2,6 +2,7 @@ use super::{
     catalog,
     error::{ErrorCode, Result, SkillsError},
     files,
+    instructions::{self, ResourcePreview},
     operations::Operation,
     package::{self, EntryState},
     repository::{Repository, SourceKind},
@@ -17,6 +18,9 @@ use std::{
 
 const MANIFEST: &str = ".skills-linker-manifest.json";
 const LEGACY: &str = ".skills-linker-manifest.tsv";
+fn is_false(value: &bool) -> bool {
+    !value
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -57,7 +61,7 @@ pub struct Installation {
     pub managed_resources: Vec<ManagedResource>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ManagedResource {
     pub path: PathBuf,
@@ -88,6 +92,8 @@ pub struct InstallStatus {
     pub state: String,
     pub installation: Option<Installation>,
     pub update_available: bool,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub instruction_checks: Vec<instructions::InstructionCheck>,
     pub message: Option<String>,
 }
 
@@ -99,6 +105,8 @@ pub struct InstallRequest {
     pub mode: InstallMode,
     pub conflict_policy: ConflictPolicy,
     pub project_path: Option<String>,
+    #[serde(default)]
+    pub with_slash_commands: bool,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -116,6 +124,10 @@ pub struct PlanItem {
     pub before: EntryState,
     pub manifest_before: EntryState,
     pub previous: Option<Installation>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub resource_changes: Vec<ResourcePreview>,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub with_slash_commands: bool,
     pub decision: String,
     pub message: Option<String>,
 }
@@ -169,27 +181,73 @@ pub struct RecoveryItem {
     pub message: Option<String>,
 }
 
-pub fn recovery_items(repo: &Repository, context: &TargetContext) -> Result<Vec<RecoveryItem>> {
-    let lease = repo.coordinator.enter()?;
-    let writer = repo.coordinator.writer_wait(&lease)?;
-    let roots = context
+fn recovery_authority(
+    repo: &Repository,
+    context: &TargetContext,
+    pending: &super::coordination::PendingTransaction,
+) -> Result<Vec<PathBuf>> {
+    let targets = context
         .targets()?
         .into_iter()
         .filter(|t| t.blocked_reason.is_none())
-        .map(|t| t.skills_dir)
         .collect::<Vec<_>>();
+    let mut roots = targets
+        .iter()
+        .map(|t| t.skills_dir.clone())
+        .collect::<Vec<_>>();
+    let mut instructions = Vec::new();
+    let mut wrappers = Vec::new();
+    for target in &targets {
+        if let Ok(path) = context.instruction_path(target) {
+            roots.push(path.parent().unwrap().to_path_buf());
+            instructions.push(path);
+        }
+        if let Ok(Some(path)) = context.wrapper_path(target, "recovery") {
+            roots.push(path.parent().unwrap().to_path_buf());
+            wrappers.push(path.parent().unwrap().to_path_buf());
+        }
+    }
+    let ledger = instructions::ledger_directory(repo);
+    roots.push(ledger.clone());
+    roots.sort();
+    roots.dedup();
+    for path in transactions::resource_targets(pending, &roots)? {
+        let parent = path
+            .parent()
+            .ok_or_else(|| SkillsError::invalid("Missing resource parent"))?;
+        let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+        let skill = targets.iter().any(|t| t.skills_dir == parent)
+            && (name == MANIFEST || validate_name(name).is_ok());
+        let wrapper = wrappers.iter().any(|p| p == parent)
+            && name
+                .strip_suffix(".md")
+                .is_some_and(|n| validate_name(n).is_ok());
+        let ownership = parent == ledger
+            && name
+                .strip_suffix(".json")
+                .is_some_and(|n| n.len() == 64 && n.bytes().all(|b| b.is_ascii_hexdigit()));
+        if !skill && !wrapper && !ownership && !instructions.contains(&path) {
+            return Err(SkillsError::recovery(
+                "Recovery resource is outside known installation paths",
+            ));
+        }
+    }
+    Ok(roots)
+}
+
+pub fn recovery_items(repo: &Repository, context: &TargetContext) -> Result<Vec<RecoveryItem>> {
+    let lease = repo.coordinator.enter()?;
+    let writer = repo.coordinator.writer_wait(&lease)?;
     Ok(writer
         .pending()?
         .into_iter()
         .map(|pending| {
-            let can_recover = pending.write_set.iter().all(|path| roots.contains(path));
+            let check = recovery_authority(repo, context, &pending);
             RecoveryItem {
                 operation_id: pending.operation_id,
                 resources: pending.write_set,
-                can_recover,
-                message: (!can_recover).then(|| {
-                    "Select the original registered project to recover this operation".into()
-                }),
+                can_recover: check.is_ok(),
+                message: check.err().map(|e| e.message),
             }
         })
         .collect())
@@ -203,12 +261,7 @@ pub fn recover_one(repo: &Repository, context: &TargetContext, id: &str) -> Resu
         .into_iter()
         .find(|p| p.operation_id == id)
         .ok_or_else(|| SkillsError::invalid("Unknown pending operation"))?;
-    let roots = context
-        .targets()?
-        .into_iter()
-        .filter(|t| t.blocked_reason.is_none())
-        .map(|t| t.skills_dir)
-        .collect::<Vec<_>>();
+    let roots = recovery_authority(repo, context, &pending)?;
     transactions::recover(&writer, &pending, &roots)
 }
 
@@ -255,10 +308,21 @@ fn load_manifest(target: &InstallTarget) -> Result<Manifest> {
         ));
     }
     for (name, entry) in &manifest.skills {
-        if !entry.managed_resources.is_empty() {
-            return Err(SkillsError::recovery("This installation contains instruction resources requiring a compatible manager version"));
-        }
         validate_name(name)?;
+        for resource in &entry.managed_resources {
+            if !resource.path.is_absolute()
+                || !matches!(resource.content_digest.len(), 64)
+                || !resource
+                    .content_digest
+                    .bytes()
+                    .all(|b| b.is_ascii_hexdigit())
+                || (resource.marker != *name && resource.marker != format!("slash:{name}"))
+            {
+                return Err(SkillsError::recovery(
+                    "Invalid managed instruction reference",
+                ));
+            }
+        }
         files::validate_id(&entry.installation_id)?;
         if name != &entry.install_name || entry.installed_state == EntryState::Missing {
             return Err(SkillsError::recovery(
@@ -355,6 +419,7 @@ pub fn statuses(
                 destination,
                 state: "absent".into(),
                 installation: None,
+                instruction_checks: Vec::new(),
                 update_available: false,
                 message: None,
             };
@@ -403,6 +468,28 @@ pub fn statuses(
                     && (entry.revision != package.revision
                         || (entry.mode == InstallMode::Copy
                             && entry.source_digest != package.digest));
+                let instruction_state = validate_owned_resources(
+                    context,
+                    &target,
+                    &entry.install_name,
+                    &entry.managed_resources,
+                )
+                .and_then(|_| {
+                    writer.check_write_set(
+                        &entry
+                            .managed_resources
+                            .iter()
+                            .map(|r| r.path.clone())
+                            .collect::<Vec<_>>(),
+                    )
+                });
+                if let Err(error) = instruction_state {
+                    status.state = "recovery_required".into();
+                    status.message = Some(error.message);
+                } else {
+                    status.instruction_checks =
+                        instructions::diagnose_installation(repo, context, &target, entry);
+                }
                 status.installation = Some(entry.clone());
             } else if package::state(&status.destination)? != EntryState::Missing {
                 status.state = "conflict".into();
@@ -416,10 +503,11 @@ pub fn statuses(
 pub fn inventory(repo: &Repository, context: &TargetContext) -> Result<Vec<InstallStatus>> {
     let lease = repo.coordinator.enter()?;
     let writer = repo.coordinator.writer_wait(&lease)?;
-    inventory_locked(context, &writer)
+    inventory_locked(repo, context, &writer)
 }
 
 fn inventory_locked(
+    repo: &Repository,
     context: &TargetContext,
     writer: &super::coordination::WriterGuard<'_>,
 ) -> Result<Vec<InstallStatus>> {
@@ -444,6 +532,7 @@ fn inventory_locked(
                     }
                     .into(),
                     installation: None,
+                    instruction_checks: Vec::new(),
                     update_available: false,
                     message: Some(error.message),
                 });
@@ -453,11 +542,34 @@ fn inventory_locked(
         for entry in manifest.skills.values() {
             let destination = target.skills_dir.join(&entry.install_name);
             let actual = package::state(&destination)?;
+            let instruction_error = validate_owned_resources(
+                context,
+                &target,
+                &entry.install_name,
+                &entry.managed_resources,
+            )
+            .and_then(|_| {
+                writer.check_write_set(
+                    &entry
+                        .managed_resources
+                        .iter()
+                        .map(|r| r.path.clone())
+                        .collect::<Vec<_>>(),
+                )
+            })
+            .err();
+            let checks = if instruction_error.is_none() {
+                instructions::diagnose_installation(repo, context, &target, entry)
+            } else {
+                Vec::new()
+            };
             result.push(InstallStatus {
                 target: target.clone(),
                 skill_id: entry.skill_id.clone(),
                 destination,
-                state: if actual == EntryState::Missing {
+                state: if instruction_error.is_some() {
+                    "recovery_required"
+                } else if actual == EntryState::Missing {
                     "missing"
                 } else if actual != entry.installed_state {
                     "modified"
@@ -466,8 +578,9 @@ fn inventory_locked(
                 }
                 .into(),
                 installation: Some(entry.clone()),
+                instruction_checks: checks,
                 update_available: false,
-                message: None,
+                message: instruction_error.map(|e| e.message),
             });
         }
     }
@@ -537,6 +650,8 @@ pub fn plan_install(
             before: before.clone(),
             manifest_before: package::state(&target.skills_dir.join(MANIFEST))?,
             previous: None,
+            resource_changes: Vec::new(),
+            with_slash_commands: input.with_slash_commands,
             decision: "install".into(),
             message: None,
         };
@@ -581,6 +696,23 @@ pub fn plan_install(
                     item.message=Some("Modified managed content will be replaced; the previous content is retained in a recovery backup".into());
                 }
             }
+            let resources = resource_plan(
+                repo,
+                context,
+                &target,
+                &source.name,
+                item.previous.as_ref(),
+                Some(&source),
+                input.with_slash_commands,
+            )?;
+            item.resource_changes = resources.preview();
+            writer.check_write_set(
+                &item
+                    .resource_changes
+                    .iter()
+                    .map(|r| r.path.clone())
+                    .collect::<Vec<_>>(),
+            )?;
             Ok(())
         })();
         if let Err(error) = check {
@@ -605,7 +737,7 @@ pub fn plan_uninstall(
     }
     let lease = repo.coordinator.enter()?;
     let writer = repo.coordinator.writer_wait(&lease)?;
-    let all = inventory_locked(context, &writer)?;
+    let all = inventory_locked(repo, context, &writer)?;
     let mut plan = new_plan(PlanAction::Uninstall, context, InstallMode::Copy, None);
     let mut seen = std::collections::BTreeSet::new();
     for id in &input.installation_ids {
@@ -622,7 +754,7 @@ pub fn plan_uninstall(
             .ok_or_else(|| SkillsError::invalid("Unknown managed installation"))?;
         let previous = status.installation.clone().unwrap();
         let before = package::state(&status.destination)?;
-        let blocked = writer
+        let mut blocked = writer
             .check_write_set(std::slice::from_ref(&status.target.skills_dir))
             .err()
             .map(|e| e.message)
@@ -630,6 +762,29 @@ pub fn plan_uninstall(
                 (status.state == "modified")
                     .then(|| "Installed content has user changes; uninstall refused".into())
             });
+        let resource_changes = match resource_plan(
+            repo,
+            context,
+            &status.target,
+            &previous.install_name,
+            Some(&previous),
+            None,
+            false,
+        ) {
+            Ok(resources) => {
+                let preview = resources.preview();
+                if let Err(error) = writer
+                    .check_write_set(&preview.iter().map(|r| r.path.clone()).collect::<Vec<_>>())
+                {
+                    blocked = Some(error.message);
+                }
+                preview
+            }
+            Err(error) => {
+                blocked = Some(error.message);
+                Vec::new()
+            }
+        };
         plan.items.push(PlanItem {
             target: status.target.clone(),
             install_name: previous.install_name.clone(),
@@ -637,6 +792,8 @@ pub fn plan_uninstall(
             before,
             manifest_before: package::state(&status.target.skills_dir.join(MANIFEST))?,
             previous: Some(previous),
+            resource_changes,
+            with_slash_commands: false,
             decision: if blocked.is_some() {
                 "blocked"
             } else {
@@ -693,6 +850,11 @@ pub fn apply(
         if let Some(state) = manifests.get(&manifest_path) {
             item.manifest_before = state.clone();
         }
+        for resource in &mut item.resource_changes {
+            if let Some(state) = manifests.get(&resource.path) {
+                resource.before = state.clone();
+            }
+        }
         let result = if let Err(error) = operation.check_cancelled() {
             Err(error)
         } else if item.decision == "blocked" {
@@ -709,6 +871,16 @@ pub fn apply(
             .as_ref()
             .is_ok_and(|status| matches!(status.as_str(), "installed" | "uninstalled"))
         {
+            for resource in &item.resource_changes {
+                manifests.insert(
+                    resource.path.clone(),
+                    transactions::committed_state(
+                        &repo.root,
+                        &format!("{}-{index}", plan.plan_id),
+                        &resource.path,
+                    )?,
+                );
+            }
             manifests.insert(
                 manifest_path.clone(),
                 transactions::committed_state(
@@ -761,6 +933,62 @@ pub fn apply(
     }
     files::atomic_json(&result_path, &receipt)?;
     Ok(receipt)
+}
+
+fn validate_owned_resources(
+    context: &TargetContext,
+    target: &InstallTarget,
+    name: &str,
+    owned: &[ManagedResource],
+) -> Result<()> {
+    for resource in owned {
+        let expected = if resource.marker == name {
+            Some(context.instruction_path(target)?)
+        } else if resource.marker == format!("slash:{name}") {
+            context.wrapper_path(target, name)?
+        } else {
+            None
+        };
+        if expected.as_ref() != Some(&resource.path) {
+            return Err(SkillsError::recovery(
+                "Instruction resource is outside its installation scope",
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn resource_plan(
+    repo: &Repository,
+    context: &TargetContext,
+    target: &InstallTarget,
+    name: &str,
+    previous: Option<&Installation>,
+    source: Option<&ResolvedPackage>,
+    slash: bool,
+) -> Result<instructions::ResourcePlan> {
+    let owned = previous
+        .map(|p| p.managed_resources.as_slice())
+        .unwrap_or_default();
+    validate_owned_resources(context, target, name, owned)?;
+    let desired = source
+        .map(|s| instructions::desired(context, target, s, slash))
+        .transpose()?
+        .unwrap_or_default();
+    let destination = target.skills_dir.join(name);
+    for path in owned
+        .iter()
+        .map(|r| &r.path)
+        .chain(desired.iter().map(|r| &r.path))
+    {
+        if path.starts_with(&destination) || source.is_some_and(|s| path.starts_with(&s.directory))
+        {
+            return Err(SkillsError::invalid(
+                "Instruction resource overlaps a skill package",
+            ));
+        }
+    }
+    instructions::plan(repo, &instructions::owner(target, name)?, owned, &desired)
 }
 
 fn apply_item(
@@ -828,6 +1056,42 @@ fn apply_item(
     } else {
         None
     };
+    let resource_plan = resource_plan(
+        repo,
+        context,
+        &target,
+        &item.install_name,
+        item.previous.as_ref(),
+        source.as_ref(),
+        item.with_slash_commands,
+    )?;
+    let current_preview = resource_plan.preview();
+    if current_preview.len() != item.resource_changes.len()
+        || current_preview
+            .iter()
+            .zip(&item.resource_changes)
+            .any(|(a, b)| a.path != b.path || a.before != b.before)
+    {
+        return Err(SkillsError::new(
+            ErrorCode::Conflict,
+            "Instruction resources changed after preview; review a new plan",
+        ));
+    }
+    writer.check_write_set(
+        &item
+            .resource_changes
+            .iter()
+            .map(|r| r.path.clone())
+            .collect::<Vec<_>>(),
+    )?;
+    let mut allowed_roots = vec![target.skills_dir.clone()];
+    allowed_roots.extend(
+        item.resource_changes
+            .iter()
+            .filter_map(|r| r.path.parent().map(Path::to_path_buf)),
+    );
+    allowed_roots.sort();
+    allowed_roots.dedup();
     context.ensure(&target)?;
     let staged = transactions::artifact(&item.destination, &id, 0, "staged")?;
     let backup = transactions::artifact(&item.destination, &id, 0, "backup")?;
@@ -880,7 +1144,7 @@ fn apply_item(
                 installed_state: package::state(&staged)?,
                 installed_at_ms: item.previous.as_ref().map_or(now, |p| p.installed_at_ms),
                 updated_at_ms: now,
-                managed_resources: Vec::new(),
+                managed_resources: resource_plan.resources.clone(),
             };
             manifest
                 .skills
@@ -903,7 +1167,7 @@ fn apply_item(
             manifest.skills.remove(&item.install_name);
         }
         files::atomic_json(&staged_manifest, &manifest)?;
-        let changes = vec![
+        let mut changes = vec![
             Change {
                 target: item.destination.clone(),
                 before: item.before.clone(),
@@ -919,13 +1183,28 @@ fn apply_item(
                 backup: transactions::artifact(&manifest_path, &id, 1, "backup")?,
             },
         ];
+        changes.extend(resource_plan.stage(&id, changes.len())?);
         operation.check_cancelled()?;
         transactions::prepare(repo, writer, &id, changes)
     })();
     let pending = match prepare {
         Ok(p) => p,
         Err(error) => {
-            for path in [&staged, &staged_manifest] {
+            // A publish/fsync error may already have made the pending marker
+            // visible. Never remove recovery artifacts in that case.
+            if writer.pending()?.iter().any(|p| p.operation_id == id) {
+                return Err(SkillsError::recovery(error.message));
+            }
+            let mut cleanup = vec![staged.clone(), staged_manifest.clone()];
+            for (i, resource) in item.resource_changes.iter().enumerate() {
+                cleanup.push(transactions::artifact(
+                    &resource.path,
+                    &id,
+                    i + 2,
+                    "staged",
+                )?);
+            }
+            for path in &cleanup {
                 if fs::symlink_metadata(path).is_ok() {
                     let _ = package::remove_entry(path);
                 }
@@ -933,12 +1212,8 @@ fn apply_item(
             return Err(error);
         }
     };
-    if let Err(error) =
-        transactions::commit(writer, &pending, std::slice::from_ref(&target.skills_dir))
-    {
-        if let Err(recovery) =
-            transactions::recover(writer, &pending, std::slice::from_ref(&target.skills_dir))
-        {
+    if let Err(error) = transactions::commit(writer, &pending, &allowed_roots) {
+        if let Err(recovery) = transactions::recover(writer, &pending, &allowed_roots) {
             return Err(SkillsError::recovery(format!(
                 "{}; {}",
                 error.message, recovery.message

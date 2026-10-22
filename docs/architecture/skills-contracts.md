@@ -9,7 +9,7 @@
 - `catalog.rs`、`repository.rs`：本地目录/根技能/嵌套技能、详情/相关文件、逐项错误、来源登记及重启读取。前端入口为 Settings → Skills，沿用设置侧栏及 Chat/Settings 两个顶层视图。
 - 业务服务不依赖 AppHandle、窗口或 ChatSession，构造时必须传明确协调根目录；`commands.rs` 是负责主窗口校验、路径解析与事件转发的 Tauri 薄层。安装与恢复命令已接 supervisor operation guard，updater 已接跨进程独占 lease；CLI binary 仍待 M2c。
 - 八项定向测试包含两个真实子进程场景：杀死持锁进程后锁释放；子进程不运行析构直接退出后，新客户端仍看到 pending。缺日志、坏 JSON、未知 pending schema、路径穿越和 symlink 也有覆盖。
-- `package.rs`、`transactions.rs`、`targets.rs`、`installers.rs` 已实现完整包指纹、目标枚举、预览/执行、逐项提交/回滚与受校验的 pending 恢复。真实子进程异常退出后由另一 dataDir 恢复有测试；共享指令使用者集合仍待 M2b。
+- `package.rs`、`transactions.rs`、`targets.rs`、`installers.rs` 已实现完整包指纹、目标枚举、预览/执行、逐项提交/回滚与受校验的 pending 恢复。真实子进程异常退出后由另一 dataDir 恢复有测试；`instructions.rs` 已接共享指令使用者集合、manual wrapper、只读诊断与跨文件恢复。
 
 ## 路径与锁
 
@@ -34,7 +34,15 @@
 
 安装规划有效期 10 分钟，捕获 source/目标/manifest 指纹和项目上下文；执行前复核，拒绝过期或目标变化。重复执行读取已有回执；同批多个安装共用 manifest 时使用前一提交后的校验状态。未托管同名内容禁止覆盖，用户修改过的受管 copy 需显式替换并保留备份；卸载修改过的内容默认拒绝。移除来源登记后仍可按 installationId 卸载。
 
-目前 managedResources 必须为空；存在指令资源的安装不由 M2a 修改，以免丢失尚未实现的资源归属。SharedInstruction v1 待 M2b 实现，放在固定协调目录，键为 canonical 指令文件路径与 marker；保存内容 digest 和安装使用者集合（含清单定位）。相同内容可共享，最后一个已核实使用者移除才删块；不同内容明确冲突。旧 marker 无使用者集合不得默认归当前安装。
+managedResources 记录 canonical path、marker 和 contentDigest。SharedInstruction v1 保存在固定协调目录的 `shared-instructions/<resource-key-digest>.json`，键为 canonical 指令文件路径与 marker；保存资源类型、内容指纹和 installationId → manifestPath/installName 使用者集合。每次变更核对所有使用者的清单引用，缺失或无法读取不能当成零使用者。相同内容可共享，最后一个已核实使用者移除才删块；不同内容明确冲突。旧 marker 无使用者集合不得默认归当前安装。
+
+`auto/global` 且有 inject.md 时生成与旧工具相同的 marker；cron 不注入。路径类别优先，其次 skill.yaml 的 category/activation。manual 的 `withSlashCommands` 默认为 false，Codex/Claude 可显式生成 wrapper，指向实际安装包路径，Claude 保留 `$ARGUMENTS`。未知 wrapper（包括空文件）不能因勾选覆盖策略而覆盖。源内容与用户指令中的嵌套/重复/异常 marker 被拒绝。
+
+规划附带 resourceChanges 前指纹；执行阶段在同一 writer 锁下重算并比较。指令正文、wrapper、共享 ledger、技能文件和安装清单进入同一个 prepare journal；批量操作只沿用该批次已验证提交的后指纹。恢复既核对 journal digest，也限制为已授权安装目录、具体指令路径、命令文件和 ledger，拒绝借项目目录覆盖无关文件。跨目录 rename 同步两端父目录；prepare 失败但 pending 已可见时保留恢复材料。
+
+`skills_get_install_status` / `skills_list_installations` 附带 instructionChecks：current/missing/stale/malformed；诊断不写文件，local-live 的 inject.md 变化会标 stale，需显式更新。前端规划显示实际受影响的指令文件，不展示内部 ledger。指令最终符号链接只在 canonical 目标仍处于获准 home/project 范围且不与技能包重叠时保留，否则拒绝。
+
+当前单安装更新不能改写其他使用者仍依赖的共享内容，即使把所有目标放进普通逐项批次仍会阻止；全部使用者的一致更新规划尚待补齐。CLI doctor 入口、旧归属重建分别随 M2c/M4 完成。
 
 远程来源快照固定 commit；dirty legacy cache 以内容 digest 单独标识，不能冒充上游 commit。刷新目录只更新 latestRevision，symlink 固定指向不可变路径。本地 live symlink 明示行为，不把其变化伪装成版本化安装。
 

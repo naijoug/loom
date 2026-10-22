@@ -597,6 +597,7 @@ mod tests {
                 &repo,
                 &context,
                 &InstallRequest {
+                    with_slash_commands: false,
                     skill_id: skill_id.clone(),
                     mode,
                     conflict_policy: ConflictPolicy::Fail,
@@ -665,6 +666,7 @@ mod tests {
                 &repo,
                 &context,
                 &InstallRequest {
+                    with_slash_commands: false,
                     skill_id: skill_id.clone(),
                     mode,
                     conflict_policy: ConflictPolicy::Overwrite,

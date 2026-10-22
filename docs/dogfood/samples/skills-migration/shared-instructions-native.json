@@ -1,0 +1,25 @@
+{
+  "afterInstall": {
+    "sharedBlockCount": 1,
+    "userRulesPreserved": true,
+    "owners": [
+      "installed-29b08a0d2f5aa6e3c503b83db4fdd068",
+      "installed-d48d5924da44db82bab2a99bdeb82e18"
+    ]
+  },
+  "afterFirstUninstall": {
+    "sharedBlockCount": 1,
+    "remainingTarget": "amp-project",
+    "userRulesPreserved": true
+  },
+  "afterLastUninstall": {
+    "sharedBlockCount": 0,
+    "originalUserRulesRestored": true,
+    "allFixtureInstallsRemoved": true,
+    "sourceFilesPreserved": true
+  },
+  "profileIsolated": true,
+  "projectTargetsOnly": true,
+  "uiReviewedInstructionPath": true,
+  "uiReportedCurrentForBothUsers": true
+}

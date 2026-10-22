@@ -34,16 +34,18 @@ export interface Installation {
   installedState: EntryState; installedAtMs: number; updatedAtMs: number;
   managedResources: { path: string; marker: string; contentDigest: string }[];
 }
-export interface InstallStatus { target: InstallTarget; skillId: string; destination: string; state: string; installation: Installation | null; updateAvailable: boolean; message: string | null; }
+export interface InstructionCheck { path: string; state: "current" | "missing" | "stale" | "malformed"; message: string | null; }
+export interface ResourcePreview { path: string; before: EntryState; }
+export interface InstallStatus { target: InstallTarget; skillId: string; destination: string; state: string; installation: Installation | null; updateAvailable: boolean; instructionChecks?: InstructionCheck[]; message: string | null; }
 export interface InstallPlan {
   schemaVersion: number; planId: string; action: "install" | "uninstall"; projectPath: string | null;
   mode: InstallMode; createdAtMs: number;
   source: { skillId: string; sourceId: string; relativePath: string; name: string; directory: string; revision: string | null; digest: string } | null;
-  items: { target: InstallTarget; installName: string; destination: string; before: EntryState; manifestBefore: EntryState; previous: Installation | null; decision: string; message: string | null }[];
+  items: { target: InstallTarget; installName: string; destination: string; before: EntryState; manifestBefore: EntryState; previous: Installation | null; resourceChanges?: ResourcePreview[]; withSlashCommands?: boolean; decision: string; message: string | null }[];
 }
 export interface InstallReceipt { planId: string; operationId: string; items: { targetId: string; destination: string; status: string; message: string | null; backupDirectory?: string }[]; }
 export interface RecoveryItem { operationId: string; resources: string[]; canRecover: boolean; message: string | null; }
-export interface InstallRequest { skillId: string; targetIds: string[]; mode: InstallMode; conflictPolicy: "fail" | "skip" | "overwrite"; projectPath: string | null; }
+export interface InstallRequest { skillId: string; targetIds: string[]; mode: InstallMode; conflictPolicy: "fail" | "skip" | "overwrite"; projectPath: string | null; withSlashCommands?: boolean; }
 export interface SkillsApi {
   list(): Promise<SkillsLibrary>;
   detail(skillId: string): Promise<SkillDetail>;

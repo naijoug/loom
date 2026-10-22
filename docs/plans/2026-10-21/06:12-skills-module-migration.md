@@ -1,6 +1,6 @@
 # Skills Manager 迁入 Loom 实施计划
 
-- 状态：实施中；M0 基础、M5 内容工具独立化、Settings → Skills 来源与 M2a 安装闭环已落地并分项验证；G1 综合关闭及后续完整替代尚未完成，G1/G2 均未验收。
+- 状态：实施中；M0 基础、M5 内容工具独立化、Settings → Skills 来源、M2a 安装闭环及 M2b 共享指令/wrapper/诊断已落地并分项验证；G1 综合关闭及后续完整替代尚未完成，G1/G2 均未验收。
 - 编写时间：2026-10-21 06:12，America/Los_Angeles。
 - v2 修订时间：2026-10-21 07:19，America/Los_Angeles；依据本对话的实施就绪审查细化。
 - v3 修订时间：2026-10-21 07:29，America/Los_Angeles；补充共享注入块使用者归属、跨客户端未完成事务发现和应用更新准入。
@@ -562,12 +562,13 @@ G1 的范围声明不是功能删减：CLI/TUI、翻译和迁移仍在本计划�
 | M0-03/04/05 | 基础与样本已落地，安装集成待后续阶段 | Skills DTO 双端样本、旧 library/JSON/TSV 合成 fixture、lease/writer/pending 和不可变快照探针；完整安装归属/恢复属于 M2/M4 验收 |
 | M1a-01/02/03/05 | 来源切片通过离线/本机验证 | catalog/repository/snapshots/operations 与 8 个 IPC 已接线；22 项 Skills 测试含真实本地 Git clone/refresh、禁用来源 smudge、取消与重启记录；外网 GitHub/GitLab 实测待后续 |
 | M1a-04 | 已按用户补充要求改为设置内板块 | 顶层仍 Chat/Settings；Settings 侧栏 SkillsPanel 原生验证本地来源添加、详情/文件、搜索/刷新、重启、移除保留文件、返回 Chat 保留草稿，中英文/深浅主题观察通过 |
+| M2b-01/02/03/04 | 共享资源切片已实现并分项验证，整体出口待关闭 | auto/global、manual wrapper、只读诊断、使用者 ledger、跨文件事务；服务级并发/恢复与原生部分/最后卸载保全通过；多使用者共享内容一致更新规划仍待补齐 |
 | M5-01/03/04 | 内容独立化切片通过 | 源提交 `fd7a4ec`；隔离副本无 apps/Node/Tauri/Loom 的 32 项内容测试、7 项旧管理测试通过，272 个技能/归档文件哈希不变 |
 | M5-02、M5 总出口 | 未完成 | 管理测试仍在源项目，等待 M2c；旧路径转发入口留到 M7 |
 | M2a 安装闭环 | 已实现并分项验证，待 G1 综合关闭 | 16 个 Skills IPC、v2 清单、copy/symlink/显式更新/卸载、跨 dataDir 事务恢复、安装与 updater lease 接线；原生 5 次规划、真实 Codex 发现/调用通过；备份避开技能发现且 Git 忽略 |
 | 其余实施；G1/G2 | 未完成/未验收 | G1 已补真实本地 Git 的固定安装版本全链与更新器失败准入回归，仍待视觉矩阵/无源码访问验收；M1b/M2b/M2c/M3/M4 及源应用退役待完成，详见实施证据 |
 | v3 文档一致性、相对链接、索引排序 | 通过 | 链接/锚点、索引唯一性与倒序、章节引用、11 阶段/50 任务、SRC-01–10/V-01–18、代码围栏及空白检查通过；人工核对三项补充的契约—任务—验证—门槛对应关系，`git diff --check` 通过 |
-| 应用测试与构建 | 分项通过，详见证据 | M2a `3448f5d` 后补充回归完整 check：前端 106/Rust 194；release app bundle、搬移后独立 cwd 原生运行通过；旧 Manager 版本保护后完整 check：应用 99/Rust 25/内容 32/管理 8 |
+| 应用测试与构建 | 分项通过，详见证据 | M2b 共享资源切片完整 check：前端 108/Rust 206；release no-bundle 与 debug app bundle 通过；release app bundle、搬移后独立 cwd 原生运行通过；旧 Manager 版本保护后完整 check：应用 99/Rust 25/内容 32/管理 8 |
 | 安装/真实服务/迁移验收 | 安装分项通过，整体未完成 | 临时项目 copy/更新/卸载与孤立 symlink 卸载、真实 Codex 调用通过；外网来源、真实翻译 provider、旧数据迁移和整体 G1/G2 未验收 |
 
 实施每个里程碑后更新本表及 [计划索引](../../PLANS.md)，成功标准逐项回填；不以“代码已迁入”代替迁移完成。

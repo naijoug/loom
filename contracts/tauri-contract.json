@@ -399,6 +399,19 @@
           "message": null
         }
       ]
+    },
+    "skillsInstructionCheck": {
+      "path": "/fixture/project/AGENTS.md",
+      "state": "current",
+      "message": null
+    },
+    "skillsResourcePreview": {
+      "path": "/fixture/project/AGENTS.md",
+      "before": {
+        "kind": "file",
+        "digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "mode": 420
+      }
     }
   }
 }

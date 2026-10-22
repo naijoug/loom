@@ -52,6 +52,7 @@ impl Setup {
         targets: &[&str],
     ) -> InstallRequest {
         InstallRequest {
+            with_slash_commands: false,
             skill_id: self.skill_id.clone(),
             mode,
             conflict_policy: policy,
@@ -521,4 +522,375 @@ fn backups_are_ignored_by_git_and_not_discoverable_as_installed_skills() {
     .unwrap()
     .skills
     .is_empty());
+}
+
+fn auto_setup() -> Setup {
+    let mut s = Setup::new();
+    fs::rename(
+        s.fixture.0.join("source/manual"),
+        s.fixture.0.join("source/auto"),
+    )
+    .unwrap();
+    fs::write(
+        s.fixture.0.join("source/auto/demo/inject.md"),
+        "Shared instruction\n",
+    )
+    .unwrap();
+    let source = s.repo.load().unwrap().sources[0].id.clone();
+    s.skill_id = catalog::encode_id(&source, "auto/demo/SKILL.md");
+    s
+}
+fn install_auto(s: &Setup, targets: &[&str], policy: ConflictPolicy) -> installers::InstallPlan {
+    let plan = installers::plan_install(
+        &s.repo,
+        &s.context,
+        &s.request(InstallMode::Copy, policy, targets),
+    )
+    .unwrap();
+    assert!(
+        plan.items.iter().all(|i| i.decision != "blocked"),
+        "{plan:?}"
+    );
+    assert!(s
+        .apply(&plan.plan_id)
+        .items
+        .iter()
+        .all(|i| i.status == "installed"));
+    plan
+}
+fn remove_target(s: &Setup, repo: &Repository, id: &str) -> installers::InstallReceipt {
+    let inventory = installers::inventory(repo, &s.context).unwrap();
+    let installed = inventory
+        .iter()
+        .find(|i| i.target.id == id)
+        .unwrap()
+        .installation
+        .as_ref()
+        .unwrap();
+    let plan = installers::plan_uninstall(
+        repo,
+        &s.context,
+        &UninstallRequest {
+            installation_ids: vec![installed.installation_id.clone()],
+            project_path: None,
+        },
+    )
+    .unwrap();
+    let mut op = Operation::begin(repo, "fixture", "uninstall").unwrap();
+    let result = installers::apply(repo, &s.context, &plan.plan_id, &mut op).unwrap();
+    op.finish(Ok(())).unwrap();
+    result
+}
+
+#[test]
+fn shared_instructions_keep_other_users_and_preserve_crlf_and_permissions() {
+    let s = auto_setup();
+    let file = s.fixture.0.join("project/AGENTS.md");
+    let original = "User rules\r\n<!-- skills-linker:foreign:begin -->\r\nForeign rule\r\n<!-- skills-linker:foreign:end -->\r\n";
+    fs::write(&file, original).unwrap();
+    package::set_mode(&file, 0o640).unwrap();
+    let first = install_auto(&s, &["codex-project", "amp-project"], ConflictPolicy::Fail);
+    assert!(first.items.iter().all(|i| i.resource_changes.len() == 2));
+    let installed = fs::read_to_string(&file).unwrap();
+    assert_eq!(
+        installed
+            .matches("skills-linker:fixture-demo:begin")
+            .count(),
+        1
+    );
+    assert!(!installed.replace("\r\n", "").contains('\n'));
+    // Replacement adds no duplicate user and does not change a peer's block.
+    install_auto(&s, &["codex-project"], ConflictPolicy::Overwrite);
+    assert_eq!(
+        remove_target(&s, &s.repo, "codex-project").items[0].status,
+        "uninstalled"
+    );
+    assert_eq!(fs::read_to_string(&file).unwrap(), installed);
+    assert_eq!(
+        remove_target(&s, &s.repo, "amp-project").items[0].status,
+        "uninstalled"
+    );
+    assert_eq!(fs::read_to_string(&file).unwrap(), original);
+    assert!(matches!(
+        package::state(&file).unwrap(),
+        package::EntryState::File { mode: 0o640, .. }
+    ));
+}
+
+#[test]
+fn another_data_directory_shares_ownership_and_unknown_peers_prevent_deletion() {
+    let s = auto_setup();
+    install_auto(&s, &["codex-project"], ConflictPolicy::Fail);
+    let other =
+        Repository::open(&s.fixture.0.join("other-data"), &s.fixture.0.join("coord")).unwrap();
+    other.add_local(&s.fixture.0.join("source")).unwrap();
+    let plan = installers::plan_install(
+        &other,
+        &s.context,
+        &s.request(InstallMode::Copy, ConflictPolicy::Fail, &["amp-project"]),
+    )
+    .unwrap();
+    let mut op = Operation::begin(&other, "fixture", "install").unwrap();
+    assert_eq!(
+        installers::apply(&other, &s.context, &plan.plan_id, &mut op)
+            .unwrap()
+            .items[0]
+            .status,
+        "installed"
+    );
+    op.finish(Ok(())).unwrap();
+    drop(op);
+    let file = s.fixture.0.join("project/AGENTS.md");
+    let original = fs::read(&file).unwrap();
+    let peer = s
+        .fixture
+        .0
+        .join("project/.codex/skills/.skills-linker-manifest.json");
+    let bytes = fs::read(&peer).unwrap();
+    fs::remove_file(&peer).unwrap();
+    assert_eq!(
+        remove_target(&s, &other, "amp-project").items[0].status,
+        "conflict"
+    );
+    assert_eq!(fs::read(&file).unwrap(), original);
+    fs::write(&peer, bytes).unwrap();
+    assert_eq!(
+        remove_target(&s, &other, "amp-project").items[0].status,
+        "uninstalled"
+    );
+    assert_eq!(fs::read(&file).unwrap(), original);
+    assert_eq!(
+        remove_target(&s, &s.repo, "codex-project").items[0].status,
+        "uninstalled"
+    );
+    assert!(!file.exists());
+}
+
+#[test]
+fn instruction_edits_unknown_markers_and_shared_version_conflicts_are_preserved() {
+    let s = auto_setup();
+    let file = s.fixture.0.join("project/AGENTS.md");
+    fs::write(&file, "<!-- skills-linker:fixture-demo:begin -->\nUnknown owner\n<!-- skills-linker:fixture-demo:end -->\n").unwrap();
+    let old = fs::read(&file).unwrap();
+    let plan = installers::plan_install(
+        &s.repo,
+        &s.context,
+        &s.request(
+            InstallMode::Copy,
+            ConflictPolicy::Overwrite,
+            &["codex-project"],
+        ),
+    )
+    .unwrap();
+    assert_eq!(plan.items[0].decision, "blocked");
+    assert_eq!(fs::read(&file).unwrap(), old);
+    fs::remove_file(&file).unwrap();
+    install_auto(&s, &["codex-project", "amp-project"], ConflictPolicy::Fail);
+    fs::write(
+        s.fixture.0.join("source/auto/demo/inject.md"),
+        "Changed instruction",
+    )
+    .unwrap();
+    let plan = installers::plan_install(
+        &s.repo,
+        &s.context,
+        &s.request(
+            InstallMode::Copy,
+            ConflictPolicy::Overwrite,
+            &["codex-project"],
+        ),
+    )
+    .unwrap();
+    assert_eq!(plan.items[0].decision, "blocked");
+    let installed = fs::read_to_string(&file).unwrap();
+    fs::write(&file, installed.replace("Shared instruction", "User edit")).unwrap();
+    assert_eq!(
+        remove_target(&s, &s.repo, "amp-project").items[0].status,
+        "conflict"
+    );
+    assert!(fs::read_to_string(&file).unwrap().contains("User edit"));
+}
+
+#[cfg(unix)]
+#[test]
+fn scoped_instruction_symlink_is_preserved_but_escape_and_stale_preview_are_blocked() {
+    let s = auto_setup();
+    let file = s.fixture.0.join("project/AGENTS.md");
+    let real = s.fixture.0.join("project/rules.md");
+    fs::write(&real, "User\n").unwrap();
+    std::os::unix::fs::symlink(&real, &file).unwrap();
+    install_auto(&s, &["codex-project"], ConflictPolicy::Fail);
+    assert!(fs::symlink_metadata(&file)
+        .unwrap()
+        .file_type()
+        .is_symlink());
+    assert_eq!(
+        remove_target(&s, &s.repo, "codex-project").items[0].status,
+        "uninstalled"
+    );
+    assert_eq!(fs::read_to_string(&real).unwrap(), "User\n");
+    let plan = installers::plan_install(
+        &s.repo,
+        &s.context,
+        &s.request(InstallMode::Copy, ConflictPolicy::Fail, &["codex-project"]),
+    )
+    .unwrap();
+    fs::write(&real, "Edited after preview\n").unwrap();
+    assert_eq!(s.apply(&plan.plan_id).items[0].status, "conflict");
+    fs::remove_file(&file).unwrap();
+    let outside = s.fixture.0.join("outside.md");
+    fs::write(&outside, "Outside").unwrap();
+    std::os::unix::fs::symlink(&outside, &file).unwrap();
+    let plan = installers::plan_install(
+        &s.repo,
+        &s.context,
+        &s.request(InstallMode::Copy, ConflictPolicy::Fail, &["codex-project"]),
+    )
+    .unwrap();
+    assert_eq!(plan.items[0].decision, "blocked");
+    assert_eq!(fs::read_to_string(&outside).unwrap(), "Outside");
+}
+
+#[test]
+fn wrappers_are_opt_in_point_to_installed_packages_and_preserve_user_files() {
+    let s = Setup::new();
+    let mut request = s.request(
+        InstallMode::Copy,
+        ConflictPolicy::Fail,
+        &["claude-code-project"],
+    );
+    request.with_slash_commands = true;
+    let plan = installers::plan_install(&s.repo, &s.context, &request).unwrap();
+    assert_eq!(s.apply(&plan.plan_id).items[0].status, "installed");
+    let wrapper = s.fixture.0.join("project/.claude/commands/fixture-demo.md");
+    let text = fs::read_to_string(&wrapper).unwrap();
+    assert!(text.contains("$ARGUMENTS"));
+    assert!(text.contains(".claude/skills/fixture-demo/SKILL.md"));
+    assert!(text.contains("<!-- skills-linker:slash:fixture-demo -->"));
+    s.repo
+        .remove_source(&s.repo.load().unwrap().sources[0].id)
+        .unwrap();
+    assert_eq!(
+        remove_target(&s, &s.repo, "claude-code-project").items[0].status,
+        "uninstalled"
+    );
+    assert!(!wrapper.exists());
+    s.repo.add_local(&s.fixture.0.join("source")).unwrap();
+    request.conflict_policy = ConflictPolicy::Overwrite;
+    for existing in ["My manual command", ""] {
+        fs::write(&wrapper, existing).unwrap();
+        assert_eq!(
+            installers::plan_install(&s.repo, &s.context, &request)
+                .unwrap()
+                .items[0]
+                .decision,
+            "blocked"
+        );
+        assert_eq!(fs::read_to_string(&wrapper).unwrap(), existing);
+    }
+}
+
+#[test]
+fn cron_inject_file_never_creates_an_instruction_or_wrapper() {
+    let mut s = auto_setup();
+    fs::rename(
+        s.fixture.0.join("source/auto"),
+        s.fixture.0.join("source/cron"),
+    )
+    .unwrap();
+    s.skill_id = catalog::encode_id(&s.repo.load().unwrap().sources[0].id, "cron/demo/SKILL.md");
+    let mut request = s.request(InstallMode::Copy, ConflictPolicy::Fail, &["codex-project"]);
+    request.with_slash_commands = true;
+    let plan = installers::plan_install(&s.repo, &s.context, &request).unwrap();
+    assert!(plan.items[0].resource_changes.is_empty());
+    assert_eq!(s.apply(&plan.plan_id).items[0].status, "installed");
+    assert!(!s.fixture.0.join("project/AGENTS.md").exists());
+    assert!(!s
+        .fixture
+        .0
+        .join("project/.codex/prompts/fixture-demo.md")
+        .exists());
+}
+
+#[test]
+fn doctor_detects_local_live_injection_changes_without_writing() {
+    let s = auto_setup();
+    let plan = installers::plan_install(
+        &s.repo,
+        &s.context,
+        &s.request(
+            InstallMode::Symlink,
+            ConflictPolicy::Fail,
+            &["codex-project"],
+        ),
+    )
+    .unwrap();
+    assert_eq!(s.apply(&plan.plan_id).items[0].status, "installed");
+    let file = s.fixture.0.join("project/AGENTS.md");
+    let before = fs::read(&file).unwrap();
+    let checks = installers::inventory(&s.repo, &s.context).unwrap();
+    assert_eq!(
+        checks
+            .iter()
+            .find(|s| s.installation.is_some())
+            .unwrap()
+            .instruction_checks[0]
+            .state,
+        "current"
+    );
+    fs::write(
+        s.fixture.0.join("source/auto/demo/inject.md"),
+        "New live rule\n",
+    )
+    .unwrap();
+    let checks = installers::inventory(&s.repo, &s.context).unwrap();
+    assert_eq!(
+        checks
+            .iter()
+            .find(|s| s.installation.is_some())
+            .unwrap()
+            .instruction_checks[0]
+            .state,
+        "stale"
+    );
+    assert_eq!(fs::read(&file).unwrap(), before);
+    let plan = installers::plan_install(
+        &s.repo,
+        &s.context,
+        &s.request(
+            InstallMode::Symlink,
+            ConflictPolicy::Overwrite,
+            &["codex-project"],
+        ),
+    )
+    .unwrap();
+    assert_eq!(s.apply(&plan.plan_id).items[0].status, "installed");
+    assert!(fs::read_to_string(file).unwrap().contains("New live rule"));
+}
+
+#[test]
+fn batch_uninstall_of_shared_instruction_users_removes_block_once() {
+    let s = auto_setup();
+    install_auto(&s, &["codex-project", "amp-project"], ConflictPolicy::Fail);
+    let ids = installers::inventory(&s.repo, &s.context)
+        .unwrap()
+        .iter()
+        .filter_map(|i| i.installation.as_ref().map(|v| v.installation_id.clone()))
+        .collect();
+    let plan = installers::plan_uninstall(
+        &s.repo,
+        &s.context,
+        &UninstallRequest {
+            installation_ids: ids,
+            project_path: None,
+        },
+    )
+    .unwrap();
+    let result = s.apply(&plan.plan_id);
+    assert_eq!(result.items.len(), 2);
+    assert!(
+        result.items.iter().all(|i| i.status == "uninstalled"),
+        "{result:?}"
+    );
+    assert!(!s.fixture.0.join("project/AGENTS.md").exists());
 }

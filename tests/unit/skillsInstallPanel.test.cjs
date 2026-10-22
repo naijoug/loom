@@ -18,8 +18,8 @@ const button=text=>[...document.querySelectorAll('button')].find(node=>node.text
 test('new targets start unchecked and selecting one produces a concrete plan before any write',async t=>{
  const calls=[];const backend=api({planInstall:async input=>{calls.push(['plan',input]);return plan;},applyInstall:async(id,project)=>{calls.push(['apply',id,project]);return receipt;}});
  await mount(t,InstallPanel,{api:backend,skillId:'skill-a',projectPath:'/one'});
- assert.equal(document.querySelector('input[type="checkbox"]').checked,false);assert.equal(button('Preview install / update').disabled,true);
- await click(document.querySelector('input[type="checkbox"]'));await click(button('Preview install / update'));
+ assert.equal(document.querySelector('.skills-install-targets input[type="checkbox"]').checked,false);assert.equal(button('Preview install / update').disabled,true);
+ await click(document.querySelector('.skills-install-targets input[type="checkbox"]'));await click(button('Preview install / update'));
  assert.equal(calls.length,1);assert.equal(calls[0][1].projectPath,'/one');assert.equal(calls[0][1].mode,'copy');assert.equal(calls[0][1].conflictPolicy,'fail');
  assert.match(document.querySelector('.skills-plan').textContent,/\/fixture\/project\/\.codex\/skills\/fixture-demo/);
  await click(button('Apply these changes'));assert.deepEqual(calls[1],['apply','install-fixture','/one']);assert.match(document.querySelector('.skills-install-results').textContent,/Installed/);
@@ -31,8 +31,8 @@ test('late status and plan responses cannot carry selections into another projec
  const root=await mount(t,InstallPanel,{api:backend,skillId:'skill-a',projectPath:project});
  project='/two';await act(async()=>root.render(React.createElement(InstallPanel,{api:backend,skillId:'skill-b',projectPath:project})));
  await act(async()=>late.resolve([{...status,state:'installed',installation:samples.skillsInstallation}]));
- assert.equal(document.querySelector('input[type="checkbox"]').checked,false);assert.match(document.querySelector('.skills-install-targets').textContent,/\/two\//);
- await click(document.querySelector('input[type="checkbox"]'));await act(async()=>button('Preview install / update').dispatchEvent(new window.MouseEvent('click',{bubbles:true})));
+ assert.equal(document.querySelector('.skills-install-targets input[type="checkbox"]').checked,false);assert.match(document.querySelector('.skills-install-targets').textContent,/\/two\//);
+ await click(document.querySelector('.skills-install-targets input[type="checkbox"]'));await act(async()=>button('Preview install / update').dispatchEvent(new window.MouseEvent('click',{bubbles:true})));
  await act(async()=>root.render(React.createElement(InstallPanel,{api:backend,skillId:'skill-c',projectPath:'/three'})));
  await act(async()=>latePlan.resolve(plan));assert.equal(document.querySelector('.skills-plan'),null);
 });
@@ -40,7 +40,7 @@ test('late status and plan responses cannot carry selections into another projec
 test('an in-flight apply keeps its reviewed project and does not overwrite a new panel result',async t=>{
  const applied=defer();const calls=[];const backend=api({applyInstall:(id,path)=>{calls.push([id,path]);return applied.promise;}});
  const root=await mount(t,InstallPanel,{api:backend,skillId:'skill-a',projectPath:'/one'});
- await click(document.querySelector('input[type="checkbox"]'));await click(button('Preview install / update'));
+ await click(document.querySelector('.skills-install-targets input[type="checkbox"]'));await click(button('Preview install / update'));
  await act(async()=>button('Apply these changes').dispatchEvent(new window.MouseEvent('click',{bubbles:true})));
  await act(async()=>root.render(React.createElement(InstallPanel,{api:backend,skillId:'skill-b',projectPath:'/two'})));
  await act(async()=>applied.resolve(receipt));assert.deepEqual(calls,[['install-fixture','/one']]);assert.equal(document.querySelector('.skills-install-results'),null);
@@ -49,7 +49,7 @@ test('an in-flight apply keeps its reviewed project and does not overwrite a new
 test('legacy and blocked targets cannot be selected and a blocked plan cannot be applied',async t=>{
  const backend=api({installStatus:async()=>[{...status,state:'legacy',message:'Migration required'}, {...status,target:{...status.target,id:'amp-global',blockedReason:'Path escapes target'},state:'unavailable'}]});
  await mount(t,InstallPanel,{api:backend,skillId:'skill-a',projectPath:null});
- assert.ok([...document.querySelectorAll('input[type="checkbox"]')].every(node=>node.disabled));assert.equal(button('Preview install / update').disabled,true);
+ assert.ok([...document.querySelectorAll('.skills-install-targets input[type="checkbox"]')].every(node=>node.disabled));assert.equal(button('Preview install / update').disabled,true);
 });
 
 test('managed inventory removes an orphan installation by its saved identity without needing its source',async t=>{
@@ -61,12 +61,32 @@ test('managed inventory removes an orphan installation by its saved identity wit
 test('a transient status-lock failure can be refreshed without losing the panel',async t=>{
  let attempts=0;const backend=api({installStatus:async()=>{if(attempts++===0)throw {code:'lock_busy',message:'Another client is committing'};return[status];}});
  await mount(t,InstallPanel,{api:backend,skillId:'skill-a',projectPath:'/one'});assert.match(document.body.textContent,/Another client is committing/);
- await click(button('Reload status'));assert.doesNotMatch(document.body.textContent,/Another client is committing/);assert.equal(document.querySelector('input[type="checkbox"]').checked,false);
+ await click(button('Reload status'));assert.doesNotMatch(document.body.textContent,/Another client is committing/);assert.equal(document.querySelector('.skills-install-targets input[type="checkbox"]').checked,false);
 });
 
 test('event refresh and action refresh serialize status reads and preserve initial selection',async t=>{
  const first=defer();let calls=0;const backend=api({installStatus:()=>{calls++;return calls===1?first.promise:Promise.resolve([{...status,state:'installed',installation:samples.skillsInstallation}]);}});
  const root=await mount(t,InstallPanel,{api:backend,skillId:'skill-a',projectPath:'/one',revision:0});assert.equal(calls,1);
  await act(async()=>root.render(React.createElement(InstallPanel,{api:backend,skillId:'skill-a',projectPath:'/one',revision:1})));assert.equal(calls,1,'second read waits for the first lock owner');
- await act(async()=>first.resolve([status]));assert.equal(calls,2);assert.equal(document.querySelector('input[type="checkbox"]').checked,true);
+ await act(async()=>first.resolve([status]));assert.equal(calls,2);assert.equal(document.querySelector('.skills-install-targets input[type="checkbox"]').checked,true);
+});
+
+
+test('instruction review lists affected files and wrappers require an explicit selection',async t=>{
+ const calls=[];const backend=api({planInstall:async input=>{calls.push(input);return {...plan,items:plan.items.map(item=>({...item,resourceChanges:[{path:'/one/AGENTS.md',before:{kind:'missing'}},{path:'/private/coord/shared-instructions/ledger.json',before:{kind:'missing'}}]}))};}});
+ await mount(t,InstallPanel,{api:backend,skillId:'skill-a',projectPath:'/one'});
+ assert.equal(document.querySelector('.skills-wrapper-option input').checked,false);
+ await click(document.querySelector('.skills-wrapper-option input'));
+ assert.equal(button('Preview install / update').disabled,true,'wrapper choice does not select an installation target');
+ await click(document.querySelector('.skills-install-targets input'));await click(button('Preview install / update'));
+ assert.equal(calls[0].withSlashCommands,true);assert.match(document.querySelector('.skills-plan').textContent,/AGENTS.md/);
+ assert.doesNotMatch(document.querySelector('.skills-plan').textContent,/ledger.json/);
+});
+
+test('instruction diagnostics display stale and malformed state without triggering a write',async t=>{
+ const checks=[{path:'/one/AGENTS.md',state:'stale',message:null},{path:'/one/.claude/commands/demo.md',state:'malformed',message:'Owner unavailable'}];
+ let writes=0;const backend=api({installations:async()=>[{...status,state:'installed',installation:samples.skillsInstallation,instructionChecks:checks}],applyInstall:async()=>{writes++;return receipt;}});
+ await mount(t,InstalledSkills,{api:backend,projectPath:'/one',revision:0});
+ assert.match(document.body.textContent,/changed; review/);assert.match(document.body.textContent,/Owner unavailable/);
+ await click(button('Reload status'));assert.equal(writes,0);
 });

@@ -6,6 +6,7 @@ pub mod coordination;
 pub mod error;
 pub mod files;
 pub mod installers;
+pub mod instructions;
 pub mod operations;
 pub mod package;
 pub mod repository;
@@ -18,5 +19,7 @@ pub mod transactions;
 mod catalog_tests;
 #[cfg(test)]
 mod installers_tests;
+#[cfg(test)]
+mod instructions_tests;
 #[cfg(test)]
 mod tests;

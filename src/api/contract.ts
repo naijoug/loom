@@ -1,3 +1,4 @@
+import type { InstructionCheck, ResourcePreview } from "./skills";
 import type { SkillsLibrary, SkillsOperation, InstallTarget, Installation, InstallPlan, InstallReceipt } from "./skills";
 import type { AgentConfig, AgentDiagnostic, AppSettings, ChatSession, ChatEvent, ChatSendInput, ChatSendReceipt, ChatResumeHandle, ChatTurn, ChatLogPage, ChatExportInput, ChatExportResult, ChatMessagePart } from "../domain";
 
@@ -399,4 +400,17 @@ export const MODEL_CONTRACT_SAMPLES = {
     }
   ]
 } satisfies InstallReceipt,
+skillsInstructionCheck: {
+  "path": "/fixture/project/AGENTS.md",
+  "state": "current",
+  "message": null
+} satisfies InstructionCheck,
+skillsResourcePreview: {
+  "path": "/fixture/project/AGENTS.md",
+  "before": {
+    "kind": "file",
+    "digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "mode": 420
+  }
+} satisfies ResourcePreview,
 } as const;

@@ -41,6 +41,71 @@ impl TargetContext {
         }
         Ok(Self { home, project })
     }
+    fn scope_root(&self, target: &InstallTarget) -> Result<&Path> {
+        let selected = self.selected(std::slice::from_ref(&target.id))?.remove(0);
+        if selected.skills_dir != target.skills_dir {
+            return Err(SkillsError::invalid("Target changed"));
+        }
+        if target.scope == "global" {
+            Ok(&self.home)
+        } else {
+            self.project
+                .as_deref()
+                .ok_or_else(|| SkillsError::invalid("Project unavailable"))
+        }
+    }
+    fn managed_path(
+        &self,
+        target: &InstallTarget,
+        segments: &[&str],
+        name: &str,
+    ) -> Result<PathBuf> {
+        let root = self.scope_root(target)?;
+        let parent = safe_child_directory(root, segments, false)?;
+        let path = parent.join(name);
+        if fs::symlink_metadata(&path).is_ok_and(|m| m.file_type().is_symlink()) {
+            let resolved = path.canonicalize()?;
+            if !resolved.starts_with(root) || !resolved.is_file() {
+                return Err(SkillsError::invalid(
+                    "Instruction link escapes its authorized scope",
+                ));
+            }
+            return Ok(resolved);
+        }
+        Ok(path)
+    }
+    pub fn instruction_path(&self, target: &InstallTarget) -> Result<PathBuf> {
+        let name = if target.tool_id == "claude-code" {
+            "CLAUDE.md"
+        } else {
+            "AGENTS.md"
+        };
+        let segments: &[&str] = if target.scope == "project" {
+            &[]
+        } else {
+            match target.tool_id.as_str() {
+                "codex" => &[".codex"],
+                "claude-code" => &[".claude"],
+                "amp" => &[".config", "amp"],
+                _ => return Err(SkillsError::invalid("Unsupported instruction tool")),
+            }
+        };
+        self.managed_path(target, segments, name)
+    }
+    pub fn wrapper_path(&self, target: &InstallTarget, name: &str) -> Result<Option<PathBuf>> {
+        super::installers::validate_name(name)?;
+        let segments: &[&str] = match target.tool_id.as_str() {
+            "codex" => &[".codex", "prompts"],
+            "claude-code" => &[".claude", "commands"],
+            "amp" => return Ok(None),
+            _ => return Err(SkillsError::invalid("Unsupported wrapper tool")),
+        };
+        Ok(Some(self.managed_path(
+            target,
+            segments,
+            &format!("{name}.md"),
+        )?))
+    }
     pub fn project(&self) -> Option<&Path> {
         self.project.as_deref()
     }

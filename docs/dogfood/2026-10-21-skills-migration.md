@@ -94,10 +94,26 @@ Settings → Skills 新增详情安装页与 Installed 列表。后端派生 Cod
 - 应用更新入口抽取 `with_install_admission`，实际 updater 与可控安装器替身共用生命周期 lease → supervisor 准入路径。测试验证纯文件工作阻止安装器执行、本地准入失败释放先取得的 OS lease、更新中拒绝新操作、安装失败释放两层准入、随后重试成功。未实际安装应用更新。
 - 定向 Git 回归 1 项、updater 3 项及全目标 Clippy 通过；随后 `pnpm check` 前端 106/Rust 194 与 `pnpm tauri build --no-bundle` 均通过。辅助日志 `/tmp/loom-skills-g1-pinned-update.log`、`/tmp/loom-skills-g1-updater.log`、`/tmp/loom-skills-g1-extra-check.log`。
 
+## 第四切片：共享指令、wrapper 与诊断（M2b 分项）
+
+- `instructions.rs` 负责 category/activation、auto/global 的 inject.md、manual 显式 wrapper 和只读诊断；使用者 ledger 放固定协调目录，跨 dataDir 共用。Codex/Amp 项目目标复用 AGENTS.md，Claude 使用 CLAUDE.md；全局路径保持旧工具约定。源内容不执行。
+- 安装规划包含指令/归属前指纹，UI 显示实际受影响文件；应用时复核并把技能、清单、指令和归属一起提交。未知旧 marker、缺失使用者清单、不同共享内容、用户编辑和目标逃逸均拒绝；cron 不注入，manual wrapper 默认不勾选。已安装 wrapper 的选项在重新打开时恢复。
+- 状态与 Installed 列表显示 current/missing/stale/malformed，诊断不写文件。local-live 注入正文变化能标 stale；来源移除后仍可根据安装归属卸载指令与 wrapper。
+- 52 项 Skills 服务测试通过；最终 `pnpm check` 前端 108/Rust 206、全目标 Clippy、fmt 和 `pnpm tauri build --no-bundle` 通过，20 ignored 含父测试实际运行的子进程入口与真实模型 opt-in。服务测试覆盖：含两个独立进程/不同 dataDir 并发写共享 AGENTS、同技能多个使用者部分/最后/批量卸载、重复安装、冲突、CRLF/权限保留、范围内符号链接、路径逃逸、陈旧预览和未知归属。并发测试首次因把正常 lock_busy 当异常而失败，改为有界重试/重新预览，仍严格拒绝其他错误；两块与原用户正文均保留。
+- 跨文件恢复在指令、ledger、manifest 的每个 rename 点中断，另一 dataDir 通过真实恢复服务还原；无关项目文件即使带有效 journal 也拒绝恢复。已有事务测试继续覆盖真实子进程崩溃和事后用户编辑保全。跨目录 rename 已补源/目标父目录同步；测试不是断电或存储硬件故障证明。
+- 前端定向 9 项通过，新增 wrapper 显式选择、受影响文件预览、诊断不触发写入；原测试改为只选择安装目标 checkbox，避免把新 wrapper 选项误当目标。
+- 原生隔离项目完成：添加 auto fixture → 预览两个项目目标及 AGENTS.md → 安装后两项均报告 current → 卸载 Codex 仍保留一块及 Amp → 卸载 Amp 后精确恢复 `User acceptance rules\n` → 移除来源登记；源包保留，测试安装均已卸载，预览已停止。见 [共享指令原生证据](samples/skills-migration/shared-instructions-native.json)。未向模型发送请求，也未写全局安装。
+
+源用例迁移对应：`test_sync_update_remove_preserve_user_bytes_and_other_blocks`、`test_crlf_and_symlink_are_preserved` 对应 Loom 安装级 CRLF/权限/共享使用者与受限链接测试；malformed 对应 marker 拒绝与原文保全；copy 强制更新/用户修改、symlink 重装/卸载、未托管冲突由安装与新诊断测试覆盖。旧脚本测试暂保留到 CLI 兼容及 G2，不能先删除源功能。
+
+辅助日志：`/tmp/loom-skills-m2b-final-check.log`、`/tmp/loom-skills-m2b-final-build.log`、`/tmp/loom-skills-m2b-native.log`。原生操作发生在最后一轮目录同步与 wrapper 选项恢复小修正之前；这些修正已通过完整回归与 release 构建，未重复原生操作。
+
+阶段限制：多使用者共享内容的一致更新尚未实现，单独改写明确阻止；已存在版本的旧指令归属重建属于 M4。M2b 整体出口尚未关闭，CLI/TUI/翻译/旧数据接管及 G1 视觉/无源码访问验收继续推进。
+
 ## 当前限制与后续执行入口
 
 M2a 安装闭环已有上述代码和原生证据，G1 仍待综合关闭：完整 Skills 视觉矩阵与无源码访问条件；远程 A → B 安装更新和更新器准入/失败的服务入口已按上一节补验。搬移运行只证明独立包路径及工作目录；源 checkout 仍在磁盘，不冒充无法访问源码的验收。
 
-M1b GitHub API、M2b 共享指令/doctor/wrapper、M2c CLI/TUI、M3 翻译与分享、M4 旧数据接管尚未完成。M2a 对 managedResources 非空的安装拒绝修改，以免提前破坏共享资源归属。外网 GitHub/GitLab 与真实翻译 provider 验收仍待后续，G2 未通过。
+M1b GitHub API、M2c CLI/TUI、M3 翻译与分享、M4 旧数据接管尚未完成；M2b 已有共享指令/wrapper/只读诊断与恢复分项证据，仍待多使用者一致更新及整体出口核对。外网 GitHub/GitLab 与真实翻译 provider 验收仍待后续，G2 未通过。
 
 旧 library/JSON/TSV 合成兼容样本已加入 `src-tauri/tests/fixtures/skills/`，尚未执行真实旧数据接管。M5 的管理测试与过渡入口需等 M2c/M7 移除。旧 Manager 新源码的版本保护不能修补已安装历史二进制，也不能让旧客户端参加 Loom 锁协议；切换期间仍须停止旧 Manager 写入。旧应用与数据保留，不提前退役。

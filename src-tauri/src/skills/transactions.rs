@@ -51,9 +51,16 @@ pub fn artifact(target: &Path, id: &str, index: usize, kind: &str) -> Result<Pat
         .ok_or_else(|| SkillsError::invalid("Missing target parent"))?;
     // Keep staged and backed-up SKILL.md files outside the directory scanned
     // by Agent CLIs, including after a successful uninstall.
-    let sibling = parent
-        .parent()
-        .ok_or_else(|| SkillsError::invalid("Target needs a transaction storage parent"))?;
+    let sibling = if parent
+        .file_name()
+        .is_some_and(|name| name == "skills" || name == "commands" || name == "prompts")
+    {
+        parent
+            .parent()
+            .ok_or_else(|| SkillsError::invalid("Target needs a transaction storage parent"))?
+    } else {
+        parent
+    };
     Ok(sibling
         .join(".loom-skill-transactions")
         .join(id)
@@ -226,6 +233,33 @@ fn load(pending: &PendingTransaction, allowed_roots: &[PathBuf]) -> Result<Prepa
     Ok(prepared)
 }
 
+pub fn resource_targets(
+    pending: &PendingTransaction,
+    allowed_roots: &[PathBuf],
+) -> Result<Vec<PathBuf>> {
+    Ok(load(pending, allowed_roots)?
+        .changes
+        .into_iter()
+        .map(|c| c.target)
+        .collect())
+}
+
+fn durable_rename(source: &Path, destination: &Path) -> Result<()> {
+    fs::rename(source, destination)?;
+    // Renames between the skill directory and its sibling backup directory
+    // change both directory entries. Persist both before advancing the journal.
+    files::sync_directory(
+        destination
+            .parent()
+            .ok_or_else(|| SkillsError::invalid("Missing rename destination parent"))?,
+    )?;
+    files::sync_directory(
+        source
+            .parent()
+            .ok_or_else(|| SkillsError::invalid("Missing rename source parent"))?,
+    )
+}
+
 pub fn commit(
     writer: &WriterGuard<'_>,
     pending: &PendingTransaction,
@@ -234,7 +268,7 @@ pub fn commit(
     commit_observed(writer, pending, allowed_roots, |_| Ok(()))
 }
 
-fn commit_observed(
+pub(super) fn commit_observed(
     writer: &WriterGuard<'_>,
     pending: &PendingTransaction,
     allowed_roots: &[PathBuf],
@@ -252,13 +286,11 @@ fn commit_observed(
             ));
         }
         if c.before != EntryState::Missing {
-            fs::rename(&c.target, &c.backup)?;
-            files::sync_directory(c.target.parent().unwrap())?;
+            durable_rename(&c.target, &c.backup)?;
         }
         observe(i * 2)?;
         if c.after != EntryState::Missing {
-            fs::rename(&c.staged, &c.target)?;
-            files::sync_directory(c.target.parent().unwrap())?;
+            durable_rename(&c.staged, &c.target)?;
         }
         observe(i * 2 + 1)?;
     }
@@ -322,8 +354,7 @@ pub fn recover(
                     "Target was changed after interruption; preserving it",
                 ));
             }
-            fs::rename(&c.backup, &c.target)?;
-            files::sync_directory(c.target.parent().unwrap())?;
+            durable_rename(&c.backup, &c.target)?;
         } else if backup == EntryState::Missing {
             if c.before == EntryState::Missing {
                 if current == c.after && current != EntryState::Missing {
