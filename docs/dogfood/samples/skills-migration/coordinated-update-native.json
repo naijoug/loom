@@ -1,0 +1,15 @@
+{
+  "projectOnly": true,
+  "profileIsolated": true,
+  "initialPlan": "install-1792640730592-1-26859",
+  "updatePlan": "install-1792640781826-3-26859",
+  "previewShowedCoordinatedBoundary": true,
+  "allInstalledPackagesAtB": true,
+  "sharedBlockAtB": true,
+  "manifestResourceDigestsMatch": true,
+  "singleJournalChangeCount": 6,
+  "userRulesPreserved": true,
+  "fixtureInstallsRemoved": true,
+  "originalUserRulesRestored": true,
+  "sourceFilesPreserved": true
+}

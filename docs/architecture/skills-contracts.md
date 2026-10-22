@@ -42,7 +42,9 @@ managedResources 记录 canonical path、marker 和 contentDigest。SharedInstru
 
 `skills_get_install_status` / `skills_list_installations` 附带 instructionChecks：current/missing/stale/malformed；诊断不写文件，local-live 的 inject.md 变化会标 stale，需显式更新。前端规划显示实际受影响的指令文件，不展示内部 ledger。指令最终符号链接只在 canonical 目标仍处于获准 home/project 范围且不与技能包重叠时保留，否则拒绝。
 
-当前单安装更新不能改写其他使用者仍依赖的共享内容，即使把所有目标放进普通逐项批次仍会阻止；全部使用者的一致更新规划尚待补齐。CLI doctor 入口、旧归属重建分别随 M2c/M4 完成。
+选择的安装若共享指令路径，规划标记 `coordinated: true`。规划与执行均核对当前 ledger 的全部使用者；改变共享内容必须选齐使用者且最终正文一致，否则冲突。选中的共享安装（以及该规划中的其他可执行项）复用单目标的暂存/校验函数，以一个 `<planId>-group` prepare journal 提交技能包、各清单、去重后的指令文件和 ledger；同一文件只生成一个一致的最终内容。独立资源保持逐目标提交，卸载按使用者逐项移除。
+
+组内任一目标/指纹变化，在变更前拒绝整组；提交失败按统一日志补偿，若用户在中断后修改内容则保留冲突并标待恢复，不报告部分成功。幂等重试读取同一组回执；应用更新仍由原生命周期 lease/operation guard 协调。这是统一恢复边界，不宣称跨文件系统瞬时原子性。CLI doctor 入口、旧归属重建分别随 M2c/M4 完成。
 
 远程来源快照固定 commit；dirty legacy cache 以内容 digest 单独标识，不能冒充上游 commit。刷新目录只更新 latestRevision，symlink 固定指向不可变路径。本地 live symlink 明示行为，不把其变化伪装成版本化安装。
 

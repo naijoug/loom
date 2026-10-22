@@ -152,6 +152,8 @@ pub struct InstallPlan {
     pub mode: InstallMode,
     pub created_at_ms: u128,
     pub source: Option<ResolvedPackage>,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub coordinated: bool,
     pub items: Vec<PlanItem>,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -618,6 +620,7 @@ fn new_plan(
         mode,
         created_at_ms: crate::models::now_ms(),
         source,
+        coordinated: false,
         items: Vec::new(),
     }
 }
@@ -696,23 +699,6 @@ pub fn plan_install(
                     item.message=Some("Modified managed content will be replaced; the previous content is retained in a recovery backup".into());
                 }
             }
-            let resources = resource_plan(
-                repo,
-                context,
-                &target,
-                &source.name,
-                item.previous.as_ref(),
-                Some(&source),
-                input.with_slash_commands,
-            )?;
-            item.resource_changes = resources.preview();
-            writer.check_write_set(
-                &item
-                    .resource_changes
-                    .iter()
-                    .map(|r| r.path.clone())
-                    .collect::<Vec<_>>(),
-            )?;
             Ok(())
         })();
         if let Err(error) = check {
@@ -721,8 +707,88 @@ pub fn plan_install(
         }
         plan.items.push(item);
     }
+    fill_resource_previews(repo, context, &writer, &mut plan)?;
     save_plan(repo, &plan)?;
     Ok(plan)
+}
+
+fn fill_resource_previews(
+    repo: &Repository,
+    context: &TargetContext,
+    writer: &super::coordination::WriterGuard<'_>,
+    plan: &mut InstallPlan,
+) -> Result<()> {
+    let mut participants = Vec::new();
+    let mut indices = Vec::new();
+    let mut paths = std::collections::BTreeSet::new();
+    let mut overlap = false;
+    for (index, item) in plan.items.iter_mut().enumerate() {
+        if matches!(item.decision.as_str(), "blocked" | "skip") {
+            continue;
+        }
+        match resource_participant(
+            context,
+            &item.target,
+            &item.install_name,
+            item.previous.as_ref(),
+            plan.source.as_ref(),
+            item.with_slash_commands,
+        ) {
+            Ok(participant) => {
+                let unique = participant
+                    .previous
+                    .iter()
+                    .map(|r| &r.path)
+                    .chain(participant.desired.iter().map(|r| &r.path))
+                    .collect::<std::collections::BTreeSet<_>>();
+                for path in unique {
+                    if !paths.insert(path.clone()) {
+                        overlap = true;
+                    }
+                }
+                participants.push(participant);
+                indices.push(index);
+            }
+            Err(error) => {
+                item.decision = "blocked".into();
+                item.message = Some(error.message);
+            }
+        }
+    }
+    plan.coordinated = overlap && participants.len() > 1;
+    let mut previews = Vec::new();
+    for participant in &participants {
+        let resource_plan = instructions::plan_member(
+            repo,
+            participant,
+            if plan.coordinated { &participants } else { &[] },
+        );
+        let result = resource_plan.and_then(|resources| {
+            let preview = resources.preview();
+            writer.check_write_set(&preview.iter().map(|r| r.path.clone()).collect::<Vec<_>>())?;
+            Ok(preview)
+        });
+        previews.push(result);
+    }
+    if plan.coordinated {
+        if let Some(error) = previews.iter().find_map(|r| r.as_ref().err()) {
+            for index in indices {
+                plan.items[index].decision = "blocked".into();
+                plan.items[index].message = Some(error.message.clone());
+            }
+            return Ok(());
+        }
+    }
+    for (index, result) in indices.into_iter().zip(previews) {
+        match result {
+            Ok(preview) => plan.items[index].resource_changes = preview,
+            Err(error) => {
+                plan.items[index].decision = "blocked".into();
+                plan.items[index].message = Some(error.message);
+            }
+        }
+    }
+    Ok(())
 }
 
 pub fn plan_uninstall(
@@ -838,6 +904,11 @@ pub fn apply(
     }
     let lease = repo.coordinator.enter()?;
     let writer = repo.coordinator.writer_wait(&lease)?;
+    if plan.coordinated {
+        let receipt = apply_coordinated(repo, context, &writer, &plan, operation)?;
+        files::atomic_json(&result_path, &receipt)?;
+        return Ok(receipt);
+    }
     let mut receipt = InstallReceipt {
         plan_id: plan_id.into(),
         operation_id: operation.record.operation_id.clone(),
@@ -967,6 +1038,18 @@ fn resource_plan(
     source: Option<&ResolvedPackage>,
     slash: bool,
 ) -> Result<instructions::ResourcePlan> {
+    let participant = resource_participant(context, target, name, previous, source, slash)?;
+    instructions::plan_member(repo, &participant, &[])
+}
+
+fn resource_participant(
+    context: &TargetContext,
+    target: &InstallTarget,
+    name: &str,
+    previous: Option<&Installation>,
+    source: Option<&ResolvedPackage>,
+    slash: bool,
+) -> Result<instructions::Participant> {
     let owned = previous
         .map(|p| p.managed_resources.as_slice())
         .unwrap_or_default();
@@ -988,7 +1071,35 @@ fn resource_plan(
             ));
         }
     }
-    instructions::plan(repo, &instructions::owner(target, name)?, owned, &desired)
+    Ok(instructions::Participant {
+        owner: instructions::owner(target, name)?,
+        previous: owned.to_vec(),
+        desired,
+    })
+}
+
+fn completed_transaction(
+    repo: &Repository,
+    id: &str,
+    action: PlanAction,
+) -> Result<Option<String>> {
+    if let Some(receipt) = transactions::receipt(&repo.root, id)? {
+        if receipt.outcome != Outcome::Committed {
+            return Err(SkillsError::new(
+                ErrorCode::Conflict,
+                "Previous attempt was rolled back; review a new plan",
+            ));
+        }
+        return Ok(Some(
+            if action == PlanAction::Install {
+                "installed"
+            } else {
+                "uninstalled"
+            }
+            .into(),
+        ));
+    }
+    Ok(None)
 }
 
 fn apply_item(
@@ -1000,42 +1111,129 @@ fn apply_item(
     index: usize,
     operation: &Operation,
 ) -> Result<String> {
-    let target = context
-        .selected(std::slice::from_ref(&item.target.id))?
-        .remove(0);
-    validate_name(&item.install_name)?;
-    if target.skills_dir != item.target.skills_dir
-        || item.destination != target.skills_dir.join(&item.install_name)
-    {
-        return Err(SkillsError::invalid("Planned target mismatch"));
-    }
     let id = format!("{}-{index}", plan.plan_id);
-    if let Some(receipt) = transactions::receipt(&repo.root, &id)? {
-        return if receipt.outcome == Outcome::Committed {
-            Ok(if plan.action == PlanAction::Install {
-                "installed"
-            } else {
-                "uninstalled"
-            }
-            .into())
-        } else {
-            Err(SkillsError::new(
-                ErrorCode::Conflict,
-                "Previous attempt was rolled back; review a new plan",
-            ))
-        };
+    if let Some(status) = completed_transaction(repo, &id, plan.action)? {
+        return Ok(status);
     }
-    writer.check_write_set(std::slice::from_ref(&target.skills_dir))?;
-    let manifest_path = target.skills_dir.join(MANIFEST);
-    if package::state(&item.destination)? != item.before
-        || package::state(&manifest_path)? != item.manifest_before
-    {
-        return Err(SkillsError::new(
-            ErrorCode::Conflict,
-            "Target changed after preview; review a new plan",
+    let (pending, roots) = prepare_items(repo, context, writer, plan, &[item], &id, operation)?;
+    commit_or_recover(writer, &pending, &roots)?;
+    Ok(if plan.action == PlanAction::Install {
+        "installed"
+    } else {
+        "uninstalled"
+    }
+    .into())
+}
+
+fn commit_or_recover(
+    writer: &super::coordination::WriterGuard<'_>,
+    pending: &super::coordination::PendingTransaction,
+    roots: &[PathBuf],
+) -> Result<()> {
+    if let Err(error) = transactions::commit(writer, pending, roots) {
+        if let Err(recovery) = transactions::recover(writer, pending, roots) {
+            return Err(SkillsError::recovery(format!(
+                "{}; {}",
+                error.message, recovery.message
+            )));
+        }
+        return Err(error);
+    }
+    Ok(())
+}
+
+fn apply_coordinated(
+    repo: &Repository,
+    context: &TargetContext,
+    writer: &super::coordination::WriterGuard<'_>,
+    plan: &InstallPlan,
+    operation: &Operation,
+) -> Result<InstallReceipt> {
+    if plan.action != PlanAction::Install {
+        return Err(SkillsError::invalid("Unsupported coordinated action"));
+    }
+    let items = plan
+        .items
+        .iter()
+        .filter(|i| !matches!(i.decision.as_str(), "blocked" | "skip"))
+        .collect::<Vec<_>>();
+    let id = format!("{}-group", plan.plan_id);
+    let result: Result<String> = (|| {
+        if let Some(status) = completed_transaction(repo, &id, plan.action)? {
+            return Ok(status);
+        }
+        if items.is_empty() {
+            return Ok("skipped".into());
+        }
+        let (pending, roots) = prepare_items(repo, context, writer, plan, &items, &id, operation)?;
+        commit_or_recover(writer, &pending, &roots)?;
+        Ok("installed".to_string())
+    })();
+    let mut receipt = InstallReceipt {
+        plan_id: plan.plan_id.clone(),
+        operation_id: operation.record.operation_id.clone(),
+        items: Vec::new(),
+    };
+    for item in &plan.items {
+        let (status, message) = if item.decision == "blocked" {
+            ("conflict".into(), item.message.clone())
+        } else if item.decision == "skip" {
+            ("skipped".into(), None)
+        } else {
+            match &result {
+                Ok(status) => (status.clone(), None),
+                Err(error) => (
+                    result_state(&error.code).into(),
+                    Some(error.message.clone()),
+                ),
+            }
+        };
+        let backup_directory = if status == "installed" && item.before != EntryState::Missing {
+            Some(
+                transactions::artifact(&item.destination, &id, 0, "backup")?
+                    .parent()
+                    .unwrap()
+                    .to_path_buf(),
+            )
+        } else {
+            None
+        };
+        receipt.items.push(InstallResultItem {
+            target_id: item.target.id.clone(),
+            destination: item.destination.clone(),
+            status,
+            message,
+            backup_directory,
+        });
+    }
+    Ok(receipt)
+}
+fn result_state(code: &ErrorCode) -> &'static str {
+    match code {
+        ErrorCode::Conflict => "conflict",
+        ErrorCode::Cancelled => "cancelled",
+        ErrorCode::RecoveryRequired => "recovery_required",
+        _ => "failed",
+    }
+}
+
+/// Common preparation path for a single target and a coordinated shared update.
+/// This creates staging and a pending record; it never commits a live target.
+pub(super) fn prepare_items(
+    repo: &Repository,
+    context: &TargetContext,
+    writer: &super::coordination::WriterGuard<'_>,
+    plan: &InstallPlan,
+    items: &[&PlanItem],
+    id: &str,
+    operation: &Operation,
+) -> Result<(super::coordination::PendingTransaction, Vec<PathBuf>)> {
+    if items.is_empty() || (items.len() > 1 && !plan.coordinated) {
+        return Err(SkillsError::invalid(
+            "Invalid coordinated transaction members",
         ));
     }
-    let mut manifest = load_manifest(&target)?;
+    operation.check_cancelled()?;
     let source = if plan.action == PlanAction::Install {
         let expected = plan
             .source
@@ -1044,8 +1242,8 @@ fn apply_item(
         let actual = resolve(repo, &expected.skill_id)?;
         if actual.directory != expected.directory
             || actual.digest != expected.digest
-            || actual.name != item.install_name
             || actual.revision != expected.revision
+            || actual.name != expected.name
         {
             return Err(SkillsError::new(
                 ErrorCode::Conflict,
@@ -1056,46 +1254,194 @@ fn apply_item(
     } else {
         None
     };
-    let resource_plan = resource_plan(
-        repo,
-        context,
-        &target,
-        &item.install_name,
-        item.previous.as_ref(),
-        source.as_ref(),
-        item.with_slash_commands,
-    )?;
-    let current_preview = resource_plan.preview();
-    if current_preview.len() != item.resource_changes.len()
-        || current_preview
-            .iter()
-            .zip(&item.resource_changes)
-            .any(|(a, b)| a.path != b.path || a.before != b.before)
-    {
-        return Err(SkillsError::new(
-            ErrorCode::Conflict,
-            "Instruction resources changed after preview; review a new plan",
-        ));
+    let mut participants = Vec::new();
+    let mut destinations = std::collections::BTreeSet::new();
+    let mut manifest_paths = std::collections::BTreeSet::new();
+    for item in items {
+        let target = context
+            .selected(std::slice::from_ref(&item.target.id))?
+            .remove(0);
+        validate_name(&item.install_name)?;
+        if target.skills_dir != item.target.skills_dir
+            || item.destination != target.skills_dir.join(&item.install_name)
+            || !destinations.insert(item.destination.clone())
+            || !manifest_paths.insert(target.skills_dir.join(MANIFEST))
+            || source.as_ref().is_some_and(|s| s.name != item.install_name)
+        {
+            return Err(SkillsError::invalid(
+                "Planned target mismatch or duplicate manifest",
+            ));
+        }
+        writer.check_write_set(std::slice::from_ref(&target.skills_dir))?;
+        if package::state(&item.destination)? != item.before
+            || package::state(&target.skills_dir.join(MANIFEST))? != item.manifest_before
+        {
+            return Err(SkillsError::new(
+                ErrorCode::Conflict,
+                "Target changed after preview; review a new plan",
+            ));
+        }
+        load_manifest(&target)?;
+        participants.push(resource_participant(
+            context,
+            &target,
+            &item.install_name,
+            item.previous.as_ref(),
+            source.as_ref(),
+            item.with_slash_commands,
+        )?);
     }
+    let mut resource_plans = Vec::new();
+    let mut edits = BTreeMap::<PathBuf, instructions::Edit>::new();
+    for (item, participant) in items.iter().zip(&participants) {
+        let resources = instructions::plan_member(repo, participant, &participants)?;
+        let current = resources.preview();
+        if current.len() != item.resource_changes.len()
+            || current
+                .iter()
+                .zip(&item.resource_changes)
+                .any(|(a, b)| a.path != b.path || a.before != b.before)
+        {
+            return Err(SkillsError::new(
+                ErrorCode::Conflict,
+                "Instruction resources changed after preview; review a new plan",
+            ));
+        }
+        for edit in &resources.edits {
+            if destinations.iter().any(|d| edit.path.starts_with(d)) {
+                return Err(SkillsError::invalid(
+                    "Shared resource overlaps an installation",
+                ));
+            }
+            if let Some(existing) = edits.get(&edit.path) {
+                if existing.before != edit.before
+                    || existing.content != edit.content
+                    || existing.mode != edit.mode
+                {
+                    return Err(SkillsError::new(
+                        ErrorCode::Conflict,
+                        "Selected installations require incompatible resource changes",
+                    ));
+                }
+            } else {
+                edits.insert(edit.path.clone(), edit.clone());
+            }
+        }
+        resource_plans.push(resources);
+    }
+    let shared = instructions::ResourcePlan {
+        resources: Vec::new(),
+        edits: edits.into_values().collect(),
+    };
     writer.check_write_set(
-        &item
-            .resource_changes
+        &shared
+            .edits
             .iter()
-            .map(|r| r.path.clone())
+            .map(|e| e.path.clone())
             .collect::<Vec<_>>(),
     )?;
-    let mut allowed_roots = vec![target.skills_dir.clone()];
-    allowed_roots.extend(
-        item.resource_changes
+    // Preserve historical single-item journal ordering for existing retry/recovery records.
+    let shared = if items.len() == 1 {
+        instructions::ResourcePlan {
+            resources: Vec::new(),
+            edits: resource_plans[0].edits.clone(),
+        }
+    } else {
+        shared
+    };
+    let mut staged_paths = Vec::new();
+    for (index, item) in items.iter().enumerate() {
+        staged_paths.push(transactions::artifact(
+            &item.destination,
+            id,
+            index * 2,
+            "staged",
+        )?);
+        staged_paths.push(transactions::artifact(
+            &item.target.skills_dir.join(MANIFEST),
+            id,
+            index * 2 + 1,
+            "staged",
+        )?);
+    }
+    for (index, edit) in shared.edits.iter().enumerate() {
+        staged_paths.push(transactions::artifact(
+            &edit.path,
+            id,
+            items.len() * 2 + index,
+            "staged",
+        )?);
+    }
+    // Do not clean up artifacts that predated this attempt.
+    for path in &staged_paths {
+        let backup_name = path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .and_then(|n| n.strip_prefix("staged-"))
+            .ok_or_else(|| SkillsError::invalid("Invalid staging filename"))?;
+        if package::state(path)? != EntryState::Missing
+            || package::state(&path.with_file_name(format!("backup-{backup_name}")))?
+                != EntryState::Missing
+        {
+            return Err(SkillsError::new(
+                ErrorCode::Conflict,
+                "Transaction artifact already exists; inspect previous attempt",
+            ));
+        }
+    }
+    let prepared: Result<(super::coordination::PendingTransaction, Vec<PathBuf>)> = (|| {
+        let mut changes = Vec::new();
+        for (item, resources) in items.iter().zip(&resource_plans) {
+            operation.check_cancelled()?;
+            changes.extend(stage_target(
+                context,
+                plan,
+                item,
+                source.as_ref(),
+                &resources.resources,
+                id,
+                changes.len(),
+            )?);
+        }
+        changes.extend(shared.stage(id, changes.len())?);
+        operation.check_cancelled()?;
+        let mut roots = changes
             .iter()
-            .filter_map(|r| r.path.parent().map(Path::to_path_buf)),
-    );
-    allowed_roots.sort();
-    allowed_roots.dedup();
-    context.ensure(&target)?;
-    let staged = transactions::artifact(&item.destination, &id, 0, "staged")?;
-    let backup = transactions::artifact(&item.destination, &id, 0, "backup")?;
-    let staged_manifest = transactions::artifact(&manifest_path, &id, 1, "staged")?;
+            .map(|c| c.target.parent().unwrap().to_path_buf())
+            .collect::<Vec<_>>();
+        roots.sort();
+        roots.dedup();
+        Ok((transactions::prepare(repo, writer, id, changes)?, roots))
+    })();
+    if let Err(error) = &prepared {
+        if writer.pending()?.iter().any(|p| p.operation_id == id) {
+            return Err(SkillsError::recovery(error.message.clone()));
+        }
+        for path in staged_paths {
+            if fs::symlink_metadata(&path).is_ok() {
+                let _ = package::remove_entry(&path);
+            }
+        }
+    }
+    prepared
+}
+
+fn stage_target(
+    context: &TargetContext,
+    plan: &InstallPlan,
+    item: &PlanItem,
+    source: Option<&ResolvedPackage>,
+    resources: &[ManagedResource],
+    id: &str,
+    offset: usize,
+) -> Result<Vec<Change>> {
+    let target = &item.target;
+    let manifest_path = target.skills_dir.join(MANIFEST);
+    let mut manifest = load_manifest(target)?;
+    context.ensure(target)?;
+    let staged = transactions::artifact(&item.destination, id, offset, "staged")?;
+    let backup = transactions::artifact(&item.destination, id, offset, "backup")?;
+    let staged_manifest = transactions::artifact(&manifest_path, id, offset + 1, "staged")?;
     for path in [&staged, &backup, &staged_manifest] {
         if package::state(path)? != EntryState::Missing {
             return Err(SkillsError::new(
@@ -1104,7 +1450,7 @@ fn apply_item(
             ));
         }
     }
-    transactions::prepare_storage(&item.destination, &id)?;
+    transactions::prepare_storage(&item.destination, id)?;
     #[cfg(unix)]
     {
         use std::os::unix::fs::MetadataExt;
@@ -1113,26 +1459,24 @@ fn apply_item(
             return Err(SkillsError::invalid("Target mount does not support same-filesystem transaction storage outside its skill directory"));
         }
     }
-    let prepare = (|| {
-        if let Some(source) = &source {
-            match plan.mode {
-                InstallMode::Copy => {
-                    package::copy(&source.directory, &staged)?;
-                    if package::tree_digest(&staged, false)? != source.digest {
-                        return Err(SkillsError::new(
-                            ErrorCode::Conflict,
-                            "Source changed while copying",
-                        ));
-                    }
+    if let Some(source) = source {
+        match plan.mode {
+            InstallMode::Copy => {
+                package::copy(&source.directory, &staged)?;
+                if package::tree_digest(&staged, false)? != source.digest {
+                    return Err(SkillsError::new(
+                        ErrorCode::Conflict,
+                        "Source changed while copying",
+                    ));
                 }
-                InstallMode::Symlink => package::symlink(&source.directory, &staged)?,
-            };
-            let now = crate::models::now_ms();
-            let installation = Installation {
-                installation_id: format!(
-                    "installed-{}",
-                    &files::digest(item.destination.to_string_lossy().as_bytes())[..32]
-                ),
+            }
+            InstallMode::Symlink => package::symlink(&source.directory, &staged)?,
+        }
+        let now = crate::models::now_ms();
+        manifest.skills.insert(
+            item.install_name.clone(),
+            Installation {
+                installation_id: installation_id(&item.destination),
                 skill_id: source.skill_id.clone(),
                 source_id: source.source_id.clone(),
                 relative_path: source.relative_path.clone(),
@@ -1144,87 +1488,41 @@ fn apply_item(
                 installed_state: package::state(&staged)?,
                 installed_at_ms: item.previous.as_ref().map_or(now, |p| p.installed_at_ms),
                 updated_at_ms: now,
-                managed_resources: resource_plan.resources.clone(),
-            };
-            manifest
-                .skills
-                .insert(item.install_name.clone(), installation);
-        } else {
-            let previous = item
-                .previous
-                .as_ref()
-                .ok_or_else(|| SkillsError::invalid("Missing uninstall ownership"))?;
-            if manifest
-                .skills
-                .get(&item.install_name)
-                .is_none_or(|current| current.installation_id != previous.installation_id)
-            {
-                return Err(SkillsError::new(
-                    ErrorCode::Conflict,
-                    "Installation ownership changed",
-                ));
-            }
-            manifest.skills.remove(&item.install_name);
-        }
-        files::atomic_json(&staged_manifest, &manifest)?;
-        let mut changes = vec![
-            Change {
-                target: item.destination.clone(),
-                before: item.before.clone(),
-                after: package::state(&staged)?,
-                staged: staged.clone(),
-                backup,
+                managed_resources: resources.to_vec(),
             },
-            Change {
-                target: manifest_path.clone(),
-                before: item.manifest_before.clone(),
-                after: package::state(&staged_manifest)?,
-                staged: staged_manifest.clone(),
-                backup: transactions::artifact(&manifest_path, &id, 1, "backup")?,
-            },
-        ];
-        changes.extend(resource_plan.stage(&id, changes.len())?);
-        operation.check_cancelled()?;
-        transactions::prepare(repo, writer, &id, changes)
-    })();
-    let pending = match prepare {
-        Ok(p) => p,
-        Err(error) => {
-            // A publish/fsync error may already have made the pending marker
-            // visible. Never remove recovery artifacts in that case.
-            if writer.pending()?.iter().any(|p| p.operation_id == id) {
-                return Err(SkillsError::recovery(error.message));
-            }
-            let mut cleanup = vec![staged.clone(), staged_manifest.clone()];
-            for (i, resource) in item.resource_changes.iter().enumerate() {
-                cleanup.push(transactions::artifact(
-                    &resource.path,
-                    &id,
-                    i + 2,
-                    "staged",
-                )?);
-            }
-            for path in &cleanup {
-                if fs::symlink_metadata(path).is_ok() {
-                    let _ = package::remove_entry(path);
-                }
-            }
-            return Err(error);
-        }
-    };
-    if let Err(error) = transactions::commit(writer, &pending, &allowed_roots) {
-        if let Err(recovery) = transactions::recover(writer, &pending, &allowed_roots) {
-            return Err(SkillsError::recovery(format!(
-                "{}; {}",
-                error.message, recovery.message
-            )));
-        }
-        return Err(error);
-    }
-    Ok(if plan.action == PlanAction::Install {
-        "installed"
+        );
     } else {
-        "uninstalled"
+        let previous = item
+            .previous
+            .as_ref()
+            .ok_or_else(|| SkillsError::invalid("Missing uninstall ownership"))?;
+        if manifest
+            .skills
+            .get(&item.install_name)
+            .is_none_or(|current| current.installation_id != previous.installation_id)
+        {
+            return Err(SkillsError::new(
+                ErrorCode::Conflict,
+                "Installation ownership changed",
+            ));
+        }
+        manifest.skills.remove(&item.install_name);
     }
-    .into())
+    files::atomic_json(&staged_manifest, &manifest)?;
+    Ok(vec![
+        Change {
+            target: item.destination.clone(),
+            before: item.before.clone(),
+            after: package::state(&staged)?,
+            staged,
+            backup,
+        },
+        Change {
+            target: manifest_path.clone(),
+            before: item.manifest_before.clone(),
+            after: package::state(&staged_manifest)?,
+            staged: staged_manifest,
+            backup: transactions::artifact(&manifest_path, id, offset + 1, "backup")?,
+        },
+    ])
 }

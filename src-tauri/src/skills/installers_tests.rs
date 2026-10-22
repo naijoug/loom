@@ -894,3 +894,267 @@ fn batch_uninstall_of_shared_instruction_users_removes_block_once() {
     );
     assert!(!s.fixture.0.join("project/AGENTS.md").exists());
 }
+
+#[test]
+fn coordinated_shared_update_requires_all_users_and_changes_the_whole_group() {
+    let s = auto_setup();
+    install_auto(&s, &["codex-project", "amp-project"], ConflictPolicy::Fail);
+    fs::write(
+        s.fixture.0.join("source/auto/demo/inject.md"),
+        "Shared revision B\n",
+    )
+    .unwrap();
+    fs::write(
+        s.fixture.0.join("source/auto/demo/references/guide.md"),
+        "package B",
+    )
+    .unwrap();
+    let partial = installers::plan_install(
+        &s.repo,
+        &s.context,
+        &s.request(
+            InstallMode::Copy,
+            ConflictPolicy::Overwrite,
+            &["codex-project"],
+        ),
+    )
+    .unwrap();
+    assert_eq!(partial.items[0].decision, "blocked");
+    let full = installers::plan_install(
+        &s.repo,
+        &s.context,
+        &s.request(
+            InstallMode::Copy,
+            ConflictPolicy::Overwrite,
+            &["codex-project", "amp-project"],
+        ),
+    )
+    .unwrap();
+    assert!(full.coordinated);
+    assert!(
+        full.items.iter().all(|i| i.decision == "replace"),
+        "{full:?}"
+    );
+    let receipt = s.apply(&full.plan_id);
+    assert!(
+        receipt.items.iter().all(|i| i.status == "installed"),
+        "{receipt:?}"
+    );
+    assert_eq!(s.apply(&full.plan_id).operation_id, receipt.operation_id);
+    let entries = installers::inventory(&s.repo, &s.context).unwrap();
+    let mut digests = Vec::new();
+    for entry in entries.iter().filter(|e| e.installation.is_some()) {
+        assert_eq!(
+            fs::read_to_string(entry.destination.join("references/guide.md")).unwrap(),
+            "package B"
+        );
+        assert_eq!(entry.instruction_checks[0].state, "current");
+        digests.push(
+            entry.installation.as_ref().unwrap().managed_resources[0]
+                .content_digest
+                .clone(),
+        );
+    }
+    assert_eq!(digests.len(), 2);
+    assert_eq!(digests[0], digests[1]);
+    let file = s.fixture.0.join("project/AGENTS.md");
+    assert!(fs::read_to_string(&file)
+        .unwrap()
+        .contains("Shared revision B"));
+    assert_eq!(
+        remove_target(&s, &s.repo, "codex-project").items[0].status,
+        "uninstalled"
+    );
+    assert!(fs::read_to_string(&file)
+        .unwrap()
+        .contains("Shared revision B"));
+    assert_eq!(
+        remove_target(&s, &s.repo, "amp-project").items[0].status,
+        "uninstalled"
+    );
+    assert!(!file.exists());
+}
+
+#[test]
+fn a_stale_group_preview_cannot_update_the_other_members() {
+    let s = auto_setup();
+    install_auto(&s, &["codex-project", "amp-project"], ConflictPolicy::Fail);
+    fs::write(s.fixture.0.join("source/auto/demo/inject.md"), "B\n").unwrap();
+    let plan = installers::plan_install(
+        &s.repo,
+        &s.context,
+        &s.request(
+            InstallMode::Copy,
+            ConflictPolicy::Overwrite,
+            &["codex-project", "amp-project"],
+        ),
+    )
+    .unwrap();
+    assert!(plan.coordinated);
+    let codex = s.destination("codex", "project");
+    let amp = s.destination("amp", "project");
+    let original = package::state(&codex).unwrap();
+    let instructions = fs::read(s.fixture.0.join("project/AGENTS.md")).unwrap();
+    fs::write(amp.join("user-note.md"), "User edit after preview").unwrap();
+    let result = s.apply(&plan.plan_id);
+    assert!(
+        result.items.iter().all(|i| i.status == "conflict"),
+        "{result:?}"
+    );
+    assert_eq!(package::state(&codex).unwrap(), original);
+    assert_eq!(
+        fs::read(s.fixture.0.join("project/AGENTS.md")).unwrap(),
+        instructions
+    );
+    assert_eq!(
+        fs::read_to_string(amp.join("user-note.md")).unwrap(),
+        "User edit after preview"
+    );
+}
+
+#[test]
+fn coordinated_update_recovers_both_packages_manifests_and_shared_resources() {
+    use super::transactions;
+    for stop in 0..12 {
+        let s = auto_setup();
+        install_auto(&s, &["codex-project", "amp-project"], ConflictPolicy::Fail);
+        fs::write(s.fixture.0.join("source/auto/demo/inject.md"), "B\n").unwrap();
+        let plan = installers::plan_install(
+            &s.repo,
+            &s.context,
+            &s.request(
+                InstallMode::Copy,
+                ConflictPolicy::Overwrite,
+                &["codex-project", "amp-project"],
+            ),
+        )
+        .unwrap();
+        let operation = Operation::begin(&s.repo, "fixture", "install").unwrap();
+        let lease = s.repo.coordinator.enter().unwrap();
+        let writer = s.repo.coordinator.writer(&lease).unwrap();
+        let id = format!("{}-group", plan.plan_id);
+        let (pending, roots) = installers::prepare_items(
+            &s.repo,
+            &s.context,
+            &writer,
+            &plan,
+            &plan.items.iter().collect::<Vec<_>>(),
+            &id,
+            &operation,
+        )
+        .unwrap();
+        let prepared: transactions::Prepared = files::read_json(&pending.journal_path).unwrap();
+        assert_eq!(prepared.changes.len(), 6);
+        assert!(
+            transactions::commit_observed(&writer, &pending, &roots, |step| if step == stop {
+                Err(super::error::SkillsError::invalid(
+                    "interrupted group commit",
+                ))
+            } else {
+                Ok(())
+            })
+            .is_err()
+        );
+        drop(writer);
+        drop(lease);
+        drop(operation);
+        let other = Repository::open(
+            &s.fixture.0.join("data-recovery"),
+            &s.fixture.0.join("coord"),
+        )
+        .unwrap();
+        assert_eq!(
+            installers::recover_one(&other, &s.context, &id).unwrap(),
+            transactions::Outcome::RolledBack
+        );
+        for change in prepared.changes {
+            assert_eq!(
+                package::state(&change.target).unwrap(),
+                change.before,
+                "failure at {stop}"
+            );
+        }
+        assert!(installers::recovery_items(&other, &s.context)
+            .unwrap()
+            .is_empty());
+        let entries = installers::inventory(&other, &s.context).unwrap();
+        assert_eq!(
+            entries.iter().filter(|s| s.installation.is_some()).count(),
+            2
+        );
+        assert!(entries
+            .iter()
+            .filter(|s| s.installation.is_some())
+            .all(|s| s.instruction_checks[0].state == "current"));
+    }
+}
+
+#[test]
+fn global_auto_instructions_use_tool_specific_paths_and_restore_existing_rules() {
+    let s = auto_setup();
+    let paths = [
+        s.fixture.0.join("home/.codex/AGENTS.md"),
+        s.fixture.0.join("home/.claude/CLAUDE.md"),
+        s.fixture.0.join("home/.config/amp/AGENTS.md"),
+    ];
+    for path in &paths {
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(path, "Existing global rules\n").unwrap();
+    }
+    let plan = install_auto(
+        &s,
+        &["codex-global", "claude-code-global", "amp-global"],
+        ConflictPolicy::Fail,
+    );
+    assert!(
+        !plan.coordinated,
+        "independent instruction files retain per-target commits"
+    );
+    for path in &paths {
+        let text = fs::read_to_string(path).unwrap();
+        assert!(text.starts_with("Existing global rules\n"));
+        assert_eq!(text.matches("skills-linker:fixture-demo:begin").count(), 1);
+    }
+    assert!(!s.fixture.0.join("home/AGENTS.md").exists());
+    for target in ["amp-global", "claude-code-global", "codex-global"] {
+        assert_eq!(
+            remove_target(&s, &s.repo, target).items[0].status,
+            "uninstalled"
+        );
+    }
+    for path in paths {
+        assert_eq!(fs::read_to_string(path).unwrap(), "Existing global rules\n");
+    }
+}
+
+#[test]
+fn missing_and_malformed_instruction_diagnoses_do_not_write_or_repair() {
+    let s = auto_setup();
+    install_auto(&s, &["codex-project"], ConflictPolicy::Fail);
+    let file = s.fixture.0.join("project/AGENTS.md");
+    fs::remove_file(&file).unwrap();
+    let entries = installers::inventory(&s.repo, &s.context).unwrap();
+    assert_eq!(
+        entries
+            .iter()
+            .find(|s| s.installation.is_some())
+            .unwrap()
+            .instruction_checks[0]
+            .state,
+        "missing"
+    );
+    assert!(!file.exists());
+    let broken = "User rules\n<!-- skills-linker:fixture-demo:begin -->\nMissing end\n";
+    fs::write(&file, broken).unwrap();
+    let entries = installers::statuses(&s.repo, &s.context, &s.skill_id).unwrap();
+    assert_eq!(
+        entries
+            .iter()
+            .find(|s| s.installation.is_some())
+            .unwrap()
+            .instruction_checks[0]
+            .state,
+        "malformed"
+    );
+    assert_eq!(fs::read_to_string(&file).unwrap(), broken);
+}

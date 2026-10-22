@@ -5,6 +5,7 @@ export const en = {
   skillsFileOnlyHint: "Auto/global skills with inject.md also update managed instructions. Review affected files before applying; cron skills never inject instructions.",
   skillsInstallToTools: "Install to coding tools",
   skillsInstallBoundary: "Choose global or current-project targets. Installing files does not prove that a CLI has loaded or invoked the skill.",
+  skillsCoordinatedPlan: "These installations share instructions and will be applied together. If one fails, the group is restored or marked for recovery.",
   skillsManagedFiles: 'Managed instructions and commands',
   skillsSlashOption: 'Create slash command wrappers for manual skills (Codex / Claude Code)',
   skillsInstructionCurrent: 'Managed instruction: current',

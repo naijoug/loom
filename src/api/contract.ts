@@ -413,4 +413,68 @@ skillsResourcePreview: {
     "mode": 420
   }
 } satisfies ResourcePreview,
+skillsCoordinatedInstallPlan: {
+  "schemaVersion": 1,
+  "planId": "install-group-fixture",
+  "action": "install",
+  "projectPath": "/fixture/project",
+  "mode": "copy",
+  "createdAtMs": 1,
+  "source": {
+    "skillId": "src-fixture::manual%2Fdemo%2FSKILL.md",
+    "sourceId": "src-fixture",
+    "relativePath": "manual/demo/SKILL.md",
+    "name": "fixture-demo",
+    "directory": "/fixture/source/manual/demo",
+    "revision": null,
+    "digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "items": [
+    {
+      "target": {
+        "id": "codex-project",
+        "toolId": "codex",
+        "label": "Codex / ChatGPT",
+        "scope": "project",
+        "skillsDir": "/fixture/project/.codex/skills",
+        "exists": false,
+        "blockedReason": null
+      },
+      "installName": "fixture-demo",
+      "destination": "/fixture/project/.codex/skills/fixture-demo",
+      "before": {
+        "kind": "missing"
+      },
+      "manifestBefore": {
+        "kind": "missing"
+      },
+      "previous": null,
+      "decision": "install",
+      "message": null
+    },
+    {
+      "target": {
+        "id": "amp-project",
+        "toolId": "amp",
+        "label": "Amp / Codex",
+        "scope": "project",
+        "skillsDir": "/fixture/project/.agents/skills",
+        "exists": false,
+        "blockedReason": null
+      },
+      "installName": "fixture-demo",
+      "destination": "/fixture/project/.agents/skills/fixture-demo",
+      "before": {
+        "kind": "missing"
+      },
+      "manifestBefore": {
+        "kind": "missing"
+      },
+      "previous": null,
+      "decision": "install",
+      "message": null
+    }
+  ],
+  "coordinated": true
+} satisfies InstallPlan,
 } as const;

@@ -128,6 +128,10 @@ fn persisted_model_samples_round_trip_through_rust_types() {
     assert_model_sample::<crate::skills::targets::InstallTarget>(samples, "skillsInstallTarget");
     assert_model_sample::<crate::skills::installers::Installation>(samples, "skillsInstallation");
     assert_model_sample::<crate::skills::installers::InstallPlan>(samples, "skillsInstallPlan");
+    assert_model_sample::<crate::skills::installers::InstallPlan>(
+        samples,
+        "skillsCoordinatedInstallPlan",
+    );
     assert_model_sample::<crate::skills::instructions::InstructionCheck>(
         samples,
         "skillsInstructionCheck",

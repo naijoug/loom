@@ -7,6 +7,7 @@ export const zhCN: Messages = {
   skillsFileOnlyHint: "含 inject.md 的 auto/global 技能会同步托管指令；应用前请检查受影响文件。cron 技能不会注入指令。",
   skillsInstallToTools: "安装到编程工具",
   skillsInstallBoundary: "选择全局或当前项目目标。文件已安装不代表 CLI 已加载或调用该技能。",
+  skillsCoordinatedPlan: "这些安装共用指令，将作为一组应用。任一项失败时整组恢复，无法安全恢复时会标记为待恢复。",
   skillsManagedFiles: '托管指令与命令文件',
   skillsSlashOption: '为 manual 技能创建 slash 命令（Codex / Claude Code）',
   skillsInstructionCurrent: '托管指令：正常',

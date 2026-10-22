@@ -108,12 +108,22 @@ Settings → Skills 新增详情安装页与 Installed 列表。后端派生 Cod
 
 辅助日志：`/tmp/loom-skills-m2b-final-check.log`、`/tmp/loom-skills-m2b-final-build.log`、`/tmp/loom-skills-m2b-native.log`。原生操作发生在最后一轮目录同步与 wrapper 选项恢复小修正之前；这些修正已通过完整回归与 release 构建，未重复原生操作。
 
-阶段限制：多使用者共享内容的一致更新尚未实现，单独改写明确阻止；已存在版本的旧指令归属重建属于 M4。M2b 整体出口尚未关闭，CLI/TUI/翻译/旧数据接管及 G1 视觉/无源码访问验收继续推进。
+该切片交付时多使用者共享内容一致更新尚未实现；下面的补充交付关闭此项。旧指令归属重建仍属于 M4，CLI/TUI/翻译/旧数据接管及 G1 视觉/无源码访问验收继续推进。
+
+## M2b 收尾：多使用者一致更新
+
+- 后端检测共享指令路径，预览增加 coordinated 标记。更改共享内容须选齐所有已核实使用者；每个使用者请求的最终内容必须一致。单目标和统一更新共用 prepare/stage 实现，统一更新合并重复资源，保留一个组级 journal 与终态回执。
+- 新增服务回归覆盖：A 安装给 Codex/Amp → 仅更新一个被拒绝 → 选齐后两份包、清单、指令一起更新 B → 重试幂等 → 卸载恢复；预览后一个目标被编辑，另一个目标与共享块都不更新；两个包/两个清单/正文/ledger 共六项资源的 12 个 rename 中断点，另一 dataDir 恢复后全部精确匹配原状态。
+- 临时 HOME 路径分别验证全局 Codex 的 `.codex/AGENTS.md`、Claude 的 `.claude/CLAUDE.md`、Amp 的 `.config/amp/AGENTS.md`，卸载恢复原文；未改真实 HOME 环境。缺失和损坏的诊断验证未创建/修复文件。
+- 最终 `pnpm check` 前端 109、Rust 211 项通过，20 ignored 的范围不变；`pnpm tauri build --no-bundle` 和 debug app bundle 构建通过。日志：`/tmp/loom-skills-m2b-closeout-check.log`、`/tmp/loom-skills-group-release-build.log`。
+- 原生临时项目验证：预览明确“共用指令，一起应用”；安装 A 后只修改来源到 B，界面显示有更新；显式替换两个目标后两份 inject.md 均为 B，共享块为 B，两个 manifest 指纹一致，检查持久化日志只有一份组级 prepare、六项资源；批量卸载后原用户规则恢复，来源文件保留，登记移除，预览停止。见 [一致更新原生证据](samples/skills-migration/coordinated-update-native.json)。没有模型调用或全局安装变更。
+
+M2b 对当前托管安装的出口已通过，允许继续 M2c；旧来源/指令归属重建及实际 CLI 入口仍分别受 M4/M2c 门槛约束。统一恢复不等于跨文件系统的瞬时原子提交，中断后发现用户修改会保留待恢复状态。
 
 ## 当前限制与后续执行入口
 
 M2a 安装闭环已有上述代码和原生证据，G1 仍待综合关闭：完整 Skills 视觉矩阵与无源码访问条件；远程 A → B 安装更新和更新器准入/失败的服务入口已按上一节补验。搬移运行只证明独立包路径及工作目录；源 checkout 仍在磁盘，不冒充无法访问源码的验收。
 
-M1b GitHub API、M2c CLI/TUI、M3 翻译与分享、M4 旧数据接管尚未完成；M2b 已有共享指令/wrapper/只读诊断与恢复分项证据，仍待多使用者一致更新及整体出口核对。外网 GitHub/GitLab 与真实翻译 provider 验收仍待后续，G2 未通过。
+M1b GitHub API、M2c CLI/TUI、M3 翻译与分享、M4 旧数据接管尚未完成；M2b 当前托管安装出口已通过，共享指令/wrapper/只读诊断/一致更新与恢复均有上述证据。外网 GitHub/GitLab 与真实翻译 provider 验收仍待后续，G2 未通过。
 
 旧 library/JSON/TSV 合成兼容样本已加入 `src-tauri/tests/fixtures/skills/`，尚未执行真实旧数据接管。M5 的管理测试与过渡入口需等 M2c/M7 移除。旧 Manager 新源码的版本保护不能修补已安装历史二进制，也不能让旧客户端参加 Loom 锁协议；切换期间仍须停止旧 Manager 写入。旧应用与数据保留，不提前退役。

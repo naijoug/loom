@@ -287,6 +287,13 @@ fn existing_content<'a>(
     }
 }
 
+#[derive(Clone)]
+pub struct Participant {
+    pub owner: Owner,
+    pub previous: Vec<ManagedResource>,
+    pub desired: Vec<DesiredResource>,
+}
+
 /// Called under the common writer lock for both preview and apply. All existing
 /// users must still have matching manifest references; unknown ownership is not zero.
 pub fn plan(
@@ -295,6 +302,30 @@ pub fn plan(
     previous: &[ManagedResource],
     desired: &[DesiredResource],
 ) -> Result<ResourcePlan> {
+    plan_member(
+        repo,
+        &Participant {
+            owner: owner.clone(),
+            previous: previous.to_vec(),
+            desired: desired.to_vec(),
+        },
+        &[],
+    )
+}
+
+/// A coordinated transaction may replace a shared block only when every
+/// existing owner participates and every remaining owner requests identical text.
+/// No manifest is changed here; callers commit all returned edits together.
+pub fn plan_member(
+    repo: &Repository,
+    member: &Participant,
+    peers: &[Participant],
+) -> Result<ResourcePlan> {
+    let Participant {
+        owner,
+        previous,
+        desired,
+    } = member;
     let mut keys = BTreeMap::new();
     for old in previous {
         let kind = if old.marker.starts_with("slash:") {
@@ -377,46 +408,105 @@ pub fn plan(
             }
             ledger
         };
-        if let Some(old) = old {
-            if old.content_digest != ledger.content_digest
-                || ledger.owners.get(&owner.installation_id) != Some(owner)
+        // Include the current member exactly once. Peer identities and their
+        // prior references are revalidated against the current ledger, not a count.
+        let mut participants = BTreeMap::new();
+        participants.insert(owner.installation_id.clone(), member);
+        for peer in peers {
+            if peer.owner.installation_id == owner.installation_id {
+                continue;
+            }
+            if participants
+                .insert(peer.owner.installation_id.clone(), peer)
+                .is_some()
+            {
+                return Err(SkillsError::invalid("Duplicate coordinated installation"));
+            }
+        }
+        let involved = participants
+            .values()
+            .filter_map(|p| {
+                let old = p
+                    .previous
+                    .iter()
+                    .find(|r| r.path == path && r.marker == marker);
+                let new = p
+                    .desired
+                    .iter()
+                    .find(|r| r.path == path && r.marker == marker);
+                (old.is_some() || new.is_some()).then_some((*p, old, new))
+            })
+            .collect::<Vec<_>>();
+        for (participant, old, _) in &involved {
+            if let Some(old) = old {
+                if old.content_digest != ledger.content_digest
+                    || ledger.owners.get(&participant.owner.installation_id)
+                        != Some(&participant.owner)
+                {
+                    return Err(conflict(
+                        "Installation no longer owns this instruction resource",
+                    ));
+                }
+            } else if ledger
+                .owners
+                .contains_key(&participant.owner.installation_id)
             {
                 return Err(conflict(
-                    "Installation no longer owns this instruction resource",
+                    "Instruction ownership is not recorded in the installation",
                 ));
             }
-        } else if ledger.owners.contains_key(&owner.installation_id) {
-            return Err(conflict(
-                "Instruction ownership is not recorded in the installation",
-            ));
         }
-        ledger.owners.remove(&owner.installation_id);
-        let content = new
-            .map(|new| match kind {
-                ResourceKind::Instruction => expected_block(&new.content, &marker, &text),
-                ResourceKind::Wrapper => Ok(new.content.clone()),
-            })
-            .transpose()?;
-        let replacement = if let Some(content) = content {
-            let digest = files::digest(content.as_bytes());
-            if !ledger.owners.is_empty() && digest != ledger.content_digest {
-                return Err(conflict("Other installations still use this instruction content; update them consistently before changing it"));
+        for (participant, _, _) in &involved {
+            ledger.owners.remove(&participant.owner.installation_id);
+        }
+        let mut replacement: Option<String> = None;
+        for (_, _, desired) in &involved {
+            let Some(desired) = desired else {
+                continue;
+            };
+            if desired.kind != kind {
+                return Err(conflict("Shared resource kind changed"));
             }
-            ledger.content_digest = digest.clone();
-            ledger
-                .owners
-                .insert(owner.installation_id.clone(), owner.clone());
-            result.resources.push(ManagedResource {
-                path: path.clone(),
-                marker: marker.clone(),
-                content_digest: digest,
-            });
-            Some(content)
+            let content = match kind {
+                ResourceKind::Instruction => expected_block(&desired.content, &marker, &text)?,
+                ResourceKind::Wrapper => desired.content.clone(),
+            };
+            if replacement
+                .as_ref()
+                .is_some_and(|current| current != &content)
+            {
+                return Err(conflict(
+                    "Selected installations request different shared instruction content",
+                ));
+            }
+            if !ledger.owners.is_empty()
+                && files::digest(content.as_bytes()) != ledger.content_digest
+            {
+                return Err(conflict("Select every installation using this instruction block before updating its content"));
+            }
+            replacement = Some(content);
+            // Add participating owners only after all requests are compared.
+        }
+        if let Some(content) = &replacement {
+            ledger.content_digest = files::digest(content.as_bytes());
+            for (participant, _, desired) in &involved {
+                if desired.is_some() {
+                    ledger.owners.insert(
+                        participant.owner.installation_id.clone(),
+                        participant.owner.clone(),
+                    );
+                }
+            }
+            if new.is_some() {
+                result.resources.push(ManagedResource {
+                    path: path.clone(),
+                    marker: marker.clone(),
+                    content_digest: ledger.content_digest.clone(),
+                });
+            }
         } else if !ledger.owners.is_empty() {
-            current.map(str::to_owned)
-        } else {
-            None
-        };
+            replacement = current.map(str::to_owned);
+        }
         let updated = match kind {
             ResourceKind::Wrapper => replacement,
             ResourceKind::Instruction => match block_span(&text, &marker)? {

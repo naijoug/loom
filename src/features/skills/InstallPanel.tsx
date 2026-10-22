@@ -13,6 +13,7 @@ export function PlanPreview({ plan, busy, onApply, onCancel }: { plan: InstallPl
   const t = useT();
   const actionable = plan.items.some(item => !["blocked", "skip"].includes(item.decision));
   return <section className="skills-plan" aria-label={t("skillsPlan")}><h3>{t("skillsPlan")}</h3>
+    {plan.coordinated && <p className="skills-coordinated-note">{t("skillsCoordinatedPlan")}</p>}
     <p>{plan.action === "install" ? t(plan.mode === "copy" ? "skillsCopyHint" : "skillsLinkHint") : t("skillsUninstallHint")}</p>
     <ul>{plan.items.map(item => <li key={`${item.target.id}/${item.installName}`}><strong>{item.target.label} · {t(item.target.scope === "global" ? "skillsGlobal" : "skillsProject")}</strong><span> · {t(installStateKey(item.decision))}</span><code>{item.destination}</code>{item.message && <p>{item.message}</p>}{item.resourceChanges?.some(r => r.path.endsWith(".md")) && <div><span>{t("skillsManagedFiles")}</span>{item.resourceChanges.filter(r => r.path.endsWith(".md")).map(r => <code key={r.path}>{r.path}</code>)}</div>}</li>)}</ul>
     <div className="skills-install-actions"><button type="button" disabled={busy || !actionable} onClick={onApply}>{t("skillsApplyPlan")}</button><button type="button" disabled={busy} onClick={onCancel}>{t("cancel")}</button></div>

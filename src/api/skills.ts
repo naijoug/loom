@@ -38,7 +38,7 @@ export interface InstructionCheck { path: string; state: "current" | "missing" |
 export interface ResourcePreview { path: string; before: EntryState; }
 export interface InstallStatus { target: InstallTarget; skillId: string; destination: string; state: string; installation: Installation | null; updateAvailable: boolean; instructionChecks?: InstructionCheck[]; message: string | null; }
 export interface InstallPlan {
-  schemaVersion: number; planId: string; action: "install" | "uninstall"; projectPath: string | null;
+  schemaVersion: number; planId: string; action: "install" | "uninstall"; coordinated?: boolean; projectPath: string | null;
   mode: InstallMode; createdAtMs: number;
   source: { skillId: string; sourceId: string; relativePath: string; name: string; directory: string; revision: string | null; digest: string } | null;
   items: { target: InstallTarget; installName: string; destination: string; before: EntryState; manifestBefore: EntryState; previous: Installation | null; resourceChanges?: ResourcePreview[]; withSlashCommands?: boolean; decision: string; message: string | null }[];

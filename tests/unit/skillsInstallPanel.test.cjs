@@ -90,3 +90,13 @@ test('instruction diagnostics display stale and malformed state without triggeri
  assert.match(document.body.textContent,/changed; review/);assert.match(document.body.textContent,/Owner unavailable/);
  await click(button('Reload status'));assert.equal(writes,0);
 });
+
+
+test('a coordinated preview explains the shared failure boundary before applying',async t=>{
+ let applied=0;const backend=api({planInstall:async()=>samples.skillsCoordinatedInstallPlan,applyInstall:async()=>{applied++;return receipt;}});
+ await mount(t,InstallPanel,{api:backend,skillId:'skill-a',projectPath:'/one'});
+ await click(document.querySelector('.skills-install-targets input'));await click(button('Preview install / update'));
+ assert.match(document.querySelector('.skills-coordinated-note').textContent,/applied together/);
+ assert.match(document.querySelector('.skills-plan').textContent,/Amp/);assert.equal(applied,0);
+ await click(button('Apply these changes'));assert.equal(applied,1);
+});
