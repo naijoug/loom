@@ -1,4 +1,4 @@
-import type { SkillSource, SkillsHttpRequest } from "./skills";
+import type { SkillSource, SkillsHttpRequest, TranslationProviders } from "./skills";
 import type { InstructionCheck, ResourcePreview } from "./skills";
 import type { SkillsLibrary, SkillsOperation, InstallTarget, Installation, InstallPlan, InstallReceipt } from "./skills";
 import type { AgentConfig, AgentDiagnostic, AppSettings, ChatSession, ChatEvent, ChatSendInput, ChatSendReceipt, ChatResumeHandle, ChatTurn, ChatLogPage, ChatExportInput, ChatExportResult, ChatMessagePart } from "../domain";
@@ -51,6 +51,8 @@ export const TAURI_COMMANDS = {
   skillsApplyInstall: "skills_apply_install",
   skillsListPending: "skills_list_pending",
   skillsRecoverInstallation: "skills_recover_installation",
+  skillsListTranslationProviders: "skills_list_translation_providers",
+  skillsSaveTranslationConfig: "skills_save_translation_config",
 } as const;
 export const TAURI_EVENTS = {
   updateState: "loom-update-state",
@@ -495,6 +497,9 @@ skillsGithubApiSource: {
   "updatedAtMs": 1,
   "defaultBranch": "trunk"
 } satisfies SkillSource,
+skillsTranslationProviders: {
+  revision: 0, providers: [{ id: "openai", label: "OpenAI", configured: false, supportsApiKey: true, storedKey: false, keySource: "none", model: "gpt-5", storedModel: null, modelFromEnvironment: false }],
+} satisfies TranslationProviders,
 skillsHttpRequest: {
   "method": "GET",
   "url": "https://api.github.com/repos/fixture/skills",

@@ -17,6 +17,8 @@
 - API 完整包经路径、模式、大小、blob 身份校验后发布固定 commit 快照；不运行包内脚本，不安装缺文件或截断树。
 - Git 保留用户 SSH 配置及身份通路；仅未配置时补非交互 BatchMode，不禁用主机密钥校验。Git/SSH stderr 持久记录使用受控错误分类，原始 wrapper 输出不进入日志。
 
+- Skills 翻译配置使用私有版本化文件，前端仅获得密钥存在性和来源状态；显式 keep/set/clear 与 expectedRevision 防止误清除/旧状态覆盖。配置操作纳入生命周期和 writer/pending 准入，不因保存设置自动调用模型。
+
 ## CLI 执行
 
 - `chat_send` 只访问已登记的 canonical 项目；存储会话路径必须匹配项目，准备后的 cwd 必须位于该项目内。

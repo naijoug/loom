@@ -8,6 +8,7 @@ import { Markdown } from "../chat/MarkdownView";
 import { mergeOperation, operationActionKey, skillBody, skillsError, visibleSkills } from "./model";
 import { InstallPanel } from "./InstallPanel";
 import { InstalledSkills } from "./InstalledSkills";
+import { TranslationSettings } from "./TranslationSettings";
 import "./skills.css";
 
 const emptyLibrary: SkillsLibrary = { sources: [], skills: [], issues: [] };
@@ -29,6 +30,7 @@ export function SkillsPanel({ projectName, projectPath = null, api = skillsApi, 
   const [url, setUrl] = useState("");
   const [sourceMode, setSourceMode] = useState<"git" | "github-api">("git");
   const [adding, setAdding] = useState(false);
+  const [translationSettings, setTranslationSettings] = useState(false);
   const [tab, setTab] = useState<"overview" | "markdown" | "files" | "install">("overview");
   const [view, setView] = useState<"library" | "installed">("library");
   const [installRevision, setInstallRevision] = useState(0);
@@ -177,6 +179,8 @@ export function SkillsPanel({ projectName, projectPath = null, api = skillsApi, 
         </div>
       </main>
     </div>}
+    <div className="skills-translation-toggle"><button type="button" disabled={!desktop} aria-expanded={translationSettings} onClick={() => setTranslationSettings(value => !value)}>{t("skillsTranslationSettings")}</button></div>
+    {translationSettings && <TranslationSettings api={api} />}
     {!!operations.length && <section className="skills-operations" aria-label={t("skillsActivity")}><h2>{t("skillsActivity")}</h2>{operations.slice(0, 4).map(operation => <div key={operation.operationId} role="status"><span>{t(operationActionKey(operation.action))} · {library.sources.find(item => item.id === operation.sourceId)?.name ?? t(operation.action === "install-fzf" ? "skillsCliTools" : ["install", "uninstall", "recover"].includes(operation.action) ? "skillsManagedInstallations" : "skillsSources")} · {t(operation.phase === "running" ? "skillsWorking" : operation.phase === "committed" ? "skillsDone" : operation.phase === "cancelled" ? "skillsCancelled" : "skillsFailed")}</span>{operation.error && <span className="skills-error">{operation.error.message}</span>}{!!operation.executions?.length && <details><summary>{t("skillsExecutionLog")}</summary>{operation.executions.map((execution, index) => <pre key={index}>{[execution.program + " " + execution.args.join(" "), execution.cwd, t("exitCodeLabel") + ": " + (execution.exitCode ?? "—"), execution.error].filter(Boolean).join("\n")}</pre>)}</details>}{!!operation.requests?.length && <details><summary>{t("skillsHttpLog")} ({operation.requests.length})</summary>{operation.requests.slice(-50).map((request, index) => <pre key={index}>{[request.method + " " + request.url, t("skillsHttpStatus") + ": " + (request.status ?? "—"), request.error].filter(Boolean).join("\n")}</pre>)}</details>}{operation.phase === "running" && <button type="button" onClick={() => { void action(() => api.cancel(operation.operationId)); }}>{t("skillsCancel")}</button>}</div>)}</section>}
   </div>;
 }

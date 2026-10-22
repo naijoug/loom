@@ -41,3 +41,17 @@ M5-02 在 Loom 等价覆盖和根内容入口排除管理测试后关闭，M5 �
 - `pnpm tauri build --bundles app` 退出 0，产物为 `src-tauri/target/release/bundle/macos/Loom.app`；未签名/公证/发布。原生 API 验收在 API 实现的 release 包完成，随后 SSH 与等价补齐用例经完整检查及最终 bundle 重建通过。
 - 日志：`/tmp/loom-skills-api-v4-final-check.log`、`/tmp/loom-skills-api-v4-final-bundle.log`、`/tmp/loom-skills-github-api-real.log`、`/tmp/loom-skills-api-native.log`、`/tmp/skills-content-isolated-v4.log`；临时日志不是长期唯一证据，关键结果保存在本记录及 JSON。
 - 后续：M3 四个翻译 provider、M4 旧数据/配置/缓存/安装迁移与回滚、G1 视觉/无源码/外网 Git 余项、M6/G2、M7 源应用退役。整体迁移未完成，不删除私人 app data、缓存或既有安装。
+
+## M3-01：翻译设置与凭据契约
+
+在 `2649372` 后接入 Rust `translation/config.rs`、两个主窗口 IPC 与 Settings → Skills 内的 Translation settings。保留 OpenAI/OpenRouter/Codex/Claude Code 四个 provider 身份和远程旧默认模型；环境模型与保存模型分别显示，密钥状态只读返回存在性和来源。保存使用 schema/revision、显式 keep/set/clear、原子私有文件、生命周期准入与共用 writer/pending 校验；旧配置自动导入和实际模型调用均未启用。
+
+新增 5 项 Rust 回归覆盖：DTO/Debug 无密钥、环境优先/清除不动环境、独立 provider 和并发 revision 冲突、坏/未来/链接配置保全、输入校验、更新与 pending 阻止写入。新增 5 项前端回归覆盖：保留密钥/显式替换清除、失败释放密码、旧请求隔离、保存期间禁用、保存某 provider 保留其他草稿。
+
+完整 `pnpm check` 退出 0：前端 115/Rust 251（23 项忽略）；随后修正 Reload settings 文案并补齐跨 provider 草稿保留，前端 116 项全部通过，最终 release app bundle 重新构建通过。日志为 `/tmp/loom-skills-translation-config-check.log`、`/tmp/loom-skills-translation-front-final.log` 与 `/tmp/loom-skills-translation-config-final-bundle.log`。
+
+原生验收使用全新临时 profile/data，清除两个远程 key 与模型环境变量；用假 key 保存 OpenAI/gpt-5-mini，文件 `0600` 且值准确，界面仅显示 Using saved key。停止并重启最终构建后仍显示正确模型/存在状态，选择 Remove saved key 后保存、重新加载，显示 No API key configured，模型保留。四 provider 状态及窄窗口深色表单观察通过。运行日志不含假 key；没有模型请求。预览前后按 debug.sh stop 清理。结构化记录见 [翻译配置原生记录](samples/skills-migration/translation-config-native.json)。
+
+首次窗口绑定曾返回空 AX/一次超时，核实只有一个进程后重新绑定明确 app 路径恢复；没有因观察超时重新启动未知进程。原生下拉菜单第一次 Return 提交了 keep，随后明确选择 clear 并点击 Save，最终文件与界面共同证明清除成功。
+
+M3-01 配置切片通过；M3-02 四 provider 实际执行/超时/取消、M3-03 翻译结果归属与复制/命令面板、M3-04 逐 provider 真实调用仍待完成。此记录不能作为翻译功能完整替代或 G2 的通过证据。

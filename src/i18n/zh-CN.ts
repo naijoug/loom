@@ -1,6 +1,24 @@
 import type { Messages } from "./en";
 
 export const zhCN: Messages = {
+  skillsReloadTranslationSettings: "重新加载设置",
+  skillsTranslationSettings: "翻译设置",
+  skillsTranslationConfigHint: "翻译配置独立于 Chat。本地 CLI 检测不代表登录已验证。密钥仅保存在本机私有配置中，已有密钥不会显示。",
+  skillsKeyEnvironment: "使用环境变量中的密钥",
+  skillsKeyStored: "使用已保存的密钥",
+  skillsKeyMissing: "尚未配置 API 密钥",
+  skillsLocalCliFound: "已检测到本地 CLI，尚未验证登录",
+  skillsLocalCliMissing: "未检测到本地 CLI",
+  skillsTranslationModel: "模型（留空使用默认值）",
+  skillsProviderDefault: "服务商默认模型",
+  skillsModelEnvironment: "环境变量中的模型优先：{model}",
+  skillsTranslationKeyChange: "已保存密钥操作",
+  skillsKeyKeep: "保留已保存密钥",
+  skillsKeyReplace: "替换已保存密钥",
+  skillsKeyClear: "移除已保存密钥",
+  skillsTranslationKey: "新 API 密钥",
+  skillsKeyClearEnvironment: "移除已保存密钥不会清除环境变量中的密钥。",
+  skillsConfigSaved: "翻译设置已保存。",
   skillsBackupLocation: "原内容备份保留在：",
   skillsSharedPathHint: ".agents/skills 也是 Codex 的共享技能目录；.codex/skills 保留用于兼容。在两处安装同名技能可能出现重复条目。",
 

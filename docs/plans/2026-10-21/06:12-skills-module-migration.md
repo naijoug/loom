@@ -7,6 +7,7 @@
 - v4 修订时间：2026-10-21 22:44，America/Los_Angeles；依据 `0b63aad` 的进度审查：解除 M5 出口与 M7 的循环依赖，明确 M2b 等价对照要求，§4 改为实际模块表，补 SRC-09 用户 SSH 配置要求并回填 §9.2。
 - 三项补充复核：2026-10-22 00:56，America/Los_Angeles；共享注入块归属、跨客户端事务发现、应用更新准入已对应到 §5.5–5.7、实施任务与 V-16–18；统一入口见 §9.1。本次仅更新计划与索引，不改变阶段验收状态。
 - v5 修订日期：2026-10-22，America/Los_Angeles；按实际 API/SSH 验收与源测试逐项对照关闭 M1b、M2b 等价记录及 M5 内容出口，保留 v4 的依赖修正和 G1/G2 边界。证据见 [本轮验收](../../dogfood/2026-10-22-skills-migration-review.md)。
+- v6 修订日期：2026-10-22，America/Los_Angeles；M3-01 翻译配置完成自动化与原生保存/重启/清除验收，实际翻译任务和逐 provider 验收仍未完成。
 - 用户目标：把 skills 项目的 Skills Manager 功能迁入 Loom，作为 Skills 模块；从 skills 仓库移除管理应用代码与功能。
 - 当前交付与验证见 [实施证据](../../dogfood/2026-10-21-skills-migration.md)；两仓均已修改，源项目已有阶段提交。未接管真实用户安装或删除旧应用。
 - Loom 基线：`codex/simple-cli-chat` @ `c8313dd60aa50831bce3d7a66ae3fbc20e72f273`，工作区另有未提交的 Chat Markdown、消息分隔、权限文档等改动。
@@ -150,7 +151,7 @@ Loom
     instructions.rs                托管注入、wrapper、共享使用者 ledger、诊断
     cli.rs、cli/interactive.rs     无窗口 CLI 与 tui/ng 交互
     commands.rs                    Tauri 输入校验与薄封装
-    translation.rs                 待新增（M3）：provider 与翻译任务
+    translation.rs、translation/config.rs  M3-01 provider 私有配置；翻译执行待 M3-02
     migration.rs                   待新增（M4）：旧数据规划、导入、恢复
   src-tauri/src/bin/loom-skills.rs  无窗口 CLI 入口
   tools/skills-cli/                 skills-linker / tui / ng 启动器
@@ -405,7 +406,7 @@ skills
 
 产出：功能矩阵中剩余 UI 能力具备 Loom 实现。出口：provider 请求/响应 fixture 和交互验证通过；真实 provider 测试状态单独列出。
 
-任务拆分：M3-01 provider 配置与 secret DTO；M3-02 四个翻译实现及超时/取消；M3-03 UI 竞态、复制和命令面板；M3-04 本地 Agent 与远程 provider 的真实验收。M3-01/02 需要配置与错误 fixture，M3-03 需要切页/切技能回归，M3-04 逐 provider 回填，不用一个成功结果代表四个 provider。
+任务拆分：M3-01 provider 配置与 secret DTO（已接 Settings → Skills，验收见 §9.2）；M3-02 四个翻译实现及超时/取消；M3-03 UI 竞态、复制和命令面板；M3-04 本地 Agent 与远程 provider 的真实验收。M3-01/02 需要配置与错误 fixture，M3-03 需要切页/切技能回归，M3-04 逐 provider 回填，不用一个成功结果代表四个 provider。
 
 ### M4：旧数据迁移与回滚
 
@@ -585,6 +586,7 @@ G1 的范围声明不是功能删减：CLI/TUI、翻译和迁移仍在本计划�
 | M5-01/03/04 | 内容独立化切片通过 | 源提交 `fd7a4ec`；隔离副本无 apps/Node/Tauri/Loom 的 32 项内容测试、7 项旧管理测试通过，272 个技能/归档文件哈希不变 |
 | M5-02、M5 总出口 | 内容独立出口通过 | 8 项源管理测试已逐项映射目标测试与安全/doctor 差异；根内容入口不运行管理测试。新隔离副本 32 项内容测试、326 个管道用例通过；271 个受管技能/归档哈希不变（原 272 记录含未受管 .DS_Store）；源管理测试与旧转发入口仍留到 M7 |
 | 其余实施；G1/G2 | 未完成/未验收 | G1 已补真实本地 Git 的固定安装版本全链与更新器失败准入回归，仍待视觉矩阵、无源码访问验收、外网 GitHub/GitLab 实测；M3/M4、M6/G2 与 M7 源应用退役待完成；M1b API/SSH 与 M2b/M5 本轮证据见 2026-10-22 验收记录，详见实施证据 |
+| M3-01 | 配置切片通过 | 4 provider 配置、显式 key 变更/脱敏 DTO、并发 revision/锁与 pending、18 个 Skills IPC；完整 check 前端 115/Rust 251，随后表单草稿保留回归使前端 116 通过，最终 release app bundle 通过；原生假 key 保存/重启读取/清除/重新加载与 0600 权限通过；模型调用未实施 |
 | M1b-01–04 | API 切片与 SSH 配置兼容通过 | 固定 commit 完整包、默认分支/旧模式映射、错误/限流/取消及 SSH 配置 7 场景；真实匿名 API 与原生临时安装/来源移除后卸载通过；私有认证及外网 Git clone 另按矩阵验收 |
 | v5 本轮工程门禁 | 通过，整体未完成 | `pnpm check` 前端 111/Rust 246（23 项忽略）；最终 release app bundle 通过；源测试 8 项对照和内容隔离证据见 [本轮验收](../../dogfood/2026-10-22-skills-migration-review.md) |
 | v4 进度审查修订 | 已修正计划 | 依据 `0b63aad` 两轮审查：M5/M7 依赖、M2b 等价对照要求、状态行、§4 实际模块表、M2a-01/04 文件范围、SRC-09、本表过期行；仅文档修改，未运行应用测试 |

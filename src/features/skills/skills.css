@@ -72,3 +72,14 @@
 .skills-installed-row { display: flex; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--chat-border); }
 .skills-installed-row > div { display: flex; flex: 1; flex-direction: column; gap: 5px; min-width: 0; }
 .skills-installed-row span, .skills-installed-row small { color: var(--chat-muted); font-size: 12px; }
+
+.skills-translation-toggle { margin-top: 16px; }
+.skills-translation-settings { margin-top: 12px; padding: 16px; border: 1px solid var(--chat-border); border-radius: 8px; }
+.skills-translation-settings h2 { margin: 0 0 8px; font-size: 16px; }
+.skills-translation-settings p, .skills-translation-settings small { font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.skills-provider-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); gap: 12px; margin-top: 16px; }
+.skills-provider { min-width: 0; padding: 14px; border: 1px solid var(--chat-border); border-radius: 8px; }
+.skills-provider h3 { margin: 0; font-size: 14px; }
+.skills-provider label { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; font-size: 12px; }
+.skills-provider input { min-width: 0; width: 100%; box-sizing: border-box; padding: 8px; border-radius: 6px; border: 1px solid var(--chat-border); background: var(--chat-input); color: inherit; font: inherit; }
+.skills-provider button { margin-top: 12px; }

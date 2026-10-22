@@ -48,7 +48,13 @@ export interface InstallPlan {
 export interface InstallReceipt { planId: string; operationId: string; items: { targetId: string; destination: string; status: string; message: string | null; backupDirectory?: string }[]; }
 export interface RecoveryItem { operationId: string; resources: string[]; canRecover: boolean; message: string | null; }
 export interface InstallRequest { skillId: string; targetIds: string[]; mode: InstallMode; conflictPolicy: "fail" | "skip" | "overwrite"; projectPath: string | null; withSlashCommands?: boolean; }
+export type TranslationProviderId = "openai" | "openrouter" | "codex" | "claude-code";
+export interface TranslationProvider { id: TranslationProviderId; label: string; configured: boolean; supportsApiKey: boolean; storedKey: boolean; keySource: "environment" | "stored" | "none" | "local_cli"; model: string | null; storedModel: string | null; modelFromEnvironment: boolean; }
+export interface TranslationProviders { revision: number; providers: TranslationProvider[]; }
+export interface TranslationConfigInput { providerId: TranslationProviderId; expectedRevision: number; key: { action: "keep" | "clear" } | { action: "set"; value: string }; model: string | null; }
 export interface SkillsApi {
+  translationProviders(): Promise<TranslationProviders>;
+  saveTranslationConfig(input: TranslationConfigInput): Promise<TranslationProviders>;
   list(): Promise<SkillsLibrary>;
   detail(skillId: string): Promise<SkillDetail>;
   addLocal(path: string): Promise<SkillsLibrary>;
@@ -68,6 +74,8 @@ export interface SkillsApi {
   recover(operationId: string, projectPath: string | null): Promise<string>;
 }
 export const skillsApi: SkillsApi = {
+  translationProviders: () => invokeCommand(TAURI_COMMANDS.skillsListTranslationProviders),
+  saveTranslationConfig: input => invokeCommand(TAURI_COMMANDS.skillsSaveTranslationConfig, { input }),
   list: () => invokeCommand(TAURI_COMMANDS.skillsListLibrary),
   detail: skillId => invokeCommand(TAURI_COMMANDS.skillsGetDetail, { skillId }),
   addLocal: path => invokeCommand(TAURI_COMMANDS.skillsAddLocalSource, { path }),

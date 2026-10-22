@@ -1,4 +1,23 @@
 export const en = {
+  skillsReloadTranslationSettings: "Reload settings",
+  skillsTranslationSettings: "Translation settings",
+  skillsTranslationConfigHint: "Configure translation providers separately from Chat. Local CLI detection does not verify sign-in. Keys are stored privately on this device and existing keys are never displayed.",
+  skillsKeyEnvironment: "Using environment key",
+  skillsKeyStored: "Using saved key",
+  skillsKeyMissing: "No API key configured",
+  skillsLocalCliFound: "Local CLI detected; authentication not checked",
+  skillsLocalCliMissing: "Local CLI not found",
+  skillsTranslationModel: "Model (blank restores default)",
+  skillsProviderDefault: "Provider default",
+  skillsModelEnvironment: "Environment model takes precedence: {model}",
+  skillsTranslationKeyChange: "Saved key action",
+  skillsKeyKeep: "Keep saved key",
+  skillsKeyReplace: "Replace saved key",
+  skillsKeyClear: "Remove saved key",
+  skillsTranslationKey: "New API key",
+  skillsKeyClearEnvironment: "Removing the saved key does not clear the environment key.",
+  skillsConfigSaved: "Translation settings saved.",
+
   skillsBackupLocation: "Previous content is retained at:",
   skillsSharedPathHint: "The .agents/skills target is shared with Codex. The .codex/skills target remains available for compatibility; installing the same name in both can create duplicate entries.",
 

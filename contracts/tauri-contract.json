@@ -47,7 +47,9 @@
     "skills_plan_uninstall",
     "skills_apply_install",
     "skills_list_pending",
-    "skills_recover_installation"
+    "skills_recover_installation",
+    "skills_list_translation_providers",
+    "skills_save_translation_config"
   ],
   "events": [
     "loom-update-state",
@@ -501,6 +503,22 @@
       "finishedAtMs": 2,
       "status": 200,
       "error": null
+    },
+    "skillsTranslationProviders": {
+      "revision": 0,
+      "providers": [
+        {
+          "id": "openai",
+          "label": "OpenAI",
+          "configured": false,
+          "supportsApiKey": true,
+          "storedKey": false,
+          "keySource": "none",
+          "model": "gpt-5",
+          "storedModel": null,
+          "modelFromEnvironment": false
+        }
+      ]
     }
   }
 }

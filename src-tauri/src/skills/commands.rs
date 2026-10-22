@@ -410,3 +410,32 @@ pub async fn skills_recover_installation(
     })
     .await
 }
+
+#[tauri::command]
+pub async fn skills_list_translation_providers(
+    app: AppHandle,
+    window: WebviewWindow,
+) -> Result<super::translation::config::ProviderList> {
+    blocking(repository(&app, &window)?, |repo| {
+        super::translation::config::list(
+            &repo,
+            &super::translation::config::RuntimeConfig::capture()?,
+        )
+    })
+    .await
+}
+#[tauri::command]
+pub async fn skills_save_translation_config(
+    app: AppHandle,
+    window: WebviewWindow,
+    input: super::translation::config::ConfigInput,
+) -> Result<super::translation::config::ProviderList> {
+    blocking(repository(&app, &window)?, move |repo| {
+        super::translation::config::save(
+            &repo,
+            input,
+            &super::translation::config::RuntimeConfig::capture()?,
+        )
+    })
+    .await
+}

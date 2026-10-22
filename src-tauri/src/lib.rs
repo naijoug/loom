@@ -105,6 +105,8 @@ pub fn run() {
             skills::commands::skills_apply_install,
             skills::commands::skills_list_pending,
             skills::commands::skills_recover_installation,
+            skills::commands::skills_list_translation_providers,
+            skills::commands::skills_save_translation_config,
         ]);
     #[cfg(target_os = "macos")]
     let builder = builder

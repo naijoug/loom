@@ -53,6 +53,8 @@ const COMMANDS: &[&str] = &[
     "skills_apply_install",
     "skills_list_pending",
     "skills_recover_installation",
+    "skills_list_translation_providers",
+    "skills_save_translation_config",
 ];
 const EVENTS: &[&str] = &[
     "loom-update-state",
@@ -123,6 +125,10 @@ fn persisted_model_samples_round_trip_through_rust_types() {
     assert_model_sample::<crate::chat::ChatExportResult>(samples, "chatExportResult");
     assert_model_sample::<crate::chat::ChatMessagePart>(samples, "chatToolPart");
     assert_model_sample::<crate::agent_diagnostics::AgentDiagnostic>(samples, "agentDiagnostic");
+    assert_model_sample::<crate::skills::translation::config::ProviderList>(
+        samples,
+        "skillsTranslationProviders",
+    );
     assert_model_sample::<crate::skills::repository::LibraryView>(samples, "skillsLibrary");
     assert_model_sample::<crate::skills::repository::Source>(samples, "skillsGithubApiSource");
     assert_model_sample::<crate::skills::operations::HttpRequestRecord>(

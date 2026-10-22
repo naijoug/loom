@@ -28,3 +28,5 @@ mod installers_tests;
 mod instructions_tests;
 #[cfg(test)]
 mod tests;
+
+pub mod translation;

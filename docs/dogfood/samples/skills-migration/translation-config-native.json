@@ -1,0 +1,23 @@
+{
+  "kind": "native-translation-configuration",
+  "providersVisible": [
+    "openai",
+    "openrouter",
+    "codex",
+    "claude-code"
+  ],
+  "isolatedProfileAndData": true,
+  "modelRequests": 0,
+  "dummyCredentialOnly": true,
+  "savePassed": true,
+  "restartReadPassed": true,
+  "clearPassed": true,
+  "reloadAfterClearPassed": true,
+  "finalConfigRevision": 3,
+  "finalStoredKey": false,
+  "modelRetained": true,
+  "fileMode": "0600",
+  "runtimeLogContainsDummyKey": false,
+  "narrowDarkLayoutObserved": true,
+  "reloadLabelCorrected": true
+}
