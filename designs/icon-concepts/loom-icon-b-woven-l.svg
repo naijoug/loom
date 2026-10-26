@@ -1,0 +1,16 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Loom icon concept B - woven L</title>
+  <defs><linearGradient id="shine" x1="512" y1="100" x2="512" y2="924" gradientUnits="userSpaceOnUse"><stop stop-color="#fff" stop-opacity=".10"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="#F4F1EA"/>
+  <g transform="translate(-16 0)">
+    <g stroke="#15181D" stroke-width="44" stroke-linecap="round">
+      <path d="M520 240V784"/><path d="M640 240V784"/><path d="M760 240V784"/>
+    </g>
+    <rect x="270" y="626" width="568" height="148" rx="74" fill="#F4F1EA"/>
+    <rect x="288" y="644" width="532" height="112" rx="56" fill="#2F7BD0"/>
+    <rect x="288" y="240" width="112" height="516" rx="56" fill="#2F7BD0"/>
+    <rect x="600" y="618" width="80" height="164" fill="#F4F1EA"/>
+    <path d="M640 610V790" stroke="#15181D" stroke-width="44"/>
+  </g>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#shine)"/>
+</svg>

@@ -1,0 +1,7 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Loom icon concept N - shed</title>
+  <defs><linearGradient id="shine" x1="512" y1="100" x2="512" y2="924" gradientUnits="userSpaceOnUse"><stop stop-color="#fff" stop-opacity=".10"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="#111318"/>
+  <g stroke="#C9D1DC" stroke-width="30" stroke-linecap="round"><path d="M232 288L600 512"/><path d="M232 352L600 512"/><path d="M232 672L600 512"/><path d="M232 736L600 512"/></g><path d="M600 512H792" stroke="#F2F5F8" stroke-width="64" stroke-linecap="round"/><path d="M280 512C350 460 460 460 530 512C460 564 350 564 280 512Z" fill="#3485D1"/>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#shine)"/>
+</svg>

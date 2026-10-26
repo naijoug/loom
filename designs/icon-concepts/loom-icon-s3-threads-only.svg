@@ -1,0 +1,7 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Loom icon concept S3 - threads only</title>
+  <defs><linearGradient id="shine" x1="512" y1="100" x2="512" y2="924" gradientUnits="userSpaceOnUse"><stop stop-color="#fff" stop-opacity=".10"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="#161616"/>
+  <g stroke="#6B7079" stroke-width="24" stroke-linecap="round"><path d="M356 272V752"/><path d="M440 272V752"/><path d="M524 272V752"/><path d="M608 272V752"/><path d="M692 272V752"/></g><g stroke-linecap="round" stroke-linejoin="round"><path d="M384 420L496 512L384 604M556 604H656" stroke="#161616" stroke-width="88"/><path d="M384 420L496 512L384 604M556 604H656" stroke="#4A9BE8" stroke-width="60"/></g><path d="M440 436V588" stroke="#161616" stroke-width="52"/><path d="M440 428V596" stroke="#6B7079" stroke-width="24"/>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#shine)"/>
+</svg>

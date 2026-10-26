@@ -1,0 +1,14 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Loom icon concept H - prompt loom</title>
+  <defs><linearGradient id="shine" x1="512" y1="100" x2="512" y2="924" gradientUnits="userSpaceOnUse"><stop stop-color="#fff" stop-opacity=".10"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="#161616"/>
+  <g stroke="#6B7079" stroke-width="20" stroke-linecap="round">
+    <path d="M340 296V728"/><path d="M408 296V728"/><path d="M476 296V728"/><path d="M548 296V728"/><path d="M616 296V728"/><path d="M684 296V728"/>
+  </g>
+  <g stroke="#EDEDED" stroke-width="56" stroke-linecap="round"><path d="M276 296H748"/><path d="M276 728H748"/></g>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <path d="M384 420L496 512L384 604M556 604H656" stroke="#161616" stroke-width="100"/>
+    <path d="M384 420L496 512L384 604M556 604H656" stroke="#4A9BE8" stroke-width="60"/>
+  </g>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#shine)"/>
+</svg>

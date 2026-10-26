@@ -1,0 +1,7 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Loom icon concept H5 - light</title>
+  <defs><linearGradient id="shine" x1="512" y1="100" x2="512" y2="924" gradientUnits="userSpaceOnUse"><stop stop-color="#fff" stop-opacity=".10"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="#F2F0EB"/>
+  <g stroke="#B3AEA4" stroke-width="20" stroke-linecap="round"><path d="M340 296V728"/><path d="M408.8 296V728"/><path d="M477.6 296V728"/><path d="M546.4 296V728"/><path d="M615.2 296V728"/><path d="M684 296V728"/></g><g stroke-linecap="round" stroke-linejoin="round"><path d="M384 420L496 512L384 604M556 604H656" stroke="#F2F0EB" stroke-width="100"/><path d="M384 420L496 512L384 604M556 604H656" stroke="#2F7BD0" stroke-width="60"/></g><g stroke="#1E2329" stroke-width="56" stroke-linecap="round"><path d="M276 296H748"/><path d="M276 728H748"/></g>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#shine)"/>
+</svg>

@@ -1,0 +1,27 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Loom icon concept A - weave</title>
+  <defs><linearGradient id="shine" x1="512" y1="100" x2="512" y2="924" gradientUnits="userSpaceOnUse"><stop stop-color="#fff" stop-opacity=".10"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="#141A22"/>
+  <g fill="#E9EEF4">
+    <rect x="300" y="232" width="104" height="560" rx="52"/>
+    <rect x="460" y="232" width="104" height="560" rx="52"/>
+    <rect x="620" y="232" width="104" height="560" rx="52"/>
+  </g>
+  <rect x="214" y="282" width="596" height="140" rx="70" fill="#141A22"/>
+  <rect x="232" y="300" width="560" height="104" rx="52" fill="#3485D1"/>
+  <rect x="214" y="442" width="596" height="140" rx="70" fill="#141A22"/>
+  <rect x="232" y="460" width="560" height="104" rx="52" fill="#3485D1"/>
+  <rect x="214" y="602" width="596" height="140" rx="70" fill="#141A22"/>
+  <rect x="232" y="620" width="560" height="104" rx="52" fill="#3485D1"/>
+  <g fill="#141A22">
+    <rect x="282" y="282" width="140" height="140"/><rect x="602" y="282" width="140" height="140"/>
+    <rect x="442" y="442" width="140" height="140"/>
+    <rect x="282" y="602" width="140" height="140"/><rect x="602" y="602" width="140" height="140"/>
+  </g>
+  <g fill="#E9EEF4">
+    <rect x="300" y="280" width="104" height="144"/><rect x="620" y="280" width="104" height="144"/>
+    <rect x="460" y="440" width="104" height="144"/>
+    <rect x="300" y="600" width="104" height="144"/><rect x="620" y="600" width="104" height="144"/>
+  </g>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#shine)"/>
+</svg>

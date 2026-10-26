@@ -1,0 +1,10 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Loom icon concept F - thread chat</title>
+  <defs><linearGradient id="shine" x1="512" y1="100" x2="512" y2="924" gradientUnits="userSpaceOnUse"><stop stop-color="#fff" stop-opacity=".10"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="#2F6FB0"/>
+  <g transform="translate(24 -16)">
+    <path d="M196 792C236 756 236 690 236 590V400A140 140 0 0 1 376 260H648A140 140 0 0 1 788 400V516A140 140 0 0 1 648 656H420" stroke="#FFFFFF" stroke-width="56" stroke-linecap="round" stroke-linejoin="round"/>
+    <g fill="#FFFFFF" fill-opacity=".92"><circle cx="404" cy="458" r="32"/><circle cx="512" cy="458" r="32"/><circle cx="620" cy="458" r="32"/></g>
+  </g>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#shine)"/>
+</svg>

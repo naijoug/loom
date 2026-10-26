@@ -1,0 +1,25 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Loom app icon</title>
+  <defs>
+    <linearGradient id="plate" x1="512" y1="100" x2="512" y2="924" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#27282C"/>
+      <stop offset="1" stop-color="#111215"/>
+    </linearGradient>
+    <mask id="prompt-gap" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024">
+      <rect width="1024" height="1024" fill="#fff"/>
+      <path d="M376 420L488 512L376 604M548 604H648" stroke="#000" stroke-width="100" stroke-linecap="round" stroke-linejoin="round"/>
+    </mask>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#plate)"/>
+  <rect x="102" y="102" width="820" height="820" rx="183" stroke="#fff" stroke-opacity=".08" stroke-width="4"/>
+  <g mask="url(#prompt-gap)" stroke="#72777F" stroke-width="24" stroke-linecap="round">
+    <path d="M372 296V728"/>
+    <path d="M512 296V728"/>
+    <path d="M652 296V728"/>
+  </g>
+  <path d="M376 420L488 512L376 604M548 604H648" stroke="#4A9BE8" stroke-width="60" stroke-linecap="round" stroke-linejoin="round"/>
+  <g stroke="#F0F0EE" stroke-width="56" stroke-linecap="round">
+    <path d="M276 296H748"/>
+    <path d="M276 728H748"/>
+  </g>
+</svg>

@@ -1,0 +1,7 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Loom icon concept K - woven prompt</title>
+  <defs><linearGradient id="shine" x1="512" y1="100" x2="512" y2="924" gradientUnits="userSpaceOnUse"><stop stop-color="#fff" stop-opacity=".10"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/></linearGradient><pattern id="weave" width="48" height="48" patternUnits="userSpaceOnUse"><rect width="48" height="48" fill="#B7C1CE"/><g fill="#F1F4F8"><rect x="1" y="2" width="22" height="8" rx="4"/><rect x="1" y="14" width="22" height="8" rx="4"/><rect x="26" y="1" width="8" height="22" rx="4"/><rect x="38" y="1" width="8" height="22" rx="4"/><rect x="2" y="25" width="8" height="22" rx="4"/><rect x="14" y="25" width="8" height="22" rx="4"/><rect x="25" y="26" width="22" height="8" rx="4"/><rect x="25" y="38" width="22" height="8" rx="4"/></g></pattern></defs>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="#141414"/>
+  <path d="M312 300L532 512L312 724" stroke="url(#weave)" stroke-width="136" stroke-linecap="round" stroke-linejoin="round"/><rect x="588" y="652" width="176" height="76" rx="38" fill="#3485D1"/>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#shine)"/>
+</svg>

@@ -1,0 +1,7 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Loom icon concept I - untangle</title>
+  <defs><linearGradient id="shine" x1="512" y1="100" x2="512" y2="924" gradientUnits="userSpaceOnUse"><stop stop-color="#fff" stop-opacity=".10"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="#12161D"/>
+  <g stroke="#7E8896" stroke-width="30" stroke-linecap="round"><path d="M240 520C250 300 470 290 400 420S300 470 512 368"/><path d="M260 360C420 330 460 620 340 600S330 420 512 464"/><path d="M230 430C300 700 470 690 420 560S360 470 512 560"/><path d="M280 700C230 560 420 520 430 640S470 720 512 656"/></g><g stroke="#EEF2F6" stroke-width="30" stroke-linecap="round"><path d="M512 368H792"/><path d="M512 464H792"/><path d="M512 560H792"/><path d="M512 656H792"/></g><rect x="488" y="276" width="48" height="472" rx="24" fill="#3485D1"/>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#shine)"/>
+</svg>

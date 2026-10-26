@@ -1,0 +1,13 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Loom icon concept E - converge</title>
+  <defs><linearGradient id="shine" x1="512" y1="100" x2="512" y2="924" gradientUnits="userSpaceOnUse"><stop stop-color="#fff" stop-opacity=".10"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="#111318"/>
+  <g stroke-width="44" stroke-linecap="round">
+    <path d="M232 300C400 300 420 512 560 512" stroke="#E8875F"/>
+    <path d="M232 436C380 436 420 512 560 512" stroke="#F2C14E"/>
+    <path d="M232 588C380 588 420 512 560 512" stroke="#4FC3A1"/>
+    <path d="M232 724C400 724 420 512 560 512" stroke="#6AA8F0"/>
+  </g>
+  <path d="M548 512H792" stroke="#F4F5F7" stroke-width="76" stroke-linecap="round"/>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#shine)"/>
+</svg>

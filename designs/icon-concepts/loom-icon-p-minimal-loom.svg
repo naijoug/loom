@@ -1,0 +1,7 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Loom icon concept P - minimal loom</title>
+  <defs><linearGradient id="shine" x1="512" y1="100" x2="512" y2="924" gradientUnits="userSpaceOnUse"><stop stop-color="#fff" stop-opacity=".10"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="#121820"/>
+  <g stroke="#C3CCD8" stroke-width="28" stroke-linecap="round"><path d="M352 296V728"/><path d="M432 296V728"/><path d="M512 296V728"/><path d="M592 296V728"/><path d="M672 296V728"/></g><path d="M272 512H752" stroke="#121820" stroke-width="92" stroke-linecap="round"/><path d="M272 512H752" stroke="#3485D1" stroke-width="56" stroke-linecap="round"/><rect x="400" y="466" width="64" height="92" fill="#121820"/><rect x="418" y="456" width="28" height="112" fill="#C3CCD8"/><rect x="560" y="466" width="64" height="92" fill="#121820"/><rect x="578" y="456" width="28" height="112" fill="#C3CCD8"/><g stroke="#EEF2F6" stroke-width="56" stroke-linecap="round"><path d="M264 296H760"/><path d="M264 728H760"/></g>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#shine)"/>
+</svg>
