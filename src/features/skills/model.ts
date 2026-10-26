@@ -2,7 +2,7 @@ import type { SkillsLibrary, SkillsOperation } from "../../api/skills";
 import type { MessageKey } from "../../i18n/en";
 
 export function operationActionKey(action: string): MessageKey {
-  const keys: Record<string, MessageKey> = { "install-fzf": "skillsInstallFzf", import: "skillsImport", refresh: "skillsRefresh", install: "skillsInstall", uninstall: "skillsUninstall", recover: "skillsRecover" };
+  const keys: Record<string, MessageKey> = { translate: "skillsTranslate", "install-fzf": "skillsInstallFzf", import: "skillsImport", refresh: "skillsRefresh", install: "skillsInstall", uninstall: "skillsUninstall", recover: "skillsRecover" };
   return keys[action] ?? "skillsSourceOperation";
 }
 

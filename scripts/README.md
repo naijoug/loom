@@ -31,3 +31,7 @@ Skills 原生验收可先用 `pnpm tauri build --debug --bundles app` 构建，�
 真实 CLI 测试通过 `LOOM_REAL_CHAT=1 cargo test --manifest-path src-tauri/Cargo.toml <test-name> -- --ignored --nocapture` 显式启用，会消耗模型额度。测试名和当前结果见 [测试指南](../docs/testing.md) 与 [本轮验收](../docs/dogfood/2026-10-20-simple-chat-acceptance.md)。
 
 目录中保留的 Craft/SDK/REA/旧 Task 实验脚本仅为历史研究资料，不再由默认预览或 CI 执行；重新启用须先核对其冻结依赖与契约。当前预览已不提供 Workbench 启动开关。
+
+Skills 视觉验收由 `pnpm smoke:visual` 同轮运行 `skills-smoke.mjs`。仅 DEV 的 `?fixture=simple-chat&skillsFixture=ready` 注入合成 API，可选 empty/loading/error/cancel；生产构建不包含该 fixture。截图和机器结果位于 `designs/exports/skills/`。
+
+原生源码隔离探针可给 `LOOM_PREVIEW_BINARY` 搭配绝对 `LOOM_PREVIEW_SANDBOX_PROFILE`，debug.sh 在 macOS 用 sandbox-exec 启动准确 binary。2026-10-22 当前主机上即使 allow-default profile 也无法由原生自动化识别窗口，普通启动正常；因此此探针暂不能作为 G1 桌面通过证据，详见 Skills 当日验收。

@@ -439,3 +439,46 @@ pub async fn skills_save_translation_config(
     })
     .await
 }
+
+#[tauri::command]
+pub async fn skills_translate(
+    app: AppHandle,
+    window: WebviewWindow,
+    input: super::translation::TranslationInput,
+) -> Result<super::translation::TranslationSummary> {
+    let prepared = blocking(repository(&app, &window)?, move |repo| {
+        super::translation::prepare(
+            repo,
+            input,
+            &super::translation::config::RuntimeConfig::capture()?,
+        )
+    })
+    .await?;
+    let summary = prepared.summary();
+    tauri::async_runtime::spawn(super::translation::run(prepared, move |event| {
+        let _ = app.emit("loom://skills-operation", event);
+    }));
+    Ok(summary)
+}
+#[tauri::command]
+pub async fn skills_translation_history(
+    app: AppHandle,
+    window: WebviewWindow,
+    skill_id: String,
+) -> Result<Vec<super::translation::TranslationSummary>> {
+    blocking(repository(&app, &window)?, move |repo| {
+        super::translation::history(&repo, &skill_id)
+    })
+    .await
+}
+#[tauri::command]
+pub async fn skills_translation_result(
+    app: AppHandle,
+    window: WebviewWindow,
+    operation_id: String,
+) -> Result<super::translation::TranslationResult> {
+    blocking(repository(&app, &window)?, move |repo| {
+        super::translation::result(&repo, &operation_id)
+    })
+    .await
+}

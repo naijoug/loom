@@ -55,3 +55,57 @@ M5-02 在 Loom 等价覆盖和根内容入口排除管理测试后关闭，M5 �
 首次窗口绑定曾返回空 AX/一次超时，核实只有一个进程后重新绑定明确 app 路径恢复；没有因观察超时重新启动未知进程。原生下拉菜单第一次 Return 提交了 keep，随后明确选择 clear 并点击 Save，最终文件与界面共同证明清除成功。
 
 M3-01 配置切片通过；M3-02 四 provider 实际执行/超时/取消、M3-03 翻译结果归属与复制/命令面板、M3-04 逐 provider 真实调用仍待完成。此记录不能作为翻译功能完整替代或 G2 的通过证据。
+
+## M3 执行与 G1 补验（本轮续记）
+
+代码基线：Loom `0ea881c` + 已有未提交翻译、Chat GFM/消息分隔等改动；skills `0f864ee`。本轮修改未提交，未改源 skills 仓库、旧 Task 数据、旧 Manager app data 或真实全局安装。下列结果更新当前状态，不覆盖上文历史计数。
+
+### 历史容量问题
+
+- 翻译历史不再调用全库 `operations::list`，改为按当前技能关联的 operation ID 读取，沿用 owner 锁识别 interrupted 与身份核验。返回最近 20 条终态和全部运行中任务；移除目录 3000 项硬失败，历史文件不删除。
+- 共用操作列表改为返回最近 1000 条终态及全部运行中任务，不再因磁盘记录超过 1000 条报错。取得已退出 owner 的锁后重新读取记录，避免把刚完成的操作误标 interrupted。
+- 回归覆盖 1001 条无关操作、1601 条翻译、超过 3000 个文件、老运行中任务保留、身份不匹配、中断恢复、旧历史保全和重新打开入口。
+- 最终 release 原生包使用隔离 profile：先完成一次真实 IPC → 合成 Codex 子进程 → 结果持久化；停止后加入 1601 条合成历史。库中共 1604 个操作记录、3204 个翻译文件，重启后显示旧结果且 Translate 可用，再次点击成功产生新的结果。源文档哈希不变，所有 1601 条历史保留。此处“真实 IPC/原生”不代表调用了真实模型。
+- 证据：[大历史原生记录](samples/skills-migration/m3-large-history-native.json)、[原生截图](../../designs/exports/skills/native-large-history.png)。
+
+### M3-02/03 功能与验证
+
+- 四 provider 执行、summary/markdown、版本绑定、任务取消、结果历史和复制已接主窗口 IPC；21 个 Skills 命令。执行上下文独立于 Chat，原文不修改，持久日志不含请求正文或密钥。
+- HTTP 通过 loopback 服务执行真实 reqwest 传输，覆盖 OpenAI/OpenRouter 成功响应、401/403、429、503、302 拒绝重定向、无效 JSON、输出上限、超时和请求中取消；断言不自动重试、日志不含合成 key/正文/上游错误文本。生产 URL 仍固定 HTTPS，测试端点只能由私有测试路径注入。
+- 本地进程覆盖 stdin/stdout/stderr 上限、失败、超时、运行中取消和进程组清理。默认测试仅使用合成程序；四 provider 工作流 fixture 不冒充真实账号验证。
+- 迁入命令面板（Cmd/Ctrl+K、搜索、上下键/Enter/Escape、无选中技能时禁用相关动作），保留来源、安装、相对路径、摘要翻译、分享文本和翻译设置导航，并增加 Markdown 复制。翻译命令只打开面板，不自动发送。
+- 分享文本包含技能原文和可预览相关文件，动态选择围栏长度以保留嵌套代码块；二进制/不可预览资源保留路径与大小说明。没有创建 Gist 或网络发布。剪贴板不可用时显示只读可选文本供手动复制；旧应用自动下载回退改为这个显式本地回退，不承诺导出完整二进制包。
+- 原生验证：来源登记/正文/相关文件、合成 Codex 翻译完成后切页恢复、命令面板筛选并复制分享文本、重启大历史结果恢复通过。全部模型调用为 0，远程 key 从验收进程环境移除，Codex 从临时 PATH 的受控脚本解析，并核对操作记录里的实际程序路径。
+
+### M3-04 逐 provider 状态
+
+用户明确选择“先完成本地与 G1，账号未核实项标 blocked”。Codex 当前账号不是此个人工作区身份；OpenAI/OpenRouter 环境 key 和 Claude 身份未核实。本轮不调用这些账号，也不代替用户切换登录。四个 provider 的真实调用均为 **blocked**；不是 failed，也不能由 fixture 置为 passed。[逐 provider 记录](samples/skills-migration/m3-provider-acceptance.json)。M3-02/03 本地工程切片已完成，M3 总出口仍等待 M3-04。
+
+### G1 补验结果
+
+| 项目 | 本轮结果 | 边界 |
+|---|---|---|
+| Skills 视觉矩阵 | passed | 显式 DEV fixture；中英文 × 深浅主题、700px 窄窗口、空库/加载/错误、搜索/文件、安装预览/卸载、翻译结果/取消/切技能、命令面板、返回 Chat 保留草稿；[机器结果](samples/skills-migration/g1-visual.json) |
+| Markdown 布局 | passed | 截图发现 Settings 的 680px 表格最小宽度泄漏，已限定 Skills Markdown 样式；新增内部横向溢出断言 |
+| GitHub HTTPS | passed | 匿名真实 tobi/qmd 导入与刷新，固定 revision、完整快照、详情读取、旧快照保留；未运行包内脚本 |
+| GitLab HTTPS | passed | 匿名真实 gitlab-org/cli，多层/来源兼容沿用已有 fixture；导入与刷新、详情与旧快照保留通过 |
+| 含 symlink 的 GitLab 样本 | 按安全边界拒绝 | gitlab-org/ai/skills clone 成功，但快照校验拒绝符号链接/特殊文件；换用支持范围内的官方 CLI 样本，未放宽校验 |
+| 随包 CLI 无源码读取 | passed | macOS sandbox 明确拒绝两仓源码内容，随包 CLI copy 安装到临时项目成功；桌面 Installed 正确识别并按预览卸载；随后隔离 CLI status 成功，源保留 |
+| 原生包搬移、启动、重启 | passed | 最终 `.app` 位于 target 下独立目录，从 Contents/MacOS 启动，临时 profile；来源、项目与大历史结果重启保留 |
+| 禁止源码读取的桌面验收 | **blocked** | `sandbox-exec` 下进程存活但原生自动化无法识别窗口；额外拒绝源码、仅允许元数据、全部允许三种配置均未得到可观察窗口；相同包不经 sandbox-exec 则窗口与操作正常。不能据此判定源码依赖，也不能把 CLI 通过当成桌面通过 |
+
+真实来源记录：[HTTPS 来源](samples/skills-migration/g1-public-git-https.json)。隔离记录：[源码拒绝与对照](samples/skills-migration/g1-source-isolation.json)。真实 SSH/私有认证完整矩阵仍属于后续 G2，未由匿名 HTTPS 代替。之前真实 CLI 发现/调用及共享事务/更新准入证据继续引用 2026-10-21 记录，本轮不冒充重复调用。
+
+### 工程门禁与下一步
+
+- 完整 `pnpm check`：前端 125、Rust 265 通过，25 ignored；包含 build/fmt/Clippy/文档检查。其后新增本机取消用例独立复验，最终计数与退出码见本段后续补记。
+- 最终 `pnpm tauri build --bundles app` 通过，包含 release 编译；没有签名、公证、发布。本轮未另称执行了 no-bundle 命令。
+- `pnpm smoke:visual` 最终通过，包含原 Chat/OpenUI 检查和新的 Skills 矩阵。最初自动化因页面切换等待与按钮文案选择器失败，修正后重跑；不是生产安装失败。截图均在 `designs/exports/skills/`。
+- 受限 sandbox 首次禁止 loopback/进程组检查，经运行环境批准后完整复验；未把受限运行失败隐去或记为通过。开发期间修正了 CommonJS 单测不能直接编译 `import.meta` 的 fixture 注入问题，最终仅由 main 的 DEV 分支注入，生产默认无 mock。
+- 日志：`/tmp/loom-skills-m3-g1-check.log`、`/tmp/loom-skills-m3-g1-bundle.log`、`/tmp/loom-skills-g1-visual.log`、`/tmp/loom-skills-{github,gitlab}-git-acceptance.log`、`/tmp/loom-skills-local-cancel-final.log`。关键结果另存上述 JSON；临时日志不是唯一证据。
+- 预览已按 debug.sh stop 停止，临时安装已卸载。继续保留临时库供复核；没有删除真实历史来解决容量问题。
+- **G1 尚未关闭**：仅剩本轮未通过的桌面无源码读取验收；需要可观察的隔离执行环境补证。**M3 总出口 blocked**：按用户决定等待四 provider 个人账号核实与真实调用。M4/M6/G2/M7 未进入，本轮不删除旧管理器。
+
+最终补记：`pnpm check` 再次退出 0，前端 **125**、Rust **266** 通过，**25 ignored**；包含新增本机运行中取消用例。单独本机进程 3 项亦通过。最终日志 `/tmp/loom-skills-m3-g1-final-check.log`。此后仅回填文档与入口代码缩进，未改运行行为。相对链接检查和 `git diff --check` 通过；生产 bundle 不含 Skills fixture 文本。
+
+2026-10-25 提交整理复核：Skills 专属内容通过独立临时树验证，Chat GFM/消息分隔与图标不纳入。该树前端 119 项（不含工作区额外 Chat 测试）；Rust 初跑 263 通过、1 项 SSH 进程组清理 EPERM，失败项定向复验通过（1/1）；其余 Rust 263 项无需重复。历史截图保留其原工作区渲染版本，不宣称专属提交包含 GFM。M5 勾选状态已按既有证据同步。

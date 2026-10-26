@@ -18,7 +18,7 @@
 ## 工程与浏览器检查
 
 - `pnpm smoke:chat`：生产仓储/runtime 运行真实本地 fixture 子进程，验证双路输出、UTF-8、停止/超时、进程组清理、幂等和恢复；不请求模型。
-- `pnpm smoke:visual`：启动合成网页并运行 Chrome 交互；检查两个项目、新会话的模式与 Agent、发送确认、工具卡片、深浅主题、中英文与窄窗口。截图在 `designs/exports/simple-chat/`。这不是桌面或真实模型证据。
+- `pnpm smoke:visual`：启动合成网页并运行 Chrome 交互；检查两个项目、新会话的模式与 Agent、发送确认、工具卡片、深浅主题、中英文与窄窗口。截图在 `designs/exports/simple-chat/`。同轮还运行 Skills 视觉矩阵（显式 DEV fixture，截图 `designs/exports/skills/`），包括来源状态、安装/翻译、命令面板和 Chat 草稿往返。这不是桌面或真实模型证据。
 - 真实 CLI 的 opt-in 测试在 `src-tauri/src/chat/real_agent_tests.rs`。例如 `LOOM_REAL_CHAT=1 cargo test --manifest-path src-tauri/Cargo.toml claude_three_turns_resume_after_repository_reopen -- --ignored --nocapture`。
 
 ## 用户验收

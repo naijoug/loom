@@ -1,0 +1,54 @@
+{
+  "checks": [
+    {
+      "action": "import",
+      "authentication": "anonymous; helpers/global/system config disabled for this fixture",
+      "executions": 3,
+      "modelInvoked": false,
+      "oldSnapshotPreserved": true,
+      "revision": "86d2365d17fc682e491c2c53d1e4a884aee8682a",
+      "skills": 2,
+      "snapshotFiles": 281,
+      "url": "https://github.com/tobi/qmd"
+    },
+    {
+      "action": "refresh",
+      "authentication": "anonymous; helpers/global/system config disabled for this fixture",
+      "executions": 3,
+      "modelInvoked": false,
+      "oldSnapshotPreserved": true,
+      "revision": "86d2365d17fc682e491c2c53d1e4a884aee8682a",
+      "skills": 2,
+      "snapshotFiles": 281,
+      "url": "https://github.com/tobi/qmd"
+    },
+    {
+      "action": "import",
+      "authentication": "anonymous; helpers/global/system config disabled for this fixture",
+      "executions": 3,
+      "modelInvoked": false,
+      "oldSnapshotPreserved": true,
+      "revision": "d7aa4d626add598c235a8bd88a168bbd9aee14f5",
+      "skills": 2,
+      "snapshotFiles": 2227,
+      "url": "https://gitlab.com/gitlab-org/cli"
+    },
+    {
+      "action": "refresh",
+      "authentication": "anonymous; helpers/global/system config disabled for this fixture",
+      "executions": 3,
+      "modelInvoked": false,
+      "oldSnapshotPreserved": true,
+      "revision": "d7aa4d626add598c235a8bd88a168bbd9aee14f5",
+      "skills": 2,
+      "snapshotFiles": 2227,
+      "url": "https://gitlab.com/gitlab-org/cli"
+    }
+  ],
+  "excludedSample": {
+    "url": "https://gitlab.com/gitlab-org/ai/skills",
+    "result": "rejected: remote snapshot contains symlink/special file",
+    "safetyPolicyUnchanged": true
+  },
+  "sshPrivateAuth": "not-run; G2 remaining matrix"
+}

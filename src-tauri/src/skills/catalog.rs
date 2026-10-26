@@ -42,6 +42,7 @@ pub struct RelatedFile {
 pub struct SkillDetail {
     pub summary: SkillSummary,
     pub content: String,
+    pub content_digest: String,
     pub manifest: BTreeMap<String, String>,
     pub related_files: Vec<RelatedFile>,
 }
@@ -248,9 +249,15 @@ pub fn detail_repository(source_id: &str, directory: &Path, relative: &str) -> R
     })?;
     related_files.sort_by(|a, b| a.relative_path.cmp(&b.relative_path));
     let manifest = read_manifest(package)?;
+    let content = text(&path)?;
+    let content_digest = files::digest(
+        &serde_json::to_vec(&(&summary, &content, &manifest))
+            .map_err(|_| SkillsError::invalid("Cannot fingerprint skill details"))?,
+    );
     Ok(SkillDetail {
+        content_digest,
         summary,
-        content: text(&path)?,
+        content,
         manifest,
         related_files,
     })

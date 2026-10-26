@@ -1,0 +1,15 @@
+{
+  "frontendTests": 125,
+  "rustTests": 266,
+  "ignoredRustTests": 25,
+  "checkExit": 0,
+  "bundleExit": 0,
+  "visualExit": 0,
+  "localProcessTests": 3,
+  "realModelCalls": 0,
+  "sourceBase": "0ea881c",
+  "workingTree": "uncommitted; includes pre-existing Chat changes",
+  "g1": "blocked: desktop source-denial observation",
+  "m3": "local implementation passed; real providers blocked per user choice",
+  "previewStopped": true
+}

@@ -3,8 +3,7 @@
 ## 2026-10-21
 
 - 06:12-skills-module-migration.md
-  > 2026-10-22 补充复核：共享注入块归属、跨客户端未完成事务发现、应用更新准入已列为必需验收项；契约、任务、V-16–18 与 G1/G2 门槛对应关系见计划 §9.1。文档补充不代表验收通过。
-  > （实施中；v6 已完成 M3-01 配置切片及 M1b API/SSH、M2b 源 8 项测试等价记录与 M5 内容独立出口；G1/G2 未整体验收）Settings → Skills 与 CLI/TUI/ng 共用服务；真实匿名 API 与原生临时安装/孤立卸载通过，SSH 用户配置保留，完整 check 前端 111/Rust 246、release app bundle 通过。M3-01 翻译配置原生保存/重启/清除通过（完整 check 前端 115/Rust 251；后续表单回归前端 116，最终 app bundle 通过）。继续 M3 执行与 M4、G1 视觉/无源码/外网 Git 余项及 M6/G2；源旧实现、管理测试与转发入口统一在 G2 后的 M7 移除。证据见 dogfood/2026-10-22-skills-migration-review.md，用法见 skills-cli.md。
+  > （v7；历史容量修复与 M3-02/03 本地切片通过；G1/G2 未整体通过）翻译/操作历史改为限制返回条数、不限制持久记录；原生 1604 条操作/3204 个翻译文件重启与再次翻译通过。补齐四 provider 执行、HTTP 传输失败/取消、命令面板/复制分享文本，Skills 视觉矩阵与真实 GitHub/GitLab HTTPS 通过。M3-04 按用户决定因账号未核实 blocked；G1 仅桌面禁止源码读取验收 blocked（sandbox-exec 下无可观察窗口，CLI 隔离通过）。最终完整 check 前端 125/Rust 266（25 ignored）、release app bundle 与 smoke:visual 通过；2026-10-25 整理 Skills 专属提交并同步 M5 状态。M4/M6/M7 待后续，旧源码与数据保留。
 
 ## 2026-10-20
 

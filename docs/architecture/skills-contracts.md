@@ -50,7 +50,7 @@ managedResources 记录 canonical path、marker 和 contentDigest。SharedInstru
 
 ## 来源、安装与前后端
 
-当前已注册 list_library/get_detail/add_local_source/remove_source/import_repository/refresh_source/list_operations/cancel_operation 八个 `skills_` 命令，以及 `loom://skills-operation` 事件。`contracts/tauri-contract.json` 的 SkillsLibrary / SkillsOperation 样本在 Rust 与 TypeScript 双端校验。安装阶段新增 list_install_targets/get_install_status/list_installations/plan_install/plan_uninstall/apply_install/list_pending/recover_installation 八个 `skills_` 命令，共 16 个；InstallTarget/Installation/InstallPlan/InstallReceipt 同样有双端样本。翻译/迁移命令在实现时再注册。
+当前已注册 list_library/get_detail/add_local_source/remove_source/import_repository/refresh_source/list_operations/cancel_operation 八个 `skills_` 命令，以及 `loom://skills-operation` 事件。`contracts/tauri-contract.json` 的 SkillsLibrary / SkillsOperation 样本在 Rust 与 TypeScript 双端校验。安装阶段新增 list_install_targets/get_install_status/list_installations/plan_install/plan_uninstall/apply_install/list_pending/recover_installation 八个 `skills_` 命令，共 16 个；InstallTarget/Installation/InstallPlan/InstallReceipt 同样有双端样本。M3 追加配置 2 个与翻译执行/历史/结果 3 个命令，当前总计 21 个；迁移命令尚未实现。
 
 错误形态为 `{code,message}`；当前 code 为 invalid_input/conflict/lock_busy/updating/recovery_required/permission_denied/io/cancelled/timeout/source_unavailable/auth_required/rate_limited。前端展示错误 message，流程判断不依赖解析自然语言。
 
@@ -114,3 +114,23 @@ Settings → Skills 的翻译设置通过 `skills_list_translation_providers` / 
 远程 key 的优先级保持旧行为：OPENAI_API_KEY/OPENROUTER_API_KEY 优先于保存值；清除保存值不清除环境变量，界面明确提示。模型优先级为 LOOM_SKILLS_OPENAI_MODEL/LOOM_SKILLS_OPENROUTER_MODEL → 对应旧 SKILLS_MANAGER_*_MODEL → 保存值 → 旧默认 gpt-5/openai/gpt-5；不在迁移中静默换模型。本地模型可独立设置，默认交给 CLI；命令可用性复用 Agent 的 resolve_executable，仅表示发现安装，不代表登录可用。
 
 后续请求实现以 [OpenAI 文本生成文档](https://developers.openai.com/api/docs/guides/text) 与 [Codex CLI 文档](https://learn.chatgpt.com/docs/developer-commands?surface=cli) 为协议参考；真实调用按 provider 单独验收。已有配置读取不触发外发、登录或付费请求，旧配置实际导入仍由 M4 显式处理。
+
+## 翻译执行与结果（M3-02/03）
+
+新增 `skills_translate`、`skills_translation_history`、`skills_translation_result`，共 21 个 Skills IPC。前端只提交技能 ID、详情指纹、provider、目标语言和 markdown/summary 模式；正文由 Rust 从已登记来源读取。详情的 contentDigest 包括正文、展示元数据与 manifest，版本不匹配返回 conflict。摘要保留标题、描述和 References，完整模式保留 Markdown；发起后固定输入与 provider 配置，不跟随来源刷新。
+
+每次翻译创建独立 Skills operation，持有生命周期 lease/operation guard，沿用取消标记、进程监督和持久终态。`translations/<operationId>.request.json` 仅存来源/输入指纹、provider、模型、语言与模式；成功结果单独私有保存到 `.result.json`，只有对应 committed 操作才能读取。没有输出正文或凭据写入 operation 日志；译文是用户可查看的本机结果，不是日志。中断/失败不自动重新发送模型请求，已保存但未确认 committed 的结果不冒充成功。
+
+OpenAI 使用固定 HTTPS Responses 端点，关闭 store、不提供 tools；OpenRouter 使用固定 HTTPS Chat Completions 端点，不提供工具。均禁用重定向，连接 10 秒、请求 180 秒，响应最多 2 MiB、译文最多 1 MiB；认证/限流/超时分类，不回显远端正文或自动重试。OpenAI 只接受 completed 的 assistant/output_text，OpenRouter 只接受 stop 的单条 assistant 文本，拒绝截断、拒答、工具调用与空结果。OpenRouter 协议见 [官方 Chat Completions 文档](https://openrouter.ai/docs/api/api-reference/chat/create-a-chat-completion)。
+
+本地 Codex/Claude 复用可执行文件发现和监督器，各自在私有临时工作目录运行，正文仅经 stdin；不复用用户 Chat 会话、不执行技能包内脚本。Codex 使用 ephemeral/read-only/ignore-user-config，关闭 shell/unified-exec/apps/hooks/multi-agent/remote-plugin/web search 与项目指令读取；保留 execpolicy 规则，不使用 ignore-rules。Claude 使用 safe-mode/restricted、空 tools、严格空 MCP 和无会话持久化。临时目录退出后清理；Codex 只读最终消息文件，Claude 只接受成功 JSON result。过旧 CLI 不识别约束参数时明确失败，不回退成更宽权限的命令。
+
+Skills 详情新增翻译页：明确点击才发送，显示 provider/语言/范围、持久历史、旧版本标记、取消及复制译文；首次历史加载完成前不可发起，避免隐藏已有活动请求。切换技能/版本卸载旧视图，延迟返回不能串入另一技能；旧结果可回看但不覆盖当前来源。实际四 provider 的账号、模型可用性和翻译质量需分别做 M3-04 验收，配置存在与 fixture 通过均不能代替真实调用。
+
+## M3 历史、交互与当前验收边界
+
+翻译历史按 skillId 扫描 request 上下文，仅按关联 operationId 读取操作并核验 action/source 身份；返回最近 20 条终态与全部运行中任务。共用操作列表返回最近 1000 条终态与全部运行中任务，限制作用于返回集合，不拒绝更大的持久库，也不删除旧记录。owner 锁释放后重读终态再判断 interrupted。旧结果仍可按 operationId 查询。当前平面目录仍需顺序扫描，返回量有界不等于扫描成本恒定。
+
+Skills 命令面板支持 Cmd/Ctrl+K、查询和键盘选择，只触发本地导航或显式复制；摘要翻译命令打开面板，不发送请求。分享文本含原文、可预览相关文件和未预览资源说明，按最长反引号生成完整围栏；不上传或发布。剪贴板失败显示只读可选文本，供用户复制。
+
+四 provider 的执行 fixture 与原生合成进程/重启已验证；真实账号调用按用户选择保持 blocked。G1 视觉/公开 HTTPS 来源与普通原生验收通过；禁止源码读取的桌面验收因 sandbox-exec 窗口不可观察仍 blocked，不以随包 CLI 隔离成功替代。

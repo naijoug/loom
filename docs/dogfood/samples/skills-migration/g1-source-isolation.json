@@ -1,0 +1,59 @@
+{
+  "kind": "source-read-denial-attempt",
+  "readProof": [
+    {
+      "path": "src/main.tsx",
+      "exitCode": 1,
+      "readDenied": true
+    },
+    {
+      "path": "src-tauri/src/lib.rs",
+      "exitCode": 1,
+      "readDenied": true
+    },
+    {
+      "path": "package.json",
+      "exitCode": 1,
+      "readDenied": true
+    },
+    {
+      "path": "skills/README.md",
+      "exitCode": 1,
+      "readDenied": true
+    },
+    {
+      "path": "src-tauri/target/skills-m3-g1-isolated/Loom.app/Contents/Info.plist",
+      "exitCode": 0,
+      "readDenied": false
+    }
+  ],
+  "bundledCliInstallExit": 0,
+  "bundledCliStatusAfterDesktopUninstallExit": 0,
+  "bundledCliStatus": {
+    "action": "status",
+    "plans": [],
+    "results": [
+      {
+        "diagnostics": null,
+        "installation": null,
+        "reason": "managed=false",
+        "skill": "loom-m3-g1-fixture",
+        "source_available": true,
+        "status": "missing",
+        "target_id": "codex-project",
+        "update_available": null
+      }
+    ],
+    "skills_root": "/fixture/source",
+    "target_dir": "/fixture/project/.codex/skills",
+    "target_dirs": [
+      "/fixture/project/.codex/skills"
+    ]
+  },
+  "desktopDeniedSource": "blocked: running process not discoverable by native automation",
+  "desktopAllowDefaultSandboxControl": "same failure without any extra deny rule",
+  "desktopWithoutSandboxControl": "window and native Skills operations passed",
+  "interpretation": "sandbox-exec/native automation limitation; not proof of a source dependency and not a passed desktop isolation gate",
+  "bundleExecutableSha256": "1f77eb88eaa756701d69666853e5143d3709d9f4282332d03be5ccde89136d16",
+  "sourceProfile": "(version 1)\n(allow default)\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/pnpm-lock.yaml\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/Cargo.toml\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/tsconfig.node.json\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/tools\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/crates\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/index.html\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/.DS_Store\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/designs\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/dist\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/.ref\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/.uploads\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/.pnpm-store\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/experiments\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/contracts\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/node_modules\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/tests\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/Cargo.lock\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/docs\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/README.md\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/.loom\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/tsconfig.test.json\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/public\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/.gitignore\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/package.json\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/scripts\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/packages\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/.github\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/src-tauri/Cargo.toml\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/src-tauri/tauri.conf.json\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/src-tauri/capabilities\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/src-tauri/resources\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/src-tauri/tests\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/src-tauri/Cargo.lock\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/src-tauri/build.rs\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/src-tauri/gen\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/src-tauri/examples\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/src-tauri/icons\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/src-tauri/src\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/tsconfig.json\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/GEMINI.md\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/.tmp\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/third-party\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/.archify\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/AGENTS.md\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/vite.config.ts\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/.git\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/.vscode\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/tsconfig.node.tsbuildinfo\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/CLAUDE.md\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/pnpm-workspace.yaml\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/loom/src\"))\n(deny file-read-data (subpath \"/Users/guojian/Workspace/naijoug/skills\"))\n"
+}

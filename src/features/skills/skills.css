@@ -83,3 +83,22 @@
 .skills-provider label { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; font-size: 12px; }
 .skills-provider input { min-width: 0; width: 100%; box-sizing: border-box; padding: 8px; border-radius: 6px; border: 1px solid var(--chat-border); background: var(--chat-input); color: inherit; font: inherit; }
 .skills-provider button { margin-top: 12px; }
+
+.skills-translation-panel { padding: 16px; min-width: 0; }
+.skills-translation-panel p { font-size: 12px; line-height: 1.6; }
+.skills-translation-panel input { padding: 7px; min-width: 0; border: 1px solid var(--chat-border); border-radius: 6px; background: var(--chat-input); color: inherit; font: inherit; }
+.skills-translation-history { display: flex; flex-direction: column; gap: 6px; font-size: 12px; margin: 16px 0; }
+.skills-translation-history select { min-width: 0; max-width: 100%; }
+.skills-tabs { flex-wrap: wrap; }
+
+.skills-actions { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 14px; border-bottom: 1px solid var(--chat-border); }
+.skills-actions kbd { font-size: 10px; color: var(--chat-muted); }
+.skills-actions > p, .skills-actions > textarea, .skills-command-list { width: 100%; }
+.skills-actions textarea { min-height: 140px; color: inherit; background: var(--chat-input); border: 1px solid var(--chat-border); }
+.skills-command-list input { box-sizing: border-box; width: 100%; padding: 10px; color: inherit; background: var(--chat-input); border: 1px solid var(--chat-border); border-radius: 6px; }
+.skills-command-list [role="listbox"] { max-height: 240px; overflow: auto; display: flex; flex-direction: column; }
+.skills-command-list [aria-selected="true"] { background: var(--chat-selected); }
+/* Settings' agent table minimum width must not leak into skill Markdown. */
+.skills-page .chat-markdown table { min-width: 0; width: 100%; }
+.skills-page .chat-markdown h1 { margin: 20px 0 10px; font-size: 20px; font-weight: 600; color: var(--chat-text); }
+.skills-page .chat-markdown > h1:first-child { margin-top: 0; }

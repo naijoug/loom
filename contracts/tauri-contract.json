@@ -49,7 +49,10 @@
     "skills_list_pending",
     "skills_recover_installation",
     "skills_list_translation_providers",
-    "skills_save_translation_config"
+    "skills_save_translation_config",
+    "skills_translate",
+    "skills_translation_history",
+    "skills_translation_result"
   ],
   "events": [
     "loom-update-state",
@@ -519,6 +522,49 @@
           "modelFromEnvironment": false
         }
       ]
+    },
+    "skillsTranslationResult": {
+      "context": {
+        "schemaVersion": 1,
+        "operationId": "skills-translation-fixture",
+        "skillId": "src-fixture::SKILL.md",
+        "sourceId": "src-fixture",
+        "sourceDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "inputDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "providerId": "openai",
+        "model": "gpt-5",
+        "targetLanguage": "zh-CN",
+        "sourceMode": "markdown",
+        "createdAtMs": 1
+      },
+      "markdown": "# 翻译"
+    },
+    "skillsTranslationSummary": {
+      "context": {
+        "schemaVersion": 1,
+        "operationId": "skills-translation-fixture",
+        "skillId": "src-fixture::SKILL.md",
+        "sourceId": "src-fixture",
+        "sourceDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "inputDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "providerId": "openai",
+        "model": "gpt-5",
+        "targetLanguage": "zh-CN",
+        "sourceMode": "markdown",
+        "createdAtMs": 1
+      },
+      "operation": {
+        "operationId": "skills-translation-fixture",
+        "sourceId": "src-fixture",
+        "action": "translate",
+        "phase": "committed",
+        "stage": "complete",
+        "sequence": 2,
+        "startedAtMs": 1,
+        "updatedAtMs": 2,
+        "error": null,
+        "executions": []
+      }
     }
   }
 }

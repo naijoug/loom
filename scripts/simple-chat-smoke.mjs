@@ -1,3 +1,4 @@
+import { skillsSmoke } from "./skills-smoke.mjs";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -245,6 +246,7 @@ async function main() {
     await screenshot('new-chat-narrow');
     writeFileSync(join(output, 'result.json'), JSON.stringify({ status: 'passed', kind: 'synthetic-web-only', checks: ['new chat sends with selected Agent and mode', 'project groups', 'composer mode picker', 'tool cards and diff', 'light/dark', 'language persists after reload', 'Settings preserves selected chat', '700px sidebar collapse', 'no horizontal overflow'] }, null, 2));
     await inlineCardsSmoke(client, { click, clickText, screenshot });
+    await skillsSmoke(client, { evaluate, waitFor, click, clickText, screenshot });
     console.log(`Simple Chat browser smoke passed: ${output}`);
   } finally { client?.close(); await killAndWait(child); await removeDirWithRetries(userDataDir); }
 }

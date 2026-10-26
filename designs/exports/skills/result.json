@@ -1,0 +1,11 @@
+{
+  "status": "passed",
+  "kind": "synthetic-web-only",
+  "checks": [
+    "new targets unchecked; install preview/apply; inventory uninstall",
+    "translation result; skill switch isolation; command summary navigation",
+    "en/zh-CN × light/dark; 700px narrow without page overflow",
+    "empty/loading/error; inflight translation cancellation",
+    "Chat draft survives Settings/Skills roundtrip"
+  ]
+}

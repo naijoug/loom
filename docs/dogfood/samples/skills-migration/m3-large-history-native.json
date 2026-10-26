@@ -1,0 +1,22 @@
+{
+  "kind": "native-with-synthetic-cli",
+  "originalProviderExecutable": "temporary fixture codex",
+  "remoteModelCalls": 0,
+  "seededCompletedTranslations": 1601,
+  "translationFiles": 3204,
+  "operationRecords": 1604,
+  "sourceSha256": "55550da962c9ea2f7e306608ccceaca13461cb0947f570adf809af642e1c050d",
+  "temporaryInstallationRemoved": true,
+  "restartResultLoaded": true,
+  "translateButtonEnabledAfterRestart": true,
+  "newTranslationAfterRestart": "committed",
+  "allSeededRecordsRetained": true,
+  "sourceUnchanged": true,
+  "nativeCommandPaletteShare": "Copied",
+  "nativeInstallHandoff": "bundled CLI copy install -> desktop inventory -> desktop uninstall",
+  "globalTargets": "legacy/read-only; not changed",
+  "screenshots": [
+    "designs/exports/skills/native-large-history.png"
+  ],
+  "appStopped": true
+}

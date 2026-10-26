@@ -19,6 +19,12 @@
 
 - Skills 翻译配置使用私有版本化文件，前端仅获得密钥存在性和来源状态；显式 keep/set/clear 与 expectedRevision 防止误清除/旧状态覆盖。配置操作纳入生命周期和 writer/pending 准入，不因保存设置自动调用模型。
 
+## Skills 翻译执行
+
+- 翻译仅由显式点击启动，固定技能版本、provider 与输入摘要；源正文不修改，不复用 Chat 会话。远程 endpoint 固定 HTTPS、拒绝重定向，不自动重试；超时、取消与输出大小受控。
+- 本地翻译使用独立私有临时目录、只读/禁用工具的 CLI 参数和进程组监督，stdin 传输正文；结果按 operationId 保存，日志仅记录脱敏元数据。实际工具隔离保障仍需对应 CLI 真实版本验收，不能用提示词代替边界。
+- 分享动作仅复制文本；剪贴板失败显示可选文本，不上传 Gist。网页合成 Skills API 仅由 main 的显式 DEV fixture 分支注入，生产默认不使用 mock。
+
 ## CLI 执行
 
 - `chat_send` 只访问已登记的 canonical 项目；存储会话路径必须匹配项目，准备后的 cwd 必须位于该项目内。

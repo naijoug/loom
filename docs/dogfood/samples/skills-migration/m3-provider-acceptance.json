@@ -1,0 +1,41 @@
+{
+  "date": "2026-10-22",
+  "realProviders": {
+    "openai": {
+      "status": "blocked",
+      "reason": "Account ownership unverified or non-personal; user chose local/G1 work and no unverified account calls"
+    },
+    "openrouter": {
+      "status": "blocked",
+      "reason": "Account ownership unverified or non-personal; user chose local/G1 work and no unverified account calls"
+    },
+    "codex": {
+      "status": "blocked",
+      "reason": "Account ownership unverified or non-personal; user chose local/G1 work and no unverified account calls"
+    },
+    "claude-code": {
+      "status": "blocked",
+      "reason": "Account ownership unverified or non-personal; user chose local/G1 work and no unverified account calls"
+    }
+  },
+  "syntheticHttpTransport": [
+    "two provider success shapes",
+    "401/403",
+    "429",
+    "503",
+    "302 without redirect",
+    "invalid JSON",
+    "response overflow",
+    "timeout",
+    "inflight cancellation",
+    "no credential/document/upstream body in records"
+  ],
+  "syntheticLocal": [
+    "bounded stdin/stdout/stderr",
+    "timeout",
+    "cancel",
+    "result persistence",
+    "native IPC/restart with fixture codex"
+  ],
+  "realModelCalls": 0
+}

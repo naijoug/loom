@@ -1,4 +1,4 @@
-import type { SkillSource, SkillsHttpRequest, TranslationProviders } from "./skills";
+import type { SkillSource, SkillsHttpRequest, TranslationProviders, TranslationResult, TranslationSummary } from "./skills";
 import type { InstructionCheck, ResourcePreview } from "./skills";
 import type { SkillsLibrary, SkillsOperation, InstallTarget, Installation, InstallPlan, InstallReceipt } from "./skills";
 import type { AgentConfig, AgentDiagnostic, AppSettings, ChatSession, ChatEvent, ChatSendInput, ChatSendReceipt, ChatResumeHandle, ChatTurn, ChatLogPage, ChatExportInput, ChatExportResult, ChatMessagePart } from "../domain";
@@ -53,6 +53,9 @@ export const TAURI_COMMANDS = {
   skillsRecoverInstallation: "skills_recover_installation",
   skillsListTranslationProviders: "skills_list_translation_providers",
   skillsSaveTranslationConfig: "skills_save_translation_config",
+  skillsTranslate: "skills_translate",
+  skillsTranslationHistory: "skills_translation_history",
+  skillsTranslationResult: "skills_translation_result",
 } as const;
 export const TAURI_EVENTS = {
   updateState: "loom-update-state",
@@ -497,6 +500,49 @@ skillsGithubApiSource: {
   "updatedAtMs": 1,
   "defaultBranch": "trunk"
 } satisfies SkillSource,
+skillsTranslationResult: {
+  "context": {
+    "schemaVersion": 1,
+    "operationId": "skills-translation-fixture",
+    "skillId": "src-fixture::SKILL.md",
+    "sourceId": "src-fixture",
+    "sourceDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "inputDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "providerId": "openai",
+    "model": "gpt-5",
+    "targetLanguage": "zh-CN",
+    "sourceMode": "markdown",
+    "createdAtMs": 1
+  },
+  "markdown": "# 翻译"
+} satisfies TranslationResult,
+skillsTranslationSummary: {
+  "context": {
+    "schemaVersion": 1,
+    "operationId": "skills-translation-fixture",
+    "skillId": "src-fixture::SKILL.md",
+    "sourceId": "src-fixture",
+    "sourceDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "inputDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "providerId": "openai",
+    "model": "gpt-5",
+    "targetLanguage": "zh-CN",
+    "sourceMode": "markdown",
+    "createdAtMs": 1
+  },
+  "operation": {
+    "operationId": "skills-translation-fixture",
+    "sourceId": "src-fixture",
+    "action": "translate",
+    "phase": "committed",
+    "stage": "complete",
+    "sequence": 2,
+    "startedAtMs": 1,
+    "updatedAtMs": 2,
+    "error": null,
+    "executions": []
+  }
+} satisfies TranslationSummary,
 skillsTranslationProviders: {
   revision: 0, providers: [{ id: "openai", label: "OpenAI", configured: false, supportsApiKey: true, storedKey: false, keySource: "none", model: "gpt-5", storedModel: null, modelFromEnvironment: false }],
 } satisfies TranslationProviders,

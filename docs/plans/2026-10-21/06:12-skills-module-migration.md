@@ -1,6 +1,6 @@
 # Skills Manager 迁入 Loom 实施计划
 
-- 状态：实施中；M0 基础、M1a 来源切片、M1b API 来源与 SSH 配置保护、M2a 安装、M2b 指令及源 8 项测试等价对照、M2c CLI/TUI/ng、M5 内容独立出口已分项通过。G1 仍待完整视觉矩阵、无源码访问与外网 GitHub/GitLab 验收；M3/M4/M6/M7 未完成，G1/G2 均未整体验收。
+- 状态：实施中；M0 基础、M1a 来源切片、M1b API 来源与 SSH 配置保护、M2a 安装、M2b 指令及源 8 项测试等价对照、M2c CLI/TUI/ng、M5 内容独立出口已分项通过。M3-02/03 本地工程与原生合成验收通过，M3-04 按用户决定 blocked；G1 视觉矩阵与真实 GitHub/GitLab HTTPS 已补齐，仅桌面禁止源码读取验收仍 blocked。M4/M6/M7 未完成，G1/G2 均未整体验收。
 - 编写时间：2026-10-21 06:12，America/Los_Angeles。
 - v2 修订时间：2026-10-21 07:19，America/Los_Angeles；依据本对话的实施就绪审查细化。
 - v3 修订时间：2026-10-21 07:29，America/Los_Angeles；补充共享注入块使用者归属、跨客户端未完成事务发现和应用更新准入。
@@ -8,6 +8,7 @@
 - 三项补充复核：2026-10-22 00:56，America/Los_Angeles；共享注入块归属、跨客户端事务发现、应用更新准入已对应到 §5.5–5.7、实施任务与 V-16–18；统一入口见 §9.1。本次仅更新计划与索引，不改变阶段验收状态。
 - v5 修订日期：2026-10-22，America/Los_Angeles；按实际 API/SSH 验收与源测试逐项对照关闭 M1b、M2b 等价记录及 M5 内容出口，保留 v4 的依赖修正和 G1/G2 边界。证据见 [本轮验收](../../dogfood/2026-10-22-skills-migration-review.md)。
 - v6 修订日期：2026-10-22，America/Los_Angeles；M3-01 翻译配置完成自动化与原生保存/重启/清除验收，实际翻译任务和逐 provider 验收仍未完成。
+- v7 修订日期：2026-10-22，America/Los_Angeles；修复历史容量阻断、收口 M3-02/03 并补 G1 视觉/公开 HTTPS/原生大历史验收；用户选择未核实 provider 账号标 blocked，桌面禁止源码读取因 sandbox-exec 窗口不可观察保留 blocked。见 §9.3 与当日续记。
 - 用户目标：把 skills 项目的 Skills Manager 功能迁入 Loom，作为 Skills 模块；从 skills 仓库移除管理应用代码与功能。
 - 当前交付与验证见 [实施证据](../../dogfood/2026-10-21-skills-migration.md)；两仓均已修改，源项目已有阶段提交。未接管真实用户安装或删除旧应用。
 - Loom 基线：`codex/simple-cli-chat` @ `c8313dd60aa50831bce3d7a66ae3fbc20e72f273`，工作区另有未提交的 Chat Markdown、消息分隔、权限文档等改动。
@@ -398,11 +399,13 @@ skills
 
 依赖：M1a；集成验收要求 M2a，独立于 M2c。
 
-- [ ] 迁入四个已注册 provider、模型/语言选择和 summary/markdown；配置进入 Loom Settings 的 Skills 分区。
-- [ ] 本地 provider 复用 CLI 探测与受控进程执行，使用独立操作上下文；不复用用户 Chat 会话和原生续聊句柄。
-- [ ] 迁入复制、分享文本、命令面板及详情相关文件展示；不自动外发技能内容。
-- [ ] 消除旧应用全局 CSS、document 主题写入、嵌套设置和默认 mock；校验 React 18 兼容性。
-- [ ] 失败、取消、不可用 provider、快速切换技能和项目都显示正确归属的状态。
+- [x] 迁入四个已注册 provider、模型/语言选择和 summary/markdown；配置进入 Loom Settings 的 Skills 分区。
+- [x] 本地 provider 复用 CLI 探测与受控进程执行，使用独立操作上下文；不复用用户 Chat 会话和原生续聊句柄。
+- [x] 迁入复制、分享文本、命令面板及详情相关文件展示；不自动外发技能内容。
+- [x] 消除旧应用全局 CSS、document 主题写入、嵌套设置和默认 mock；校验 React 18 兼容性。
+- [x] 失败、取消、不可用 provider、快速切换技能和项目都显示正确归属的状态。
+
+工程任务已完成并通过本地/合成原生验证；M3-04 真实 provider 调用仍 blocked，M3 总出口未通过。分享文本在剪贴板失败时显示可选文本供手动复制，不自动下载或发布。
 
 产出：功能矩阵中剩余 UI 能力具备 Loom 实现。出口：provider 请求/响应 fixture 和交互验证通过；真实 provider 测试状态单独列出。
 
@@ -426,10 +429,10 @@ skills
 
 依赖：M0 的文件映射；内容工具移动可先执行。M5-02 依赖 M2b 等价对照：Loom 已有等价测试后，内容检查入口（`scripts/skills-quality-check` 与内容测试发现）不再运行管理测试即可关闭；源管理测试文件不在 M5 删除，随旧应用在 M7 删除，避免 G2 依赖 M7。
 
-- [ ] 在 skills 仓库迁移第 3.3 节的内容检查、routing 工具和测试，更新相对路径、`support.py` 与测试发现入口。
-- [ ] 更新 README、AGENTS、skill-authoring、技能中引用的管理命令；需要安装时指向 Loom CLI，内容检查不依赖该 CLI。
-- [ ] 比较迁移前后受版本控制的技能及归档文件哈希；除必要路径文案外，技能内容不变，归档字节不变。
-- [ ] 从没有 Loom checkout、Node workspace 的干净技能仓库副本运行 `bash scripts/skills-quality-check`。
+- [x] 在 skills 仓库迁移第 3.3 节的内容检查、routing 工具和测试，更新相对路径、`support.py` 与测试发现入口。
+- [x] 更新 README、AGENTS、skill-authoring、技能中引用的管理命令；需要安装时指向 Loom CLI，内容检查不依赖该 CLI。
+- [x] 比较迁移前后受版本控制的技能及归档文件哈希；除必要路径文案外，技能内容不变，归档字节不变。
+- [x] 从没有 Loom checkout、Node workspace 的干净技能仓库副本运行 `bash scripts/skills-quality-check`。
 
 产出：独立内容仓库工具链。出口：元数据、归档完整性、routing 管道和技能自有测试通过；无 Manager 运行依赖。
 
@@ -585,13 +588,34 @@ G1 的范围声明不是功能删减：CLI/TUI、翻译和迁移仍在本计划�
 | M2c-01–05 | 当前保留能力出口通过 | CLI/TUI/ng 同一 Rust 服务；真实 fzf 预览/重复安装卸载、自定义含空格/中文路径取消、搬移后的启动器、25 项真实目录身份/分类对照、CLI → 桌面 → CLI 交接、另一 dataDir 的真实 CLI 恢复通过；fzf 显式安装使用受控替身，未下载真实软件；旧源实现仍按 G2/M7 退役 |
 | M5-01/03/04 | 内容独立化切片通过 | 源提交 `fd7a4ec`；隔离副本无 apps/Node/Tauri/Loom 的 32 项内容测试、7 项旧管理测试通过，272 个技能/归档文件哈希不变 |
 | M5-02、M5 总出口 | 内容独立出口通过 | 8 项源管理测试已逐项映射目标测试与安全/doctor 差异；根内容入口不运行管理测试。新隔离副本 32 项内容测试、326 个管道用例通过；271 个受管技能/归档哈希不变（原 272 记录含未受管 .DS_Store）；源管理测试与旧转发入口仍留到 M7 |
-| 其余实施；G1/G2 | 未完成/未验收 | G1 已补真实本地 Git 的固定安装版本全链与更新器失败准入回归，仍待视觉矩阵、无源码访问验收、外网 GitHub/GitLab 实测；M3/M4、M6/G2 与 M7 源应用退役待完成；M1b API/SSH 与 M2b/M5 本轮证据见 2026-10-22 验收记录，详见实施证据 |
+| 其余实施；G1/G2 | G1 单项 blocked；G2 未完成 | G1 新增完整 Skills 合成视觉矩阵、真实 GitHub/GitLab HTTPS、原生大历史/重启与 CLI 安装交接。桌面禁止源码读取验收因 sandbox-exec 下窗口不可观察未通过，CLI 隔离通过不能替代桌面；M3-04 账号实测 blocked，M4/M6/M7 待完成 |
+| M3-02/03 | 本地工程与原生合成切片通过 | 四 provider 执行、HTTP 传输错误/取消/超时、子进程监督、结果归属与大历史、复制/分享文本/命令面板已接线；原生 1604 条操作/3204 个翻译文件重启与再次翻译通过；详情见当日续记，不能代替真实 provider 调用 |
+| M3-04 | blocked | 用户明确选择先完成本地与 G1，未核实账号不调用；四 provider 均有独立 blocked 记录，真实模型调用 0 |
 | M3-01 | 配置切片通过 | 4 provider 配置、显式 key 变更/脱敏 DTO、并发 revision/锁与 pending、18 个 Skills IPC；完整 check 前端 115/Rust 251，随后表单草稿保留回归使前端 116 通过，最终 release app bundle 通过；原生假 key 保存/重启读取/清除/重新加载与 0600 权限通过；模型调用未实施 |
 | M1b-01–04 | API 切片与 SSH 配置兼容通过 | 固定 commit 完整包、默认分支/旧模式映射、错误/限流/取消及 SSH 配置 7 场景；真实匿名 API 与原生临时安装/来源移除后卸载通过；私有认证及外网 Git clone 另按矩阵验收 |
 | v5 本轮工程门禁 | 通过，整体未完成 | `pnpm check` 前端 111/Rust 246（23 项忽略）；最终 release app bundle 通过；源测试 8 项对照和内容隔离证据见 [本轮验收](../../dogfood/2026-10-22-skills-migration-review.md) |
 | v4 进度审查修订 | 已修正计划 | 依据 `0b63aad` 两轮审查：M5/M7 依赖、M2b 等价对照要求、状态行、§4 实际模块表、M2a-01/04 文件范围、SRC-09、本表过期行；仅文档修改，未运行应用测试 |
 | v3 文档一致性、相对链接、索引排序 | 通过 | 链接/锚点、索引唯一性与倒序、章节引用、11 阶段/50 任务、SRC-01–10/V-01–18、代码围栏及空白检查通过；人工核对三项补充的契约—任务—验证—门槛对应关系，`git diff --check` 通过 |
 | 应用测试与构建 | 分项通过，详见证据 | M2c 收尾完整 check：前端 109/Rust 230；真实 fzf 和真实 CLI 恢复两个 opt-in 检查另显式通过；release no-bundle 与 debug app bundle 通过；release app bundle、搬移后独立 cwd 原生运行通过；旧 Manager 版本保护后完整 check：应用 99/Rust 25/内容 32/管理 8 |
-| 安装/真实服务/迁移验收 | 安装分项通过，整体未完成 | 临时项目 copy/更新/卸载与孤立 symlink 卸载、真实 Codex 调用通过；外网来源、真实翻译 provider、旧数据迁移和整体 G1/G2 未验收 |
+| 安装/真实服务/迁移验收 | 安装分项通过，整体未完成 | 临时项目 copy/更新/卸载与孤立 symlink 卸载、真实 Codex 调用通过；本轮公开 HTTPS 来源通过；真实翻译 provider、旧数据迁移和整体 G1/G2 未通过 |
 
 实施每个里程碑后更新本表及 [计划索引](../../PLANS.md)，成功标准逐项回填；不以“代码已迁入”代替迁移完成。
+
+### 9.3 本轮执行与验收结果（2026-10-22）
+
+基线 `0ea881c` + 既有未提交翻译/Chat 改动，工作区尚未提交。用户范围为历史修复、M3 与 G1，不进入 M4/M7。
+
+| 执行项 | 结果 | 证据 |
+|---|---|---|
+| 最终工程门禁 | passed | `pnpm check` 前端 125/Rust 266，25 ignored；release app bundle 与 Skills/Chat smoke:visual 通过；未签名/公证/发布 |
+| 历史容量修复 | passed | 按关联 operation 读取，最近 20 条终态 + 全部运行中；共用列表最近 1000 条终态 + 全部运行中；不删磁盘历史。单测与原生大历史重启/再次翻译通过 |
+| M3 HTTP/进程/交互 | passed（本地切片） | 两 provider 真实 loopback 传输、失败/限流/重定向/超时/取消/脱敏；本机合成进程；命令面板、分享文本、复制、版本与请求归属 |
+| M3-04 | blocked | 用户确认不使用未核实账号；不把合成成功记为真实 provider 成功 |
+| G1 视觉/公开来源 | passed | Settings 内 Skills 中英文/主题/窄窗/错误/加载/安装/翻译矩阵；GitHub tobi/qmd 与 GitLab gitlab-org/cli 匿名导入/刷新 |
+| G1 桌面无源码读取 | blocked | deny-source 与 allow-default 两类 sandbox-exec 均无可观察窗口，普通启动正常；文件拒读与随包 CLI 成功已证明，桌面出口仍未满足 |
+
+完整命令、计数、失败后修正、截图、逐 provider 和隔离对照记录见 [当日续记](../../dogfood/2026-10-22-skills-migration-review.md)。下一步仅补桌面隔离环境证据及经用户确认账号后的 M3-04；保持 G1/G2 未整体验收，不删除旧应用。
+
+### 9.4 已完成切片整理（2026-10-25）
+
+按用户要求整理 Skills 专属提交，保留在途 Chat GFM、消息分隔、图标与原暂存删除。M5 四项复选框依据 2026-10-22 内容独立与哈希证据同步，不重复声称本日运行了内容检查。M3-04 账号实测继续 blocked；G1 桌面源码隔离仍 blocked。M4 本轮后续仅做只读发现与预览，不接管真实旧数据。

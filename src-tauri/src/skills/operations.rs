@@ -211,47 +211,79 @@ impl Drop for Operation {
     }
 }
 
+/// Read one operation and reconcile a lost owner without scanning unrelated history.
+pub fn get(repository: &Repository, id: &str) -> Result<OperationRecord> {
+    let path = operation_path(repository, id, "json")?;
+    let mut record: OperationRecord = files::read_json(&path)?;
+    if operation_path(repository, &record.operation_id, "json")? != path {
+        return Err(SkillsError::recovery("Operation identity mismatch"));
+    }
+    if record.phase == Phase::Running {
+        let lock_path = operation_path(repository, &record.operation_id, "lock")?;
+        files::regular_file(&lock_path)?;
+        let owner = OpenOptions::new().read(true).write(true).open(lock_path)?;
+        if owner.try_lock().is_ok() {
+            // The owner may have committed between our first read and locking.
+            record = files::read_json(&path)?;
+            if record.operation_id != id {
+                return Err(SkillsError::recovery("Operation identity mismatch"));
+            }
+            if record.phase != Phase::Running {
+                return Ok(record);
+            }
+            record.phase = Phase::Interrupted;
+            record.sequence += 1;
+            record.updated_at_ms = crate::models::now_ms();
+            record.error = Some(SkillsError::recovery(
+                "Operation interrupted; inspect source state before retrying",
+            ));
+            let lease = repository.coordinator.enter()?;
+            let writer = repository.coordinator.writer_wait(&lease)?;
+            writer.check_write_set(std::slice::from_ref(&path))?;
+            files::atomic_json(&path, &record)?;
+            let _ = owner.unlock();
+        }
+    }
+    Ok(record)
+}
+
 pub fn list(repository: &Repository) -> Result<Vec<OperationRecord>> {
     let directory = repository.root.join("operations");
     if !directory.try_exists()? {
         return Ok(vec![]);
     }
     let mut records = Vec::new();
+    let mut active = Vec::new();
     for entry in fs::read_dir(directory)? {
         let path = entry?.path();
         if path.extension().is_none_or(|v| v != "json") {
             continue;
         }
-        if records.len() >= 1000 {
-            return Err(SkillsError::invalid(
-                "Operation history exceeds the current limit",
-            ));
-        }
-        let mut record: OperationRecord = files::read_json(&path)?;
-        if operation_path(repository, &record.operation_id, "json")? != path {
-            return Err(SkillsError::recovery("Operation identity mismatch"));
-        }
+        let id = path
+            .file_stem()
+            .and_then(|v| v.to_str())
+            .ok_or_else(|| SkillsError::recovery("Invalid operation filename"))?;
+        let record = get(repository, id)?;
         if record.phase == Phase::Running {
-            let lock_path = operation_path(repository, &record.operation_id, "lock")?;
-            files::regular_file(&lock_path)?;
-            let owner = OpenOptions::new().read(true).write(true).open(lock_path)?;
-            if owner.try_lock().is_ok() {
-                record.phase = Phase::Interrupted;
-                record.sequence += 1;
-                record.updated_at_ms = crate::models::now_ms();
-                record.error = Some(SkillsError::recovery(
-                    "Operation interrupted; inspect source state before retrying",
-                ));
-                let lease = repository.coordinator.enter()?;
-                let writer = repository.coordinator.writer_wait(&lease)?;
-                writer.check_write_set(std::slice::from_ref(&path))?;
-                files::atomic_json(&path, &record)?;
-                let _ = owner.unlock();
+            active.push(record);
+        } else {
+            records.push(record);
+            if records.len() > 1000 {
+                records.sort_by(|a, b| {
+                    b.started_at_ms
+                        .cmp(&a.started_at_ms)
+                        .then_with(|| b.operation_id.cmp(&a.operation_id))
+                });
+                records.truncate(1000);
             }
         }
-        records.push(record);
     }
-    records.sort_by_key(|record| std::cmp::Reverse(record.started_at_ms));
+    records.extend(active);
+    records.sort_by(|a, b| {
+        b.started_at_ms
+            .cmp(&a.started_at_ms)
+            .then_with(|| b.operation_id.cmp(&a.operation_id))
+    });
     Ok(records)
 }
 
@@ -596,6 +628,63 @@ mod tests {
             String::from_utf8_lossy(&output.stderr)
         );
         String::from_utf8_lossy(&output.stdout).trim().into()
+    }
+
+    #[tokio::test]
+    #[ignore = "explicit anonymous public Git HTTPS acceptance; temporary library only"]
+    async fn public_git_https_import_and_refresh_acceptance() {
+        let f = Fixture::new();
+        let repository = Repository::open(&f.0.join("data"), &f.0.join("coord")).unwrap();
+        let url =
+            std::env::var("LOOM_SKILLS_REAL_GIT_URL").expect("Set a public GitHub/GitLab URL");
+        let source = normalize_git_url(&url).unwrap();
+        assert!(source.clone_url.starts_with("https://"));
+        let runner = || GitRunner {
+            extra_args: vec![
+                "-c".into(),
+                "credential.helper=".into(),
+                "-c".into(),
+                "http.extraHeader=".into(),
+            ],
+            environment: vec![
+                ("GIT_CONFIG_GLOBAL".into(), Some("/dev/null".into())),
+                ("GIT_CONFIG_NOSYSTEM".into(), Some("1".into())),
+                ("GIT_CONFIG_COUNT".into(), None),
+            ],
+        };
+        let mut expected = None;
+        let mut old_snapshot: Option<std::path::PathBuf> = None;
+        for action in ["import", "refresh"] {
+            let op = Operation::begin(&repository, &source.source_id, action).unwrap();
+            let id = op.record.operation_id.clone();
+            import_using(
+                repository.clone(),
+                op,
+                source.clone(),
+                expected.clone(),
+                |_| {},
+                runner(),
+            )
+            .await;
+            let record = get(&repository, &id).unwrap();
+            assert_eq!(record.phase, Phase::Committed, "{:?}", record.error);
+            let saved = repository.get_source(&source.source_id).unwrap();
+            expected = saved.revision.clone();
+            let directory = repository.source_directory(&saved).unwrap();
+            let snapshot = snapshots::verify(directory.parent().unwrap()).unwrap();
+            if let Some(old) = &old_snapshot {
+                snapshots::verify(old).unwrap();
+            }
+            old_snapshot = Some(directory.parent().unwrap().to_path_buf());
+            let library = repository.list().unwrap();
+            assert!(!library.skills.is_empty());
+            let detail = repository.detail(&library.skills[0].id).unwrap();
+            assert!(!detail.content.is_empty());
+            println!(
+                "PUBLIC_GIT_ACCEPTANCE {}",
+                serde_json::json!({"url":url,"action":action,"revision":saved.revision,"skills":library.skills.len(),"snapshotFiles":snapshot.file_count,"executions":record.executions.len(),"authentication":"anonymous; helpers/global/system config disabled for this fixture","oldSnapshotPreserved":true,"modelInvoked":false})
+            );
+        }
     }
 
     #[tokio::test]

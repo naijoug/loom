@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState, type FormEvent } from "react";
+import { lazy, Suspense, useContext, useEffect, useState, type FormEvent } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
 import { Activity, ArrowLeft, BookOpen, Bot, FlaskConical, Info, Monitor, Moon, Palette, RefreshCw, Plus, Sun } from "lucide-react";
 import { invokeCommand, TAURI_COMMANDS } from "../../api";
@@ -14,6 +14,7 @@ import { agentHealth } from "../chat/AgentPicker";
 import { setInlineCardsEnabled, useInlineCardsEnabled } from "../chat/openui/inlineCardsSetting";
 import "../chat/chat.css";
 import "./settings.css";
+import { SkillsPreviewContext } from "../skills/previewContext";
 
 const SkillsPanel = lazy(() => import("../skills/SkillsPanel").then(module => ({ default: module.SkillsPanel })));
 
@@ -22,6 +23,7 @@ const tabIcons = { skills: BookOpen, agents: Bot, appearance: Palette, experimen
 const themeIcons = { system: Monitor, dark: Moon, light: Sun } as const;
 export function SettingsPage({ onBack }: { onBack: () => void }) {
   const t = useT();
+  const skillsPreview = useContext(SkillsPreviewContext);
   const { state } = useAppState();
   const { themeMode, setThemeMode, settingsError } = useTheme();
   const { locale, setLocale } = useLocale();
@@ -89,7 +91,7 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
           <button type="button" onClick={() => edit()}><Plus size={14} aria-hidden="true" />{t("customCli")}</button></div>}
       </header>
       {(error || state.app.agentError || settingsError) && <p role="alert" className="chat-error">{error || state.app.agentError || settingsError}</p>}
-      {tab === "skills" && <Suspense fallback={<p role="status">{t("loading")}</p>}><SkillsPanel projectName={state.projects.current?.name} projectPath={state.projects.current?.path ?? null} /></Suspense>}
+      {tab === "skills" && <Suspense fallback={<p role="status">{t("loading")}</p>}><SkillsPanel api={skillsPreview ?? undefined} desktop={skillsPreview ? true : undefined} projectName={state.projects.current?.name} projectPath={state.projects.current?.path ?? null} /></Suspense>}
       {tab === "agents" && <>
         <div className="settings-table-wrap"><table><thead><tr><th>{t("agents")}</th><th>{t("status")}</th><th>{t("path")}</th><th>{t("capabilities")}</th><th>{t("enabled")}</th><th /></tr></thead>
           <tbody>{state.agents.filter(agent => agent.adapterType !== "dummy").map(agent => {

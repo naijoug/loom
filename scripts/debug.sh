@@ -22,6 +22,7 @@ Environment variables:
   LOOM_PREVIEW_TARGET=craft-reference  Run the pinned M0 reference app.
   LOOM_PREVIEW_TARGET=browser-probe    Run the Rust Chromium M0 probe.
   LOOM_PREVIEW_BINARY                 Run a built Loom.app binary under src-tauri/target.
+  LOOM_PREVIEW_SANDBOX_PROFILE        Optional absolute macOS sandbox profile for that binary.
 USAGE
 }
 
@@ -141,6 +142,13 @@ start_desktop() {
     fi
     # A bundled preview must not accidentally depend on the repository cwd.
     cd "$(dirname "${LOOM_PREVIEW_BINARY}")"
+    if [[ -n "${LOOM_PREVIEW_SANDBOX_PROFILE:-}" ]]; then
+      if [[ "${LOOM_PREVIEW_SANDBOX_PROFILE}" != /* || ! -f "${LOOM_PREVIEW_SANDBOX_PROFILE}" || "$(uname -s)" != Darwin ]]; then
+        echo "LOOM_PREVIEW_SANDBOX_PROFILE requires an absolute profile file on macOS." >&2
+        return 1
+      fi
+      exec /usr/bin/sandbox-exec -f "${LOOM_PREVIEW_SANDBOX_PROFILE}" "${LOOM_PREVIEW_BINARY}"
+    fi
     exec "${LOOM_PREVIEW_BINARY}"
   fi
   if [[ "${LOOM_PREVIEW_TARGET:-loom}" == "browser-probe" ]]; then

@@ -134,6 +134,11 @@ pub struct RuntimeConfig {
     local: BTreeMap<ProviderId, bool>,
 }
 impl RuntimeConfig {
+    #[cfg(test)]
+    pub(crate) fn fixture_local(mut self, id: ProviderId) -> Self {
+        self.local.insert(id, true);
+        self
+    }
     pub fn capture() -> Result<Self> {
         let mut value = Self::default();
         for (id, key, model, legacy) in [
@@ -331,3 +336,35 @@ pub fn save(
 #[cfg(test)]
 #[path = "config_tests.rs"]
 mod tests;
+
+/// Captured once for an operation; never serialized or returned to the frontend.
+pub(super) struct ResolvedProvider {
+    pub id: ProviderId,
+    pub model: Option<String>,
+    pub api_key: Option<String>,
+}
+pub(super) fn resolve(
+    repo: &Repository,
+    id: ProviderId,
+    runtime: &RuntimeConfig,
+) -> Result<ResolvedProvider> {
+    let _lease = repo.coordinator.enter()?;
+    let stored = load(repo)?;
+    let view = project(&stored, runtime);
+    let provider = view.providers.into_iter().find(|p| p.id == id).unwrap();
+    if !provider.configured {
+        return Err(SkillsError::new(
+            ErrorCode::AuthRequired,
+            "Translation provider is not configured or its local CLI is unavailable",
+        ));
+    }
+    Ok(ResolvedProvider {
+        id,
+        model: provider.model,
+        api_key: runtime
+            .keys
+            .get(&id)
+            .cloned()
+            .or_else(|| stored.providers.get(&id).and_then(|p| p.api_key.clone())),
+    })
+}

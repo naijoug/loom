@@ -11,7 +11,7 @@ export interface SkillSummary {
   title: string; description: string; category: string; keywords: string;
 }
 export interface SkillDetail {
-  summary: SkillSummary; content: string; manifest: Record<string, string>;
+  summary: SkillSummary; content: string; contentDigest: string; manifest: Record<string, string>;
   relatedFiles: { relativePath: string; sizeBytes: number; content: string | null }[];
 }
 export interface SkillsLibrary {
@@ -52,7 +52,15 @@ export type TranslationProviderId = "openai" | "openrouter" | "codex" | "claude-
 export interface TranslationProvider { id: TranslationProviderId; label: string; configured: boolean; supportsApiKey: boolean; storedKey: boolean; keySource: "environment" | "stored" | "none" | "local_cli"; model: string | null; storedModel: string | null; modelFromEnvironment: boolean; }
 export interface TranslationProviders { revision: number; providers: TranslationProvider[]; }
 export interface TranslationConfigInput { providerId: TranslationProviderId; expectedRevision: number; key: { action: "keep" | "clear" } | { action: "set"; value: string }; model: string | null; }
+export type TranslationSourceMode = "markdown" | "summary";
+export interface TranslationInput { skillId: string; expectedContentDigest: string; providerId: TranslationProviderId; targetLanguage: string; sourceMode: TranslationSourceMode; }
+export interface TranslationContext { schemaVersion: number; operationId: string; skillId: string; sourceId: string; sourceDigest: string; inputDigest: string; providerId: TranslationProviderId; model: string | null; targetLanguage: string; sourceMode: TranslationSourceMode; createdAtMs: number; }
+export interface TranslationSummary { context: TranslationContext; operation: SkillsOperation; }
+export interface TranslationResult { context: TranslationContext; markdown: string; }
 export interface SkillsApi {
+  translate(input: TranslationInput): Promise<TranslationSummary>;
+  translationHistory(skillId: string): Promise<TranslationSummary[]>;
+  translationResult(operationId: string): Promise<TranslationResult>;
   translationProviders(): Promise<TranslationProviders>;
   saveTranslationConfig(input: TranslationConfigInput): Promise<TranslationProviders>;
   list(): Promise<SkillsLibrary>;
@@ -74,6 +82,9 @@ export interface SkillsApi {
   recover(operationId: string, projectPath: string | null): Promise<string>;
 }
 export const skillsApi: SkillsApi = {
+  translate: input => invokeCommand(TAURI_COMMANDS.skillsTranslate, { input }),
+  translationHistory: skillId => invokeCommand(TAURI_COMMANDS.skillsTranslationHistory, { skillId }),
+  translationResult: operationId => invokeCommand(TAURI_COMMANDS.skillsTranslationResult, { operationId }),
   translationProviders: () => invokeCommand(TAURI_COMMANDS.skillsListTranslationProviders),
   saveTranslationConfig: input => invokeCommand(TAURI_COMMANDS.skillsSaveTranslationConfig, { input }),
   list: () => invokeCommand(TAURI_COMMANDS.skillsListLibrary),

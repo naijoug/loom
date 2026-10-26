@@ -8,6 +8,8 @@ import { Markdown } from "../chat/MarkdownView";
 import { mergeOperation, operationActionKey, skillBody, skillsError, visibleSkills } from "./model";
 import { InstallPanel } from "./InstallPanel";
 import { InstalledSkills } from "./InstalledSkills";
+import { SkillActions } from "./SkillActions";
+import { TranslationPanel } from "./TranslationPanel";
 import { TranslationSettings } from "./TranslationSettings";
 import "./skills.css";
 
@@ -17,6 +19,7 @@ export function SkillsPanel({ projectName, projectPath = null, api = skillsApi, 
   projectName?: string; projectPath?: string | null; api?: SkillsApi; desktop?: boolean;
 }) {
   const t = useT();
+  const [libraryLoading, setLibraryLoading] = useState(desktop);
   const [library, setLibrary] = useState<SkillsLibrary>(emptyLibrary);
   const [sourceId, setSourceId] = useState("");
   const [query, setQuery] = useState("");
@@ -31,7 +34,8 @@ export function SkillsPanel({ projectName, projectPath = null, api = skillsApi, 
   const [sourceMode, setSourceMode] = useState<"git" | "github-api">("git");
   const [adding, setAdding] = useState(false);
   const [translationSettings, setTranslationSettings] = useState(false);
-  const [tab, setTab] = useState<"overview" | "markdown" | "files" | "install">("overview");
+  const [tab, setTab] = useState<"overview" | "markdown" | "files" | "install" | "translate">("overview");
+  const [translationMode, setTranslationMode] = useState<"summary" | "markdown">("markdown");
   const [view, setView] = useState<"library" | "installed">("library");
   const [installRevision, setInstallRevision] = useState(0);
   const [operations, setOperations] = useState<SkillsOperation[]>([]);
@@ -58,10 +62,12 @@ export function SkillsPanel({ projectName, projectPath = null, api = skillsApi, 
 
   const load = useCallback(async () => {
     const request = ++libraryRequest.current;
+    setLibraryLoading(true);
     try {
       const next = await api.list();
       if (mounted.current && request === libraryRequest.current) { setLibrary(next); setError(""); }
     } catch (failure) { if (mounted.current && request === libraryRequest.current) setError(skillsError(failure)); }
+    finally { if (mounted.current && request === libraryRequest.current) setLibraryLoading(false); }
   }, [api]);
 
   useEffect(() => {
@@ -136,10 +142,17 @@ export function SkillsPanel({ projectName, projectPath = null, api = skillsApi, 
     });
   }
   const validDetail = detail?.summary.id === activeId ? detail : null;
-  return <div className="skills-page" data-testid="skills-panel">
+  return <div className="skills-page" data-testid="skills-panel" aria-busy={libraryLoading}>
+    {libraryLoading && <p role="status" className="skills-notice">{t("loading")}</p>}
     {projectName && <div className="skills-context">{t("skillsProjectContext", { project: projectName })}</div>}
     {!desktop && <p className="skills-notice" role="status">{t("skillsDesktopOnly")}</p>}
     {error && <p className="skills-error" role="alert">{error}<button type="button" onClick={() => { void load(); }}>{t("skillsRetry")}</button></p>}
+    <SkillActions detail={validDetail} sourceName={library.sources.find(item => item.id === validDetail?.summary.sourceId)?.name ?? ""}
+      onSearch={() => { setView("library"); searchInput.current?.focus(); }}
+      onSources={() => { setView("library"); setAdding(true); }}
+      onInstall={() => { setView("library"); setTab("install"); }}
+      onTranslate={() => { setView("library"); setTranslationMode("summary"); setTab("translate"); }}
+      onSettings={() => setTranslationSettings(true)} />
     <nav className="skills-view-tabs" aria-label={t("skills")}><button type="button" aria-pressed={view === "library"} onClick={() => setView("library")}>{t("skillsLibraryView")}</button><button type="button" aria-pressed={view === "installed"} disabled={!desktop} onClick={() => setView("installed")}>{t("skillsInstalledView")}</button></nav>
     {view === "installed" ? <InstalledSkills api={api} projectPath={projectPath} revision={installRevision} /> : <div className="skills-workspace">
       <aside className="skills-sources" aria-label={t("skillsSources")}>
@@ -169,9 +182,10 @@ export function SkillsPanel({ projectName, projectPath = null, api = skillsApi, 
             {detailBusy && <p role="status"><LoaderCircle size={16} className="chat-spin" />{t("loading")}</p>}
             {detailError && <p className="skills-error" role="alert">{detailError}</p>}
             {validDetail ? <><header><small>{validDetail.summary.category}</small><h2>{validDetail.summary.title}</h2><p>{validDetail.summary.description}</p><code>{validDetail.summary.relativePath}</code></header>
-              <nav className="skills-tabs" aria-label={t("skillsDetailTabs")}>{(["overview", "markdown", "files", "install"] as const).map(value => <button type="button" aria-pressed={tab === value} key={value} onClick={() => setTab(value)}>{t(value === "overview" ? "skillsOverview" : value === "markdown" ? "skillsMarkdown" : value === "files" ? "skillsFiles" : "skillsInstallTab")}</button>)}</nav>
+              <nav className="skills-tabs" aria-label={t("skillsDetailTabs")}>{(["overview", "markdown", "files", "install", "translate"] as const).map(value => <button type="button" aria-pressed={tab === value} key={value} onClick={() => { if (value === "translate") setTranslationMode("markdown"); setTab(value); }}>{t(value === "overview" ? "skillsOverview" : value === "markdown" ? "skillsMarkdown" : value === "files" ? "skillsFiles" : value === "install" ? "skillsInstallTab" : "skillsTranslate")}</button>)}</nav>
               {tab === "overview" && <div className="skills-markdown"><Markdown text={skillBody(validDetail.content)} /></div>}
               {tab === "markdown" && <pre>{validDetail.content}</pre>}
+              {tab === "translate" && <TranslationPanel key={`${activeId}:${validDetail.contentDigest}:${translationMode}`} initialMode={translationMode} api={api} detail={validDetail} desktop={desktop} />}
               {tab === "install" && <InstallPanel api={api} skillId={activeId} projectPath={projectPath} revision={installRevision} />}
               {tab === "files" && <div>{validDetail.relatedFiles.map(file => <details key={file.relativePath}><summary>{file.relativePath} <small>{file.sizeBytes} B</small></summary>{file.content === null ? <p>{t("skillsNoPreview")}</p> : <pre>{file.content}</pre>}</details>)}{!validDetail.relatedFiles.length && <p>{t("skillsNoFiles")}</p>}</div>}
             </> : !detailBusy && <div className="skills-empty"><p>{t("skillsSelect")}</p></div>}
