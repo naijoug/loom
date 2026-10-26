@@ -10,8 +10,10 @@ export async function skillsSmoke(client, { evaluate, waitFor, click, clickText,
     await evaluate(client,`localStorage.setItem('loom-app-settings',JSON.stringify({...JSON.parse(localStorage.getItem('loom-app-settings')||'{}'),locale:${JSON.stringify(locale)},themeMode:${JSON.stringify(theme)}}))`);
     await client.send('Page.navigate',{url:root+scenario});
     await waitFor(client,'Boolean(document.querySelector(".chat-project-tree footer button"))','chat navigation');
-    await click('.chat-project-tree footer button');await waitFor(client,'Boolean(document.querySelector(".chat-settings"))','settings');await clickText('.chat-settings nav button',locale==='en'?'Skills':'技能');
-    await waitFor(client,'Boolean(document.querySelector(".skills-page"))','Skills page');
+    // Both clicks are idempotent; repeat them until the lazily loaded view appears so a click that lands
+    // before the new document or chunk is ready does not stall slow CI runners.
+    await waitFor(client,'Boolean(document.querySelector(".chat-settings"))||(document.querySelector(".chat-project-tree footer button")?.click(),false)','settings',300);
+    await waitFor(client,`Boolean(document.querySelector(".skills-page"))||(Array.from(document.querySelectorAll(".chat-settings nav button")).find(e=>e.textContent.trim()===${JSON.stringify(locale==='en'?'Skills':'技能')})?.click(),false)`,'Skills page',300);
     if(scenario==='ready'||scenario==='cancel')await waitFor(client,'Boolean(document.querySelector(".skills-detail header h2"))','skill detail');
   };
   const type=async(selector,value)=>evaluate(client,`(()=>{const input=document.querySelector(${JSON.stringify(selector)});Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,${JSON.stringify(value)});input.dispatchEvent(new Event('input',{bubbles:true}));})()`);

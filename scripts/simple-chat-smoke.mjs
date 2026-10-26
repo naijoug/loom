@@ -113,15 +113,21 @@ async function evaluate(client, expression) {
     returnByValue: true,
   });
   if (result.exceptionDetails) {
-    throw new Error(`Evaluation failed: ${result.exceptionDetails.text}`);
+    throw new Error(`Evaluation failed: ${result.exceptionDetails.exception?.description ?? result.exceptionDetails.text}`);
   }
   return result.result.value;
 }
 
 async function waitFor(client, expression, label, attempts = 80) {
+  // A reload or navigation can briefly leave no document; treat a throwing check as "not yet".
+  let lastError;
   for (let index = 0; index < attempts; index += 1) {
-    if (await evaluate(client, expression)) {
-      return;
+    try {
+      if (await evaluate(client, expression)) {
+        return;
+      }
+    } catch (error) {
+      lastError = error;
     }
     await delay(100);
   }
@@ -129,7 +135,7 @@ async function waitFor(client, expression, label, attempts = 80) {
     href: window.location.href,
     text: document.body?.innerText?.slice(0, 500) ?? '',
   })`);
-  throw new Error(`Timed out waiting for ${label}: ${JSON.stringify(debug)}`);
+  throw new Error(`Timed out waiting for ${label}: ${JSON.stringify(debug)}${lastError ? ` (last error: ${lastError.message})` : ''}`);
 }
 
 
@@ -148,7 +154,10 @@ async function inlineCardsSmoke(client, { click, clickText, screenshot }) {
   await client.send('Page.navigate', { url: `${baseUrl}&cards=1` });
   await waitFor(client, 'document.querySelectorAll(".chat-tree-session").length === 3', 'card preview session');
   const openCardSession = async () => {
-    await evaluate(client, `Array.from(document.querySelectorAll('.chat-tree-session')).find(e => e.textContent.includes('Inline card preview')).click()`);
+    // After a reload the tree renders later than the lang/theme attributes; wait for the row itself.
+    const row = `Array.from(document.querySelectorAll('.chat-tree-session')).find(e => e.textContent.includes('Inline card preview'))`;
+    await waitFor(client, `Boolean(${row})`, 'card preview session row');
+    await evaluate(client, `${row}.click()`);
     await waitFor(client, 'document.querySelectorAll(".chat-transcript code[data-language=\\"openui-lang\\"], .chat-inline-card").length >= 2', 'card session transcript');
   };
   await openCardSession();
