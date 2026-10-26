@@ -134,3 +134,13 @@ Skills 详情新增翻译页：明确点击才发送，显示 provider/语言/�
 Skills 命令面板支持 Cmd/Ctrl+K、查询和键盘选择，只触发本地导航或显式复制；摘要翻译命令打开面板，不发送请求。分享文本含原文、可预览相关文件和未预览资源说明，按最长反引号生成完整围栏；不上传或发布。剪贴板失败显示只读可选文本，供用户复制。
 
 四 provider 的执行 fixture 与原生合成进程/重启已验证；真实账号调用按用户选择保持 blocked。G1 视觉/公开 HTTPS 来源与普通原生验收通过；禁止源码读取的桌面验收因 sandbox-exec 窗口不可观察仍 blocked，不以随包 CLI 隔离成功替代。
+
+## M4-01 只读迁移预览
+
+`skills_plan_migration`（主窗口）与 `loom-skills migration-preview` 共用 `skills/migration.rs`。输入 `dataDirs`（最多 8 个；空数组为旧桌面 app data）、可选 `catalogDir`、`projectPath`、`includeGlobal`。桌面项目必须已登记；用户级清单默认不勾选，CLI 使用 `--scope` 选择是否包含用户级目标。旧 workspace/随包目录须显式提供，不从源码位置或旧清单推导新的读取授权。
+
+输出 `MigrationPreview` schemaVersion=1，`readOnly=true`、`canApply=false`；含规范化的数据根、来源及旧 source ID alias、声明缓存的存在状态、配置 key/model 存在性、JSON v1/TSV 安装记录、路径/模式/链接风险、逐文件 SHA-256 和受控问题列表。Loom v2 记录只提示排除，不据版本号宣称归属正确。所有旧安装均 `legacy-unverified`；不判定副本是否匹配原版本，不重建共享指令使用者。源代码与 CLI 本轮都没有 apply/rollback 命令。
+
+该服务绕开 Repository::open、Coordinator 和 Operation，不创建目录或锁、不 chmod、不保存规划、不联网或执行旧代码。现有库校验抽为纯读取/解析函数，预览使用同一次读取的字节生成指纹和比较结果。元数据每文件 1 MiB，总读取 16 MiB，来源/安装记录总计最多 2000；超限与错误逐项报告、complete=false，不当空库成功。只检查 library.json/config.json、所选目标的两个清单及其声明路径，不扫描整个 HOME、未登记缓存或任意项目。
+
+目录前缀按用户选择归一化（包括 macOS /var 的别名）；引用路径只重写已授权前缀，目录内 symlink 不扩大读取范围。安装自身的 symlink 仅 read_link；范围外目标保持 unchecked，不跟随读取。配置内容不返回/打印，报告只含存在性及文件指纹。预览 ID 是可重复的观察摘要，不是可执行 planId；不是一致性事务，后续接管仍必须重新校验来源/目标/配置内容和权限。

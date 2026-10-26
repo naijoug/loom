@@ -9,6 +9,7 @@ pub mod files;
 pub mod github_api;
 pub mod installers;
 pub mod instructions;
+pub mod migration;
 pub mod operations;
 pub mod package;
 pub mod repository;

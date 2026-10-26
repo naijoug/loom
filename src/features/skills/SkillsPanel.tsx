@@ -8,6 +8,7 @@ import { Markdown } from "../chat/MarkdownView";
 import { mergeOperation, operationActionKey, skillBody, skillsError, visibleSkills } from "./model";
 import { InstallPanel } from "./InstallPanel";
 import { InstalledSkills } from "./InstalledSkills";
+import { MigrationPanel } from "./MigrationPanel";
 import { SkillActions } from "./SkillActions";
 import { TranslationPanel } from "./TranslationPanel";
 import { TranslationSettings } from "./TranslationSettings";
@@ -36,7 +37,7 @@ export function SkillsPanel({ projectName, projectPath = null, api = skillsApi, 
   const [translationSettings, setTranslationSettings] = useState(false);
   const [tab, setTab] = useState<"overview" | "markdown" | "files" | "install" | "translate">("overview");
   const [translationMode, setTranslationMode] = useState<"summary" | "markdown">("markdown");
-  const [view, setView] = useState<"library" | "installed">("library");
+  const [view, setView] = useState<"library" | "installed" | "migration">("library");
   const [installRevision, setInstallRevision] = useState(0);
   const [operations, setOperations] = useState<SkillsOperation[]>([]);
   const [requestedImport, setRequestedImport] = useState<string | null>(null);
@@ -153,8 +154,8 @@ export function SkillsPanel({ projectName, projectPath = null, api = skillsApi, 
       onInstall={() => { setView("library"); setTab("install"); }}
       onTranslate={() => { setView("library"); setTranslationMode("summary"); setTab("translate"); }}
       onSettings={() => setTranslationSettings(true)} />
-    <nav className="skills-view-tabs" aria-label={t("skills")}><button type="button" aria-pressed={view === "library"} onClick={() => setView("library")}>{t("skillsLibraryView")}</button><button type="button" aria-pressed={view === "installed"} disabled={!desktop} onClick={() => setView("installed")}>{t("skillsInstalledView")}</button></nav>
-    {view === "installed" ? <InstalledSkills api={api} projectPath={projectPath} revision={installRevision} /> : <div className="skills-workspace">
+    <nav className="skills-view-tabs" aria-label={t("skills")}><button type="button" aria-pressed={view === "library"} onClick={() => setView("library")}>{t("skillsLibraryView")}</button><button type="button" aria-pressed={view === "installed"} disabled={!desktop} onClick={() => setView("installed")}>{t("skillsInstalledView")}</button><button type="button" aria-pressed={view === "migration"} disabled={!desktop} onClick={() => setView("migration")}>{t("skillsMigration")}</button></nav>
+    {view === "migration" ? <MigrationPanel api={api} desktop={desktop} projectPath={projectPath} /> : view === "installed" ? <InstalledSkills api={api} projectPath={projectPath} revision={installRevision} /> : <div className="skills-workspace">
       <aside className="skills-sources" aria-label={t("skillsSources")}>
         <div className="skills-section-heading"><h2>{t("skillsSources")}</h2><button type="button" aria-label={t("skillsAddSource")} disabled={!desktop || busy} onClick={() => setAdding(!adding)}><FolderPlus size={17} /></button></div>
         <button type="button" aria-pressed={!sourceId} onClick={() => setSourceId("")}>{t("skillsAll")}<span>{library.skills.length}</span></button>

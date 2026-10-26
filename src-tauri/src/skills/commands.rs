@@ -482,3 +482,62 @@ pub async fn skills_translation_result(
     })
     .await
 }
+
+/// Deliberately bypass repository()/target_context(): those initialize directories.
+#[tauri::command]
+pub async fn skills_plan_migration(
+    app: AppHandle,
+    window: WebviewWindow,
+    input: super::migration::MigrationInput,
+) -> Result<super::migration::MigrationPreview> {
+    if window.label() != "main" {
+        return Err(SkillsError::new(
+            ErrorCode::PermissionDenied,
+            "Skills preview requires the main window",
+        ));
+    }
+    let app_data = app
+        .path()
+        .app_data_dir()
+        .map_err(|_| SkillsError::invalid("Application data unavailable"))?;
+    let home = app
+        .path()
+        .home_dir()
+        .map_err(|_| SkillsError::invalid("Home unavailable"))?;
+    let paths = super::runtime_paths::RuntimePaths::from_base(home, app_data.clone(), None)?;
+    let default = app_data
+        .parent()
+        .ok_or_else(|| SkillsError::invalid("Application data parent unavailable"))?
+        .join("com.naijoug.skills-manager");
+    tauri::async_runtime::spawn_blocking(move || {
+        let project = input
+            .project_path
+            .as_deref()
+            .map(crate::projects::canonical_project_path)
+            .transpose()
+            .map_err(SkillsError::invalid)?;
+        if let Some(project) = &project {
+            let config = std::env::var_os("LOOM_PROFILE_DIR")
+                .map(PathBuf::from)
+                .unwrap_or_else(|| app_data.join("loom"));
+            if !config.is_absolute() {
+                return Err(SkillsError::invalid("Profile path must be absolute"));
+            }
+            let path = super::files::resource_path(&config.join("recent-projects.json"))?;
+            let entries: Vec<crate::models::ProjectSummary> = super::files::read_json(&path)?;
+            if !entries
+                .iter()
+                .any(|p| std::path::Path::new(&p.path) == project)
+            {
+                return Err(SkillsError::new(
+                    ErrorCode::PermissionDenied,
+                    "Open the project in Loom before previewing its legacy installations",
+                ));
+            }
+        }
+        let targets = TargetContext::new(&paths.home, project.as_deref())?;
+        super::migration::preview(&default, &paths.library, &targets, &input)
+    })
+    .await
+    .map_err(|_| SkillsError::recovery("Migration preview worker interrupted"))?
+}

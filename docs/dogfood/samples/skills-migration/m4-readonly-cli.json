@@ -1,0 +1,108 @@
+{
+  "kind": "actual-bundled-cli-with-synthetic-legacy-data",
+  "exitCodes": [
+    0,
+    0
+  ],
+  "samePreviewOnRepeat": true,
+  "filesAndModesUnchanged": true,
+  "newLoomDataNotCreated": true,
+  "globalTargetsExcluded": true,
+  "realLegacyDataRead": false,
+  "modelRequests": 0,
+  "preview": {
+    "schemaVersion": 1,
+    "previewId": "preview-4dc50e3528495affbc7078348d9c64778a2c1ad135206b7a2326e3e25759a881",
+    "readOnly": true,
+    "canApply": false,
+    "dataDirectories": [
+      "/fixture/old"
+    ],
+    "catalogDirectory": null,
+    "sources": [
+      {
+        "sourceId": "src-b657e8444a7fc8d78d6e43b2e72e173a",
+        "legacyIds": [
+          "gitlab:fixture/nested/demo",
+          "old-demo"
+        ],
+        "kind": "git",
+        "location": "https://gitlab.com/fixture/nested/demo",
+        "cachePath": "/fixture/old/repos/demo",
+        "cacheState": "directory_unverified",
+        "alreadyRegistered": false
+      }
+    ],
+    "installations": [
+      {
+        "targetId": "codex-project",
+        "manifestPath": "/fixture/project/.codex/skills/.skills-linker-manifest.json",
+        "name": "demo",
+        "mode": "copy",
+        "sourcePath": "/fixture/old/repos/demo",
+        "sourceState": "directory_unverified",
+        "destinationState": "copy_directory_unverified",
+        "linkTarget": null,
+        "ownership": "legacy-unverified",
+        "nextStep": "compare_copy_before_adoption"
+      }
+    ],
+    "configs": [
+      {
+        "path": "/fixture/old/config.json",
+        "provider": "openai",
+        "keyPresent": true,
+        "modelPresent": true
+      }
+    ],
+    "files": [
+      {
+        "path": "/fixture/new/library.json",
+        "state": "missing",
+        "digest": null
+      },
+      {
+        "path": "/fixture/old/library.json",
+        "state": "read",
+        "digest": "d482e3e6b2b659076ebf31d6cd7f0fd3af6e5b5a407b9ceda03bf41293eeeb23"
+      },
+      {
+        "path": "/fixture/old/config.json",
+        "state": "read",
+        "digest": "fa190d2959324818e47e6dacf2d3b83be35d76b109242481fbbd46aa3b2c22d3"
+      },
+      {
+        "path": "/fixture/project/.codex/skills/.skills-linker-manifest.json",
+        "state": "read",
+        "digest": "75f5f7a041cab32aae93e2ab3a65779d401d084087b2b7b79cfd998d19d8c333"
+      },
+      {
+        "path": "/fixture/project/.codex/skills/.skills-linker-manifest.tsv",
+        "state": "missing",
+        "digest": null
+      },
+      {
+        "path": "/fixture/project/.claude/skills/.skills-linker-manifest.json",
+        "state": "missing",
+        "digest": null
+      },
+      {
+        "path": "/fixture/project/.claude/skills/.skills-linker-manifest.tsv",
+        "state": "missing",
+        "digest": null
+      },
+      {
+        "path": "/fixture/project/.agents/skills/.skills-linker-manifest.json",
+        "state": "missing",
+        "digest": null
+      },
+      {
+        "path": "/fixture/project/.agents/skills/.skills-linker-manifest.tsv",
+        "state": "missing",
+        "digest": null
+      }
+    ],
+    "issues": [],
+    "complete": true
+  }
+}

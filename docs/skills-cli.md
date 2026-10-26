@@ -103,3 +103,11 @@ LOOM_SKILLS_ACCEPTANCE_BINARY=/absolute/path/to/loom-skills \
 ```
 
 第二项只写自行创建的临时项目和事务，用实际用户协调域验证另一 dataDir 的真实 CLI 恢复，并清理自身 pending 标记。
+
+## 旧数据只读预览（M4-01）
+
+```bash
+loom-skills migration-preview --legacy-data-dir /path/to/old-data --data-dir /path/to/loom-library --scope project --project-root /path/to/project --json
+```
+
+可重复 `--legacy-data-dir`（最多 8 个）；省略时检查旧桌面默认 app data。`--legacy-catalog-dir` 显式提供旧本地/随包技能目录。`--scope project` 排除用户级安装清单；默认 global 会检查已知用户级目标，`--project-root` 可同时加入一个明确项目。预览不创建 Loom 库或协调目录，不导入来源/配置、不接管安装、不调用模型。退出 0 表示限定范围无扫描问题；有缺失/冲突/不支持的记录时仍输出完整 JSON，但退出 1。所有旧安装均未核实，canApply 始终 false。没有迁移 apply/rollback 命令；`--force` 等写选项被拒绝。

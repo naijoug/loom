@@ -20,7 +20,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-pub const HELP: &str = "Usage: loom-skills tools|list|detail|install|uninstall|status|doctor|pending|recover|tui|ng [options] [skill ...]\n\nOptions:\n  --skills-root DIR      Explicit local source; otherwise use the Loom library\n  --data-dir DIR         Library override (does not change the user lock domain)\n  --category NAME        global|cron|auto|manual\n  --tool NAME            codex|chatgpt|claude|claude-code|amp|custom (default codex)\n                        Repeat or comma-separate tools for a shared update\n  --scope SCOPE          global|project (default global)\n  --project-root DIR     Explicit project grant (default current directory for project scope)\n  --target-dir DIR       Explicit dedicated skills directory (one tool only)\n  --mode MODE            symlink|copy (default symlink)\n  --force               Replace verified managed installs; never delete unmanaged content\n  --with-slash-commands  Create manual Codex/Claude command wrappers\n  --json                Machine-readable output\n  --preview             Return installation/uninstallation plans without applying\n  --auto-install-fzf    Explicitly permit Homebrew fzf installation for tui/ng\n\nInstall without skill names selects all matching source skills. Uninstall without\nnames selects managed installs in the chosen target/source. Unknown ownership and\nuser-modified uninstalls are refused even with --force. recover takes an operation ID.\n\nInteractive entrypoints:\n  loom-skills tui [options]         Select, preview, apply reviewed plans, repeat\n  loom-skills ng [options]          Pick a manual skill (list fallback without fzf)\n  loom-skills ng list|plan          Show manual groups or activation categories\n  loom-skills ng plan review TEXT   Print a suggested prompt; never run an Agent\n";
+pub const HELP: &str = "Usage: loom-skills tools|list|detail|install|uninstall|status|doctor|pending|recover|tui|ng|migration-preview [options] [skill ...]\n\nOptions:\n  --skills-root DIR      Explicit local source; otherwise use the Loom library\n  --legacy-data-dir DIR  Legacy data directory for read-only migration-preview (repeatable)\n  --legacy-catalog-dir DIR  Explicit old local/bundled skill catalog for preview\n  --data-dir DIR         Library override (does not change the user lock domain)\n  --category NAME        global|cron|auto|manual\n  --tool NAME            codex|chatgpt|claude|claude-code|amp|custom (default codex)\n                        Repeat or comma-separate tools for a shared update\n  --scope SCOPE          global|project (default global)\n  --project-root DIR     Explicit project grant (default current directory for project scope)\n  --target-dir DIR       Explicit dedicated skills directory (one tool only)\n  --mode MODE            symlink|copy (default symlink)\n  --force               Replace verified managed installs; never delete unmanaged content\n  --with-slash-commands  Create manual Codex/Claude command wrappers\n  --json                Machine-readable output\n  --preview             Return installation/uninstallation plans without applying\n  --auto-install-fzf    Explicitly permit Homebrew fzf installation for tui/ng\n\nInstall without skill names selects all matching source skills. Uninstall without\nnames selects managed installs in the chosen target/source. Unknown ownership and\nuser-modified uninstalls are refused even with --force. recover takes an operation ID.\n\nInteractive entrypoints:\n  loom-skills tui [options]         Select, preview, apply reviewed plans, repeat\n  loom-skills ng [options]          Pick a manual skill (list fallback without fzf)\n  loom-skills ng list|plan          Show manual groups or activation categories\n  loom-skills ng plan review TEXT   Print a suggested prompt; never run an Agent\n";
 
 pub struct Output {
     pub text: String,
@@ -32,6 +32,8 @@ pub struct Output {
 pub struct Options {
     command: String,
     skills_root: Option<PathBuf>,
+    legacy_data_dirs: Vec<PathBuf>,
+    legacy_catalog: Option<PathBuf>,
     data_dir: Option<PathBuf>,
     category: Option<String>,
     tools: Vec<String>,
@@ -60,6 +62,8 @@ impl Options {
         let mut out = Self {
             command: command.into(),
             skills_root: None,
+            legacy_data_dirs: vec![],
+            legacy_catalog: None,
             data_dir: None,
             category: None,
             tools: vec!["codex".into()],
@@ -87,6 +91,8 @@ impl Options {
                 Ok(value)
             };
             match arg.as_str() {
+                "--legacy-data-dir" => out.legacy_data_dirs.push(absolute(value()?)?),
+                "--legacy-catalog-dir" => out.legacy_catalog = Some(absolute(value()?)?),
                 "--skills-root" => out.skills_root = Some(absolute(value()?)?),
                 "--data-dir" => out.data_dir = Some(absolute(value()?)?),
                 "--category" => out.category = Some(value()?.into()),
@@ -146,6 +152,7 @@ impl Options {
             "doctor",
             "pending",
             "recover",
+            "migration-preview",
             "tui",
             "ng",
         ]
@@ -177,6 +184,23 @@ impl Options {
         }
         if out.tools.iter().any(|t| t == "custom") && out.target.is_none() {
             return Err(SkillsError::invalid("Custom tool requires --target-dir"));
+        }
+        if out.command == "migration-preview" {
+            if out.force
+                || out.slash
+                || out.auto_install_fzf
+                || out.skills_root.is_some()
+                || !out.selected.is_empty()
+                || out.category.is_some()
+            {
+                return Err(SkillsError::invalid(
+                    "Migration preview accepts no write options or skill selections",
+                ));
+            }
+        } else if !out.legacy_data_dirs.is_empty() || out.legacy_catalog.is_some() {
+            return Err(SkillsError::invalid(
+                "Legacy paths require migration-preview",
+            ));
         }
         Ok(out)
     }
@@ -390,6 +414,9 @@ pub fn run(args: &[String]) -> Result<Output> {
         });
     }
     let paths = RuntimePaths::system(options.data_dir.as_deref())?;
+    if options.command == "migration-preview" {
+        return migration_preview(&options, &paths);
+    }
     let lease = paths.repository()?.coordinator.enter()?;
     let mut output = run_with_paths(&options, &paths)?;
     output._lifecycle = Some(lease);
@@ -398,6 +425,9 @@ pub fn run(args: &[String]) -> Result<Output> {
 /// Explicit paths are injected by tests; the production entry never accepts a
 /// coordination-root flag or mutates HOME to obtain isolated locks.
 pub fn run_with_paths(options: &Options, paths: &RuntimePaths) -> Result<Output> {
+    if options.command == "migration-preview" {
+        return migration_preview(options, paths);
+    }
     let repo = paths.repository()?;
     let _lease = repo.coordinator.enter()?;
     if matches!(options.command.as_str(), "tui" | "ng") {
@@ -864,4 +894,39 @@ fn finish_receipt(
         Ok(_) => Ok(()),
     };
     operation.finish(outcome)
+}
+
+fn migration_preview(options: &Options, paths: &RuntimePaths) -> Result<Output> {
+    let project = options.project.clone().or_else(|| {
+        if options.scope == "project" {
+            std::env::current_dir().ok()
+        } else {
+            None
+        }
+    });
+    let mut targets = TargetContext::new(&paths.home, project.as_deref())?;
+    if let Some(target) = &options.target {
+        targets = targets.with_custom(&options.tools[0], &options.scope, target)?;
+    }
+    let default = paths
+        .app_data
+        .parent()
+        .ok_or_else(|| SkillsError::invalid("Application data parent unavailable"))?
+        .join("com.naijoug.skills-manager");
+    let input = super::migration::MigrationInput {
+        include_global: options.scope == "global",
+        data_dirs: options.legacy_data_dirs.clone(),
+        catalog_dir: options.legacy_catalog.clone(),
+        project_path: project.map(|p| p.to_string_lossy().into_owned()),
+    };
+    let preview = super::migration::preview(&default, &paths.library, &targets, &input)?;
+    Ok(Output {
+        text: format!(
+            "{}\n",
+            serde_json::to_string_pretty(&preview)
+                .map_err(|_| SkillsError::invalid("Cannot encode migration preview"))?
+        ),
+        exit_code: if preview.complete { 0 } else { 1 },
+        _lifecycle: None,
+    })
 }

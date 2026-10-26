@@ -1,9 +1,14 @@
 # 计划文档索引
 
+## 2026-10-25
+
+- 22:59-skills-migration-preview.md
+  > （M4-01 本地切片完成）`46af4ba` 已保存前序 Skills 改动并同步 M5；新增桌面/CLI 只读发现与预览、旧 source alias/JSON/TSV/链接风险及配置存在性。完整工作区 check 前端 128/Rust 275、app bundle/视觉与原生合成样本通过；无接管/凭据导入，账号实测与 G1 桌面隔离继续 blocked，M4-02–05 待后续。
+
 ## 2026-10-21
 
 - 06:12-skills-module-migration.md
-  > （v7；历史容量修复与 M3-02/03 本地切片通过；G1/G2 未整体通过）翻译/操作历史改为限制返回条数、不限制持久记录；原生 1604 条操作/3204 个翻译文件重启与再次翻译通过。补齐四 provider 执行、HTTP 传输失败/取消、命令面板/复制分享文本，Skills 视觉矩阵与真实 GitHub/GitLab HTTPS 通过。M3-04 按用户决定因账号未核实 blocked；G1 仅桌面禁止源码读取验收 blocked（sandbox-exec 下无可观察窗口，CLI 隔离通过）。最终完整 check 前端 125/Rust 266（25 ignored）、release app bundle 与 smoke:visual 通过；2026-10-25 整理 Skills 专属提交并同步 M5 状态。M4/M6/M7 待后续，旧源码与数据保留。
+  > （v7；历史容量修复与 M3-02/03 本地切片通过；G1/G2 未整体通过）翻译/操作历史改为限制返回条数、不限制持久记录；原生 1604 条操作/3204 个翻译文件重启与再次翻译通过。补齐四 provider 执行、HTTP 传输失败/取消、命令面板/复制分享文本，Skills 视觉矩阵与真实 GitHub/GitLab HTTPS 通过。M3-04 按用户决定因账号未核实 blocked；G1 仅桌面禁止源码读取验收 blocked（sandbox-exec 下无可观察窗口，CLI 隔离通过）。最终完整 check 前端 125/Rust 266（25 ignored）、release app bundle 与 smoke:visual 通过；2026-10-25 已整理为 `46af4ba` 并同步 M5 状态。M4-01 转 10-25 计划；M4 接管/M6/M7 待后续，旧源码与数据保留。
 
 ## 2026-10-20
 

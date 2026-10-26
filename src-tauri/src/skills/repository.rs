@@ -73,68 +73,7 @@ impl Repository {
         self.root.join("library.json")
     }
     pub fn load(&self) -> Result<SourceLibrary> {
-        let path = self.library_path();
-        files::regular_file(&path)?;
-        if !path.try_exists()? {
-            return Ok(SourceLibrary::default());
-        }
-        let library: SourceLibrary = files::read_json(&path)?;
-        if library.schema_version != 1 {
-            return Err(SkillsError::recovery("Unsupported Skills library schema"));
-        }
-        let mut seen = std::collections::BTreeSet::new();
-        for source in &library.sources {
-            files::validate_id(&source.id)?;
-            if !seen.insert(&source.id) {
-                return Err(SkillsError::recovery(
-                    "Duplicate source identity in library",
-                ));
-            }
-            match source.kind {
-                SourceKind::Local
-                    if source
-                        .local_path
-                        .as_ref()
-                        .is_some_and(|p| p.is_absolute() && p.parent().is_some())
-                        && source.git.is_none()
-                        && source.revision.is_none()
-                        && source.default_branch.is_none() => {}
-                SourceKind::Git | SourceKind::GithubApi if source.local_path.is_none() => {
-                    let git = source
-                        .git
-                        .as_ref()
-                        .ok_or_else(|| SkillsError::recovery("Git source metadata missing"))?;
-                    let normalized = super::sources::normalize_git_url(&git.clone_url)?;
-                    let expected_id = if source.kind == SourceKind::GithubApi {
-                        super::github_api::source_id(git)?
-                    } else {
-                        git.source_id.clone()
-                    };
-                    if normalized != *git || source.id != expected_id {
-                        return Err(SkillsError::recovery("Git source identity mismatch"));
-                    }
-                    if source.kind == SourceKind::GithubApi {
-                        super::github_api::validate_branch(
-                            source.default_branch.as_deref().ok_or_else(|| {
-                                SkillsError::recovery("GitHub API default branch missing")
-                            })?,
-                        )?;
-                    } else if source.default_branch.is_some() {
-                        return Err(SkillsError::recovery(
-                            "Unexpected API metadata on a Git source",
-                        ));
-                    }
-                    files::validate_id(
-                        source
-                            .revision
-                            .as_deref()
-                            .ok_or_else(|| SkillsError::recovery("Git revision missing"))?,
-                    )?;
-                }
-                _ => return Err(SkillsError::recovery("Invalid source metadata")),
-            }
-        }
-        Ok(library)
+        read_library(&self.root)
     }
 
     pub fn list(&self) -> Result<LibraryView> {
@@ -349,4 +288,75 @@ impl Repository {
         fs::create_dir(&path)?;
         Ok(path)
     }
+}
+
+/// Read and validate an existing library without creating directories or locks.
+pub fn read_library(data_dir: &Path) -> Result<SourceLibrary> {
+    let path = data_dir.join("library.json");
+    files::regular_file(&path)?;
+    if !path.try_exists()? {
+        return Ok(SourceLibrary::default());
+    }
+    parse_library(&files::read_metadata_bytes(&path)?)
+}
+
+pub fn parse_library(bytes: &[u8]) -> Result<SourceLibrary> {
+    let library: SourceLibrary = serde_json::from_slice(bytes)
+        .map_err(|_| SkillsError::recovery("Malformed Skills library"))?;
+    if library.schema_version != 1 {
+        return Err(SkillsError::recovery("Unsupported Skills library schema"));
+    }
+    let mut seen = std::collections::BTreeSet::new();
+    for source in &library.sources {
+        files::validate_id(&source.id)?;
+        if !seen.insert(&source.id) {
+            return Err(SkillsError::recovery(
+                "Duplicate source identity in library",
+            ));
+        }
+        match source.kind {
+            SourceKind::Local
+                if source
+                    .local_path
+                    .as_ref()
+                    .is_some_and(|p| p.is_absolute() && p.parent().is_some())
+                    && source.git.is_none()
+                    && source.revision.is_none()
+                    && source.default_branch.is_none() => {}
+            SourceKind::Git | SourceKind::GithubApi if source.local_path.is_none() => {
+                let git = source
+                    .git
+                    .as_ref()
+                    .ok_or_else(|| SkillsError::recovery("Git source metadata missing"))?;
+                let normalized = super::sources::normalize_git_url(&git.clone_url)?;
+                let expected_id = if source.kind == SourceKind::GithubApi {
+                    super::github_api::source_id(git)?
+                } else {
+                    git.source_id.clone()
+                };
+                if normalized != *git || source.id != expected_id {
+                    return Err(SkillsError::recovery("Git source identity mismatch"));
+                }
+                if source.kind == SourceKind::GithubApi {
+                    super::github_api::validate_branch(
+                        source.default_branch.as_deref().ok_or_else(|| {
+                            SkillsError::recovery("GitHub API default branch missing")
+                        })?,
+                    )?;
+                } else if source.default_branch.is_some() {
+                    return Err(SkillsError::recovery(
+                        "Unexpected API metadata on a Git source",
+                    ));
+                }
+                files::validate_id(
+                    source
+                        .revision
+                        .as_deref()
+                        .ok_or_else(|| SkillsError::recovery("Git revision missing"))?,
+                )?;
+            }
+            _ => return Err(SkillsError::recovery("Invalid source metadata")),
+        }
+    }
+    Ok(library)
 }

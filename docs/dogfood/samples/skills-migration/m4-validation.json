@@ -1,0 +1,33 @@
+{
+  "baseline": "46af4ba",
+  "scope": "M4-01 read-only preview only",
+  "workspaceCheck": {
+    "frontend": 128,
+    "rust": 275,
+    "ignored": 25,
+    "exitCode": 0
+  },
+  "isolatedCommitTree": {
+    "frontend": 122,
+    "rustInitialPassed": 272,
+    "rustInitialFailed": 1,
+    "ignored": 25,
+    "retry": {
+      "test": "chat shutdown process cleanup",
+      "passed": 1,
+      "initialFailure": "OS EPERM"
+    }
+  },
+  "nativeBundleExit": 0,
+  "visualExit": 0,
+  "rustMigrationTests": 9,
+  "frontendMigrationTests": 3,
+  "actualCliReadOnly": true,
+  "nativeIpcReadOnly": true,
+  "realLegacyDataAdopted": false,
+  "realProviderCalls": 0,
+  "M3RealProviders": "blocked",
+  "G1DesktopIsolation": "blocked",
+  "M4ApplyRollback": "not implemented",
+  "previewStopped": true
+}

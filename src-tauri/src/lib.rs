@@ -107,6 +107,7 @@ pub fn run() {
             skills::commands::skills_recover_installation,
             skills::commands::skills_list_translation_providers,
             skills::commands::skills_save_translation_config,
+            skills::commands::skills_plan_migration,
             skills::commands::skills_translate,
             skills::commands::skills_translation_history,
             skills::commands::skills_translation_result,

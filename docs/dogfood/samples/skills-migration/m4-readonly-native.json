@@ -1,0 +1,15 @@
+{
+  "kind": "native-ipc-synthetic-legacy-preview",
+  "explicitClickRequired": true,
+  "globalManifestCheckboxDefault": false,
+  "sourceAliasesVisible": true,
+  "cacheDirectoryRecognizedThroughVarAlias": true,
+  "keyPresenceOnly": true,
+  "secretValueVisible": false,
+  "applyControlPresent": false,
+  "legacyFilesAndModesUnchanged": true,
+  "sourcesOrCredentialsImported": false,
+  "accountCalls": 0,
+  "realLegacyDataAccessed": false,
+  "screenshot": "designs/exports/skills/migration-preview-native.png"
+}

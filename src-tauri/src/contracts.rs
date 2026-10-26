@@ -55,6 +55,7 @@ const COMMANDS: &[&str] = &[
     "skills_recover_installation",
     "skills_list_translation_providers",
     "skills_save_translation_config",
+    "skills_plan_migration",
     "skills_translate",
     "skills_translation_history",
     "skills_translation_result",
@@ -128,6 +129,10 @@ fn persisted_model_samples_round_trip_through_rust_types() {
     assert_model_sample::<crate::chat::ChatExportResult>(samples, "chatExportResult");
     assert_model_sample::<crate::chat::ChatMessagePart>(samples, "chatToolPart");
     assert_model_sample::<crate::agent_diagnostics::AgentDiagnostic>(samples, "agentDiagnostic");
+    assert_model_sample::<crate::skills::migration::MigrationPreview>(
+        samples,
+        "skillsMigrationPreview",
+    );
     assert_model_sample::<crate::skills::translation::TranslationResult>(
         samples,
         "skillsTranslationResult",

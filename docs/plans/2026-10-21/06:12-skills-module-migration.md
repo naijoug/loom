@@ -1,6 +1,6 @@
 # Skills Manager 迁入 Loom 实施计划
 
-- 状态：实施中；M0 基础、M1a 来源切片、M1b API 来源与 SSH 配置保护、M2a 安装、M2b 指令及源 8 项测试等价对照、M2c CLI/TUI/ng、M5 内容独立出口已分项通过。M3-02/03 本地工程与原生合成验收通过，M3-04 按用户决定 blocked；G1 视觉矩阵与真实 GitHub/GitLab HTTPS 已补齐，仅桌面禁止源码读取验收仍 blocked。M4/M6/M7 未完成，G1/G2 均未整体验收。
+- 状态：实施中；已完成 Skills 切片与 M5 状态整理提交为 `46af4ba`；M4-01 只读发现/预览本轮已实现验收，M4-02–05 未开始；M0 基础、M1a 来源切片、M1b API 来源与 SSH 配置保护、M2a 安装、M2b 指令及源 8 项测试等价对照、M2c CLI/TUI/ng、M5 内容独立出口已分项通过。M3-02/03 本地工程与原生合成验收通过，M3-04 按用户决定 blocked；G1 视觉矩阵与真实 GitHub/GitLab HTTPS 已补齐，仅桌面禁止源码读取验收仍 blocked。M4-02–05/M6/M7 未完成，G1/G2 均未整体验收。
 - 编写时间：2026-10-21 06:12，America/Los_Angeles。
 - v2 修订时间：2026-10-21 07:19，America/Los_Angeles；依据本对话的实施就绪审查细化。
 - v3 修订时间：2026-10-21 07:29，America/Los_Angeles；补充共享注入块使用者归属、跨客户端未完成事务发现和应用更新准入。
@@ -619,3 +619,9 @@ G1 的范围声明不是功能删减：CLI/TUI、翻译和迁移仍在本计划�
 ### 9.4 已完成切片整理（2026-10-25）
 
 按用户要求整理 Skills 专属提交，保留在途 Chat GFM、消息分隔、图标与原暂存删除。M5 四项复选框依据 2026-10-22 内容独立与哈希证据同步，不重复声称本日运行了内容检查。M3-04 账号实测继续 blocked；G1 桌面源码隔离仍 blocked。M4 本轮后续仅做只读发现与预览，不接管真实旧数据。
+
+### 9.5 M4-01 只读发现与预览（2026-10-25）
+
+用户授权仅推进只读预览，不接管真实旧数据。当前通过主窗口 IPC 与无窗口 CLI 返回观察报告，所有安装标 legacy-unverified、canApply=false，无 apply/rollback 入口。新增独立计划见 [M4-01 执行计划](../2026-10-25/22:59-skills-migration-preview.md)。配置只显示 key/model 存在性；已声明缓存、旧 source ID alias 与 JSON/TSV 记录可见，未知归属/外部路径留待后续核验。M4 全阶段复选框不勾选；M3-04/G1 阻塞不变。
+
+M4-01 本轮验证通过：工作区完整 check 前端 128/Rust 275，25 ignored；release app bundle、合成视觉、真实随包 CLI 与原生只读样本验收通过。用户级清单默认不勾选；不扫描任意 HOME、不跟随范围外引用，不创建迁移日志或库。详见 [M4-01 记录](../../dogfood/2026-10-25-skills-readonly-preview.md)。

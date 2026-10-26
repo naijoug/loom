@@ -102,3 +102,13 @@
 .skills-page .chat-markdown table { min-width: 0; width: 100%; }
 .skills-page .chat-markdown h1 { margin: 20px 0 10px; font-size: 20px; font-weight: 600; color: var(--chat-text); }
 .skills-page .chat-markdown > h1:first-child { margin-top: 0; }
+
+.skills-migration { overflow: auto; min-height: 0; padding: 20px; flex: 1; }
+.skills-migration > label { display: flex; flex-direction: column; gap: 6px; margin: 14px 0; }
+.skills-migration textarea { width: 100%; box-sizing: border-box; color: inherit; background: var(--chat-input); border: 1px solid var(--chat-border); border-radius: 6px; padding: 8px; font: inherit; }
+.skills-migration code { display: block; overflow-wrap: anywhere; margin: 6px 0; font-size: 11px; }
+.skills-migration p { line-height: 1.6; font-size: 12px; }
+.skills-migration-report h3 { margin-top: 22px; }
+.skills-migration-report article { padding: 10px 0; border-bottom: 1px solid var(--chat-border); overflow-wrap: anywhere; }
+.skills-view-tabs { flex-wrap: wrap; }
+.skills-migration > .skills-migration-global { flex-direction: row; align-items: center; }
