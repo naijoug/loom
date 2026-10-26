@@ -47,7 +47,7 @@ test('an in-flight apply keeps its reviewed project and does not overwrite a new
 });
 
 test('legacy and blocked targets cannot be selected and a blocked plan cannot be applied',async t=>{
- const backend=api({installStatus:async()=>[{...status,state:'legacy',message:'Migration required'}, {...status,target:{...status.target,id:'amp-global',blockedReason:'Path escapes target'},state:'unavailable'}]});
+ const backend=api({installStatus:async()=>[{...status,state:'legacy',message:'Legacy installation is read-only'}, {...status,target:{...status.target,id:'amp-global',blockedReason:'Path escapes target'},state:'unavailable'}]});
  await mount(t,InstallPanel,{api:backend,skillId:'skill-a',projectPath:null});
  assert.ok([...document.querySelectorAll('.skills-install-targets input[type="checkbox"]')].every(node=>node.disabled));assert.equal(button('Preview install / update').disabled,true);
 });

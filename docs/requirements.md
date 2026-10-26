@@ -4,7 +4,7 @@
 
 用户已授权按 [简化 CLI Chat 重构计划](plans/2026-10-20/00:44-simple-cli-chat-refactor.md) 和 [实施计划](plans/2026-10-20/01:01-simple-chat-implementation.md) 重构，保留 Tauri + React + Rust，收敛为按项目组织的本机 CLI Chat。
 
-- 当前应用顶层入口为 Chat 和 Settings；2026-10-21 用户授权按 [Skills 迁移计划](plans/2026-10-21/06:12-skills-module-migration.md) 迁入 Skills，并在实施中明确它位于设置侧边栏。模块实施中，桌面安装闭环已有分项证据，G1/G2 综合验收尚未通过。Task/Board/Planning 不再属于产品。旧 Task 数据原样保留。
+- 当前应用顶层入口为 Chat 和 Settings；2026-10-21 用户授权按 [Skills 迁移计划](plans/2026-10-21/06:12-skills-module-migration.md) 迁入 Skills，并在实施中明确它位于设置侧边栏。管理功能已分项迁入；2026-10-25 用户明确只保留功能迁移并退役源管理代码，取消旧数据迁移。真实验证限制单独记录。Task/Board/Planning 不再属于产品。旧 Task 数据原样保留。
 - 输入框只提供一个权限选择器：Read-only / Ask / Auto，对应 `explore` / `ask` / `auto`（2026-10-21 由 Research / Code / Auto-run 改名，工作类型与权限不再混在一层）。权限由 CLI 执行；Ask 的发送确认是回合授权，非逐工具审批。
 - 本机探测 Claude Code、Codex、OpenCode、Grok；支持自定义 CLI。原生续聊、工具事件等按适配器能力与真实证据展示。
 - 新会话只选择权限；Agent 选择器固定在输入框左下，新旧会话一致。流式回复、停止、恢复、工具卡片、Markdown、导出和执行日志保留。
@@ -12,10 +12,11 @@
 - 默认英文，Settings → Appearance 支持简体中文和主题，立即生效并持久化。
 - Craft 全功能重建暂停，Workbench / SDK worker 源码冻结并移出默认构建与主门禁；除独立 Skills 迁移外，不扩展 Sources/MCP、Browser、Pages、DAG、远程和分享。
 
-### Skills 新增范围（2026-10-21，实施中）
+### Skills 范围（2026-10-25，按用户要求调整）
 
 - Settings → Skills 承载技能发现、来源、浏览/搜索、安装到各工具、更新/卸载、托管指令、CLI/TUI 兼容及翻译；不新增 Chat 同级入口。技能内容与质量工具继续留在独立 skills 仓库。
-- G1 交付本地/Git 来源与桌面安装闭环，G2 完成旧数据、CLI/TUI、翻译及完整替代验收后才允许退役源应用。门槛通过与否以实施证据为准。
+- 只迁入 Skills Manager 的管理功能；旧 Manager 数据发现、预览、导入、接管、备份和回滚不再属于需求。原 skills 仓库的管理应用、专属依赖和入口按用户明确要求退役，技能内容/归档与质量工具保留。
+- G1/G2 原历史门槛不再阻塞本次源码退役；真实 provider 账号实测和桌面源码隔离的未通过项继续如实标 blocked，不把源码删除当成验收通过。
 - Skills 切页保持 Chat 会话、草稿和活动回合；来源目录与当前项目安装目标独立。文件/网络/进程及权限校验归 Rust，不在前端拼接 CLI。
 - 远程安装固定 revision，刷新库不隐式更新安装；共享注入块按使用者归属管理；跨客户端未完成事务先恢复；应用更新不得打断文件事务。
 - 不内置个人技能集合，不自动注入所有技能到 Chat，不启用冻结 Workbench，不删除技能内容、用户安装、缓存或旧 Task 数据。

@@ -1,4 +1,4 @@
-import type { SkillSource, SkillsHttpRequest, TranslationProviders, TranslationResult, TranslationSummary, MigrationPreview } from "./skills";
+import type { SkillSource, SkillsHttpRequest, TranslationProviders, TranslationResult, TranslationSummary } from "./skills";
 import type { InstructionCheck, ResourcePreview } from "./skills";
 import type { SkillsLibrary, SkillsOperation, InstallTarget, Installation, InstallPlan, InstallReceipt } from "./skills";
 import type { AgentConfig, AgentDiagnostic, AppSettings, ChatSession, ChatEvent, ChatSendInput, ChatSendReceipt, ChatResumeHandle, ChatTurn, ChatLogPage, ChatExportInput, ChatExportResult, ChatMessagePart } from "../domain";
@@ -53,7 +53,6 @@ export const TAURI_COMMANDS = {
   skillsRecoverInstallation: "skills_recover_installation",
   skillsListTranslationProviders: "skills_list_translation_providers",
   skillsSaveTranslationConfig: "skills_save_translation_config",
-  skillsPlanMigration: "skills_plan_migration",
   skillsTranslate: "skills_translate",
   skillsTranslationHistory: "skills_translation_history",
   skillsTranslationResult: "skills_translation_result",
@@ -501,28 +500,6 @@ skillsGithubApiSource: {
   "updatedAtMs": 1,
   "defaultBranch": "trunk"
 } satisfies SkillSource,
-skillsMigrationPreview: {
-  "schemaVersion": 1,
-  "previewId": "preview-fixture",
-  "readOnly": true,
-  "canApply": false,
-  "dataDirectories": [
-    "/fixture/legacy"
-  ],
-  "catalogDirectory": null,
-  "sources": [],
-  "installations": [],
-  "configs": [],
-  "files": [
-    {
-      "path": "/fixture/legacy/library.json",
-      "state": "missing",
-      "digest": null
-    }
-  ],
-  "issues": [],
-  "complete": true
-} satisfies MigrationPreview,
 skillsTranslationResult: {
   "context": {
     "schemaVersion": 1,

@@ -477,7 +477,7 @@ async fn root_skill_and_nested_skill_keep_old_api_discovery_semantics() {
 }
 
 #[tokio::test]
-async fn api_and_git_modes_keep_distinct_sources_and_legacy_metadata() {
+async fn api_and_git_modes_keep_distinct_sources() {
     let (fixture, repo, source) = setup();
     let files = [(
         "SKILL.md",
@@ -514,28 +514,6 @@ async fn api_and_git_modes_keep_distinct_sources_and_legacy_metadata() {
     .unwrap();
     assert_eq!(repo.load().unwrap().sources.len(), 2);
     assert_eq!(repo.list().unwrap().skills.len(), 2);
-    let legacy: Value = serde_json::from_str(include_str!(
-        "../../tests/fixtures/skills/legacy-library.json"
-    ))
-    .unwrap();
-    let api = crate::skills::sources::legacy_remote_descriptor(&legacy["repositories"][0]).unwrap();
-    assert_eq!(api.kind, SourceKind::GithubApi);
-    assert_eq!(api.legacy_mode.as_deref(), Some("github-api"));
-    assert_eq!(api.default_branch.as_deref(), Some("trunk"));
-    assert_eq!(api.cache_slug.as_deref(), Some("fixture--skills"));
-    assert!(api.legacy_ids.contains(&"github:fixture/skills".into()));
-    assert_eq!(api.source_id, source_id(&source).unwrap());
-    let cache =
-        crate::skills::sources::legacy_remote_descriptor(&legacy["repositories"][1]).unwrap();
-    assert_eq!(cache.kind, SourceKind::Git);
-    assert_eq!(cache.legacy_mode.as_deref(), Some("server-cache"));
-    assert_eq!(cache.git.namespace, "fixture/nested/skills");
-    assert!(cache.git.clone_url.starts_with("git@gitlab.com:"));
-    assert!(cache.cache_path.is_some());
-    assert!(crate::skills::sources::legacy_remote_descriptor(
-        &json!({"url":"https://github.com/fixture/skills","source":"unknown"})
-    )
-    .is_err());
 }
 
 #[tokio::test]
@@ -723,22 +701,4 @@ fn secondary_limit_detection_does_not_return_untrusted_server_text() {
         br#"{"message":"Resource not accessible by integration"}"#
     ));
     assert!(!secondary_rate_limit(b"not json"));
-}
-
-#[test]
-fn malformed_legacy_fields_are_not_silently_treated_as_git_defaults() {
-    for extra in [
-        json!({"source":123}),
-        json!({"defaultBranch":[]}),
-        json!({"path":false}),
-        json!({"slug":"../outside"}),
-        json!({"defaultBranch":"main","default_branch":"trunk"}),
-    ] {
-        let mut value = json!({"url":"https://github.com/fixture/skills"});
-        value
-            .as_object_mut()
-            .unwrap()
-            .extend(extra.as_object().unwrap().clone());
-        assert!(crate::skills::sources::legacy_remote_descriptor(&value).is_err());
-    }
 }

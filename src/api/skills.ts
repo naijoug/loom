@@ -57,18 +57,7 @@ export interface TranslationInput { skillId: string; expectedContentDigest: stri
 export interface TranslationContext { schemaVersion: number; operationId: string; skillId: string; sourceId: string; sourceDigest: string; inputDigest: string; providerId: TranslationProviderId; model: string | null; targetLanguage: string; sourceMode: TranslationSourceMode; createdAtMs: number; }
 export interface TranslationSummary { context: TranslationContext; operation: SkillsOperation; }
 export interface TranslationResult { context: TranslationContext; markdown: string; }
-export interface MigrationInput { dataDirs: string[]; catalogDir: string | null; projectPath: string | null; includeGlobal: boolean; }
-export interface MigrationPreview {
-  schemaVersion: number; previewId: string; readOnly: boolean; canApply: boolean;
-  dataDirectories: string[]; catalogDirectory: string | null; complete: boolean;
-  sources: { sourceId: string; legacyIds: string[]; kind: SkillSource["kind"]; location: string; cachePath: string | null; cacheState: string; alreadyRegistered: boolean }[];
-  installations: { targetId: string; manifestPath: string; name: string; mode: string; sourcePath: string; sourceState: string; destinationState: string; linkTarget: string | null; ownership: string; nextStep: string }[];
-  configs: { path: string; provider: string; keyPresent: boolean; modelPresent: boolean }[];
-  files: { path: string; state: string; digest: string | null }[];
-  issues: { code: string; path: string; message: string }[];
-}
 export interface SkillsApi {
-  planMigration(input: MigrationInput): Promise<MigrationPreview>;
   translate(input: TranslationInput): Promise<TranslationSummary>;
   translationHistory(skillId: string): Promise<TranslationSummary[]>;
   translationResult(operationId: string): Promise<TranslationResult>;
@@ -93,7 +82,6 @@ export interface SkillsApi {
   recover(operationId: string, projectPath: string | null): Promise<string>;
 }
 export const skillsApi: SkillsApi = {
-  planMigration: input => invokeCommand(TAURI_COMMANDS.skillsPlanMigration, { input }),
   translate: input => invokeCommand(TAURI_COMMANDS.skillsTranslate, { input }),
   translationHistory: skillId => invokeCommand(TAURI_COMMANDS.skillsTranslationHistory, { skillId }),
   translationResult: operationId => invokeCommand(TAURI_COMMANDS.skillsTranslationResult, { operationId }),

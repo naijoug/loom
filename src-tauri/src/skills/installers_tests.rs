@@ -279,29 +279,39 @@ fn modified_copy_is_protected_until_explicit_replacement_and_backup_is_retained(
 
 #[test]
 fn legacy_manifests_are_not_implicitly_adopted() {
-    let s = Setup::new();
-    let dir = s
-        .destination("codex", "project")
-        .parent()
-        .unwrap()
-        .to_path_buf();
-    fs::create_dir_all(&dir).unwrap();
-    let path = dir.join(".skills-linker-manifest.json");
-    let original = include_str!("../../tests/fixtures/skills/legacy-install-manifest.json");
-    fs::write(&path, original).unwrap();
-    let plan = installers::plan_install(
-        &s.repo,
-        &s.context,
-        &s.request(
-            InstallMode::Copy,
-            ConflictPolicy::Overwrite,
-            &["codex-project"],
+    for (filename, original) in [
+        (
+            ".skills-linker-manifest.json",
+            include_str!("../../tests/fixtures/skills/legacy-install-manifest.json"),
         ),
-    )
-    .unwrap();
-    assert_eq!(plan.items[0].decision, "blocked");
-    assert_eq!(s.apply(&plan.plan_id).items[0].status, "conflict");
-    assert_eq!(fs::read_to_string(path).unwrap(), original);
+        (
+            ".skills-linker-manifest.tsv",
+            include_str!("../../tests/fixtures/skills/legacy-install-manifest.tsv"),
+        ),
+    ] {
+        let s = Setup::new();
+        let dir = s
+            .destination("codex", "project")
+            .parent()
+            .unwrap()
+            .to_path_buf();
+        fs::create_dir_all(&dir).unwrap();
+        let path = dir.join(filename);
+        fs::write(&path, original).unwrap();
+        let plan = installers::plan_install(
+            &s.repo,
+            &s.context,
+            &s.request(
+                InstallMode::Copy,
+                ConflictPolicy::Overwrite,
+                &["codex-project"],
+            ),
+        )
+        .unwrap();
+        assert_eq!(plan.items[0].decision, "blocked");
+        assert_eq!(s.apply(&plan.plan_id).items[0].status, "conflict");
+        assert_eq!(fs::read_to_string(path).unwrap(), original);
+    }
 }
 
 #[cfg(unix)]

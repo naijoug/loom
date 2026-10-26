@@ -1,6 +1,6 @@
 # Skills 命令行
 
-状态：无窗口 CLI、TUI、ng 已接入并完成 M2c 当前范围验收；GitHub API 来源已接入，完整迁移仍等待翻译、旧数据接管与 G2。当前 CLI 与 Settings → Skills 共用 Rust 来源、安装、共享指令、诊断和恢复服务，不启动 Tauri 窗口。
+状态：无窗口 CLI、TUI、ng 已接入并完成 M2c 当前范围验收；GitHub API 来源已接入，管理功能由 Loom 维护，源 Manager 按用户更新范围退役；旧数据迁移不再提供，真实 provider 验收继续 blocked。当前 CLI 与 Settings → Skills 共用 Rust 来源、安装、共享指令、诊断和恢复服务，不启动 Tauri 窗口。
 
 ## 入口
 
@@ -58,7 +58,7 @@ tools/skills-cli/skills-linker pending --scope project --project-root /path/to/p
 tools/skills-cli/skills-linker recover --scope project --project-root /path/to/project operation-id
 ```
 
-无技能名的 uninstall 选择所选目标内的受管安装；提供 `--skills-root` 时进一步限定来源，提供 `--category` 时按安装包元数据/路径筛选。旧 v1/TSV 与未知归属继续只读保护，等待 M4 显式接管。
+无技能名的 uninstall 选择所选目标内的受管安装；提供 `--skills-root` 时进一步限定来源，提供 `--category` 时按安装包元数据/路径筛选。旧 v1/TSV 与未知归属继续只读保护，不提供自动接管。请为新安装选择清洁的独立目标；Loom 不覆盖旧记录。
 
 ## 输出与协调
 
@@ -68,7 +68,7 @@ tools/skills-cli/skills-linker recover --scope project --project-root /path/to/p
 
 库目录解析顺序：`--data-dir` → `LOOM_SKILLS_DATA_DIR` → `LOOM_PROFILE_DIR/skills` → 默认 app data/skills。库覆盖不改变同一用户的固定协调目录。CLI 持生命周期 lease 到输出结束，应用更新独占准入期间拒绝新 CLI 操作；提交与恢复沿用桌面的 writer、指纹和 pending 协议。测试注入独立路径，不替换 HOME/CODEX_HOME。
 
-旧 Manager 尚未退役；历史管理器不能同时写 Loom v2 目标。旧源码和转发入口在 G2 通过后的 M7 统一移除。
+源 Manager 的应用代码与转发入口已按新范围退役；历史二进制不能写入 Loom v2 目标。旧 app data、缓存和既有安装不会因源码退役被清理。
 
 ## TUI 与 ng
 
@@ -103,11 +103,3 @@ LOOM_SKILLS_ACCEPTANCE_BINARY=/absolute/path/to/loom-skills \
 ```
 
 第二项只写自行创建的临时项目和事务，用实际用户协调域验证另一 dataDir 的真实 CLI 恢复，并清理自身 pending 标记。
-
-## 旧数据只读预览（M4-01）
-
-```bash
-loom-skills migration-preview --legacy-data-dir /path/to/old-data --data-dir /path/to/loom-library --scope project --project-root /path/to/project --json
-```
-
-可重复 `--legacy-data-dir`（最多 8 个）；省略时检查旧桌面默认 app data。`--legacy-catalog-dir` 显式提供旧本地/随包技能目录。`--scope project` 排除用户级安装清单；默认 global 会检查已知用户级目标，`--project-root` 可同时加入一个明确项目。预览不创建 Loom 库或协调目录，不导入来源/配置、不接管安装、不调用模型。退出 0 表示限定范围无扫描问题；有缺失/冲突/不支持的记录时仍输出完整 JSON，但退出 1。所有旧安装均未核实，canApply 始终 false。没有迁移 apply/rollback 命令；`--force` 等写选项被拒绝。

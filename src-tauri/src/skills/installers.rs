@@ -290,7 +290,7 @@ fn load_manifest(target: &InstallTarget) -> Result<Manifest> {
         if target.skills_dir.join(LEGACY).try_exists()? {
             return Err(SkillsError::new(
                 ErrorCode::Conflict,
-                "Legacy installation manifest requires migration before changes",
+                "Legacy installation manifest is read-only; automatic adoption is not supported",
             ));
         }
         return Ok(Manifest::default());
@@ -299,7 +299,7 @@ fn load_manifest(target: &InstallTarget) -> Result<Manifest> {
     if value["version"] == 1 {
         return Err(SkillsError::new(
             ErrorCode::Conflict,
-            "Legacy installation manifest requires migration before changes",
+            "Legacy installation manifest is read-only; automatic adoption is not supported",
         ));
     }
     let manifest: Manifest = serde_json::from_value(value)

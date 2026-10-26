@@ -30,7 +30,7 @@
 
 ## 安装与共享指令
 
-目标目录的 `.skills-linker-manifest.json` 是安装归属权威记录。新写入采用 version 2，记录 installationId、skillId、sourceId、relativePath、installName、sourceDir、mode、revision、sourceDigest、installedState、时间戳和 managedResources；本地 symlink 的 revision 为空，UI 标记 live；v1/TSV 只读识别，M4 验证归属并备份后显式升级。旧 Manager 不能继续写 v2，回退必须恢复备份。
+目标目录的 `.skills-linker-manifest.json` 是安装归属权威记录。新写入采用 version 2，记录 installationId、skillId、sourceId、relativePath、installName、sourceDir、mode、revision、sourceDigest、installedState、时间戳和 managedResources；本地 symlink 的 revision 为空，UI 标记 live；v1/TSV 只读识别并拒绝写入，不提供接管或升级。旧 Manager 数据迁移已取消；Loom v2 的事务恢复仍保留。
 
 安装规划有效期 10 分钟，捕获 source/目标/manifest 指纹和项目上下文；执行前复核，拒绝过期或目标变化。重复执行读取已有回执；同批多个安装共用 manifest 时使用前一提交后的校验状态。未托管同名内容禁止覆盖，用户修改过的受管 copy 需显式替换并保留备份；卸载修改过的内容默认拒绝。移除来源登记后仍可按 installationId 卸载。
 
@@ -44,13 +44,13 @@ managedResources 记录 canonical path、marker 和 contentDigest。SharedInstru
 
 选择的安装若共享指令路径，规划标记 `coordinated: true`。规划与执行均核对当前 ledger 的全部使用者；改变共享内容必须选齐使用者且最终正文一致，否则冲突。选中的共享安装（以及该规划中的其他可执行项）复用单目标的暂存/校验函数，以一个 `<planId>-group` prepare journal 提交技能包、各清单、去重后的指令文件和 ledger；同一文件只生成一个一致的最终内容。独立资源保持逐目标提交，卸载按使用者逐项移除。
 
-组内任一目标/指纹变化，在变更前拒绝整组；提交失败按统一日志补偿，若用户在中断后修改内容则保留冲突并标待恢复，不报告部分成功。幂等重试读取同一组回执；应用更新仍由原生命周期 lease/operation guard 协调。这是统一恢复边界，不宣称跨文件系统瞬时原子性。CLI 核心命令与 doctor 已接共用服务；TUI/ng 同样调用该服务，旧归属重建随 M4 完成。
+组内任一目标/指纹变化，在变更前拒绝整组；提交失败按统一日志补偿，若用户在中断后修改内容则保留冲突并标待恢复，不报告部分成功。幂等重试读取同一组回执；应用更新仍由原生命周期 lease/operation guard 协调。这是统一恢复边界，不宣称跨文件系统瞬时原子性。CLI 核心命令与 doctor 已接共用服务；TUI/ng 同样调用该服务，旧归属不重建，未知归属继续拒绝写入。
 
 远程来源快照固定 commit；dirty legacy cache 以内容 digest 单独标识，不能冒充上游 commit。刷新目录只更新 latestRevision，symlink 固定指向不可变路径。本地 live symlink 明示行为，不把其变化伪装成版本化安装。
 
 ## 来源、安装与前后端
 
-当前已注册 list_library/get_detail/add_local_source/remove_source/import_repository/refresh_source/list_operations/cancel_operation 八个 `skills_` 命令，以及 `loom://skills-operation` 事件。`contracts/tauri-contract.json` 的 SkillsLibrary / SkillsOperation 样本在 Rust 与 TypeScript 双端校验。安装阶段新增 list_install_targets/get_install_status/list_installations/plan_install/plan_uninstall/apply_install/list_pending/recover_installation 八个 `skills_` 命令，共 16 个；InstallTarget/Installation/InstallPlan/InstallReceipt 同样有双端样本。M3 追加配置 2 个与翻译执行/历史/结果 3 个命令，当前总计 21 个；迁移命令尚未实现。
+当前已注册 list_library/get_detail/add_local_source/remove_source/import_repository/refresh_source/list_operations/cancel_operation 八个 `skills_` 命令，以及 `loom://skills-operation` 事件。`contracts/tauri-contract.json` 的 SkillsLibrary / SkillsOperation 样本在 Rust 与 TypeScript 双端校验。安装阶段新增 list_install_targets/get_install_status/list_installations/plan_install/plan_uninstall/apply_install/list_pending/recover_installation 八个 `skills_` 命令，共 16 个；InstallTarget/Installation/InstallPlan/InstallReceipt 同样有双端样本。M3 追加配置 2 个与翻译执行/历史/结果 3 个命令，当前总计 21 个；旧数据迁移命令已按用户要求撤下。
 
 错误形态为 `{code,message}`；当前 code 为 invalid_input/conflict/lock_busy/updating/recovery_required/permission_denied/io/cancelled/timeout/source_unavailable/auth_required/rate_limited。前端展示错误 message，流程判断不依赖解析自然语言。
 
@@ -73,7 +73,7 @@ Git 在独立进程组执行，有 120 秒单命令超时、取消、输出有�
 | auto/global 注入、manual wrapper、doctor | 共享资源归属与指令服务 | M2b |
 | skills-linker、tui、ng | Loom tools + 无窗口 CLI | M2c |
 | 4 个已注册翻译 provider、复制/分享文本 | Skills UI 与后端任务 | M3 |
-| app data、旧 cache/bundle links、JSON/TSV | 预览/备份/接管/恢复 | M4 |
+| 旧 app data/cache/bundle links | 用户取消数据迁移，原样保留；无导入/接管入口 | 已退出范围 |
 | metadata/routing/archive/who-am-i 内容检查 | 保留在 skills 的独立 scripts/tests | M5 |
 | Web/API/桌面旧壳与专属依赖 | 完整替代验收后移除 | M7 |
 
@@ -101,7 +101,7 @@ HTTP 仅访问固定 HTTPS `api.github.com`，禁用重定向，不跟随响应�
 
 Git 显式 SSH transport 保留 GIT_SSH_COMMAND、GIT_SSH、GIT_SSH_VARIANT 和有效 core.sshCommand。未配置环境通路时以受监督的 `git config --name-only --get-regexp` 只查询键名；仅确认用户未配置才补 `ssh -oBatchMode=yes`，配置读取错误即失败。不关闭 host key 校验。自定义 SSH 原始 stderr 不进入持久日志，只保存受控分类/退出码，避免 wrapper 打印秘密。
 
-`legacy_remote_descriptor` 只读取旧 API/server-cache/desktop-local 元数据，保留默认分支、模式、alias、cachePath/cacheSlug；类型与路径校验失败不默默回退。它没有授权缓存路径，也不执行数据接管；实际导入属于 M4。
+旧数据来源解析器与预览已撤下；当前只接受用户主动添加的本地/Git/GitHub API 来源，不读取或接管旧库。
 
 ## 翻译配置（M3-01）
 
@@ -113,7 +113,7 @@ Settings → Skills 的翻译设置通过 `skills_list_translation_providers` / 
 
 远程 key 的优先级保持旧行为：OPENAI_API_KEY/OPENROUTER_API_KEY 优先于保存值；清除保存值不清除环境变量，界面明确提示。模型优先级为 LOOM_SKILLS_OPENAI_MODEL/LOOM_SKILLS_OPENROUTER_MODEL → 对应旧 SKILLS_MANAGER_*_MODEL → 保存值 → 旧默认 gpt-5/openai/gpt-5；不在迁移中静默换模型。本地模型可独立设置，默认交给 CLI；命令可用性复用 Agent 的 resolve_executable，仅表示发现安装，不代表登录可用。
 
-后续请求实现以 [OpenAI 文本生成文档](https://developers.openai.com/api/docs/guides/text) 与 [Codex CLI 文档](https://learn.chatgpt.com/docs/developer-commands?surface=cli) 为协议参考；真实调用按 provider 单独验收。已有配置读取不触发外发、登录或付费请求，旧配置实际导入仍由 M4 显式处理。
+后续请求实现以 [OpenAI 文本生成文档](https://developers.openai.com/api/docs/guides/text) 与 [Codex CLI 文档](https://learn.chatgpt.com/docs/developer-commands?surface=cli) 为协议参考；真实调用按 provider 单独验收。已有配置读取不触发外发、登录或付费请求，不提供旧配置导入。
 
 ## 翻译执行与结果（M3-02/03）
 
@@ -135,12 +135,7 @@ Skills 命令面板支持 Cmd/Ctrl+K、查询和键盘选择，只触发本地�
 
 四 provider 的执行 fixture 与原生合成进程/重启已验证；真实账号调用按用户选择保持 blocked。G1 视觉/公开 HTTPS 来源与普通原生验收通过；禁止源码读取的桌面验收因 sandbox-exec 窗口不可观察仍 blocked，不以随包 CLI 隔离成功替代。
 
-## M4-01 只读迁移预览
 
-`skills_plan_migration`（主窗口）与 `loom-skills migration-preview` 共用 `skills/migration.rs`。输入 `dataDirs`（最多 8 个；空数组为旧桌面 app data）、可选 `catalogDir`、`projectPath`、`includeGlobal`。桌面项目必须已登记；用户级清单默认不勾选，CLI 使用 `--scope` 选择是否包含用户级目标。旧 workspace/随包目录须显式提供，不从源码位置或旧清单推导新的读取授权。
+## 2026-10-25 功能归属与退役范围
 
-输出 `MigrationPreview` schemaVersion=1，`readOnly=true`、`canApply=false`；含规范化的数据根、来源及旧 source ID alias、声明缓存的存在状态、配置 key/model 存在性、JSON v1/TSV 安装记录、路径/模式/链接风险、逐文件 SHA-256 和受控问题列表。Loom v2 记录只提示排除，不据版本号宣称归属正确。所有旧安装均 `legacy-unverified`；不判定副本是否匹配原版本，不重建共享指令使用者。源代码与 CLI 本轮都没有 apply/rollback 命令。
-
-该服务绕开 Repository::open、Coordinator 和 Operation，不创建目录或锁、不 chmod、不保存规划、不联网或执行旧代码。现有库校验抽为纯读取/解析函数，预览使用同一次读取的字节生成指纹和比较结果。元数据每文件 1 MiB，总读取 16 MiB，来源/安装记录总计最多 2000；超限与错误逐项报告、complete=false，不当空库成功。只检查 library.json/config.json、所选目标的两个清单及其声明路径，不扫描整个 HOME、未登记缓存或任意项目。
-
-目录前缀按用户选择归一化（包括 macOS /var 的别名）；引用路径只重写已授权前缀，目录内 symlink 不扩大读取范围。安装自身的 symlink 仅 read_link；范围外目标保持 unchecked，不跟随读取。配置内容不返回/打印，报告只含存在性及文件指纹。预览 ID 是可重复的观察摘要，不是可执行 planId；不是一致性事务，后续接管仍必须重新校验来源/目标/配置内容和权限。
+用户明确只迁移管理功能并清理源 Manager；M4-01 模块、UI/CLI/IPC 与专属测试已撤下，后续旧数据备份/暂存/恢复不再实施。源 apps/ 与专属启动/打包入口移除，内容检查独立运行。真实 provider 与 G1 桌面隔离仍为历史验证限制，未因范围调整宣称通过。安装服务保留旧清单只读阻止和 Loom v2 事务恢复。

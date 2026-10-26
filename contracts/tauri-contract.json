@@ -50,7 +50,6 @@
     "skills_recover_installation",
     "skills_list_translation_providers",
     "skills_save_translation_config",
-    "skills_plan_migration",
     "skills_translate",
     "skills_translation_history",
     "skills_translation_result"
@@ -566,28 +565,6 @@
         "error": null,
         "executions": []
       }
-    },
-    "skillsMigrationPreview": {
-      "schemaVersion": 1,
-      "previewId": "preview-fixture",
-      "readOnly": true,
-      "canApply": false,
-      "dataDirectories": [
-        "/fixture/legacy"
-      ],
-      "catalogDirectory": null,
-      "sources": [],
-      "installations": [],
-      "configs": [],
-      "files": [
-        {
-          "path": "/fixture/legacy/library.json",
-          "state": "missing",
-          "digest": null
-        }
-      ],
-      "issues": [],
-      "complete": true
     }
   }
 }
