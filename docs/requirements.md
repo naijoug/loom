@@ -7,7 +7,7 @@
 - 当前应用顶层入口为 Chat 和 Settings；2026-10-21 用户授权按 [Skills 迁移计划](plans/2026-10-21/06:12-skills-module-migration.md) 迁入 Skills，并在实施中明确它位于设置侧边栏。管理功能已分项迁入；2026-10-25 用户明确只保留功能迁移并退役源管理代码，取消旧数据迁移。真实验证限制单独记录。Task/Board/Planning 不再属于产品。旧 Task 数据原样保留。
 - 输入框只提供一个权限选择器：Read-only / Ask / Auto，对应 `explore` / `ask` / `auto`（2026-10-21 由 Research / Code / Auto-run 改名，工作类型与权限不再混在一层）。权限由 CLI 执行；Ask 的发送确认是回合授权，非逐工具审批。
 - 本机探测 Claude Code、Codex、OpenCode、Grok；支持自定义 CLI。原生续聊、工具事件等按适配器能力与真实证据展示。
-- 新会话只选择权限；Agent 选择器固定在输入框左下，新旧会话一致。流式回复、停止、恢复、工具卡片、Markdown、导出和执行日志保留。
+- 新会话只选择权限；Agent 选择器固定在输入框左下，新旧会话一致。流式回复、停止、恢复、工具卡片、Markdown（GFM：标题、加粗、链接、表格、任务列表等）、导出和执行日志保留；原始 HTML 按字面显示，`http(s)`/`mailto` 链接在系统浏览器打开。
 - 会话保持项目本地 `.loom/chat/v2`；按项目聚合列表，不跨项目移动会话。
 - 默认英文，Settings → Appearance 支持简体中文和主题，立即生效并持久化。
 - Craft 全功能重建暂停，Workbench / SDK worker 源码冻结并移出默认构建与主门禁；除独立 Skills 迁移外，不扩展 Sources/MCP、Browser、Pages、DAG、远程和分享。

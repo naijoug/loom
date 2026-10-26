@@ -91,6 +91,8 @@
 | session_patch | `{ fields, changedMessages, appendedMessages }` |
 | stream | `{ sessionId, turnId, messageId, delta, done, part? }` |
 
+`delta` 是正文增量。适配器把一段新的助手文本（Codex `agent_message`、Claude 文本块或整条 `assistant` 消息、OpenCode text part）标为块起点，runtime 在下一段非空增量前补足一个空行，使相邻文本块成为独立 Markdown 段落；补入的分隔同样经 `delta` 下发并写入日志，前端不另行拼接。已持久化的旧消息不回写。
+
 Patch 只允许指定的元数据字段，不允许更改身份/路径/schema，不能删除或重排已有消息。恢复、开始与结束状态以 patch 表达；完整 turn 状态语义仍按计划推进。
 
 `loom://chat-error` 仅用于无法写入权威日志的非持久化故障通知，包含 projectKey/sessionId/turnId/messageId/status/errorSummary。旧 `chat-stream` 和 `chat-turn-finished` 已由生产端与消费端同轮替换，不再双订阅。

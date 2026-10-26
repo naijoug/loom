@@ -484,6 +484,7 @@ struct Output {
     reported_error: Option<String>,
     file_changes: Option<super::file_changes::FileChanges>,
     streamed_text: bool,
+    block_pending: bool,
     bytes: usize,
     lines: usize,
     stdout: Vec<String>,
@@ -561,7 +562,13 @@ impl Output {
                 super::tools::merge_part(&mut self.parts, part.clone());
                 emit(event(request, String::new(), Some(part), false))?;
             }
+            self.block_pending |= parsed.block_start;
             if !parsed.delta.is_empty() {
+                if std::mem::take(&mut self.block_pending) {
+                    parsed
+                        .delta
+                        .insert_str(0, super::block_separator(&self.content));
+                }
                 self.content.push_str(&parsed.delta);
                 emit(event(request, parsed.delta, None, false))?;
             }
@@ -957,5 +964,80 @@ mod structured_failure_tests {
             Some("provider unavailable")
         );
         assert!(result.resume_command.is_none());
+    }
+
+    fn scripted(output_mode: &str, lines: &[&str]) -> Request {
+        let script = lines
+            .iter()
+            .map(|line| format!("printf '%s\\n' '{line}'"))
+            .collect::<Vec<_>>()
+            .join("; ");
+        Request {
+            prepared: PreparedAgentInvocation {
+                program: "/bin/sh".into(),
+                args: vec!["-c".into(), script],
+                cwd: std::env::temp_dir().to_string_lossy().into_owned(),
+                stdin_prompt: false,
+                output_mode: output_mode.into(),
+                resumed: false,
+                environment: Default::default(),
+            },
+            project_key: "/fixture".into(),
+            session_id: "session".into(),
+            turn_id: crate::models::IdGenerator::default().next("blocks"),
+            message_id: "message".into(),
+            stdin_text: None,
+            limits: Default::default(),
+        }
+    }
+
+    #[tokio::test]
+    async fn consecutive_text_blocks_become_separate_paragraphs() {
+        let codex = scripted(
+            "codex_json",
+            &[
+                r#"{"type":"item.completed","item":{"id":"i0","type":"agent_message","text":"适合降低使用成本。"}}"#,
+                r#"{"type":"item.completed","item":{"id":"i1","type":"command_execution","command":"ls","aggregated_output":"a","exit_code":0,"status":"completed"}}"#,
+                r#"{"type":"item.completed","item":{"id":"i2","type":"agent_message","text":"**WeKnora** 是框架\n"}}"#,
+                r#"{"type":"item.completed","item":{"id":"i3","type":"agent_message","text":"结论"}}"#,
+            ],
+        );
+        let mut deltas = String::new();
+        let result = run_observed(
+            codex,
+            || None,
+            |event| {
+                deltas.push_str(&event.delta);
+                Ok(())
+            },
+            |_| Ok(()),
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            result.content,
+            "适合降低使用成本。\n\n**WeKnora** 是框架\n\n结论"
+        );
+        assert_eq!(
+            deltas, result.content,
+            "streamed deltas carry the same separators"
+        );
+
+        let claude = scripted(
+            "claude_stream_json",
+            &[
+                r#"{"type":"stream_event","event":{"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}}"#,
+                r#"{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"先看文件。"}}}"#,
+                r#"{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"马上。"}}}"#,
+                r#"{"type":"assistant","message":{"content":[{"type":"text","text":"先看文件。马上。"}]}}"#,
+                r#"{"type":"stream_event","event":{"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}}"#,
+                r#"{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"看完了。"}}}"#,
+                r#"{"type":"assistant","message":{"content":[{"type":"text","text":"看完了。"}]}}"#,
+            ],
+        );
+        let result = run_observed(claude, || None, |_| Ok(()), |_| Ok(()))
+            .await
+            .unwrap();
+        assert_eq!(result.content, "先看文件。马上。\n\n看完了。");
     }
 }

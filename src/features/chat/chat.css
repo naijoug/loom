@@ -103,6 +103,27 @@
 .chat-markdown pre, .chat-tool-body pre { white-space: pre-wrap; overflow-wrap: anywhere; border-radius: 8px; background: var(--chat-sidebar); padding: 12px 14px; overflow-x: auto; line-height: 1.6; margin: 0 0 12px; }
 .chat-markdown code { padding: 1px 5px; background: var(--chat-raised); border: 1px solid var(--chat-border); border-radius: 4px; font-size: 12.5px; color: var(--chat-text); }
 .chat-markdown pre code { padding: 0; border: 0; background: none; }
+.chat-markdown > :last-child { margin-bottom: 0; }
+.chat-markdown :is(h1, h2, h3, h4, h5, h6) { margin: 20px 0 10px; color: var(--chat-text); font-weight: 600; line-height: 1.4; }
+.chat-markdown > :is(h1, h2, h3, h4, h5, h6):first-child { margin-top: 0; }
+.chat-markdown h1 { font-size: 20px; }
+.chat-markdown h2 { font-size: 17px; }
+.chat-markdown h3 { font-size: 15px; }
+.chat-markdown :is(h4, h5, h6) { font-size: 14px; }
+.chat-markdown strong { color: var(--chat-text); font-weight: 600; }
+.chat-markdown a { color: var(--chat-accent); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--chat-accent) 40%, transparent); text-underline-offset: 2px; overflow-wrap: anywhere; cursor: pointer; }
+.chat-markdown a:hover { text-decoration-color: var(--chat-accent); }
+.chat-markdown li > p { margin: 0; }
+.chat-markdown li > :is(ul, ol) { margin: 4px 0 0; }
+.chat-markdown li:has(> input[type="checkbox"]) { list-style: none; margin-left: -20px; }
+.chat-markdown li > input[type="checkbox"] { margin: 0 6px 0 0; vertical-align: -1px; accent-color: var(--chat-accent); }
+.chat-markdown blockquote { margin: 0 0 12px; padding: 2px 0 2px 14px; border-left: 3px solid var(--chat-border-strong); color: var(--chat-muted); }
+.chat-markdown blockquote > :last-child { margin-bottom: 0; }
+.chat-markdown hr { border: 0; border-top: 1px solid var(--chat-border); margin: 18px 0; }
+.chat-markdown table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; margin: 0 0 12px; font-size: 13px; line-height: 1.55; }
+.chat-markdown :is(th, td) { padding: 6px 12px; border: 1px solid var(--chat-border); text-align: left; vertical-align: top; }
+.chat-markdown th { background: var(--chat-raised); color: var(--chat-text); font-weight: 600; white-space: nowrap; }
+.chat-markdown tbody tr:nth-child(even) { background: color-mix(in srgb, var(--chat-raised) 45%, transparent); }
 .chat-stopped { color: var(--chat-dim); font-size: 13px; }
 
 /* Tool calls: borderless rows */

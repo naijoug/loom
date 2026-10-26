@@ -136,6 +136,10 @@ struct ParsedChatLine {
     warning: Option<String>,
     delta: String,
     parts: Vec<ChatMessagePart>,
+    /// The line opens a new assistant text block (a Codex message, a Claude text
+    /// block or message, an OpenCode text part); the transcript separates blocks
+    /// with a blank line instead of gluing them together.
+    block_start: bool,
 }
 
 fn parse_chat_stream_line(output_mode: &str, line: &str) -> ParsedChatLine {
@@ -145,17 +149,15 @@ fn parse_chat_stream_line(output_mode: &str, line: &str) -> ParsedChatLine {
     }
     if output_mode == "plain" {
         return ParsedChatLine {
-            warning: None,
             delta: format!("{line}\n"),
-            parts: Vec::new(),
+            ..Default::default()
         };
     }
     let Ok(value) = serde_json::from_str::<serde_json::Value>(trimmed) else {
         if !trimmed.starts_with('{') {
             return ParsedChatLine {
-                warning: None,
                 delta: trimmed.to_string(),
-                parts: Vec::new(),
+                ..Default::default()
             };
         }
         return ParsedChatLine::default();
@@ -173,12 +175,11 @@ fn parse_chat_stream_line(output_mode: &str, line: &str) -> ParsedChatLine {
             .and_then(|value| summarize_json(value, 2000))
             .unwrap_or_else(|| "CLI reported an error".into());
         return ParsedChatLine {
-            warning: None,
-            delta: String::new(),
             parts: vec![ChatMessagePart::Error {
                 message,
                 code: Some("cli_reported_error".into()),
             }],
+            ..Default::default()
         };
     }
     let event = unwrap_stream_event(&value);
@@ -237,10 +238,36 @@ fn parse_chat_stream_line(output_mode: &str, line: &str) -> ParsedChatLine {
     } else {
         None
     };
+    let block_start = match output_mode {
+        "codex_json" => {
+            value.pointer("/item/type").and_then(|v| v.as_str()) == Some("agent_message")
+        }
+        "opencode_json" => kind == "text",
+        _ => {
+            kind == "assistant"
+                || (event["type"] == "content_block_start"
+                    && event
+                        .pointer("/content_block/type")
+                        .and_then(|v| v.as_str())
+                        == Some("text"))
+        }
+    };
     ParsedChatLine {
         warning,
         delta,
         parts,
+        block_start,
+    }
+}
+
+/// Text needed before a new block so it starts a fresh Markdown paragraph.
+fn block_separator(content: &str) -> &'static str {
+    if content.is_empty() || content.ends_with("\n\n") {
+        ""
+    } else if content.ends_with('\n') {
+        "\n"
+    } else {
+        "\n\n"
     }
 }
 
@@ -351,7 +378,7 @@ fn extract_assistant_text(output_mode: &str, raw: &str) -> String {
                     }
                 }
                 if !block_text.is_empty() {
-                    chunks.extend(block_text);
+                    chunks.push(block_text.join("\n\n"));
                     continue;
                 }
             }
@@ -1016,6 +1043,41 @@ mod tests {
             }
             other => panic!("expected tool/command part, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn text_blocks_are_marked_so_the_runtime_can_separate_them() {
+        let codex = parse_chat_stream_line(
+            "codex_json",
+            r#"{"type":"item.completed","item":{"id":"i1","type":"agent_message","text":"第二段"}}"#,
+        );
+        assert_eq!(codex.delta, "第二段");
+        assert!(codex.block_start);
+        let start = parse_chat_stream_line(
+            "claude_stream_json",
+            r#"{"type":"stream_event","event":{"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}}"#,
+        );
+        assert!(start.block_start && start.delta.is_empty());
+        let delta = parse_chat_stream_line(
+            "claude_stream_json",
+            r#"{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"x"}}}"#,
+        );
+        assert!(!delta.block_start);
+        let tool = parse_chat_stream_line(
+            "claude_stream_json",
+            r#"{"type":"stream_event","event":{"type":"content_block_start","index":1,"content_block":{"type":"tool_use","id":"t","name":"Read","input":{}}}}"#,
+        );
+        assert!(!tool.block_start);
+        let message = parse_chat_stream_line(
+            "claude_stream_json",
+            r#"{"type":"assistant","message":{"content":[{"type":"text","text":"一"},{"type":"tool_use","id":"t","name":"Read","input":{}},{"type":"text","text":"二"}]}}"#,
+        );
+        assert!(message.block_start);
+        assert_eq!(message.delta, "一\n\n二");
+        assert_eq!(super::block_separator(""), "");
+        assert_eq!(super::block_separator("a"), "\n\n");
+        assert_eq!(super::block_separator("a\n"), "\n");
+        assert_eq!(super::block_separator("a\n\n"), "");
     }
 
     #[test]

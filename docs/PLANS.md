@@ -15,6 +15,9 @@
   > （管理功能已分项迁入；范围已更新）来源、安装/更新/卸载、共享指令/恢复、CLI/TUI/ng、翻译/交互保留；2026-10-25 用户取消旧数据迁移并授权源 Manager 代码退役，执行转当日功能退役计划。M3-04 账号实测与 G1 桌面源码隔离仍 blocked，不宣称原 G2 全部通过。
 
 
+- 00:53-chat-gfm-markdown.md
+  > （完成并提交；`pnpm check` 与 `smoke:visual` 通过，Markdown 依赖约 +54 kB gzip；2026-10-26 用户验收桌面外链由系统浏览器打开）Chat 改用完整 GFM Markdown 渲染：`react-markdown` + `remark-gfm` + `remark-cjk-friendly`，原始 HTML 按字面显示，`http(s)`/`mailto` 链接经 opener 在系统浏览器打开，WebView 不导航；修复 Codex 多条 `agent_message`、Claude 新文本块与 OpenCode 多个 text part 拼接时缺少段落分隔；OpenUI 卡片继续可用，不改存储与 IPC。
+
 ## 2026-10-20
 
 - 18:25-openui-inline-cards-experiment.md
