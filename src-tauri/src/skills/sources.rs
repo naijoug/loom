@@ -97,7 +97,8 @@ pub fn normalize_git_url(input: &str) -> Result<GitSource> {
     };
     let identity = format!("{provider}:{namespace}");
     // Retain source path case to avoid silently merging distinct namespaces.
-    // legacy_id is only a migration alias; collisions require explicit review.
+    // legacy_id is a case-insensitive identity key; sources that differ only
+    // by case are rejected as conflicts instead of being merged.
     Ok(GitSource {
         source_id: format!("src-{}", &files::digest(identity.as_bytes())[..32]),
         provider: provider.into(),

@@ -141,29 +141,23 @@ impl RuntimeConfig {
     }
     pub fn capture() -> Result<Self> {
         let mut value = Self::default();
-        for (id, key, model, legacy) in [
+        for (id, key, model) in [
             (
                 ProviderId::OpenAi,
                 "OPENAI_API_KEY",
                 "LOOM_SKILLS_OPENAI_MODEL",
-                "SKILLS_MANAGER_OPENAI_MODEL",
             ),
             (
                 ProviderId::OpenRouter,
                 "OPENROUTER_API_KEY",
                 "LOOM_SKILLS_OPENROUTER_MODEL",
-                "SKILLS_MANAGER_OPENROUTER_MODEL",
             ),
         ] {
             if let Some(key) = environment(key)? {
                 validate_key(&key)?;
                 value.keys.insert(id, key);
             }
-            let configured_model = match environment(model)? {
-                Some(value) => Some(value),
-                None => environment(legacy)?,
-            };
-            if let Some(model) = configured_model {
+            if let Some(model) = environment(model)? {
                 validate_model(&model)?;
                 value.models.insert(id, model);
             }

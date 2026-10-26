@@ -111,7 +111,7 @@ Settings → Skills 的翻译设置通过 `skills_list_translation_providers` / 
 
 前端仅收到 configured、storedKey、keySource、model/storedModel 和环境覆盖状态，不返回 secret 值；输入 DTO 不派生 Debug/Serialize。临时表单值仅保存在组件内，保存后及关闭面板时释放，不写 localStorage。各 provider 分别保存，保存一个保留其他 provider 的未保存草稿。
 
-远程 key 的优先级保持旧行为：OPENAI_API_KEY/OPENROUTER_API_KEY 优先于保存值；清除保存值不清除环境变量，界面明确提示。模型优先级为 LOOM_SKILLS_OPENAI_MODEL/LOOM_SKILLS_OPENROUTER_MODEL → 对应旧 SKILLS_MANAGER_*_MODEL → 保存值 → 旧默认 gpt-5/openai/gpt-5；不在迁移中静默换模型。本地模型可独立设置，默认交给 CLI；命令可用性复用 Agent 的 resolve_executable，仅表示发现安装，不代表登录可用。
+远程 key 的优先级保持旧行为：OPENAI_API_KEY/OPENROUTER_API_KEY 优先于保存值；清除保存值不清除环境变量，界面明确提示。模型优先级为 LOOM_SKILLS_OPENAI_MODEL/LOOM_SKILLS_OPENROUTER_MODEL → 保存值 → 默认 gpt-5/openai/gpt-5；不读取旧 Manager 的 SKILLS_MANAGER_* 环境变量。本地模型可独立设置，默认交给 CLI；命令可用性复用 Agent 的 resolve_executable，仅表示发现安装，不代表登录可用。
 
 后续请求实现以 [OpenAI 文本生成文档](https://developers.openai.com/api/docs/guides/text) 与 [Codex CLI 文档](https://learn.chatgpt.com/docs/developer-commands?surface=cli) 为协议参考；真实调用按 provider 单独验收。已有配置读取不触发外发、登录或付费请求，不提供旧配置导入。
 

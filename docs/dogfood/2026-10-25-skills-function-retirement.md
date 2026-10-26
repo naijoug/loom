@@ -35,3 +35,7 @@
 ## 提交树复核（2026-10-26 完成）
 
 排除在途 Chat 改动的精确提交树：前端 119 项通过，build/fmt/Clippy/文档检查通过；Rust 初跑 262 项通过，1 个本地 Git fixture 出现 Failed/Committed 断言差异，定向复验 1/1 通过，合计 263 个用例，25 ignored。初次断言未打印具体错误，不能把它直接归因为此前的系统 EPERM。日志 `/tmp/loom-function-retirement-index/check.log` 与 `git-retry.log`。混合工作区的 125/265 完整检查独立通过，不与提交树计数混用。当前文档链接、源仓入口清理及原暂存状态核对通过。
+
+## 残留清理（2026-10-26）
+
+按用户要求删除源仓被忽略的 `.skills-manager-data/`、`.design/`、`.output/`、`.qa/` 及 `.gitignore` 的旧缓存条目；上文记录的临时 Git bundle/生成产物目录已删除，恢复只依赖 Git 历史 `0f864ee`。Loom 不再读取 `SKILLS_MANAGER_*_MODEL`；`legacy_id` 保留为大小写不敏感的来源冲突键，仅更正注释。本机未发现旧 Manager 安装或 app data。
