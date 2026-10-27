@@ -1,6 +1,6 @@
 # Agent 调用层与左侧功能栏重构计划
 
-- 状态：计划，待用户 Review；未开始实施
+- 状态：实施中；P0、P1 已完成，下一步 P2（进度见第 0 节）
 - 基线：`main` @ `d5b8c4b` 之上的未提交 Learn 工作区（含 2026-10-26 Agent 启动前检查与错误详情折叠）
 - 触发：用户要求参考 Codex 应用的布局，把 Chat 作为默认主页，Learn、Research、Discuss 作为并列功能；调用本机各种 Agent 做成独立的模块和层，上层模块只管调用，UI 只是交互入口
 - 范围：
@@ -8,6 +8,20 @@
   - 前端新增左侧功能栏（Activity Rail）和功能注册表；
   - 新增 Research、Discuss 两个 MVP。
   - 不改 Chat v2 存储格式与现有 IPC 命令名，不启用冻结的 Workbench / SDK worker，不修改或删除旧 Task 数据。
+
+## 0. 实施进度
+
+- **P0 完成（2026-10-26）**：
+  - Learn 工作已提交：`849d223 feat(learn): study GitHub repositories with a local agent`；本计划：`c616117`。
+  - 真实 Codex Chat 基线通过：`chat::real_agent_tests::codex_three_turns_resume_after_repository_reopen`、`codex_stop_then_send`（78.5 s；全局 Codex 0.164.0 缺平台包，本次用本机缓存的 Codex 0.153.0 二进制前置 PATH 运行，未改全局安装）。Learn 真实基线沿用验收记录中的 hexyl 研究。
+- **P1 完成（2026-10-26，`7049270`）**：
+  - `src-tauri/src/chat/characterization_tests.rs`：
+    - 用 `/bin/cat` 经真实 runner 回放 Claude 2.1.304、Codex 0.163.0、OpenCode 1.19.3、Grok 1.0.62 的录制流，事件序列、日志行数与 FNV-1a 摘要、`ChatTurnOutcome` 对比 `*.golden.json`（`LOOM_UPDATE_GOLDEN=1` 重新生成）；
+    - 非零退出保留部分文本与最后 2,000 字符 stderr；静默成功与启动失败可区分；stdin 提示缺输入在启动前拒绝；非 Chat 所有者（Learn）登记的进程类型与清理。
+  - `learn/jobs.rs`：`job_events_record_and_logs_are_stable` 固定伪 CLI 作业的事件、`JobRecord`、调用参数与日志文件内容。
+  - 超时、取消、输出限额、进程组清理与 shutdown 已有 `chat::runtime` / `chat::shutdown` / `process_supervisor` 测试覆盖，未重复添加。
+  - 与计划的偏差：测试数据复用已有的 `src-tauri/tests/fixtures/cli-streams/`，未新建 `agent-streams/`；runner 特征测试单独成文件，而非放进 `chat/mod.rs` tests，便于 P3 整体迁到 `agent/`。
+  - 验证：`pnpm check` 通过（前端 130、Rust 296 通过 / 27 忽略）。首轮 `pnpm check` 中 `chat::shutdown::tests::shutdown_cases_in_isolated_processes` 失败一次（`killpg` 返回 EPERM，回合记为 Failed 而非 Cancelled），单独连跑 5 次与复跑全量均通过，判断为负载下的偶发问题，P3 迁移进程组清理时一并处理。
 
 ## 1. 目标
 
