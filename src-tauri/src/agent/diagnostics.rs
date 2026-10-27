@@ -1,7 +1,11 @@
-use super::{capabilities, registry};
+use super::{capabilities, registry, AgentError};
 use crate::models::now_ms;
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
+use std::{
+    collections::HashMap,
+    sync::{Mutex, OnceLock},
+    time::{Duration, SystemTime},
+};
 use tauri::AppHandle;
 use tokio::{process::Command as TokioCommand, time::timeout};
 
@@ -65,6 +69,8 @@ async fn diagnose_agent(agent: crate::models::AgentConfig) -> AgentDiagnostic {
     let version_result = timeout(Duration::from_secs(2), command.output()).await;
     let cannot_start = matches!(&version_result, Ok(Err(_)))
         || matches!(&version_result, Ok(Ok(output)) if output.status.code().is_none());
+    // Starts but `--version` fails: typically a half-installed package.
+    let broken = matches!(&version_result, Ok(Ok(output)) if output.status.code().is_some_and(|code| code != 0));
     let (version, detail) = match version_result {
         Ok(Ok(output)) if output.status.success() => (
             compact_version(&output.stdout).or_else(|| compact_version(&output.stderr)),
@@ -91,6 +97,8 @@ async fn diagnose_agent(agent: crate::models::AgentConfig) -> AgentDiagnostic {
             "disabled"
         } else if cannot_start {
             "unavailable"
+        } else if broken {
+            "broken"
         } else {
             "ready"
         }
@@ -107,26 +115,84 @@ async fn diagnose_agent(agent: crate::models::AgentConfig) -> AgentDiagnostic {
 const STARTUP_PROBE_TIMEOUT: Duration = Duration::from_secs(15);
 const STARTUP_DETAIL_LIMIT: usize = 4000;
 
-/// Runs `<command> --version` before a long job so a broken install fails fast.
-/// The error's first line is a readable summary; the raw output follows a blank line.
-pub async fn check_startable(agent: &crate::models::AgentConfig) -> Result<(), String> {
+/// Agents whose last startup check passed, keyed by agent id, with the resolved
+/// executable and its modification time. Lives for the app session.
+type StartableKey = (String, Option<SystemTime>);
+
+fn startable_cache() -> &'static Mutex<HashMap<String, StartableKey>> {
+    static CACHE: OnceLock<Mutex<HashMap<String, StartableKey>>> = OnceLock::new();
+    CACHE.get_or_init(Default::default)
+}
+
+fn startable_key(path: &str) -> StartableKey {
+    let modified = std::fs::metadata(path)
+        .and_then(|metadata| metadata.modified())
+        .ok();
+    (path.to_string(), modified)
+}
+
+/// Drops cached startup checks for one agent, or for all agents when `agent_id`
+/// is `None`. Called when agent settings change, a run fails or Settings re-checks.
+pub fn forget_startable(agent_id: Option<&str>) {
+    let mut cache = startable_cache()
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    match agent_id {
+        Some(id) => {
+            cache.remove(id);
+        }
+        None => cache.clear(),
+    }
+}
+
+/// Checks that an agent CLI can start before a run, so a broken install fails
+/// fast with a readable summary and the raw output as details. Built-in adapters
+/// run `<command> --version`; custom CLIs only need to resolve, since `--version`
+/// is not part of their contract. Passing checks are cached until the executable
+/// changes or [`forget_startable`] is called; failures are never cached.
+pub async fn check_startable(agent: &crate::models::AgentConfig) -> Result<(), AgentError> {
+    if agent.adapter_type == "dummy" {
+        return Ok(());
+    }
     let path = resolve_command_path(&agent.command)
-        .ok_or_else(|| format!("{} was not found on this machine", agent.name))?;
-    let mut command = TokioCommand::new(&path);
+        .ok_or_else(|| AgentError::new(format!("{} was not found on this machine", agent.name)))?;
+    if !capabilities::capabilities(&agent.adapter_type).structured_stream {
+        return Ok(());
+    }
+    let key = startable_key(&path);
+    if startable_cache()
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .get(&agent.id)
+        == Some(&key)
+    {
+        return Ok(());
+    }
+    probe_version(agent, &path).await?;
+    startable_cache()
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .insert(agent.id.clone(), key);
+    Ok(())
+}
+
+async fn probe_version(agent: &crate::models::AgentConfig, path: &str) -> Result<(), AgentError> {
+    let mut command = TokioCommand::new(path);
     command.arg("--version").kill_on_drop(true);
     let output = match timeout(STARTUP_PROBE_TIMEOUT, command.output()).await {
         Err(_) => {
-            return Err(format!(
+            return Err(AgentError::new(format!(
                 "{} did not answer `--version` within {} seconds; check the installation and try again.",
                 agent.name,
                 STARTUP_PROBE_TIMEOUT.as_secs()
-            ))
+            )))
         }
         Ok(Err(error)) => {
-            return Err(format!(
-                "{} could not start; repair or reinstall it, then try again.\n\n{path}: {error}",
+            return Err(AgentError::new(format!(
+                "{} could not start; repair or reinstall it, then try again.",
                 agent.name
             ))
+            .with_details(format!("{path}: {error}")))
         }
         Ok(Ok(output)) if output.status.success() => return Ok(()),
         Ok(Ok(output)) => output,
@@ -147,10 +213,11 @@ pub async fn check_startable(agent: &crate::models::AgentConfig) -> Result<(), S
         detail.push('\n');
         detail.extend(raw.chars().take(STARTUP_DETAIL_LIMIT));
     }
-    Err(format!(
-        "{} is installed but cannot run (`--version` {status}); repair or reinstall it, then try again.\n\n{detail}",
+    Err(AgentError::new(format!(
+        "{} is installed but cannot run (`--version` {status}); repair or reinstall it, then try again.",
         agent.name
     ))
+    .with_details(detail))
 }
 
 #[tauri::command]
@@ -158,6 +225,7 @@ pub async fn diagnose_agents(
     app: AppHandle,
     agent_id: Option<String>,
 ) -> Result<Vec<AgentDiagnostic>, String> {
+    forget_startable(agent_id.as_deref());
     let mut diagnostics = Vec::new();
     for agent in registry::load_agents(&app)?
         .into_iter()
@@ -206,33 +274,87 @@ mod timeout_tests {
         std::fs::remove_file(path).unwrap();
     }
 
+    fn script(name: &str, body: &str) -> std::path::PathBuf {
+        let path = std::env::temp_dir().join(crate::models::IdGenerator::default().next(name));
+        std::fs::write(&path, body).unwrap();
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o700)).unwrap();
+        path
+    }
+
+    fn agent(id: &str, adapter: &str, path: &std::path::Path) -> crate::models::AgentConfig {
+        serde_json::from_value(serde_json::json!({
+            "id":id, "name":"Codex", "command":path, "args":[], "workingDirectoryPolicy":"project_root", "capabilities":[], "adapterType":adapter, "canWriteFiles":false, "canRunCommands":false, "enabled":true, "available":true
+        })).unwrap()
+    }
+
     #[tokio::test]
     async fn startup_check_summarises_broken_install_and_keeps_raw_output() {
-        let script = |name: &str, body: &str| {
-            let path = std::env::temp_dir().join(crate::models::IdGenerator::default().next(name));
-            std::fs::write(&path, body).unwrap();
-            std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o700)).unwrap();
-            path
-        };
-        let agent = |path: &std::path::Path| -> crate::models::AgentConfig {
-            serde_json::from_value(serde_json::json!({
-                "id":"codex", "name":"Codex", "command":path, "args":[], "workingDirectoryPolicy":"project_root", "capabilities":[], "adapterType":"codex_cli", "canWriteFiles":false, "canRunCommands":false, "enabled":true, "available":true
-            })).unwrap()
-        };
         let broken = script(
             "loom-broken-version",
             "#!/bin/sh\necho 'Error: Missing optional dependency @openai/codex-darwin-arm64' >&2\nexit 1\n",
         );
-        let error = check_startable(&agent(&broken)).await.unwrap_err();
+        let id = crate::models::IdGenerator::default().next("broken");
+        let error = check_startable(&agent(&id, "codex_cli", &broken))
+            .await
+            .unwrap_err()
+            .to_string();
         let (summary, detail) = error.split_once("\n\n").unwrap();
         assert!(
             summary.starts_with("Codex is installed but cannot run (`--version` exited with 1)")
         );
         assert!(!summary.contains("Missing optional dependency"));
         assert!(detail.contains("Missing optional dependency @openai/codex-darwin-arm64"));
+        let diagnostic = diagnose_agent(agent(&id, "codex_cli", &broken)).await;
+        assert_eq!(diagnostic.status, "broken");
         let working = script("loom-good-version", "#!/bin/sh\necho 'codex 1.0'\n");
-        check_startable(&agent(&working)).await.unwrap();
+        check_startable(&agent(&id, "codex_cli", &working))
+            .await
+            .unwrap();
+        assert_eq!(
+            diagnose_agent(agent(&id, "codex_cli", &working))
+                .await
+                .status,
+            "ready"
+        );
+        // Custom CLIs are not asked for `--version`; resolving is enough.
+        check_startable(&agent(&id, "cli", &broken)).await.unwrap();
         std::fs::remove_file(broken).unwrap();
         std::fs::remove_file(working).unwrap();
+        forget_startable(Some(&id));
+    }
+
+    #[tokio::test]
+    async fn passing_checks_are_cached_until_the_executable_changes_or_is_forgotten() {
+        let counter = std::env::temp_dir()
+            .join(crate::models::IdGenerator::default().next("loom-version-count"));
+        let path = script(
+            "loom-counted-version",
+            &format!(
+                "#!/bin/sh\necho x >> '{}'\necho 'codex 1.0'\n",
+                counter.display()
+            ),
+        );
+        let probes = || {
+            std::fs::read_to_string(&counter)
+                .map(|text| text.lines().count())
+                .unwrap_or(0)
+        };
+        let id = crate::models::IdGenerator::default().next("cached");
+        let codex = agent(&id, "codex_cli", &path);
+        check_startable(&codex).await.unwrap();
+        check_startable(&codex).await.unwrap();
+        assert_eq!(probes(), 1);
+        let file = std::fs::File::options().write(true).open(&path).unwrap();
+        file.set_modified(SystemTime::now() + Duration::from_secs(60))
+            .unwrap();
+        drop(file);
+        check_startable(&codex).await.unwrap();
+        assert_eq!(probes(), 2);
+        forget_startable(Some(&id));
+        check_startable(&codex).await.unwrap();
+        assert_eq!(probes(), 3);
+        forget_startable(Some(&id));
+        std::fs::remove_file(path).unwrap();
+        std::fs::remove_file(counter).unwrap();
     }
 }

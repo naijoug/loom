@@ -4,6 +4,7 @@
 //! events; spawn, stdin, limits, timeout, cancellation and process-group
 //! cleanup live here.
 use super::{
+    error::AgentError,
     event::{AgentEvent, AgentOutcome, MessagePart},
     invocation::PreparedAgentInvocation,
     stream::{block_separator, parse_line, redact_stream_line},
@@ -511,7 +512,13 @@ pub(crate) async fn run(
             .into_iter()
             .rev()
             .collect();
-        let error = format!("agent exited with status {status}; stderr: {diagnostic}");
+        let summary = status
+            .code()
+            .map(|code| format!("agent exited with code {code}"))
+            .unwrap_or_else(|| "agent was stopped by a signal".into());
+        let error = AgentError::new(summary)
+            .with_details(diagnostic)
+            .to_string();
         output.parts.push(MessagePart::Error {
             message: error.clone(),
             code: Some("agent_exit_failed".into()),

@@ -6,9 +6,16 @@ Loom 通过 Rust Agent 调用层 `src-tauri/src/agent/`（参数在 `invocation.
 
 `agent/registry.rs` 先查 `$PATH`，再查当前 `$HOME` 下的 `.local/bin`、`.npm-global/bin`、`.opencode/bin`、`.grok/bin`，以及 `/opt/homebrew/bin`、`/usr/local/bin`。检查可执行位，不使用 shell，不包含写死的用户名目录。
 
-内建 Agent 为 Claude Code、Codex、OpenCode、Grok；Dummy 仅在 debug/test 构建出现。已保存的命令路径覆盖和启用状态不被重新探测覆盖。诊断直接执行 `--version`，两秒超时，失败显示 `unknown`；“已安装”只代表找到可执行文件，登录/模型可用性需真实调用验证。
+内建 Agent 为 Claude Code、Codex、OpenCode、Grok；Dummy 仅在 debug/test 构建出现。已保存的命令路径覆盖和启用状态不被重新探测覆盖。诊断直接执行 `--version`，两秒超时，取不到版本显示 `unknown`；能启动但 `--version` 非零退出（常见于安装不完整）标为 `broken`，Settings 与 Agent 选择器显示“安装已损坏”且不可选；“已安装”只代表找到可执行文件，登录/模型可用性需真实调用验证。
 
-诊断返回 `capabilities { structuredStream, toolEvents, nativeResume, inlineCards, modes }`。每个 mode 含适配器生成的 policy 文本；设置表格不自行拼写参数。单项测试同样仅执行版本探测。
+诊断返回 `capabilities { structuredStream, toolEvents, nativeResume, inlineCards, modelSelection, modes }`。每个 mode 含适配器生成的 policy 文本；设置表格不自行拼写参数。单项测试同样仅执行版本探测。
+
+## 启动前检查与错误格式
+
+- `agent::check_startable` 在运行前确认 CLI 能启动：内建适配器执行 `<command> --version`（15 秒上限），自定义 CLI 只要求命令可解析（`--version` 不属于它们的约定）。Learn 开始研究前、Chat 每次发送前都会调用；Chat 在接受回合前拒绝，不留下失败回合。
+- 通过的结果按 Agent id 缓存，键为解析后的可执行文件路径与修改时间，应用会话内有效；失败不缓存。保存 Agent 配置、Settings 重新检测，以及 Chat 回合或 Learn 作业失败时清除缓存。
+- 面向用户的错误统一为“一行摘要 + 空行 + 原始详情”（`agent::AgentError`），IPC 仍传字符串。Agent 非零退出写作 `agent exited with code <n>`，详情为 stderr 最后 2,000 字符。前端共享的 `ErrorText`（`src/components/common/`）显示摘要并把详情收进折叠区，兼容旧会话中的 `agent exited with status …; stderr: …` 格式；Chat 的错误片段、回合详情和发送错误与 Learn 共用它。
+- 例外：Skills 本地翻译（`skills/translation/local.rs`）仍自行启动 Codex / Claude。它需要原始 stdout（Claude 的单个 JSON 结果），而 `agent::run` 在解析前逐行脱敏，可能改写译文里形似密钥的示例；翻译也不走 Agent 配置，按命令名解析。它同样经 `process_supervisor` 登记进程组、限时和取消。
 
 `inlineCards` 只对 Claude Code 为 true（实验）。设置 `experimentalInlineCards` 打开时，适配器每轮（含续聊）追加 `--append-system-prompt <提示词>`；提示词由 `pnpm openui:prompt` 生成并编译进二进制，执行记录中以 `[OPENUI_PROMPT sha256:…]` 代替原文。其他适配器忽略该字段，参数不变。
 

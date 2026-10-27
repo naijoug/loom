@@ -163,8 +163,8 @@ async fn non_zero_exit_keeps_partial_text_and_the_stderr_tail() {
     assert_eq!(outcome["terminationReason"], "exit status: 3");
     assert!(outcome["resumeCommand"].is_null());
     let summary = outcome["errorSummary"].as_str().unwrap();
-    let (head, tail) = summary.split_once("; stderr: ").unwrap();
-    assert_eq!(head, "agent exited with status exit status: 3");
+    let (head, tail) = summary.split_once("\n\n").unwrap();
+    assert_eq!(head, "agent exited with code 3");
     // Only the last 2,000 characters of stderr are kept, ending with the fatal line.
     assert_eq!(tail.chars().count(), 2_000);
     assert!(tail.ends_with("\nfatal: model missing"));

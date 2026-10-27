@@ -560,9 +560,12 @@ impl Job {
             )),
             "aborted" if self.cancel.load(Ordering::Relaxed) => Err(CANCELLED.into()),
             "aborted" => Err("The agent was stopped".into()),
-            _ => Err(crate::agent::redact_sensitive_text(
-                outcome.error_summary.as_deref().unwrap_or("The agent failed"),
-            )),
+            _ => {
+                agent::forget_startable(Some(&agent.id));
+                Err(crate::agent::redact_sensitive_text(
+                    outcome.error_summary.as_deref().unwrap_or("The agent failed"),
+                ))
+            }
         };
         self.verify_checkout(study).await?;
         result

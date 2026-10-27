@@ -6,7 +6,7 @@ import type { MessageKey } from "../../i18n/en";
 import { Markdown, type MarkdownLinks } from "../chat/MarkdownView";
 import { openExternalLink } from "../chat/externalLink";
 import { ArchitectureDiagram } from "./ArchitectureDiagram";
-import { ErrorText } from "./ErrorText";
+import { ErrorText } from "../../components/common/ErrorText";
 import { SourceViewer, type SourceTarget } from "./SourceViewer";
 
 const PIPELINE = ["fetch", "inventory", "architecture"] as const;
@@ -91,7 +91,7 @@ export function StudyView({ api, studyId, revision, onDeleted }: { api: LearnApi
       {running && running.stage.includes(":") && <li className="learn-stage" data-status="running"><LoaderCircle size={13} className="chat-spin" aria-hidden="true" />{stageLabel(running.stage)}</li>}
       {study.coverage && study.coverage.sourceFiles > 0 && <li className="learn-stage" title={study.coverage.uncovered.join("\n")}>{t("learnCoverage", { covered: study.coverage.covered, total: study.coverage.sourceFiles })}</li>}
     </ol>
-    {actionError && <ErrorText text={actionError} alert />}
+    {actionError && <ErrorText text={actionError} alert className="learn-error" />}
     <StageProblems study={study.stages} label={stageLabel} />
     {logsOpen && latestJob && <JobLogs api={api} studyId={studyId} jobId={latestJob} revision={revision} />}
     <div className="learn-body">
@@ -175,7 +175,7 @@ function PagePending({ info, state, busy, onGenerate }: { info: LearnPageInfo; s
     <h2>{info.title}</h2>
     {state?.status === "running" ? <p role="status"><LoaderCircle size={14} className="chat-spin" aria-hidden="true" /> {t("learnGenerating")}</p>
       : <>
-        {state?.error && <ErrorText text={state.error} />}
+        {state?.error && <ErrorText text={state.error} className="learn-error" />}
         <p className="learn-note">{t("learnNotGeneratedDesc")}</p>
         <button type="button" className="chat-primary-button" disabled={busy} onClick={onGenerate}><Play size={13} aria-hidden="true" />{t("learnGeneratePage")}</button>
       </>}

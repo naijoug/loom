@@ -59,6 +59,29 @@ test('Agent picker disables unavailable CLIs and remembers only an installed ena
  const choices=[...document.querySelectorAll('[role="menuitemradio"]')];assert.equal(choices[1].disabled,true);
  await act(async()=>choices[0].click());assert.equal(selected,'claude');
 });
+test('a send rejected by a broken install shows the summary and keeps the raw output collapsed',async t=>{
+ const render=await fixture(t);
+ const error='Codex is installed but cannot run (`--version` exited with 1); repair or reinstall it, then try again.\n\n/usr/local/bin/codex --version exited with 1\nError: Missing optional dependency @openai/codex-darwin-arm64';
+ await render(React.createElement(ChatComposer,{...props,error}));
+ const alert=document.querySelector('.chat-composer-error[role="alert"]');
+ assert.equal(alert.querySelector(':scope > span').textContent,'Codex is installed but cannot run (`--version` exited with 1); repair or reinstall it, then try again.');
+ const details=alert.querySelector('details');assert.equal(details.open,false);
+ assert.match(details.querySelector('pre').textContent,/Missing optional dependency/);
+ await render(React.createElement(ChatTranscript,{messages:[{id:'a',role:'assistant',content:'',status:'error',createdAtMs:1,errorSummary:'agent exited with code 3\n\nfatal: model missing',parts:[{type:'error',message:'agent exited with code 3\n\nfatal: model missing',code:'agent_exit_failed'}]}]}));
+ const part=document.querySelector('.chat-error');
+ assert.equal(part.querySelector(':scope > span').textContent,'agent exited with code 3 (agent_exit_failed)');
+ assert.equal(part.querySelector('details pre').textContent,'fatal: model missing');
+});
+test('a broken install is shown and cannot be chosen or used to send',async t=>{
+ const render=await fixture(t);let sent=0;
+ const codex={...agent,id:'codex',name:'Codex',adapterType:'codex_cli'};
+ const diagnostics=[{agentId:'codex',status:'broken',authStatus:'unknown',detail:'',checkedAtMs:1}];
+ await render(React.createElement(ChatComposer,{...props,agentId:'codex',agents:[agent,codex],diagnostics,onSend(){sent++}}));
+ await key('Enter');assert.equal(sent,0);
+ await act(async()=>document.querySelector('[aria-label="Select Agent"]').click());
+ const choices=[...document.querySelectorAll('[role="menuitemradio"]')];
+ assert.equal(choices[1].disabled,true);assert.match(choices[1].textContent,/Broken install/);
+});
 test('tool cards pair by id, preserve metadata, and collapse after completion',async t=>{
  const running={type:'tool',name:'Edit',callId:'c1',kind:'edit',target:'src/a.ts',status:'running',diffStats:{added:2,removed:1},diffPreview:'-old\n+new'};
  const result=mergeChatPart([running],{type:'tool',name:'c1',callId:'c1',outputSummary:'done',status:'done'});

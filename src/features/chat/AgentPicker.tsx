@@ -10,8 +10,18 @@ export function defaultAgentId(agents: AgentConfig[], previous?: string | null):
     ?? available[0]?.id ?? "";
 }
 /** ok: installed and runnable; unknown: not diagnosed yet; down: missing or cannot start. */
+/** Diagnostic states in which an Agent cannot run a turn. */
+export function isAgentUnusable(status: AgentDiagnostic["status"] | undefined): boolean {
+  return status === "missing" || status === "unavailable" || status === "broken";
+}
+/** Short status label: why an Agent cannot start, or its version when it can. */
+export function agentStatusKey(agent: AgentConfig, diagnostic?: AgentDiagnostic): "cannotStart" | "brokenInstall" | "unavailable" | undefined {
+  if (diagnostic?.status === "unavailable") return "cannotStart";
+  if (diagnostic?.status === "broken") return "brokenInstall";
+  return agent.available ? undefined : "unavailable";
+}
 export function agentHealth(agent: AgentConfig | undefined, diagnostic?: AgentDiagnostic): "ok" | "unknown" | "down" {
-  if (!agent?.available || ["missing", "unavailable"].includes(diagnostic?.status ?? "")) return "down";
+  if (!agent?.available || isAgentUnusable(diagnostic?.status)) return "down";
   return diagnostic ? "ok" : "unknown";
 }
 export function AgentPicker({ agents, diagnostics, value, onChange, disabled }: {
@@ -54,7 +64,7 @@ export function AgentPicker({ agents, diagnostics, value, onChange, disabled }: 
           <span className="chat-agent-check" aria-hidden="true">{value === agent.id && <Check size={14} strokeWidth={2.5} />}</span>
           <span className="chat-agent-item">
             <span className="chat-agent-item-head"><strong>{agent.name}</strong>
-              <code>{diagnostic?.status === "unavailable" ? t("cannotStart") : agent.available ? diagnostic?.version ?? t("unknown") : t("unavailable")}</code></span>
+              <code>{(() => { const key = agentStatusKey(agent, diagnostic); return key ? t(key) : diagnostic?.version ?? t("unknown"); })()}</code></span>
             {capabilities && <small>{capabilities}</small>}
           </span>
         </button>;

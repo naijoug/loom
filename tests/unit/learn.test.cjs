@@ -7,7 +7,7 @@ global.window=initial.window;global.document=initial.window.document;global.navi
 const React=require('react'),{act}=React,{createRoot}=require('react-dom/client'),{renderToStaticMarkup}=require('react-dom/server');
 const {parseSourceTarget,LEARN_ADAPTERS}=require('../../.tmp/test-build/src/api/learn.js');
 const {learnAgents}=require('../../.tmp/test-build/src/features/learn/NewStudyForm.js');
-const {splitError}=require('../../.tmp/test-build/src/features/learn/ErrorText.js');
+const {splitError}=require('../../.tmp/test-build/src/components/common/ErrorText.js');
 const {Markdown}=require('../../.tmp/test-build/src/features/chat/MarkdownView.js');
 const {AppStateProvider,useAppState}=require('../../.tmp/test-build/src/state/AppStateContext.js');
 const {initialAppState}=require('../../.tmp/test-build/src/state/reducer.js');

@@ -186,6 +186,7 @@ pub(super) fn load_agents_inner(app: &AppHandle) -> Result<Vec<AgentConfig>, Str
 }
 
 pub(super) fn save_agents(app: &AppHandle, agents: &[AgentConfig]) -> Result<(), String> {
+    super::diagnostics::forget_startable(None);
     save_agent_store(&agents_path(app)?, agents)
 }
 

@@ -125,7 +125,8 @@ JSON 保留完整转录和结构化证据（未脱敏，供回滚使用）；Mar
 日志读取只接受已登记项目中的已关联回合，不接受任意文件路径；仓储派生并校验目录/文件，拒绝 symlink。字节游标分页默认 32 KiB，上限 64 KiB，UTF-8 字符不跨页截断；越界/字符中间游标报错，空日志与读取失败不同。旧会话未记录的日志不伪造。当前没有自动删除历史日志，长时间使用的保留策略仍待定义。
 
 - stdout/stderr 并发排流，stdin 并发写入并关闭。默认回合预算 10 分钟；停止先 TERM，1 秒后升级 KILL，再有界回收。父进程退出但子进程持管道、关管道但仍存活等路径有实际进程回归。
-- 每回合输出预算 8 MiB、单行 512 KiB、20,000 行和 1,000 工具片段；超限明确失败。非零退出保留 partial 但标 error，不更新 resume。
+- 每回合输出预算 8 MiB、单行 512 KiB、20,000 行和 1,000 工具片段；超限明确失败。非零退出保留 partial 但标 error，不更新 resume；错误摘要为 `agent exited with code <n>`，空行后是 stderr 最后 2,000 字符（旧会话中的 `…; stderr: …` 格式继续可读）。
+- `chat_send` 接受回合前执行带缓存的 `agent::check_startable`；Agent 安装损坏时直接返回“摘要 + 空行 + 原始输出”错误，不创建回合。
 - 正常或异常收口清理同进程组；正常应用退出已接 Tauri 关闭/退出和 Unix TERM/INT：先关闭新操作入口、取消活动回合，TERM 后升级 KILL，等待操作结束与持久化；失败保留窗口并可重试。真实 CLI 停止与原生桌面运行中退出/强制退出仍需独立验收，不能以本地进程测试代替。
 - `prepare_chat_invocation` 以 adapter 的 resumed 为准：原生续聊只传新增输入；fallback 历史最多 12 条、单条 2000 字符、序列化 12000 字符并标截断。最新请求保留，超过 32000 字符先报错，不裁剪原始转录。
 - Codex/Claude 请求已有 stdin 能力，只有 adapter 返回 stdin_prompt 才写入；Grok/自定义 positional 模板使用 argv。Grok 使用 `streaming-messages-json`。

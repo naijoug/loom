@@ -1,6 +1,6 @@
 # Agent 调用层与左侧功能栏重构计划
 
-- 状态：实施中；P0–P3 已完成，下一步 P4（进度见第 0 节）
+- 状态：实施中；P0–P4 已完成，下一步 P5（进度见第 0 节）
 - 基线：`main` @ `d5b8c4b` 之上的未提交 Learn 工作区（含 2026-10-26 Agent 启动前检查与错误详情折叠）
 - 触发：用户要求参考 Codex 应用的布局，把 Chat 作为默认主页，Learn、Research、Discuss 作为并列功能；调用本机各种 Agent 做成独立的模块和层，上层模块只管调用，UI 只是交互入口
 - 范围：
@@ -51,6 +51,25 @@
     - S1 只部分落实：chat 的停止/关停（`chat/mod.rs`、`service.rs`、`shutdown.rs`、`repository.rs`）与 `learn/jobs.rs` 的 `is_shutting_down` 仍直接用 `process_supervisor`，脚本未检查这一项；P4/P8 由 `agent` 暴露停止与关停接口后收紧。
     - S2 前端规则未接入：`settings`→`chat`/`app-update`/`skills`、`learn`→`chat`、`skills`→`chat`、`chat`→`app-update` 目前存在跨 feature 导入（Markdown、AgentPicker 等），随 P5 抽共享组件后再加。
     - `session_capture.rs` 仍在 crate 顶层，由 `agent/` 引用。
+
+- **P4 完成（2026-10-27）**：
+  - `agent/error.rs`：`AgentError { summary, details }`，`Display` / `String` 输出“摘要 + 空行 + 详情”，空详情不输出空行。`check_startable` 返回 `AgentError`。
+  - `check_startable` 加缓存：通过的结果按 Agent id 缓存（键为解析路径 + 修改时间），失败不缓存；`save_agents`、`diagnose_agents`（Settings 重新检测）、Chat 回合失败、Learn 作业失败时清除。自定义 CLI 只检查命令可解析，不执行 `--version`；Dummy 直接通过。
+  - `chat_send` 在接受回合前调用 `check_startable`，安装损坏时直接返回错误，不创建回合。
+  - `diagnose_agent`：能启动但 `--version` 非零退出标为 `broken`；前端 `AgentDiagnostic.status` 增加 `broken`，`AgentPicker` 新增 `isAgentUnusable` / `agentStatusKey`，Settings、Agent 选择器、Composer 发送判断、ChatPage 默认 Agent 与 `/agent` 切换统一使用，显示“安装已损坏 / Broken install”。
+  - runner 非零退出的错误改为 `agent exited with code <n>` + 空行 + stderr 尾部 2,000 字符；`termination_reason`、错误码 `agent_exit_failed` 不变。
+  - `ErrorText` 移到 `src/components/common/ErrorText.tsx`（样式 `ErrorText.css`，i18n 键 `learnErrorDetails` → `errorDetails`），兼容旧 `; stderr:` 格式；Chat 的错误片段、回退错误、回合详情的 `errorSummary` 与发送错误改用它，Learn 照常使用。
+  - 契约：`docs/agent-adapter.md` 新增“启动前检查与错误格式”，`docs/architecture/chat-contracts.md` 记录 `chat_send` 的检查与新的退出错误格式。
+  - 验证：
+    - `pnpm check` 通过（前端 132，新增发送遇坏 CLI 时摘要与折叠详情、损坏 Agent 不可选两项；Rust 298 通过 / 27 忽略，新增 `AgentError` 格式、坏/好 CLI 与 `broken` 诊断、缓存命中 / 文件变化 / 清除三项）。
+    - 首轮 `pnpm check` 中 `skills::operations::tests::ssh_configuration_is_preserved_and_default_is_only_used_when_unconfigured` 失败一次（`killpg` 返回 EPERM），单独连跑 3 次与复跑全量均通过；与 P1 记录的偶发问题同源（macOS 上进程组只剩未回收的僵尸进程时 `kill` 返回 EPERM 而非 ESRCH），P3 未处理，另立任务修复。
+    - 真实二进制：临时测试对本机 Codex 调用 `check_startable` / `diagnose_agent`，全局 `~/.npm-global/bin/codex`（0.164.0）与缓存的 0.153.0 均为 Ok / `ready`；P0 时全局安装损坏，现已可用，因此损坏场景只由复现同一 stderr 的脚本单测覆盖。临时测试已删除。
+    - 未跑真实 Chat / Learn 回合与 `smoke:visual`：本阶段只改了失败路径的文案和发送前检查，成功路径未变。
+  - 与计划的偏差：
+    - 未实现 `AgentErrorKind`：IPC 仍传字符串，当前没有按类型分支的调用方，`-D warnings` 下未使用的变体会报错；等 Research / Discuss 需要按类型展示时再加。
+    - Skills 本地翻译未改用 `agent::run`，在 `docs/agent-adapter.md` 记为例外：它需要原始 stdout（Claude 的单个 JSON 结果），而 runner 解析前逐行脱敏，可能改写译文中形似密钥的示例；它也不走 Agent 配置。`check-layers.mjs` 暂不扫描 `skills/`。
+    - Learn 新建研究表单仍只按 `available` 过滤 Agent，未读取诊断；损坏的 Agent 在开始时被 `check_startable` 拦下。
+    - 新 Chat 回合的错误文本格式变化（旧：`agent exited with status exit status: N; stderr: …`），旧会话由 `ErrorText` 兼容读取。
 
 ## 1. 目标
 

@@ -3,7 +3,7 @@ import { GraduationCap, LoaderCircle } from "lucide-react";
 import { LEARN_ADAPTERS, type CreateStudyInput, type LearnApi, type LearnDepth, type LearnLanguage } from "../../api/learn";
 import type { AgentConfig } from "../../domain";
 import { useLocale, useT } from "../../i18n";
-import { ErrorText } from "./ErrorText";
+import { ErrorText } from "../../components/common/ErrorText";
 
 const GITHUB_URL = /^https:\/\/github\.com\/[A-Za-z0-9-]+\/[A-Za-z0-9._-]+?(\.git)?\/?$/;
 
@@ -72,7 +72,7 @@ export function NewStudyForm({ api, agents, onCreated }: { api: LearnApi; agents
       </label>
     </div>
     <p className="learn-note">{t("learnModelHint")}</p>
-    {error && <ErrorText text={error} alert />}
+    {error && <ErrorText text={error} alert className="learn-error" />}
     <button type="submit" className="chat-primary-button" disabled={!canSubmit}>{busy && <LoaderCircle size={14} className="chat-spin" aria-hidden="true" />}{t("learnStart")}</button>
   </form>;
 }

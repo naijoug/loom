@@ -157,6 +157,15 @@ pub async fn chat_export(
 ) -> Result<ChatExportResult, String> {
     let operation = process_supervisor::supervisor().begin_operation()?;
     let repository = open_chat_repository(&app, &input.project_path)?;
+    // A broken install is rejected before the turn is accepted; the check is
+    // cached, so a healthy agent adds no probe to each send.
+    let session_agent = repository.load(&input.session_id)?.agent_id;
+    if let Some(agent) = load_agents(&app)?
+        .into_iter()
+        .find(|agent| agent.id == session_agent)
+    {
+        crate::agent::check_startable(&agent).await?;
+    }
     let export_id = ids.next("export");
     tauri::async_runtime::spawn_blocking(move || {
         let _operation = operation;
@@ -399,6 +408,15 @@ pub async fn chat_send(
 ) -> Result<ChatSendResult, String> {
     let operation = process_supervisor::supervisor().begin_operation()?;
     let repository = open_chat_repository(&app, &input.project_path)?;
+    // A broken install is rejected before the turn is accepted; the check is
+    // cached, so a healthy agent adds no probe to each send.
+    let session_agent = repository.load(&input.session_id)?.agent_id;
+    if let Some(agent) = load_agents(&app)?
+        .into_iter()
+        .find(|agent| agent.id == session_agent)
+    {
+        crate::agent::check_startable(&agent).await?;
+    }
     // Unreadable settings keep the experiment off rather than blocking chat.
     let inline_cards = crate::settings::load_app_settings_for_app(&app)
         .map(|settings| settings.experimental_inline_cards)
@@ -491,6 +509,9 @@ pub async fn chat_send(
             Some(&resume_binding),
             result,
         );
+        if event.status == "error" {
+            crate::agent::forget_startable(Some(&session_agent));
+        }
         if let Some(persisted) = event.journal_event.clone() {
             let _ = app.emit("loom://chat-event", persisted);
         } else {

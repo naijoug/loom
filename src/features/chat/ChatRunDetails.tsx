@@ -2,6 +2,7 @@ import { useT } from "../../i18n";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { chatReadRunLogs } from "../../api/chatClient";
 import type { ChatTurn } from "../../domain/chat";
+import { ErrorText } from "../../components/common/ErrorText";
 
 
 
@@ -51,7 +52,7 @@ export function ChatRunDetails({ projectPath, sessionId, turn, readLogs = chatRe
         <dt>{t("exitCodeLabel")}</dt><dd>{turn.exitCode ?? t("noExitCode")}</dd>
         {turn.terminationReason && <><dt>{t("termination")}</dt><dd>{turn.terminationReason}</dd></>}
       </dl>
-      {turn.errorSummary && <p role="alert">{turn.errorSummary}</p>}
+      {turn.errorSummary && <ErrorText alert text={turn.errorSummary} />}
       <div className="chat-run-controls" role="group" aria-label={t("logs")} >
         <button type="button" aria-pressed={stream === "stdout"} onClick={() => setStream("stdout")}>stdout</button>
         <button type="button" aria-pressed={stream === "stderr"} onClick={() => setStream("stderr")}>stderr</button>

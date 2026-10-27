@@ -10,7 +10,7 @@ import { hasTauriRuntime } from "../../hooks/runtime";
 import { useAppState } from "../../state/AppStateContext";
 import { UpdateButton } from "../app-update/UpdateProvider";
 import { defaultAgentDraft, draftFromAgent, isBuiltInAgent } from "./agentDraft";
-import { agentHealth } from "../chat/AgentPicker";
+import { agentHealth, agentStatusKey } from "../chat/AgentPicker";
 import { setInlineCardsEnabled, useInlineCardsEnabled } from "../chat/openui/inlineCardsSetting";
 import "../chat/chat.css";
 import "./settings.css";
@@ -97,7 +97,7 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
           <tbody>{state.agents.filter(agent => agent.adapterType !== "dummy").map(agent => {
             const diag = diagnostics.find(item => item.agentId === agent.id);
             return <tr key={agent.id}><td><strong>{agent.name}</strong><small><code>{diag?.version ?? t("unknown")}</code></small></td>
-              <td title={diag?.detail}><span className="settings-status"><span className="chat-health-dot" data-health={agentHealth(agent, diag)} aria-hidden="true" />{t(diag?.status === "unavailable" ? "cannotStart" : agent.available ? "installed" : "unavailable")}</span></td>
+              <td title={diag?.detail}><span className="settings-status"><span className="chat-health-dot" data-health={agentHealth(agent, diag)} aria-hidden="true" />{t(agentStatusKey(agent, diag) ?? "installed")}</span></td>
               <td><code>{diag?.resolvedPath ?? agent.command}</code></td>
               <td>{[diag?.capabilities?.structuredStream && t("structuredStream"), diag?.capabilities?.toolEvents && t("toolEvents"), diag?.capabilities?.nativeResume && t("nativeResume")].filter(Boolean).join(", ") || t("historyReplay")}</td>
               <td><label className="settings-switch"><input type="checkbox" role="switch" aria-label={`${t("enabled")} ${agent.name}`} checked={agent.enabled} disabled={busy} onChange={event => void setAgentEnabled(agent.id, event.target.checked)} /><span aria-hidden="true" /></label></td>

@@ -14,7 +14,7 @@ import { useChatBridge } from "./useChatBridge";
 import { useChatExport } from "./useChatExport";
 import { mockChatStore } from "./mockStore";
 import { chatSendController } from "./state/ChatSendController";
-import { defaultAgentId } from "./AgentPicker";
+import { defaultAgentId, isAgentUnusable } from "./AgentPicker";
 import { ProjectTree } from "./ProjectTree";
 import { ProjectPicker } from "./ProjectPicker";
 import { ChatSessionHeader } from "./ChatSessionHeader";
@@ -52,7 +52,7 @@ export function ChatPage() {
   const [newMode, setNewMode] = useState<ChatPermissionMode>("explore");
   const [newAgent, setNewAgent] = useState("");
   const [diagnostics, setDiagnostics] = useState<AgentDiagnostic[]>([]);
-  const draftAgent = defaultAgentId(agents.map(agent => diagnostics.some(diagnostic => diagnostic.agentId === agent.id && diagnostic.status === "unavailable") ? { ...agent, available: false } : agent), newAgent || localStorage.getItem("loom-last-agent"));
+  const draftAgent = defaultAgentId(agents.map(agent => diagnostics.some(diagnostic => diagnostic.agentId === agent.id && isAgentUnusable(diagnostic.status)) ? { ...agent, available: false } : agent), newAgent || localStorage.getItem("loom-last-agent"));
   const [revision, setRevision] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [addProjectOpen, setAddProjectOpen] = useState(false);
@@ -179,7 +179,7 @@ export function ChatPage() {
   async function changeAgent(id: string) {
     if (running) return;
     const target = agents.find(agent => agent.id === id && agent.available);
-    if (!target || diagnostics.some(item => item.agentId === id && ["missing", "unavailable"].includes(item.status))) { setError(t("noAgent")); return; }
+    if (!target || diagnostics.some(item => item.agentId === id && isAgentUnusable(item.status))) { setError(t("noAgent")); return; }
     if (!session || !projectPath) { setNewAgent(id); return; }
     if (id === session.agentId) return;
     setConfirmation({ title: t("agentSwitchTitle", { agent: target.name }), body: t("agentSwitchWarning"), confirmLabel: t("agentSwitchConfirm"), onCancel: () => setConfirmation(null),

@@ -6,6 +6,7 @@
 //! `registry` and `diagnostics`.
 mod capabilities;
 pub(crate) mod diagnostics;
+mod error;
 mod event;
 mod invocation;
 pub(crate) mod registry;
@@ -16,7 +17,8 @@ mod tools;
 pub use capabilities::{
     capabilities, ADAPTER_CLAUDE, ADAPTER_CODEX, ADAPTER_GROK, ADAPTER_OPENCODE,
 };
-pub(crate) use diagnostics::check_startable;
+pub(crate) use diagnostics::{check_startable, forget_startable};
+pub use error::AgentError;
 pub use event::{AgentEvent, AgentOutcome, DiffStats, MessagePart};
 pub(crate) use invocation::{parse_resume_session_id, valid_session_id};
 pub use invocation::{

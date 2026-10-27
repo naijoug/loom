@@ -22,7 +22,8 @@ Learn 模块于 2026-10-26 按用户要求新增为顶层视图（入口在 Chat
 | `src/i18n/` | 英文源字典、受类型约束的简体中文、locale 持久化 |
 | `src/features/settings/SettingsPage.tsx` / `src/features/skills/SkillsPanel.tsx` | 设置侧边栏 Skills 板块，来源/搜索/详情/文件、安装到工具、已安装清单和恢复状态；设置切换保留 Chat 挂载 |
 | `skills/{catalog,repository,snapshots,operations,commands}.rs` | 有界扫描、来源登记、不可变快照、受控 Git 子进程与 typed IPC；来源移除只取消登记 |
-| `agent/{registry,capabilities,diagnostics}.rs` | Agent 调用层：PATH 优先、通用安装目录、命令覆盖、限时版本探测、启动前检查与能力声明；功能模块只经 `agent/mod.rs` 的公开接口调用 |
+| `agent/{registry,capabilities,diagnostics}.rs` | Agent 调用层：PATH 优先、通用安装目录、命令覆盖、限时版本探测、带缓存的启动前检查（Chat 发送、Learn 开始前）与能力声明；功能模块只经 `agent/mod.rs` 的公开接口调用 |
+| `agent/error.rs` | `AgentError`：面向用户的错误统一为“摘要 + 空行 + 原始详情”，前端 `components/common/ErrorText` 解析展示 |
 | `agent/invocation.rs` / `chat_context.rs` | CLI 参数、权限、原生续聊和有界历史重放 |
 | `agent/runner.rs` / `agent/event.rs` | 通用 runner `agent::run`：启动并登记进程（`ProcessOwner` 由调用方给出）、stdin、超时/取消/输出限额、进程组清理，输出 `AgentEvent`（文本/工具片段/结束）与 `AgentOutcome`；Chat、Learn 都经它启动 Agent CLI |
 | `agent/stream.rs` / `agent/tools.rs` | 各 CLI 流式 JSON 的通用解析、工具片段生成与按 `callId` 合并；不破坏 JSON 信封的日志脱敏 |

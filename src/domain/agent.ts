@@ -47,10 +47,12 @@ export interface AgentCapabilities {
 export interface AgentDiagnostic {
   capabilities?: AgentCapabilities;
   agentId: string;
-  status: "ready" | "disabled" | "missing" | "unavailable";
+  /** `broken`: the CLI starts but `--version` exits non-zero (usually a half-installed package). */
+  status: "ready" | "disabled" | "missing" | "unavailable" | "broken";
   resolvedPath?: string;
   version?: string;
   authStatus: "unknown" | "not_applicable";
   detail: string;
   checkedAtMs: number;
 }
+

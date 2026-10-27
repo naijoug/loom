@@ -1,0 +1,5 @@
+.error-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.error-text-details { margin-top: 4px; color: var(--chat-muted); }
+.error-text-details summary { cursor: pointer; width: fit-content; font-size: 12px; }
+.error-text-details summary:hover { color: var(--chat-text); }
+.error-text-details pre { margin: 6px 0 0; padding: 8px 10px; max-height: 220px; overflow: auto; border: 1px solid var(--chat-border); border-radius: 6px; background: var(--chat-raised); color: var(--chat-text); font-size: 11.5px; white-space: pre-wrap; overflow-wrap: anywhere; }

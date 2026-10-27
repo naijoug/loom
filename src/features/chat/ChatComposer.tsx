@@ -2,7 +2,8 @@ import { useEffect, useState, type ReactNode } from "react";
 import { ArrowUp, Square } from "lucide-react";
 import type { AgentConfig, AgentDiagnostic, ChatPermissionMode } from "../../domain";
 import { useT } from "../../i18n";
-import { AgentPicker } from "./AgentPicker";
+import { AgentPicker, isAgentUnusable } from "./AgentPicker";
+import { ErrorText } from "../../components/common/ErrorText";
 import { ModePicker } from "./ModePicker";
 import { ConfirmBanner, type Confirmation } from "./ConfirmBanner";
 import { SlashMenu } from "./SlashMenu";
@@ -34,7 +35,7 @@ export function ChatComposer(props: ChatComposerProps) {
   const commandIndex = Math.min(selectedCommand, Math.max(0, commands.length - 1));
   const selected = agents.find(agent => agent.id === agentId);
   const diagnostic = diagnostics.find(item => item.agentId === agentId);
-  const allowed = canSend && selected?.available && selected?.enabled && !["missing", "unavailable"].includes(diagnostic?.status ?? "");
+  const allowed = canSend && selected?.available && selected?.enabled && !isAgentUnusable(diagnostic?.status);
   useEffect(() => { setAskConfirm(false); }, [sessionKey, permissionMode, sending]);
   function send() {
     if (sending || !draft.trim()) return;
@@ -49,7 +50,7 @@ export function ChatComposer(props: ChatComposerProps) {
     } else { onCommand?.(command); setMenuClosed(true); }
   }
   return <div className="chat-composer-shell">
-    {props.error && <p className="chat-error chat-composer-error" role="alert">{props.error}</p>}
+    {props.error && <ErrorText text={props.error} alert className="chat-error chat-composer-error" />}
     <div className="chat-composer" data-mode={mode} data-auto={permissionMode === "auto"} onKeyDown={event => {
       if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
       if (event.key === "Escape") {
