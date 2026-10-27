@@ -729,6 +729,70 @@ mod tests {
         fs::remove_dir_all(root).unwrap();
     }
 
+    /// Characterization for the agent layer move (P1): the event order, job
+    /// record and log files a successful job leaves behind.
+    #[tokio::test]
+    async fn job_events_record_and_logs_are_stable() {
+        let architecture = format!(
+            "```json\n{}\n```",
+            super::super::generate::tests::architecture_json()
+        );
+        let page = "<<<LOOM_PAGE\n# CLI\n[a](loom-src:src/main.rs#L1-L3) [b](loom-src:src/core/mod.rs#L1-L9) [c](loom-src:src/core/mod.rs#L10-L20)\nLOOM_PAGE>>>";
+        let script = format!(
+            "echo 'warming up' >&2; if [ -f \"$0.done\" ]; then {}; else touch \"$0.done\"; {}; fi",
+            codex_message(page),
+            codex_message(&architecture)
+        );
+        let (root, job, events) = setup("study-jk", &script);
+        let (store, job_id) = (job.store.clone(), job.job_id.clone());
+        job.run(vec!["architecture".into()], true).await;
+        let events = events
+            .lock()
+            .unwrap()
+            .iter()
+            .map(|e| format!("{}:{}", e.stage, e.status))
+            .collect::<Vec<_>>();
+        assert_eq!(
+            events,
+            [
+                "architecture:running",
+                "architecture:done",
+                "module:cli:running",
+                "module:cli:done",
+                "job:done"
+            ]
+        );
+        let job_dir = store.job_dir("study-jk", &job_id).unwrap();
+        let mut files = fs::read_dir(&job_dir)
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+            .collect::<Vec<_>>();
+        files.sort();
+        assert_eq!(files, ["job.json", "prompt.md", "stderr.log", "stdout.log"]);
+        let record: JobRecord =
+            serde_json::from_str(&fs::read_to_string(job_dir.join("job.json")).unwrap()).unwrap();
+        // The record keeps the first stage of the job; every agent attempt is listed.
+        assert_eq!(record.stage, "architecture");
+        assert_eq!(record.status, StageStatus::Done);
+        assert_eq!((record.exit_code, record.tool_calls), (Some(0), 0));
+        assert!(record.error.is_none() && record.model.is_none());
+        let checkout = store.checkout("study-jk").unwrap();
+        let expected = format!(
+            "{} exec --json --skip-git-repo-check --cd {} --sandbox read-only --config approval_policy=\"never\" -- -",
+            root.join("fake-codex").display(),
+            checkout.display()
+        );
+        assert_eq!(record.invocations, [expected.clone(), expected]);
+        let read = |name: &str| fs::read_to_string(job_dir.join(name)).unwrap();
+        assert_eq!(read("stderr.log"), "warming up\nwarming up\n");
+        let stdout = read("stdout.log");
+        assert_eq!(stdout.lines().count(), 2);
+        assert!(stdout.lines().all(|line| line.contains("agent_message")));
+        let prompt = read("prompt.md");
+        assert!(!prompt.contains("repair attempt"));
+        fs::remove_dir_all(root).unwrap();
+    }
+
     #[tokio::test]
     async fn invalid_json_gets_one_repair_then_fails_and_writes_are_detected() {
         let (root, job, _) = setup("study-jb", &codex_message("no json at all"));

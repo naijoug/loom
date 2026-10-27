@@ -1,0 +1,149 @@
+{
+  "events": [
+    {
+      "delta": "I’ll read the instructions and `sample.txt`, then run `pwd` without changing any files.\n",
+      "done": false
+    },
+    {
+      "delta": "",
+      "done": false,
+      "part": {
+        "callId": "item_1",
+        "inputSummary": "/bin/zsh -lc 'rtk read /fixture/home/.codex/RTK.md'",
+        "kind": "bash",
+        "name": "command",
+        "status": "running",
+        "target": "/bin/zsh -lc 'rtk read /fixture/home/.codex/RTK.md'",
+        "type": "tool"
+      }
+    },
+    {
+      "delta": "",
+      "done": false,
+      "part": {
+        "callId": "item_1",
+        "exitCode": 0,
+        "inputSummary": "/bin/zsh -lc 'rtk read /fixture/home/.codex/RTK.md'",
+        "kind": "bash",
+        "name": "command",
+        "outputSummary": "<!-- rtk-owned: written by `rtk init --codex`, removed by `rtk init --codex --uninstall` -->\n\n# Command output\n\n[REDACTED sensitive line]\ndropping costly noise. Treat it as the complete result: run commands\nnormally, and batch related commands into one call to avoid extra turns.\nTruncated results state their recovery path in their own output. Re-run a\ncommand as `rtk proxy <cmd>` only when its result is unusable: empty when\noutput was clearly expected, contradicting its exit code, or garbled.",
+        "status": "done",
+        "target": "/bin/zsh -lc 'rtk read /fixture/home/.codex/RTK.md'",
+        "type": "tool"
+      }
+    },
+    {
+      "delta": "",
+      "done": false,
+      "part": {
+        "callId": "item_2",
+        "inputSummary": "/bin/zsh -lc 'rtk read sample.txt'",
+        "kind": "bash",
+        "name": "command",
+        "status": "running",
+        "target": "/bin/zsh -lc 'rtk read sample.txt'",
+        "type": "tool"
+      }
+    },
+    {
+      "delta": "",
+      "done": false,
+      "part": {
+        "callId": "item_2",
+        "exitCode": 0,
+        "inputSummary": "/bin/zsh -lc 'rtk read sample.txt'",
+        "kind": "bash",
+        "name": "command",
+        "outputSummary": "Loom fixture: cobalt 17",
+        "status": "done",
+        "target": "/bin/zsh -lc 'rtk read sample.txt'",
+        "type": "tool"
+      }
+    },
+    {
+      "delta": "",
+      "done": false,
+      "part": {
+        "callId": "item_3",
+        "inputSummary": "/bin/zsh -lc pwd",
+        "kind": "bash",
+        "name": "command",
+        "status": "running",
+        "target": "/bin/zsh -lc pwd",
+        "type": "tool"
+      }
+    },
+    {
+      "delta": "",
+      "done": false,
+      "part": {
+        "callId": "item_3",
+        "exitCode": 0,
+        "inputSummary": "/bin/zsh -lc pwd",
+        "kind": "bash",
+        "name": "command",
+        "outputSummary": "/fixture/project",
+        "status": "done",
+        "target": "/bin/zsh -lc pwd",
+        "type": "tool"
+      }
+    },
+    {
+      "delta": "\nLoom fixture: cobalt 17\n\nREADY",
+      "done": false
+    },
+    {
+      "delta": "",
+      "done": true
+    }
+  ],
+  "logs": {
+    "fnv1a": "6a82d9b12e82b45c",
+    "lines": 11,
+    "stderrLines": 0
+  },
+  "outcome": {
+    "content": "I’ll read the instructions and `sample.txt`, then run `pwd` without changing any files.\n\nLoom fixture: cobalt 17\n\nREADY",
+    "errorSummary": null,
+    "exitCode": 0,
+    "parts": [
+      {
+        "callId": "item_1",
+        "exitCode": 0,
+        "inputSummary": "/bin/zsh -lc 'rtk read /fixture/home/.codex/RTK.md'",
+        "kind": "bash",
+        "name": "command",
+        "outputSummary": "<!-- rtk-owned: written by `rtk init --codex`, removed by `rtk init --codex --uninstall` -->\n\n# Command output\n\n[REDACTED sensitive line]\ndropping costly noise. Treat it as the complete result: run commands\nnormally, and batch related commands into one call to avoid extra turns.\nTruncated results state their recovery path in their own output. Re-run a\ncommand as `rtk proxy <cmd>` only when its result is unusable: empty when\noutput was clearly expected, contradicting its exit code, or garbled.",
+        "status": "done",
+        "target": "/bin/zsh -lc 'rtk read /fixture/home/.codex/RTK.md'",
+        "type": "tool"
+      },
+      {
+        "callId": "item_2",
+        "exitCode": 0,
+        "inputSummary": "/bin/zsh -lc 'rtk read sample.txt'",
+        "kind": "bash",
+        "name": "command",
+        "outputSummary": "Loom fixture: cobalt 17",
+        "status": "done",
+        "target": "/bin/zsh -lc 'rtk read sample.txt'",
+        "type": "tool"
+      },
+      {
+        "callId": "item_3",
+        "exitCode": 0,
+        "inputSummary": "/bin/zsh -lc pwd",
+        "kind": "bash",
+        "name": "command",
+        "outputSummary": "/fixture/project",
+        "status": "done",
+        "target": "/bin/zsh -lc pwd",
+        "type": "tool"
+      }
+    ],
+    "resumeCommand": "/bin/cat resume fixture-session",
+    "status": "complete",
+    "terminationReason": null
+  },
+  "started": 1
+}

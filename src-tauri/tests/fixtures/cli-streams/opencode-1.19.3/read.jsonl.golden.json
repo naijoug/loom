@@ -1,0 +1,52 @@
+{
+  "events": [
+    {
+      "delta": "",
+      "done": false,
+      "part": {
+        "callId": "call_60db6c16950c4d34a317bdf9",
+        "inputSummary": "{\"filePath\":\"/fixture/project/sample.txt\"}",
+        "kind": "read",
+        "name": "read",
+        "outputSummary": "<path>/fixture/project/sample.txt</path>\n<type>file</type>\n<content>\n1: Loom fixture: cobalt 17\n\n(End of file - total 1 lines)\n</content>",
+        "status": "done",
+        "target": "/fixture/project/sample.txt",
+        "type": "tool"
+      }
+    },
+    {
+      "delta": "Loom fixture: cobalt 17\nREADY",
+      "done": false
+    },
+    {
+      "delta": "",
+      "done": true
+    }
+  ],
+  "logs": {
+    "fnv1a": "bc30bc85b983973a",
+    "lines": 6,
+    "stderrLines": 0
+  },
+  "outcome": {
+    "content": "Loom fixture: cobalt 17\nREADY",
+    "errorSummary": null,
+    "exitCode": 0,
+    "parts": [
+      {
+        "callId": "call_60db6c16950c4d34a317bdf9",
+        "inputSummary": "{\"filePath\":\"/fixture/project/sample.txt\"}",
+        "kind": "read",
+        "name": "read",
+        "outputSummary": "<path>/fixture/project/sample.txt</path>\n<type>file</type>\n<content>\n1: Loom fixture: cobalt 17\n\n(End of file - total 1 lines)\n</content>",
+        "status": "done",
+        "target": "/fixture/project/sample.txt",
+        "type": "tool"
+      }
+    ],
+    "resumeCommand": "/bin/cat --session fixture-session",
+    "status": "complete",
+    "terminationReason": null
+  },
+  "started": 1
+}

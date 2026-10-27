@@ -1,0 +1,38 @@
+{
+  "events": [
+    {
+      "delta": "",
+      "done": false,
+      "part": {
+        "code": "cli_reported_error",
+        "message": "[\"Internal error: {\\n  \\\"message\\\": \\\"API error (status 402 Payment Required): api_error: Grok (SuperGrok): Grok Build usage balance exhausted\\\",\\n  \\\"http_status\\\": 402\\n}\"]",
+        "type": "error"
+      }
+    },
+    {
+      "delta": "",
+      "done": true
+    }
+  ],
+  "logs": {
+    "fnv1a": "9e9f54a2aecfae29",
+    "lines": 2,
+    "stderrLines": 0
+  },
+  "outcome": {
+    "content": "",
+    "errorSummary": "[\"Internal error: {\\n  \\\"message\\\": \\\"API error (status 402 Payment Required): api_error: Grok (SuperGrok): Grok Build usage balance exhausted\\\",\\n  \\\"http_status\\\": 402\\n}\"]",
+    "exitCode": 0,
+    "parts": [
+      {
+        "code": "cli_reported_error",
+        "message": "[\"Internal error: {\\n  \\\"message\\\": \\\"API error (status 402 Payment Required): api_error: Grok (SuperGrok): Grok Build usage balance exhausted\\\",\\n  \\\"http_status\\\": 402\\n}\"]",
+        "type": "error"
+      }
+    ],
+    "resumeCommand": null,
+    "status": "error",
+    "terminationReason": "agent_reported_error"
+  },
+  "started": 1
+}

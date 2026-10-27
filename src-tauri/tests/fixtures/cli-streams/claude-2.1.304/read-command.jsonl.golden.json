@@ -1,0 +1,269 @@
+{
+  "events": [
+    {
+      "delta": "",
+      "done": false,
+      "part": {
+        "callId": "call_5f16d6479eb1434fb03f67af",
+        "kind": "search",
+        "name": "ToolSearch",
+        "status": "running",
+        "type": "tool"
+      }
+    },
+    {
+      "delta": "",
+      "done": false,
+      "part": {
+        "callId": "call_5f16d6479eb1434fb03f67af",
+        "inputSummary": "{\"max_results\":5,\"query\":\"select:Read,Bash\"}",
+        "kind": "search",
+        "name": "ToolSearch",
+        "status": "running",
+        "type": "tool"
+      }
+    },
+    {
+      "delta": "",
+      "done": false,
+      "part": {
+        "callId": "call_5f16d6479eb1434fb03f67af",
+        "name": "call_5f16d6479eb1434fb03f67af",
+        "outputSummary": "[{\"tool_name\":\"Read\",\"type\":\"tool_reference\"},{\"tool_name\":\"Bash\",\"type\":\"tool_reference\"}]",
+        "status": "done",
+        "type": "tool"
+      }
+    },
+    {
+      "delta": "",
+      "done": false,
+      "part": {
+        "callId": "call_4741b0c6caab48e7a3d91fd7",
+        "kind": "read",
+        "name": "Read",
+        "status": "running",
+        "type": "tool"
+      }
+    },
+    {
+      "delta": "",
+      "done": false,
+      "part": {
+        "callId": "call_4741b0c6caab48e7a3d91fd7",
+        "inputSummary": "{\"file_path\":\"/fixture/project/sample.txt\"}",
+        "kind": "read",
+        "name": "Read",
+        "status": "running",
+        "target": "/fixture/project/sample.txt",
+        "type": "tool"
+      }
+    },
+    {
+      "delta": "",
+      "done": false,
+      "part": {
+        "callId": "call_4741b0c6caab48e7a3d91fd7",
+        "name": "call_4741b0c6caab48e7a3d91fd7",
+        "outputSummary": "1\tLoom fixture: cobalt 17\n2",
+        "status": "done",
+        "type": "tool"
+      }
+    },
+    {
+      "delta": "",
+      "done": false,
+      "part": {
+        "callId": "call_ffb6637ef5ea4b258f9f7238",
+        "kind": "bash",
+        "name": "Bash",
+        "status": "running",
+        "type": "tool"
+      }
+    },
+    {
+      "delta": "",
+      "done": false,
+      "part": {
+        "callId": "call_ffb6637ef5ea4b258f9f7238",
+        "inputSummary": "{\"command\":\"pwd\",\"description\":\"Print current working directory\"}",
+        "kind": "bash",
+        "name": "Bash",
+        "status": "running",
+        "target": "pwd",
+        "type": "tool"
+      }
+    },
+    {
+      "delta": "",
+      "done": false,
+      "part": {
+        "callId": "call_ffb6637ef5ea4b258f9f7238",
+        "name": "call_ffb6637ef5ea4b258f9f7238",
+        "outputSummary": "/fixture/project",
+        "status": "done",
+        "type": "tool"
+      }
+    },
+    {
+      "delta": "File",
+      "done": false
+    },
+    {
+      "delta": " content",
+      "done": false
+    },
+    {
+      "delta": ":\n\n",
+      "done": false
+    },
+    {
+      "delta": "``",
+      "done": false
+    },
+    {
+      "delta": "`\n",
+      "done": false
+    },
+    {
+      "delta": "L",
+      "done": false
+    },
+    {
+      "delta": "oom",
+      "done": false
+    },
+    {
+      "delta": " fixture",
+      "done": false
+    },
+    {
+      "delta": ":",
+      "done": false
+    },
+    {
+      "delta": " cob",
+      "done": false
+    },
+    {
+      "delta": "alt",
+      "done": false
+    },
+    {
+      "delta": " ",
+      "done": false
+    },
+    {
+      "delta": "17",
+      "done": false
+    },
+    {
+      "delta": "\n",
+      "done": false
+    },
+    {
+      "delta": "``",
+      "done": false
+    },
+    {
+      "delta": "`\n\n",
+      "done": false
+    },
+    {
+      "delta": "`",
+      "done": false
+    },
+    {
+      "delta": "pwd",
+      "done": false
+    },
+    {
+      "delta": "`",
+      "done": false
+    },
+    {
+      "delta": " output",
+      "done": false
+    },
+    {
+      "delta": ":",
+      "done": false
+    },
+    {
+      "delta": " `/",
+      "done": false
+    },
+    {
+      "delta": "private",
+      "done": false
+    },
+    {
+      "delta": "/tmp",
+      "done": false
+    },
+    {
+      "delta": "/",
+      "done": false
+    },
+    {
+      "delta": "loom",
+      "done": false
+    },
+    {
+      "delta": "-cli",
+      "done": false
+    },
+    {
+      "delta": "-probe/project`\n\nREADY",
+      "done": false
+    },
+    {
+      "delta": "",
+      "done": true
+    }
+  ],
+  "logs": {
+    "fnv1a": "c7f11529c44f8f7f",
+    "lines": 931,
+    "stderrLines": 0
+  },
+  "outcome": {
+    "content": "File content:\n\n```\nLoom fixture: cobalt 17\n```\n\n`pwd` output: `/private/tmp/loom-cli-probe/project`\n\nREADY",
+    "errorSummary": null,
+    "exitCode": 0,
+    "parts": [
+      {
+        "callId": "call_5f16d6479eb1434fb03f67af",
+        "inputSummary": "{\"max_results\":5,\"query\":\"select:Read,Bash\"}",
+        "kind": "search",
+        "name": "ToolSearch",
+        "outputSummary": "[{\"tool_name\":\"Read\",\"type\":\"tool_reference\"},{\"tool_name\":\"Bash\",\"type\":\"tool_reference\"}]",
+        "status": "done",
+        "type": "tool"
+      },
+      {
+        "callId": "call_4741b0c6caab48e7a3d91fd7",
+        "inputSummary": "{\"file_path\":\"/fixture/project/sample.txt\"}",
+        "kind": "read",
+        "name": "Read",
+        "outputSummary": "1\tLoom fixture: cobalt 17\n2",
+        "status": "done",
+        "target": "/fixture/project/sample.txt",
+        "type": "tool"
+      },
+      {
+        "callId": "call_ffb6637ef5ea4b258f9f7238",
+        "inputSummary": "{\"command\":\"pwd\",\"description\":\"Print current working directory\"}",
+        "kind": "bash",
+        "name": "Bash",
+        "outputSummary": "/fixture/project",
+        "status": "done",
+        "target": "pwd",
+        "type": "tool"
+      }
+    ],
+    "resumeCommand": "/bin/cat --resume fixture-session",
+    "status": "complete",
+    "terminationReason": null
+  },
+  "started": 1
+}

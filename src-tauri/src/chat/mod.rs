@@ -1,4 +1,6 @@
 //! Chat sessions: independent of the advanced Task state machine.
+#[cfg(all(test, unix))]
+mod characterization_tests;
 mod export;
 mod file_changes;
 pub(crate) mod groups;
