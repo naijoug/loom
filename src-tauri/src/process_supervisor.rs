@@ -25,6 +25,8 @@ pub enum ProcessKind {
     /// Chat turns have their own project/session/turn owner, not a Task id.
     Chat,
     Skills,
+    /// Learn study generation jobs; read-only agent runs in a Loom-managed checkout.
+    Learn,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -45,6 +47,10 @@ pub enum ProcessOwner {
         project_key: String,
         session_id: String,
         turn_id: String,
+    },
+    Learn {
+        study_id: String,
+        job_id: String,
     },
 }
 

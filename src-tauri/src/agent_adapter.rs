@@ -15,6 +15,9 @@ pub struct AgentCapabilities {
     pub native_resume: bool,
     /// Accepts an appended system prompt for experimental inline cards.
     pub inline_cards: bool,
+    /// Accepts `AdapterInvocationRequest::model` as a `--model` argument.
+    #[serde(default)]
+    pub model_selection: bool,
     pub modes: Vec<ModeCapability>,
 }
 
@@ -57,6 +60,7 @@ pub fn capabilities(adapter: &str) -> AgentCapabilities {
         tool_events: structured,
         native_resume: structured,
         inline_cards: adapter == ADAPTER_CLAUDE,
+        model_selection: structured,
         modes: ["explore", "ask", "auto"]
             .into_iter()
             .zip(policies)
@@ -112,6 +116,9 @@ pub struct AdapterInvocationRequest<'a> {
     pub embed_prompt: bool,
     /// Extra system prompt text; adapters without `inline_cards` ignore it.
     pub system_append: Option<&'a str>,
+    /// Model name passed to the CLI; `None` keeps the CLI default. Rejected
+    /// for adapters without `model_selection` instead of being ignored.
+    pub model: Option<&'a str>,
 }
 
 impl AdapterInvocationRequest<'_> {
@@ -167,7 +174,35 @@ pub fn prepare_invocation(
     } else {
         validate_stage_permissions(agent, request.stage)?;
     }
+    if let Some(model) = request.model {
+        validate_model_name(model)?;
+        if !capabilities(&agent.adapter_type).model_selection {
+            return Err(format!(
+                "agent '{}' does not support model selection",
+                agent.name
+            ));
+        }
+    }
     adapter_for(agent).prepare(agent, request)
+}
+
+/// Real model names include `[]@#/:` (for example `auto/glm-5.3[1m]` or
+/// `provider/model#variant`), so only shape and option injection are checked.
+pub fn validate_model_name(model: &str) -> Result<(), String> {
+    if model.is_empty()
+        || model.chars().count() > 128
+        || model.starts_with('-')
+        || model.chars().any(|c| c.is_whitespace() || c.is_control())
+    {
+        return Err("invalid model name".into());
+    }
+    Ok(())
+}
+
+fn push_model(args: &mut Vec<String>, request: &AdapterInvocationRequest<'_>) {
+    if let Some(model) = request.model {
+        args.extend(["--model".into(), model.into()]);
+    }
 }
 
 pub fn validate_stage_permissions(agent: &AgentConfig, stage: AgentStage) -> Result<(), String> {
@@ -246,6 +281,7 @@ impl AgentAdapter for CodexAdapter {
         // Exec-level options precede the resume subcommand. Always reassert
         // policy instead of inheriting a previous session's broader sandbox.
         args.extend(["--config".into(), "approval_policy=\"never\"".into()]);
+        push_model(&mut args, request);
         if let Some(id) = &resume_id {
             args.extend(["resume".into(), "--json".into(), "--".into(), id.clone()]);
         } else {
@@ -298,6 +334,7 @@ impl AgentAdapter for ClaudeAdapter {
         if let Some(mode) = permission_mode {
             args.extend(["--permission-mode".into(), mode.into()]);
         }
+        push_model(&mut args, request);
         // Claude Code does not persist an appended prompt with the session,
         // so it is passed on every turn, including resumed ones.
         if let Some(text) = request.system_append {
@@ -354,6 +391,7 @@ impl AgentAdapter for GrokAdapter {
             "plan"
         };
         args.extend(["--permission-mode".to_string(), permission_mode.to_string()]);
+        push_model(&mut args, request);
 
         // Headless single-turn
         args.push("-p".to_string());
@@ -413,6 +451,7 @@ impl AgentAdapter for OpencodeAdapter {
         if let Some(id) = &resume {
             args.extend(["--session".into(), id.clone()]);
         }
+        push_model(&mut args, request);
         if request.embed_prompt {
             args.extend(["--".into(), request.prompt.into()]);
         }
@@ -602,6 +641,7 @@ mod tests {
                 chat_permission_mode: None,
                 embed_prompt: true,
                 system_append: None,
+                model: None,
             },
         )
         .expect("review invocation");
@@ -621,6 +661,7 @@ mod tests {
                 chat_permission_mode: None,
                 embed_prompt: true,
                 system_append: None,
+                model: None,
             },
         )
         .expect("implementation invocation");
@@ -666,6 +707,7 @@ mod tests {
                 chat_permission_mode: None,
                 embed_prompt: true,
                 system_append: None,
+                model: None,
             },
         )
         .expect("custom invocation");
@@ -690,10 +732,85 @@ mod tests {
                 chat_permission_mode: None,
                 embed_prompt: true,
                 system_append: None,
+                model: None,
             },
         )
         .expect_err("shell wrappers should be rejected");
         assert!(error.contains("dedicated executable"));
+    }
+
+    #[test]
+    fn built_in_adapters_pass_selected_models_and_reject_invalid_ones() {
+        let root = Path::new("/repo");
+        for (adapter, model) in [
+            (ADAPTER_CODEX, "gpt-6-luna"),
+            (ADAPTER_CLAUDE, "auto/glm-5.3[1m]"),
+            (ADAPTER_GROK, "grok-4.7@500k"),
+            (ADAPTER_OPENCODE, "provider/model#variant"),
+        ] {
+            assert!(capabilities(adapter).model_selection);
+            let request = AdapterInvocationRequest {
+                project_path: root,
+                prompt: "study",
+                prompt_file: None,
+                stage: AgentStage::Planning,
+                resume_command: None,
+                chat_permission_mode: Some("explore"),
+                embed_prompt: adapter == ADAPTER_GROK || adapter == ADAPTER_OPENCODE,
+                system_append: None,
+                model: Some(model),
+            };
+            let prepared = prepare_invocation(&agent(adapter), &request).unwrap();
+            let at = prepared
+                .args
+                .iter()
+                .position(|arg| arg == "--model")
+                .unwrap_or_else(|| panic!("{adapter} has no --model"));
+            assert_eq!(prepared.args[at + 1], model);
+            if let Some(separator) = prepared.args.iter().position(|arg| arg == "--") {
+                assert!(
+                    at < separator,
+                    "{adapter} model follows the prompt separator"
+                );
+            }
+            let without = prepare_invocation(
+                &agent(adapter),
+                &AdapterInvocationRequest {
+                    model: None,
+                    ..request.clone()
+                },
+            )
+            .unwrap();
+            assert!(!without.args.iter().any(|arg| arg == "--model"));
+            for bad in ["", "-x", "a b", "a\nb", &"m".repeat(129)] {
+                let error = prepare_invocation(
+                    &agent(adapter),
+                    &AdapterInvocationRequest {
+                        model: Some(bad),
+                        ..request.clone()
+                    },
+                )
+                .unwrap_err();
+                assert_eq!(error, "invalid model name", "{adapter} accepted {bad:?}");
+            }
+        }
+        assert!(!capabilities("cli").model_selection);
+        let error = prepare_invocation(
+            &agent("cli"),
+            &AdapterInvocationRequest {
+                project_path: root,
+                prompt: "study",
+                prompt_file: None,
+                stage: AgentStage::Planning,
+                resume_command: None,
+                chat_permission_mode: Some("explore"),
+                embed_prompt: true,
+                system_append: None,
+                model: Some("any"),
+            },
+        )
+        .unwrap_err();
+        assert!(error.contains("does not support model selection"));
     }
 
     #[test]
@@ -711,6 +828,7 @@ mod tests {
                 chat_permission_mode: None,
                 embed_prompt: true,
                 system_append: None,
+                model: None,
             },
         )
         .expect("grok prepare");
@@ -755,6 +873,7 @@ mod tests {
             chat_permission_mode: Some("explore"),
             embed_prompt: false,
             system_append: Some("CARDS"),
+            model: None,
         };
         let args = prepare_invocation(&agent, &request).unwrap().args;
         let at = args
@@ -794,6 +913,7 @@ mod tests {
                         }),
                         embed_prompt,
                         system_append: None,
+                        model: None,
                     };
                     let invocation = prepare_invocation(&agent, &request).unwrap();
                     assert!(invocation.resumed);
@@ -886,6 +1006,7 @@ mod tests {
                             chat_permission_mode: None,
                             embed_prompt: true,
                             system_append: None,
+                            model: None,
                         }
                     )
                     .is_err(),
@@ -914,6 +1035,7 @@ mod opencode_tests {
                 chat_permission_mode: Some(mode),
                 embed_prompt: true,
                 system_append: None,
+                model: None,
             };
             let invocation = prepare_invocation(&agent, &request).unwrap();
             assert_eq!(invocation.output_mode, "opencode_json");

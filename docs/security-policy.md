@@ -1,6 +1,6 @@
 # Loom 安全策略
 
-当前运行产品是本机 CLI Chat，独立 Skills 模块实施中。Rust 校验本地文件、项目路径与进程边界；React 的控件禁用和确认对话框不构成安全沙箱。
+当前运行产品是本机 CLI Chat，另有独立 Skills 模块与 Learn 学习研究模块。Rust 校验本地文件、项目路径与进程边界；React 的控件禁用和确认对话框不构成安全沙箱。
 
 ## Skills 写入边界（安装接线已实现，完整迁移实施中）
 
@@ -34,6 +34,15 @@
 - 自定义 CLI 不接受 shell wrapper，只按参数数组启动专用程序。Loom 不为自定义程序额外提供文件沙箱。
 - 原生续聊只接受有界 ID，绑定 Agent、程序、参数、项目和权限指纹。不能把存储的命令字符串当 shell 执行；配置改变后清除句柄并重放有界历史。
 - 子进程使用独立进程组。停止/超时先 TERM，再升级 KILL；正常退出等待运行终止与证据保存。历史 PID 只用于诊断，不用于重启后盲杀进程。
+
+## Learn
+
+- 只接受 `https://github.com/<owner>/<repo>` 公开仓库与受校验的分支 / tag / 完整 commit；不支持 SSH、私有仓库或其他主机。仓库内容一律视为不可信输入。
+- 拉取复用 `git_fetch.rs` 加固配置（禁用 hooks、fsmonitor、ext 传输、子模块递归和 LFS/smudge 过滤器，`.git/info/attributes` 关闭过滤属性）；先 `--no-checkout` 浅克隆，`ls-tree` 校验文件数与体积上限后才检出。Git stderr 只以受控分类持久化。
+- 研究数据只写 `<appData>/learn/studies/<studyId>/`；研究 ID 为受限单段标识，研究目录与源码读取路径拒绝 symlink 和逃逸。Loom 不运行被研究项目的任何代码。
+- Agent 只以 `explore`（只读 / plan）权限、cwd = checkout 运行，不接受自定义 CLI；每次运行前后比对 checkout 指纹，变化即判作业失败。这是检测而非 OS 沙箱：实际只读保障取决于各 CLI 的策略实现。
+- 模型输出只按 schema 与引用校验后使用；无效引用以警告样式显示，不静默信任。Markdown 渲染沿用下文的安全规则，`loom-src:` / `loom-wiki:` 仅在 Learn 页面内转为应用内操作。
+- 作业日志沿用 CLI 执行的输出限额和脱敏；`learn_*` 命令仅接受主窗口调用。
 
 ## 存储和输出
 

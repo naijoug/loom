@@ -6,13 +6,15 @@
 
 Task/Board/Planning 的 UI、命令及独占模块已删除。`crates/`、`packages/`、`src/workbench/`、`src-tauri/src/workbench/` 保留冻结；默认应用不挂载这些模块，也不依赖 Bun 或 SDK worker。
 
-Skills 模块自 2026-10-21 开始按 [迁移计划](plans/2026-10-21/06:12-skills-module-migration.md) 实施。用户已明确入口位于 Settings 侧边栏，顶层仍为 Chat / Settings。当前已接通本地/Git/GitHub API 来源、固定快照、操作记录，以及 copy/symlink 安装、显式更新/卸载、共享指令/wrapper、只读诊断、事务恢复和无窗口 CLI 核心；管理功能继续由 Loom 维护；2026-10-25 用户取消旧数据迁移并授权源 Manager 代码退役，真实账号/桌面隔离验证限制单独保留。契约与状态见 [Skills 契约](architecture/skills-contracts.md)，不挂载冻结 Workbench。
+Skills 模块自 2026-10-21 开始按 [迁移计划](plans/2026-10-21/06:12-skills-module-migration.md) 实施。用户已明确入口位于 Settings 侧边栏，Skills 不新增顶层视图。当前已接通本地/Git/GitHub API 来源、固定快照、操作记录，以及 copy/symlink 安装、显式更新/卸载、共享指令/wrapper、只读诊断、事务恢复和无窗口 CLI 核心；管理功能继续由 Loom 维护；2026-10-25 用户取消旧数据迁移并授权源 Manager 代码退役，真实账号/桌面隔离验证限制单独保留。契约与状态见 [Skills 契约](architecture/skills-contracts.md)，不挂载冻结 Workbench。
+
+Learn 模块于 2026-10-26 按用户要求新增为顶层视图（入口在 Chat 侧边栏），输入公开 GitHub 仓库与 Agent/模型，生成架构、分级模块 Wiki 和可定位的源码引用。数据只写应用数据目录，Agent 以只读权限在 checkout 中运行。契约见 [Learn 契约](architecture/learn-contracts.md)。
 
 ## 生产模块
 
 | 模块 | 职责 |
 |---|---|
-| `src/App.tsx` | Chat / Settings；设置打开时保留 Chat 挂载、草稿与活动会话 |
+| `src/App.tsx` | Chat / Learn / Settings；Learn 或设置打开时保留 Chat 挂载、草稿与活动会话 |
 | `src/features/chat/ProjectTree.tsx` | 最近项目、按需展开会话、搜索、归档过滤、折叠状态 |
 | `ChatPage` / `useChatBridge` / `ChatProjection` | 会话选择、异步归属、序号补流与快照协调 |
 | `ChatComposer` / `AgentPicker` / `ModeSwitch` | 发送、停止、IME 保护、斜杠命令、模式和 Agent 选择 |
@@ -27,6 +29,8 @@ Skills 模块自 2026-10-21 开始按 [迁移计划](plans/2026-10-21/06:12-skil
 | `process_supervisor.rs` | 进程组归属、超时、TERM/KILL、应用退出协调 |
 | `projects.rs` / `storage.rs` / `settings.rs` | 项目登记、原子写入、设置与旧数据兼容 |
 | `diagnostics.rs` / `chat/export.rs` / `app_update.rs` | 有界诊断包、会话导出、应用内更新与草稿恢复 |
+| `src/features/learn/` | Learn 研究列表、新建表单、阶段/日志、Wiki 目录与页面、架构图、源码查看器；入口为 Chat 侧边栏 Learn 按钮 |
+| `learn/{store,fetch,inventory,source,generate,jobs,commands}.rs` / `git_fetch.rs` | 研究存储与作业登记、加固浅克隆、静态清单、受限源码读取、提示词与输出/引用校验、只读 Agent 作业、typed IPC；Git 加固配置与 Skills 共享 |
 | `contracts/tauri-contract.json` | Rust/TypeScript 共同验证的命令、事件和模型样本 |
 
 ## 执行与存储

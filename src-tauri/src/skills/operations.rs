@@ -406,22 +406,7 @@ async fn git_raw(
     }
     command
         .args(&runner.extra_args)
-        .args([
-            "-c",
-            "core.hooksPath=/dev/null",
-            "-c",
-            "core.fsmonitor=false",
-            "-c",
-            "protocol.ext.allow=never",
-            "-c",
-            "submodule.recurse=false",
-            "-c",
-            "filter.lfs.required=false",
-            "-c",
-            "filter.lfs.smudge=",
-            "-c",
-            "filter.lfs.process=",
-        ])
+        .args(crate::git_fetch::HARDENED_CONFIG)
         .args(args)
         .current_dir(cwd)
         .env("GIT_TERMINAL_PROMPT", "0")
@@ -474,24 +459,9 @@ async fn git_raw(
         .map_err(|_| SkillsError::invalid("Git output task failed"))??;
     let status = result?;
     if !(status.success() || policy.missing_config_ok && status.code() == Some(1)) {
-        let diagnostic = String::from_utf8_lossy(&stderr).to_ascii_lowercase();
-        let message = if diagnostic.contains("host key verification failed")
-            || diagnostic.contains("remote host identification has changed")
-        {
-            "SSH host verification failed; review known_hosts without disabling verification"
-        } else if diagnostic.contains("permission denied")
-            || diagnostic.contains("authentication failed")
-        {
-            "Git authentication failed; check the configured credential or SSH identity"
-        } else if diagnostic.contains("could not resolve host")
-            || diagnostic.contains("could not resolve hostname")
-        {
-            "Git host lookup failed"
-        } else {
-            "Git command failed; check repository access and local Git configuration"
-        };
         // Arbitrary SSH wrappers may print secrets; persist only a controlled
         // diagnostic and the already-recorded exit status, never raw stderr.
+        let message = crate::git_fetch::classify_failure(&stderr);
         return Err(SkillsError::new(ErrorCode::SourceUnavailable, message));
     }
     Ok(String::from_utf8_lossy(&stdout).trim().into())
@@ -545,9 +515,7 @@ async fn import_using(
             .await?;
             let checkout = directory.join("repository");
             let revision = git(&mut op, &checkout, &["rev-parse", "HEAD"], &runner).await?;
-            if !matches!(revision.len(), 40 | 64)
-                || !revision.bytes().all(|b| b.is_ascii_hexdigit())
-            {
+            if !crate::git_fetch::valid_revision(&revision) {
                 return Err(SkillsError::invalid("Invalid Git revision"));
             }
             // info/attributes has precedence over repository/global attributes;
@@ -555,7 +523,7 @@ async fn import_using(
             fs::create_dir_all(checkout.join(".git/info"))?;
             fs::write(
                 checkout.join(".git/info/attributes"),
-                "* -filter -working-tree-encoding -text\n",
+                crate::git_fetch::NO_FILTER_ATTRIBUTES,
             )?;
             git(
                 &mut op,

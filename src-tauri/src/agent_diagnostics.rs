@@ -103,6 +103,55 @@ async fn diagnose_agent(agent: crate::models::AgentConfig) -> AgentDiagnostic {
     }
 }
 
+const STARTUP_PROBE_TIMEOUT: Duration = Duration::from_secs(15);
+const STARTUP_DETAIL_LIMIT: usize = 4000;
+
+/// Runs `<command> --version` before a long job so a broken install fails fast.
+/// The error's first line is a readable summary; the raw output follows a blank line.
+pub async fn check_startable(agent: &crate::models::AgentConfig) -> Result<(), String> {
+    let path = resolve_command_path(&agent.command)
+        .ok_or_else(|| format!("{} was not found on this machine", agent.name))?;
+    let mut command = TokioCommand::new(&path);
+    command.arg("--version").kill_on_drop(true);
+    let output = match timeout(STARTUP_PROBE_TIMEOUT, command.output()).await {
+        Err(_) => {
+            return Err(format!(
+                "{} did not answer `--version` within {} seconds; check the installation and try again.",
+                agent.name,
+                STARTUP_PROBE_TIMEOUT.as_secs()
+            ))
+        }
+        Ok(Err(error)) => {
+            return Err(format!(
+                "{} could not start; repair or reinstall it, then try again.\n\n{path}: {error}",
+                agent.name
+            ))
+        }
+        Ok(Ok(output)) if output.status.success() => return Ok(()),
+        Ok(Ok(output)) => output,
+    };
+    let status = output
+        .status
+        .code()
+        .map(|code| format!("exited with {code}"))
+        .unwrap_or_else(|| "was stopped by a signal".into());
+    let raw = [output.stderr, output.stdout]
+        .iter()
+        .map(|bytes| String::from_utf8_lossy(bytes).trim().to_string())
+        .filter(|text| !text.is_empty())
+        .collect::<Vec<_>>()
+        .join("\n");
+    let mut detail = format!("{path} --version {status}");
+    if !raw.is_empty() {
+        detail.push('\n');
+        detail.extend(raw.chars().take(STARTUP_DETAIL_LIMIT));
+    }
+    Err(format!(
+        "{} is installed but cannot run (`--version` {status}); repair or reinstall it, then try again.\n\n{detail}",
+        agent.name
+    ))
+}
+
 #[tauri::command]
 pub async fn diagnose_agents(
     app: AppHandle,
@@ -154,5 +203,35 @@ mod timeout_tests {
         assert_eq!(result.version.as_deref(), Some("unknown"));
         assert!(result.detail.contains("timed out"));
         std::fs::remove_file(path).unwrap();
+    }
+
+    #[tokio::test]
+    async fn startup_check_summarises_broken_install_and_keeps_raw_output() {
+        let script = |name: &str, body: &str| {
+            let path = std::env::temp_dir().join(crate::models::IdGenerator::default().next(name));
+            std::fs::write(&path, body).unwrap();
+            std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o700)).unwrap();
+            path
+        };
+        let agent = |path: &std::path::Path| -> crate::models::AgentConfig {
+            serde_json::from_value(serde_json::json!({
+                "id":"codex", "name":"Codex", "command":path, "args":[], "workingDirectoryPolicy":"project_root", "capabilities":[], "adapterType":"codex_cli", "canWriteFiles":false, "canRunCommands":false, "enabled":true, "available":true
+            })).unwrap()
+        };
+        let broken = script(
+            "loom-broken-version",
+            "#!/bin/sh\necho 'Error: Missing optional dependency @openai/codex-darwin-arm64' >&2\nexit 1\n",
+        );
+        let error = check_startable(&agent(&broken)).await.unwrap_err();
+        let (summary, detail) = error.split_once("\n\n").unwrap();
+        assert!(
+            summary.starts_with("Codex is installed but cannot run (`--version` exited with 1)")
+        );
+        assert!(!summary.contains("Missing optional dependency"));
+        assert!(detail.contains("Missing optional dependency @openai/codex-darwin-arm64"));
+        let working = script("loom-good-version", "#!/bin/sh\necho 'codex 1.0'\n");
+        check_startable(&agent(&working)).await.unwrap();
+        std::fs::remove_file(broken).unwrap();
+        std::fs::remove_file(working).unwrap();
     }
 }

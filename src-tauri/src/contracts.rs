@@ -58,12 +58,23 @@ const COMMANDS: &[&str] = &[
     "skills_translate",
     "skills_translation_history",
     "skills_translation_result",
+    "learn_list_studies",
+    "learn_create_study",
+    "learn_get_study",
+    "learn_read_page",
+    "learn_generate",
+    "learn_cancel_job",
+    "learn_read_job_logs",
+    "learn_list_tree",
+    "learn_read_source",
+    "learn_delete_study",
 ];
 const EVENTS: &[&str] = &[
     "loom-update-state",
     "loom://chat-event",
     "loom://chat-error",
     "loom://skills-operation",
+    "loom://learn-event",
 ];
 fn manifest() -> Value {
     json!({"schemaVersion":1,"commands":COMMANDS,"events":EVENTS,"storeSchemaVersions":{"agents":AGENT_STORE_SCHEMA_VERSION,"settings":SETTINGS_SCHEMA_VERSION,"chat":crate::chat::CHAT_SCHEMA_VERSION}})
@@ -128,6 +139,10 @@ fn persisted_model_samples_round_trip_through_rust_types() {
     assert_model_sample::<crate::chat::ChatExportResult>(samples, "chatExportResult");
     assert_model_sample::<crate::chat::ChatMessagePart>(samples, "chatToolPart");
     assert_model_sample::<crate::agent_diagnostics::AgentDiagnostic>(samples, "agentDiagnostic");
+    assert_model_sample::<crate::learn::models::Study>(samples, "learnStudy");
+    assert_model_sample::<crate::learn::models::Architecture>(samples, "learnArchitecture");
+    assert_model_sample::<crate::learn::models::PageContent>(samples, "learnPageContent");
+    assert_model_sample::<crate::learn::models::LearnEvent>(samples, "learnEvent");
     assert_model_sample::<crate::skills::translation::TranslationResult>(
         samples,
         "skillsTranslationResult",
@@ -194,6 +209,7 @@ fn event_manifest_matches_backend_emitters() {
         include_str!("chat/mod.rs"),
         include_str!("chat/service.rs"),
         include_str!("skills/commands.rs"),
+        include_str!("learn/mod.rs"),
     ]
     .join("\n");
     for event in EVENTS {

@@ -1,5 +1,10 @@
 # 计划文档索引
 
+## 2026-10-26
+
+- 19:26-learn-repo-study-module.md
+  > （L0–L5、L7 已实施，待用户验收；L6 未做）顶层 Learn：输入公开 GitHub 地址并选择 Agent 与模型，加固浅克隆固定 commit，Rust 静态清单 + 只读 CLI 生成经校验的架构、L1–L3 模块 Wiki 与术语表，`loom-src:` 引用在应用内查看器定位；适配器新增模型选择。check、Learn 视觉矩阵通过；真实研究 Codex 完成、Claude 本机代理认证失败（blocked），见验收记录；计划第 0 节列出实现偏差。
+
 ## 2026-10-25
 
 - 23:41-skills-function-migration-retirement.md

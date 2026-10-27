@@ -1,5 +1,5 @@
 import type { AgentConfig, ProjectSummary } from "../domain";
-export type AppView = "chat" | "settings";
+export type AppView = "chat" | "learn" | "settings";
 export interface AppSlice {
   currentView: AppView; activeProjectId: string | null;
   isLoadingProjects: boolean; isLoadingAgents: boolean;

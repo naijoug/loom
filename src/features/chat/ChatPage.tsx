@@ -206,7 +206,7 @@ export function ChatPage() {
   return <div className={`chat-page${collapsed ? " sidebar-collapsed" : ""}`} data-traffic-lights={trafficLights || undefined} data-testid="chat-page">
     {!collapsed && <ProjectTree projects={state.projects.recent} agents={state.agents} projectPath={projectPath} sessionId={sessionId}
       useBackend={useBackend} revision={revision} onSelect={select} onAdd={() => setAddProjectOpen(true)}
-      onSettings={() => dispatch({ type: "app/viewSelected", view: "settings" })} onCollapse={() => setCollapsed(true)} />}
+      onSettings={() => dispatch({ type: "app/viewSelected", view: "settings" })} onLearn={() => dispatch({ type: "app/viewSelected", view: "learn" })} onCollapse={() => setCollapsed(true)} />}
     <main className={`chat-main${newChat ? " chat-main-new" : ""}`}>
       <div className="chat-window-bar" data-tauri-drag-region>
         {collapsed && <button type="button" className="chat-icon-button" aria-label={t("expandSidebar")} title={t("expandSidebar")} onClick={() => setCollapsed(false)}><PanelLeftOpen size={16} /></button>}

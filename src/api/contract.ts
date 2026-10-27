@@ -1,5 +1,6 @@
 import type { SkillSource, SkillsHttpRequest, TranslationProviders, TranslationResult, TranslationSummary } from "./skills";
 import type { InstructionCheck, ResourcePreview } from "./skills";
+import type { LearnArchitecture, LearnEvent, LearnPageContent, LearnStudy } from "./learn";
 import type { SkillsLibrary, SkillsOperation, InstallTarget, Installation, InstallPlan, InstallReceipt } from "./skills";
 import type { AgentConfig, AgentDiagnostic, AppSettings, ChatSession, ChatEvent, ChatSendInput, ChatSendReceipt, ChatResumeHandle, ChatTurn, ChatLogPage, ChatExportInput, ChatExportResult, ChatMessagePart } from "../domain";
 
@@ -56,12 +57,23 @@ export const TAURI_COMMANDS = {
   skillsTranslate: "skills_translate",
   skillsTranslationHistory: "skills_translation_history",
   skillsTranslationResult: "skills_translation_result",
+  learnListStudies: "learn_list_studies",
+  learnCreateStudy: "learn_create_study",
+  learnGetStudy: "learn_get_study",
+  learnReadPage: "learn_read_page",
+  learnGenerate: "learn_generate",
+  learnCancelJob: "learn_cancel_job",
+  learnReadJobLogs: "learn_read_job_logs",
+  learnListTree: "learn_list_tree",
+  learnReadSource: "learn_read_source",
+  learnDeleteStudy: "learn_delete_study",
 } as const;
 export const TAURI_EVENTS = {
   updateState: "loom-update-state",
   chatEvent: "loom://chat-event",
   chatError: "loom://chat-error",
   skillsOperation: "loom://skills-operation",
+  learnEvent: "loom://learn-event",
 } as const;
 export const STORE_SCHEMA_VERSIONS = {"agents": 1, "settings": 1, "chat": 2} as const;
 export type TauriCommand = (typeof TAURI_COMMANDS)[keyof typeof TAURI_COMMANDS];
@@ -280,6 +292,7 @@ export const MODEL_CONTRACT_SAMPLES = {
     "toolEvents": true,
     "nativeResume": true,
     "inlineCards": false,
+    "modelSelection": true,
     "modes": [
       {
         "mode": "explore",
@@ -554,4 +567,154 @@ skillsHttpRequest: {
   "status": 200,
   "error": null
 } satisfies SkillsHttpRequest,
+learnStudy: {
+  "schemaVersion": 1,
+  "studyId": "study-1-0",
+  "url": "https://github.com/sharkdp/hexyl",
+  "owner": "sharkdp",
+  "repo": "hexyl",
+  "commit": "0123456789abcdef0123456789abcdef01234567",
+  "agentId": "agent-claude",
+  "agentName": "Claude Code",
+  "adapterType": "claude_code_cli",
+  "model": "sonnet",
+  "language": "zh-CN",
+  "depth": "standard",
+  "promptVersion": 1,
+  "createdAtMs": 1,
+  "updatedAtMs": 2,
+  "stages": [
+    {
+      "stage": "fetch",
+      "status": "done",
+      "jobId": "job-1-0",
+      "startedAtMs": 1,
+      "finishedAtMs": 2,
+      "warnings": []
+    },
+    {
+      "stage": "architecture",
+      "status": "running",
+      "jobId": "job-1-0",
+      "startedAtMs": 2,
+      "warnings": []
+    },
+    {
+      "stage": "module:cli",
+      "status": "failed",
+      "jobId": "job-0-0",
+      "startedAtMs": 1,
+      "finishedAtMs": 2,
+      "error": "The agent timed out",
+      "warnings": [
+        "The agent read no files; references may be guessed"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "pageId": "overview",
+      "title": "概览",
+      "kind": "overview",
+      "ready": true,
+      "refs": {
+        "valid": 3,
+        "invalid": 0
+      }
+    },
+    {
+      "pageId": "module:cli",
+      "title": "CLI",
+      "kind": "module",
+      "moduleId": "cli",
+      "level": 1,
+      "ready": false
+    }
+  ],
+  "coverage": {
+    "sourceFiles": 10,
+    "covered": 9,
+    "uncovered": [
+      "src/extra.rs"
+    ]
+  },
+  "checkoutFingerprint": "abc"
+} satisfies LearnStudy,
+learnArchitecture: {
+  "schemaVersion": 1,
+  "project": {
+    "name": "hexyl",
+    "summary": "Hex viewer.",
+    "overview": "Reads bytes and prints them.",
+    "techStack": [
+      "Rust"
+    ],
+    "entryPoints": [
+      {
+        "path": "src/main.rs",
+        "line": 1,
+        "why": "CLI entry"
+      }
+    ]
+  },
+  "layers": [
+    {
+      "id": "entry",
+      "title": "Entry",
+      "moduleIds": [
+        "cli"
+      ]
+    }
+  ],
+  "modules": [
+    {
+      "id": "cli",
+      "title": "CLI",
+      "summary": "Parses arguments.",
+      "level": 1,
+      "order": 1,
+      "paths": [
+        "src/main.rs"
+      ],
+      "dependsOn": [],
+      "keyFiles": [
+        {
+          "path": "src/main.rs",
+          "startLine": 1,
+          "endLine": 40,
+          "why": "argument parsing"
+        }
+      ]
+    }
+  ],
+  "learningPath": [
+    {
+      "level": 1,
+      "title": "Start",
+      "goal": "Run it",
+      "moduleIds": [
+        "cli"
+      ]
+    }
+  ]
+} satisfies LearnArchitecture,
+learnPageContent: {
+  "pageId": "module:cli",
+  "markdown": "# CLI\n[main](loom-src:src/main.rs#L1-L40)",
+  "refs": [
+    {
+      "target": "src/main.rs#L1-L40",
+      "path": "src/main.rs",
+      "startLine": 1,
+      "endLine": 40,
+      "status": "valid"
+    }
+  ]
+} satisfies LearnPageContent,
+learnEvent: {
+  "studyId": "study-1-0",
+  "jobId": "job-1-0",
+  "stage": "architecture",
+  "status": "running"
+} satisfies LearnEvent,
 } as const;

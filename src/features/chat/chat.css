@@ -50,6 +50,8 @@
 .chat-tree-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
 .chat-attention { flex-shrink: 0; width: 6px; height: 6px; border-radius: 50%; background: var(--chat-danger); }
 .chat-tree-empty { padding: 6px 14px; font-size: 12px; color: var(--chat-dim); }
+.chat-tree-nav { display: flex !important; align-items: center; gap: 9px; color: var(--chat-muted); padding: 7px 10px !important; text-align: left; }
+.chat-tree-nav:hover { color: var(--chat-text); }
 .chat-project-tree footer { display: flex; align-items: center; gap: 4px; }
 .chat-project-tree footer button:first-child { display: flex; align-items: center; gap: 9px; flex: 1; color: var(--chat-muted); padding: 7px 10px; }
 .chat-project-tree footer [aria-pressed="true"] { color: var(--chat-text) !important; background: var(--chat-selected); }

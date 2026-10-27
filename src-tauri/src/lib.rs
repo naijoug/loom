@@ -9,6 +9,8 @@ mod contracts;
 #[cfg(target_os = "macos")]
 mod desktop_menu;
 mod diagnostics;
+mod git_fetch;
+mod learn;
 mod migrations;
 pub mod models;
 pub mod process_supervisor;
@@ -110,6 +112,16 @@ pub fn run() {
             skills::commands::skills_translate,
             skills::commands::skills_translation_history,
             skills::commands::skills_translation_result,
+            learn::commands::learn_list_studies,
+            learn::commands::learn_create_study,
+            learn::commands::learn_get_study,
+            learn::commands::learn_read_page,
+            learn::commands::learn_generate,
+            learn::commands::learn_cancel_job,
+            learn::commands::learn_read_job_logs,
+            learn::commands::learn_list_tree,
+            learn::commands::learn_read_source,
+            learn::commands::learn_delete_study,
         ]);
     #[cfg(target_os = "macos")]
     let builder = builder

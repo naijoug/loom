@@ -10,6 +10,9 @@ import { useT } from "./i18n";
 const SettingsPage = lazy(() =>
   import("./components/Settings").then((module) => ({ default: module.SettingsPage })),
 );
+const LearnPage = lazy(() =>
+  import("./features/learn").then((module) => ({ default: module.LearnPage })),
+);
 const ChatPage = lazy(() =>
   import("./features/chat").then((module) => ({ default: module.ChatPage })),
 );
@@ -22,9 +25,10 @@ function ViewFallback() {
 export function AppContent() {
   const { state, dispatch } = useAppState();
   return <>
-    <div className="app-chat-container" hidden={state.app.currentView === "settings"}>
+    <div className="app-chat-container" hidden={state.app.currentView !== "chat"}>
       <Suspense fallback={<ViewFallback />}><ChatShell><ChatPage /></ChatShell></Suspense>
     </div>
+    {state.app.currentView === "learn" && <div className="app-chat-container"><Suspense fallback={<ViewFallback />}><ChatShell><LearnPage onBack={() => dispatch({ type: "app/viewSelected", view: "chat" })} /></ChatShell></Suspense></div>}
     {state.app.currentView === "settings" && <Suspense fallback={<ViewFallback />}><SettingsPage onBack={() => dispatch({ type: "app/viewSelected", view: "chat" })} /></Suspense>}
   </>;
 }

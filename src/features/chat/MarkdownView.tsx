@@ -1,5 +1,5 @@
 import { useMemo, type MouseEvent, type ReactNode } from "react";
-import ReactMarkdown, { type Components } from "react-markdown";
+import ReactMarkdown, { defaultUrlTransform, type Components } from "react-markdown";
 import remarkCjkFriendly from "remark-cjk-friendly";
 import remarkGfm from "remark-gfm";
 import { isExternalUrl, openExternalLink } from "./externalLink";
@@ -7,6 +7,9 @@ import { InlineCard } from "./openui/InlineCard";
 
 /** Present when experimental inline cards are on; `openui-lang` blocks then render as cards. */
 export interface MarkdownCards { streaming: boolean; onInsert?: (text: string) => void }
+/** Learn wiki pages: `loom-src:` opens the source viewer, `loom-wiki:` another page. Absent elsewhere, so Chat drops both schemes. */
+export interface MarkdownLinks { onSource: (target: string) => void; onWiki: (target: string) => void; sourceStatus?: (target: string) => string | undefined }
+const keepLoomLinks = (url: string) => /^loom-(src|wiki):/.test(url) ? url : defaultUrlTransform(url);
 
 type MdNode = { type: string; value?: string; children?: MdNode[] };
 const FLOW_PARENTS = new Set(["root", "blockquote", "listItem", "footnoteDefinition"]);
@@ -32,7 +35,15 @@ function ExternalLink({ href, children }: { href?: string; children: ReactNode }
   return <a href={href} title={href} target="_blank" rel="noopener noreferrer" onClick={open}>{children}</a>;
 }
 
-function components(cards?: MarkdownCards): Components {
+function LoomLink({ href, links, children }: { href: string; links: MarkdownLinks; children: ReactNode }) {
+  const [scheme, ...rest] = href.split(":");
+  const target = rest.join(":");
+  if (scheme === "loom-wiki") return <a href="#" className="learn-wiki-link" onClick={event => { event.preventDefault(); links.onWiki(target); }}>{children}</a>;
+  const status = links.sourceStatus?.(target) ?? "valid";
+  return <button type="button" className="learn-src-link" data-status={status} title={target} onClick={() => links.onSource(target)}>{children}</button>;
+}
+
+function components(cards?: MarkdownCards, links?: MarkdownLinks): Components {
   return {
     pre({ node }) {
       const code = (node as HastNode | undefined)?.children?.find(child => child.tagName === "code");
@@ -43,7 +54,7 @@ function components(cards?: MarkdownCards): Components {
       return <pre><code data-language={language}>{text}</code></pre>;
     },
     code: ({ children }) => <code>{children}</code>,
-    a: ({ href, children }) => <ExternalLink href={href}>{children}</ExternalLink>,
+    a: ({ href, children }) => links && href && /^loom-(src|wiki):/.test(href) ? <LoomLink href={href} links={links}>{children}</LoomLink> : <ExternalLink href={href}>{children}</ExternalLink>,
     // Remote images would leave the app (and CSP blocks them); show them as links instead.
     img: ({ src, alt }) => <ExternalLink href={typeof src === "string" ? src : undefined}>{alt || src}</ExternalLink>,
     input: ({ type, checked }) => type === "checkbox" ? <input type="checkbox" checked={!!checked} disabled readOnly /> : null,
@@ -52,8 +63,8 @@ function components(cards?: MarkdownCards): Components {
 
 const REMARK_PLUGINS = [remarkGfm, remarkCjkFriendly, literalHtml];
 
-export function Markdown({ text, cards }: { text: string; cards?: MarkdownCards }) {
+export function Markdown({ text, cards, links }: { text: string; cards?: MarkdownCards; links?: MarkdownLinks }) {
   const enabled = !!cards, streaming = !!cards?.streaming, onInsert = cards?.onInsert;
-  const overrides = useMemo(() => components(enabled ? { streaming, onInsert } : undefined), [enabled, streaming, onInsert]);
-  return <div className="chat-markdown"><ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={overrides}>{text}</ReactMarkdown></div>;
+  const overrides = useMemo(() => components(enabled ? { streaming, onInsert } : undefined, links), [enabled, streaming, onInsert, links]);
+  return <div className="chat-markdown"><ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={overrides} urlTransform={links ? keepLoomLinks : defaultUrlTransform}>{text}</ReactMarkdown></div>;
 }

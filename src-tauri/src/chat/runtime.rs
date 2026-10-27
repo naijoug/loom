@@ -7,7 +7,7 @@ use super::{
 use crate::{
     agent_adapter::PreparedAgentInvocation,
     agents,
-    process_supervisor::{self, ProcessMetadata},
+    process_supervisor::{self, ProcessKind, ProcessMetadata, ProcessOwner},
     session_capture,
 };
 use std::{
@@ -21,7 +21,7 @@ use tokio::{
 };
 
 #[derive(Clone, Copy)]
-pub(super) struct Limits {
+pub(crate) struct Limits {
     pub timeout: Duration,
     pub terminate_grace: Duration,
     pub drain_grace: Duration,
@@ -45,7 +45,7 @@ impl Default for Limits {
     }
 }
 
-pub(super) struct Request {
+pub(crate) struct Request {
     pub prepared: PreparedAgentInvocation,
     pub project_key: String,
     pub session_id: String,
@@ -55,7 +55,7 @@ pub(super) struct Request {
     pub limits: Limits,
 }
 
-pub(super) enum Observation {
+pub(crate) enum Observation {
     Started(u32),
     Log { stderr: bool, line: String },
 }
@@ -611,6 +611,18 @@ pub(super) async fn run(
 pub(super) async fn run_observed(
     request: Request,
     cancelled: impl Fn() -> Option<&'static str>,
+    emit: impl FnMut(ChatStreamEvent) -> Result<(), String>,
+    observe: impl FnMut(Observation) -> Result<(), String>,
+) -> Result<ChatTurnOutcome, String> {
+    run_owned(request, None, cancelled, emit, observe).await
+}
+
+/// Same runner for non-Chat callers (Learn): the process is registered under
+/// `owner` with `ProcessKind::Learn` instead of a Chat turn owner.
+pub(crate) async fn run_owned(
+    request: Request,
+    owner: Option<ProcessOwner>,
+    cancelled: impl Fn() -> Option<&'static str>,
     mut emit: impl FnMut(ChatStreamEvent) -> Result<(), String>,
     mut observe: impl FnMut(Observation) -> Result<(), String>,
 ) -> Result<ChatTurnOutcome, String> {
@@ -673,13 +685,18 @@ pub(super) async fn run_observed(
         run_id: request.turn_id.clone(),
         registered: false,
     };
-    if let Err(error) = operation.register(ProcessMetadata::chat(
+    let mut meta = ProcessMetadata::chat(
         &request.turn_id,
         &request.project_key,
         &request.session_id,
         pid,
         request.limits.timeout.as_millis().min(u64::MAX as u128) as u64,
-    )) {
+    );
+    if let Some(owner) = owner {
+        meta.owner = owner;
+        meta.kind = ProcessKind::Learn;
+    }
+    if let Err(error) = operation.register(meta) {
         process_supervisor::force_terminate_process_group(pid)?;
         let _ = child.wait().await;
         return Err(error);

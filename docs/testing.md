@@ -18,8 +18,9 @@
 ## 工程与浏览器检查
 
 - `pnpm smoke:chat`：生产仓储/runtime 运行真实本地 fixture 子进程，验证双路输出、UTF-8、停止/超时、进程组清理、幂等和恢复；不请求模型。
-- `pnpm smoke:visual`：启动合成网页并运行 Chrome 交互；检查两个项目、新会话的模式与 Agent、发送确认、工具卡片、深浅主题、中英文与窄窗口。截图在 `designs/exports/simple-chat/`。同轮还运行 Skills 视觉矩阵（显式 DEV fixture，截图 `designs/exports/skills/`），包括来源状态、安装/翻译、命令面板和 Chat 草稿往返。这不是桌面或真实模型证据。
+- `pnpm smoke:visual`：启动合成网页并运行 Chrome 交互；检查两个项目、新会话的模式与 Agent、发送确认、工具卡片、深浅主题、中英文与窄窗口。截图在 `designs/exports/simple-chat/`。同轮还运行 Skills 视觉矩阵（显式 DEV fixture，截图 `designs/exports/skills/`），包括来源状态、安装/翻译、命令面板和 Chat 草稿往返；以及 Learn 视觉矩阵（`learnFixture`，截图 `designs/exports/learn/`）：Wiki 目录与页面、源码范围高亮、架构图跳转、无效引用、未生成页、作业日志、运行中/失败/存储错误、新建表单校验与生成、中英文 × 深浅主题、700px 窄窗口。这不是桌面或真实模型证据。
 - 真实 CLI 的 opt-in 测试在 `src-tauri/src/chat/real_agent_tests.rs`。例如 `LOOM_REAL_CHAT=1 cargo test --manifest-path src-tauri/Cargo.toml claude_three_turns_resume_after_repository_reopen -- --ignored --nocapture`。
+- Learn 真实研究的 opt-in 测试在 `src-tauri/src/learn/real_tests.rs`，走与桌面命令相同的作业流水线（拉取 → 架构 → 全部页面与术语表）并打印阶段耗时和引用统计，会消耗额度：`LOOM_REAL_LEARN=1 LOOM_REAL_LEARN_ROOT=<dir> cargo test --manifest-path src-tauri/Cargo.toml learn::real_tests::codex_studies_hexyl -- --ignored --nocapture`。可用 `LOOM_REAL_LEARN_URL`、`LOOM_REAL_LEARN_MODEL`、`LOOM_REAL_LEARN_CODEX` / `LOOM_REAL_LEARN_CLAUDE`（CLI 路径）覆盖默认值。
 
 ## 用户验收
 
@@ -32,6 +33,17 @@
 7. 换 Agent 提示清除原生续聊；确认后保留可见历史并使用有界重放。无原生续聊支持时会话“更多操作”菜单底部显示 History replay。
 8. 重命名、归档/恢复、清除续聊、导出 JSON/Markdown 与执行日志；日志失败或缺失必须可见。
 9. Settings → Appearance 切换简体中文与主题，立即生效且重启保留；从设置返回仍停留在先前会话。
+
+### Learn
+
+1. 侧边栏点 Learn，Chat 草稿与当前会话保持；返回 Chat 仍在原处。
+2. 新建研究：输入 `https://github.com/sharkdp/hexyl`，选 Claude Code 或 Codex，可留空模型；非法 URL 或模型名不可提交。
+3. 进度依次经过 Download → Inventory → Architecture → Level 1 页面；可查看作业日志（输出 / 错误 / 提示词），运行中可取消，失败后可重试。
+4. 打开 Overview / Architecture：架构图节点可点击进入模块页；“生成剩余”补齐其余模块页与术语表。
+5. 点击页面中的源码引用，右侧查看器定位并高亮对应行；无效引用显示警告样式；可浏览文件树，并在 GitHub 打开固定 commit。
+6. 生成全程 checkout 不变（指纹检测失败会使作业失败）；删除研究需二次确认，仅删除应用数据目录中的该研究。
+
+Learn 证据与限制见 [Learn 验收记录](dogfood/2026-10-26-learn-acceptance.md)。
 
 逐项证据与当前环境限制见 [本轮记录](dogfood/2026-10-20-simple-chat-acceptance.md)。OpenCode / Grok 未通过的真实场景不得用合成数据代替。
 

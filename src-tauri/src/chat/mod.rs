@@ -12,7 +12,7 @@ pub use models::*;
 mod real_agent_tests;
 mod repository;
 pub(crate) mod resume;
-mod runtime;
+pub(crate) mod runtime;
 mod service;
 pub(crate) mod shutdown;
 pub(crate) mod turns;
@@ -660,8 +660,8 @@ pub fn chat_clear_resume(
     publish_chat_session(&app, &repository, session)
 }
 
-const STOP_REASON_ABORT: &str = "chat_abort";
-const STOP_REASON_TIMEOUT: &str = "chat_timeout";
+pub(crate) const STOP_REASON_ABORT: &str = "chat_abort";
+pub(crate) const STOP_REASON_TIMEOUT: &str = "chat_timeout";
 const STOP_REASON_SHUTDOWN: &str = "app_shutdown";
 
 /// True when ProcessSupervisor recorded a cooperative stop (user abort or turn timeout).
@@ -838,14 +838,14 @@ pub async fn chat_send(
 }
 
 #[derive(Debug, Default)]
-struct ChatTurnOutcome {
-    content: String,
-    parts: Vec<ChatMessagePart>,
-    resume_command: Option<String>,
-    status: String,
-    error_summary: Option<String>,
-    exit_code: Option<i32>,
-    termination_reason: Option<String>,
+pub(crate) struct ChatTurnOutcome {
+    pub(crate) content: String,
+    pub(crate) parts: Vec<ChatMessagePart>,
+    pub(crate) resume_command: Option<String>,
+    pub(crate) status: String,
+    pub(crate) error_summary: Option<String>,
+    pub(crate) exit_code: Option<i32>,
+    pub(crate) termination_reason: Option<String>,
 }
 
 #[cfg(test)]
@@ -932,6 +932,7 @@ mod tests {
                     chat_permission_mode: Some(mode),
                     embed_prompt: true,
                     system_append: None,
+                    model: None,
                 },
             )
             .expect("grok");
@@ -959,6 +960,7 @@ mod tests {
                     chat_permission_mode: Some(mode),
                     embed_prompt: true,
                     system_append: None,
+                    model: None,
                 },
             )
             .expect("codex");
@@ -984,6 +986,7 @@ mod tests {
                     chat_permission_mode: Some(mode),
                     embed_prompt: true,
                     system_append: None,
+                    model: None,
                 },
             )
             .expect("claude");

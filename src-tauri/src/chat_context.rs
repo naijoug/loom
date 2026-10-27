@@ -67,6 +67,7 @@ pub(crate) fn prepare_chat_invocation(
             agent_adapter::ADAPTER_CODEX | agent_adapter::ADAPTER_CLAUDE
         ),
         system_append,
+        model: None,
     };
     // Preparing arguments has no side effects. Let the adapter decide whether
     // this handle is actually usable; an arbitrary stored string is not proof.
