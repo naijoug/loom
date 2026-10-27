@@ -1,7 +1,7 @@
 # 简化 CLI Chat 验收记录（2026-10-20）
 
 - 对应计划：[重构计划](../plans/2026-10-20/00:44-simple-cli-chat-refactor.md) §1 成功标准、[实施计划](../plans/2026-10-20/01:01-simple-chat-implementation.md) P9 场景矩阵。
-- 交付基线：分支 `codex/simple-cli-chat`；`7e1dfcb` 为 CLI 样本，`3dd9a9f` 为重构实现，`0acbb10` 已提交首版验收资料。未推送、未合入 `main`。本记录的完整工程门禁针对重构基线，不自动覆盖后续 UI 打磨改动。
+- 2026-10-20 交付基线（历史）：分支 `codex/simple-cli-chat`；`7e1dfcb` 为 CLI 样本，`3dd9a9f` 为重构实现，`0acbb10` 已提交首版验收资料。未推送、未合入 `main`。本记录的完整工程门禁针对重构基线，不自动覆盖后续 UI 打磨改动。
 - 环境：macOS（Darwin 25.5.0），Claude Code 2.1.304、Codex 0.163.0、Grok 1.0.62、OpenCode 1.19.3（官方临时副本，见下文）。
 - 交付结论：**重构工程与资料收尾完成，产品验收为 partial，等待用户桌面验收**。用户已明确选择“原生桌面验收留给我，完成其余工作后通知我”。本轮不再以自动操作原生窗口作为交付前提；没有将任何未执行的桌面场景标为 passed。
 
@@ -64,7 +64,7 @@
 | 调研模式无文件写入 | partial（claude-permissions：新建与续聊的 explore 均 `file_changed=false`，CLI 尝试 Write 被拦截） | partial（codex-permissions） | partial（opencode） | not-tested（`grok_file_permissions…` 未运行） |
 | 中途调研切 Code 后能改文件 | partial（claude-mode-switch，之前有失败） | partial（codex-mode-switch） | not-tested（没有对应测试） | — |
 | 切换 Agent 后历史重放 | partial（agent-switch：Claude → Codex） | 同左 | — | — |
-| 两项目分组，重启后分组与折叠保留 | partial（合成网页；折叠状态重启保留未单独验证） | | | |
+| 两项目分组，重启后分组与折叠保留 | partial（2026-10-26 合成网页已补双项目折叠/展开刷新恢复；应用重启仍未验证） | | | |
 | 新会话只有模式卡片，按所选 Agent 创建 | partial（合成网页） | | | |
 | 默认英文，切中文后重启保留 | partial（单测 + 合成网页 reload） | | | |
 
@@ -131,3 +131,7 @@ scripts/debug.sh stop
 3. Grok 额度恢复后补测。遇到问题请附会话导出或脱敏执行日志，注明 CLI 版本和模式。
 
 本轮收尾只提交验收文档、两份计划状态和重构依赖/删除清单；独立 UI 打磨及原有架构评审文件保留原工作区状态。
+
+## 2026-10-26 当前版本补验
+
+本地 `main` @ `ffe3127` 已包含上文重构提交；历史“未合入 main”不再代表当前状态。前端 125/Rust 265 通过（25 ignored），Tauri no-bundle 构建与三个合成界面矩阵通过。新增项目折叠/展开刷新恢复回归，分别反转两个项目的默认状态，再刷新验证，避免默认值造成假阳性。桌面重启、真实 CLI 与账号状态本轮未复验，P9 仍为 partial。详见 [当前进度与证据](2026-10-26-project-progress.md)。

@@ -1,6 +1,6 @@
 # 简化为 Claude Code 式本机 CLI Chat 的重构计划
 
-- 状态：工程与资料收尾完成，待用户桌面验收（2026-10-20）。R0–R4 代码已在分支 `codex/simple-cli-chat` 完成（`7e1dfcb`、`3dd9a9f`，未合入 `main`），工程门禁通过；R5 文档已提交于 `0acbb10` 并继续补齐收尾记录；真实 CLI 进程验证有分项证据，**桌面验收由用户明确接手，未执行项仍保持 not-tested**。证据见 [验收记录](../../dogfood/2026-10-20-simple-chat-acceptance.md)，明细见 §10。执行拆解见 [实施计划](01:01-simple-chat-implementation.md)（R0→P0，R1→P1，R2→P2/P3，R3→P4–P7，R4→P8，R5→P9）。
+- 状态：工程与资料收尾完成，待用户桌面验收（2026-10-26 复核）。R0–R4 代码已在分支 `codex/simple-cli-chat` 完成（`7e1dfcb`、`3dd9a9f`，当前已包含在本地 `main` @ `ffe3127`），工程门禁通过；R5 文档已提交于 `0acbb10` 并继续补齐收尾记录；真实 CLI 进程验证有分项证据，**桌面验收由用户明确接手，未执行项仍保持 not-tested**。证据见 [验收记录](../../dogfood/2026-10-20-simple-chat-acceptance.md)，明细见 §10。执行拆解见 [实施计划](01:01-simple-chat-implementation.md)（R0→P0，R1→P1，R2→P2/P3，R3→P4–P7，R4→P8，R5→P9）。
 - 代码基线：`main` @ `bed095c`（2026-10-18），工作区仅 `docs/reviews/` 未跟踪。
 - 关联：本计划落地后取代 [Craft 完整重建计划](../2026-09-30/13:17-craft-parity-rebuild.md) 作为当前实施入口；与 [2026-09-14 chat-first 重构](../2026-09-14/20:06-chat-first-refactor.md) 方向一致，复用 [2026-09-17 Chat 重建](../2026-09-17/10:15-local-agent-chat-rebuild.md) 已落地的仓储与运行链。
 
@@ -213,3 +213,7 @@
 - `3dd9a9f` 使用 `window.confirm`；独立 UI 打磨已在工作区改成应用内提示条，但尚未提交和桌面验收，不计入此基线。
 
 **交付与验收边界**：本轮代码、工程检查、验收资料及阶段性 commit 已交付。用户已明确接手桌面验收；上述产品验收项保持开放，不能因工程交付完成而自动改成 passed。合入 `main` 由后续验收决定，本轮不自动合并。
+
+## 2026-10-26 当前进度复核
+
+本地 `main` @ `ffe3127` 已包含 Chat 重构、Skills 管理功能与后续 Markdown/图标/回归修复。当前完整检查为前端 125/Rust 265 通过（25 ignored），Tauri no-bundle 构建通过。补充双项目折叠/展开刷新恢复的浏览器回归，Chat、Skills、OpenUI 合成矩阵通过。真实桌面、账号与分发门禁不由这些结果代替；当前边界与持久化日志见 [进度复核](../../dogfood/2026-10-26-project-progress.md)。前文实施过程中的分支与“不自动合并”表述保留为当时记录。

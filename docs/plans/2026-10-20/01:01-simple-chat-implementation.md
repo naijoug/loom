@@ -1,6 +1,6 @@
 # 简化 CLI Chat 实施计划
 
-- 状态：工程与资料收尾完成，待用户桌面验收（2026-10-20）。P0–P8 代码已完成（`7e1dfcb`、`3dd9a9f`，分支 `codex/simple-cli-chat`，未合入 `main`）；P9 工程门禁与文档提交已完成（首版资料 `0acbb10`），桌面验收由用户明确接手，未执行项仍为 not-tested。明细见 §6 和 [验收记录](../../dogfood/2026-10-20-simple-chat-acceptance.md)。
+- 状态：工程与资料收尾完成，待用户桌面验收（2026-10-26 复核）。P0–P8 代码已完成（`7e1dfcb`、`3dd9a9f`，原分支 `codex/simple-cli-chat`，当前已包含在本地 `main` @ `ffe3127`）；P9 工程门禁与文档提交已完成（首版资料 `0acbb10`），桌面验收由用户明确接手，未执行项仍为 not-tested。明细见 §6 和 [验收记录](../../dogfood/2026-10-20-simple-chat-acceptance.md)。
 - 上位计划：[简化 CLI Chat 重构计划](00:44-simple-cli-chat-refactor.md)。目标、非目标、决策 D1–D8 和成功标准以那份计划为准，本文只写怎么做。
 - UI 设计：[Loom Chat 初版 UI（Claude Design 画布）](https://claude.ai/artifact/MrT5QtAcWQJVt3tdTWodx4)，包含主会话（运行中）、新会话空状态、Composer 命令与 Agent 切换、设置页本机 Agent 四个画板。画布是私有链接，未分享前只有作者能打开。
 - 代码基线：`main` @ `bed095c`。
@@ -204,3 +204,7 @@ P2 ─┴─> P7 ────────┘
 P9 场景矩阵见 [验收记录](../../dogfood/2026-10-20-simple-chat-acceptance.md#p9-场景矩阵)。真实 CLI 进程层面，Claude / Codex / OpenCode 的必测项都有通过记录，开发过程中的失败与复验原因已补入验收资料；当前工作区另有独立 UI 打磨，尚未提交，不混入本轮文档 commit。
 
 用户交接：原生桌面验收按用户明确选择留给用户；工程交付完成不等于产品验收全部通过。启动方式见验收记录“启动用户测试”。
+
+## 2026-10-26 当前进度复核
+
+本地 `main` @ `ffe3127` 已包含 Chat 重构、Skills 管理功能与后续 Markdown/图标/回归修复。当前完整检查为前端 125/Rust 265 通过（25 ignored），Tauri no-bundle 构建通过。补充双项目折叠/展开刷新恢复的浏览器回归，Chat、Skills、OpenUI 合成矩阵通过。真实桌面、账号与分发门禁不由这些结果代替；当前边界与持久化日志见 [进度复核](../../dogfood/2026-10-26-project-progress.md)。前文实施过程中的分支与“不自动合并”表述保留为当时记录。

@@ -1,0 +1,537 @@
+
+> loom@0.1.0 check /Users/guojian/Workspace/naijoug/loom
+> ./scripts/check.sh
+
+
+> loom@0.1.0 docs:release:check /Users/guojian/Workspace/naijoug/loom
+> node scripts/check-release-docs.mjs
+
+Release docs check passed (25 markdown files).
+
+> loom@0.1.0 docs:release:test /Users/guojian/Workspace/naijoug/loom
+> node scripts/test-release-docs-checker.mjs
+
+Release docs checker fixture tests passed.
+
+> loom@0.1.0 openui:prompt /Users/guojian/Workspace/naijoug/loom
+> node scripts/openui-prompt.mjs --check
+
+openui prompt up to date (4700 chars)
+
+> loom@0.1.0 test /Users/guojian/Workspace/naijoug/loom
+> node scripts/run-tests.mjs
+
+✔ release refuses mismatched versions and invalid key configuration (2.33025ms)
+✔ manifest requires both architectures and embeds signature content (8.286042ms)
+✔ progress tolerates missing length and late snapshots never reverse state (0.369ms)
+✔ update download retries; installation persists drafts and reports active work without duplicate operations (47.245541ms)
+✔ web preview never invokes native update commands (8.778417ms)
+✔ remounting a composer restores its latest draft, never the stale startup copy (4.191709ms)
+✔ production bridge waits for listeners and buffers events before get resolves (125.659542ms)
+✔ production bridge ignores late A loads/errors after selecting B and replays sequence gaps (16.82925ms)
+✔ production bridge catches a missed final event on focus and reports durable changes (8.141375ms)
+✔ production bridge reports listener initialization failures without marking the listener ready (6.671ms)
+✔ production bridge reports only errors for the active turn (10.68125ms)
+✔ production bridge drains paged recovery using the updated cursor (6.115209ms)
+✔ production bridge falls back to a fresh snapshot after the recovery page cap (8.99225ms)
+✔ production bridge refreshes from snapshot when recovery marks projection stale (7.61475ms)
+✔ production bridge suppresses recovery failures after switching sessions (10.864417ms)
+✔ production bridge reports recovery failures for the current session (5.708ms)
+✔ chatInputEnvelope wraps fields under input (0.731166ms)
+✔ four input-envelope chat commands use chat_* names and input wrapper shape (0.167833ms)
+✔ flat-arg chat commands stay flat (no input wrapper) (0.054208ms)
+✔ chatClient wrappers are exported (0.053042ms)
+✔ production Chat wrappers invoke the real transport with the correct envelopes and replay cursor (0.308333ms)
+✔ export menu invokes production hook once and shows warnings plus an explicit folder action (93.862459ms)
+✔ late export responses cannot overwrite a new session, and returning to the old session is not stuck busy (25.139292ms)
+✔ export and folder errors stay visible and export can be retried (23.066ms)
+✔ damaged or missing log warnings are exposed as incomplete export evidence (12.066833ms)
+✔ titleFromUserMessage truncates on word boundary (0.521167ms)
+✔ titleFromUserMessage uses first non-empty line (0.0715ms)
+✔ needsAttention from flag or error, not archived (0.072ms)
+✔ message error fallback stays visible beside structured tool parts (0.065875ms)
+✔ out-of-order and duplicate durable events are applied exactly once (0.550916ms)
+✔ events arriving during snapshot load survive and stale responses cannot erase them (0.09075ms)
+✔ large sequence gaps are capped and wait for an authoritative snapshot (0.903041ms)
+✔ terminal stream events keep text idempotent while preserving structured parts (0.411791ms)
+✔ other projects/sessions and stale turn payloads cannot contaminate a selection (0.1115ms)
+✔ patches persist terminal text, clear optional handles and reject identity mutation (0.100917ms)
+✔ failed patches keep the last safe session until a fresh snapshot arrives (0.092625ms)
+✔ new sessions and restored snapshots establish the cursor without replaying old deltas (0.079291ms)
+✔ GFM headings, emphasis, links, tables, task lists and quotes render as elements (13.246917ms)
+✔ CJK punctuation next to bold markers still closes the emphasis (1.885291ms)
+✔ raw HTML stays literal text and unsafe links are not clickable (2.521458ms)
+✔ only http(s) and mailto URLs count as external links (0.120209ms)
+✔ clicking a link opens it outside the webview without navigating (17.900125ms)
+✔ fenced code keeps its language attribute and exact text (1.616541ms)
+✔ MockChatStore create/list/send roundtrip (0.583625ms)
+✔ MockChatStore archive and title helpers (0.092125ms)
+✔ normalizeChatPermissionMode maps legacy aliases (0.330083ms)
+✔ production run viewer shows immutable invocation, exit reason, separate streams and paginated offsets (170.064875ms)
+✔ late log responses never replace a different stream/session and errors stay visible (18.018916ms)
+✔ ambiguous IPC failure retains request identity, success permits an intentional new submission (0.791042ms)
+✔ double submit shares the pending operation and project/session/content/permission are isolated (0.28125ms)
+✔ production controller and wrapper forward the same request ID through real IPC on retry (2.485291ms)
+✔ default Chat and Settings never load Task data or subscribe to Planning events (318.727917ms)
+✔ an active Chat keeps receiving stream events while Settings Skills is visible (34.697084ms)
+✔ frontend command event and schema contract matches the canonical fixture (0.751ms)
+✔ Tauri core and event access stays behind the typed client (11.280708ms)
+✔ typed Tauri client forwards invoke payloads and unwraps event payloads (0.42875ms)
+✔ debug stop recognizes dev executables, never build/compiler commands containing cfg(dev) (197.329542ms)
+✔ debug stop succeeds with no dev process and a PID disappearing before inspection (48.368333ms)
+✔ unavailable process inspection fails shutdown and preserves the PID hint (31.387042ms)
+✔ cards stay plain source code blocks when the experiment is off (6.955916ms)
+✔ a valid finished card renders with Loom-owned source, copy and insert controls (47.88625ms)
+✔ invalid or truncated finished cards fall back to their source with a notice (5.056291ms)
+✔ a streaming card renders progressively without falling back, then gains controls when complete (5.843625ms)
+✔ card plain text covers every component without markup (0.359875ms)
+✔ the setting store persists the opt-in flag (0.695459ms)
+✔ inline card prompt keeps standalone programs, required-first signatures and no tool workflow (1.15525ms)
+✔ component schemas expose no action, url or html props (1.172125ms)
+✔ a complete valid card passes the render check (1.827375ms)
+✔ invalid finished cards report problems so the UI can fall back to source (0.459958ms)
+✔ renderer outputs card text as escaped text nodes (9.770334ms)
+✔ project dialog does not invent stack or Git analysis before registration (3.801959ms)
+✔ projects preserve current selection on refresh and select a valid fallback after removal (0.414792ms)
+✔ registration deduplicates project paths and enters chat without Task state (0.07775ms)
+✔ findTestsInDirectory recursively returns sorted .test.cjs files (3.145792ms)
+✔ resolveRequestedTestFiles defaults to tests/unit (1.213708ms)
+✔ resolveRequestedTestFiles supports pnpm separator, files, directories, and absolute targets (1.589792ms)
+✔ resolveRequestedTestFiles rejects unsupported or empty targets (2.002458ms)
+✔ default Agent draft is implementation-capable and safe to edit (0.373542ms)
+✔ Agent draft round-trips editable fields (0.356125ms)
+✔ permission modes normalize legacy and unknown values without granting auto mode (2.889042ms)
+✔ slash commands validate arguments and never accept trailing tokens (0.515ms)
+✔ composer respects readiness, IME, newline, and focused Esc; running mode and agent are locked (25.947833ms)
+✔ Code confirmation is per turn, while slash navigation executes the selected command (12.410375ms)
+✔ Agent picker disables unavailable CLIs and remembers only an installed enabled Agent (7.698666ms)
+✔ tool cards pair by id, preserve metadata, and collapse after completion (3.062042ms)
+✔ transcript escapes HTML and hides tools when capability is absent (5.817209ms)
+✔ ErrorBoundary contains child failures and retries the view (4.516167ms)
+✔ dictionaries have identical keys, interpolation is text, and locale persists after remount (2.429958ms)
+✔ composer project picker switches project, offers Add project and sits before the Agent picker (9.865083ms)
+✔ sharing preserves fenced Markdown and related files without invoking providers or publishing (19.324125ms)
+✔ command keyboard filters, invokes summary navigation only, and escape restores focus (21.603708ms)
+✔ missing selection disables skill commands; clipboard rejection exposes selectable text (13.242667ms)
+✔ late clipboard failure does not expose the previous skill text (4.099292ms)
+✔ new targets start unchecked and selecting one produces a concrete plan before any write (42.367667ms)
+✔ late status and plan responses cannot carry selections into another project (12.018125ms)
+✔ an in-flight apply keeps its reviewed project and does not overwrite a new panel result (6.5635ms)
+✔ legacy and blocked targets cannot be selected and a blocked plan cannot be applied (2.4595ms)
+✔ managed inventory removes an orphan installation by its saved identity without needing its source (4.106167ms)
+✔ a transient status-lock failure can be refreshed without losing the panel (2.230291ms)
+✔ event refresh and action refresh serialize status reads and preserve initial selection (3.569125ms)
+✔ instruction review lists affected files and wrappers require an explicit selection (4.068333ms)
+✔ instruction diagnostics display stale and malformed state without triggering a write (3.095125ms)
+✔ a coordinated preview explains the shared failure boundary before applying (7.619042ms)
+✔ detail responses remain bound to the selected skill (37.671042ms)
+✔ filtering to no results clears old detail and clearing search restores selection (15.622833ms)
+✔ removing a source clears its selected detail and forwards only its identity (8.046125ms)
+✔ operation subscription is released and stale sequences cannot replace terminal status (4.391375ms)
+✔ search includes metadata keywords and source filters without changing canonical IDs (0.515542ms)
+✔ overview removes frontmatter while ordinary separators and raw source remain intact (0.087292ms)
+✔ API import explicitly forwards its mode and source identity stays separate from Git (10.213042ms)
+✔ API sources show their branch and only bounded HTTP diagnostics (7.373667ms)
+✔ translation captures skill version and cancellation uses returned operation identity (32.194875ms)
+✔ initial history must load before starting to avoid duplicate active requests (3.548958ms)
+✔ late result from an unmounted skill cannot appear under another skill (8.914167ms)
+✔ earlier source version is explicit and copying never sends another translation (5.039541ms)
+✔ reopening a large retained history allows new requests but keeps older running work visible (11.04325ms)
+✔ provider form preserves hidden key and submits only explicit changes with revision (22.938583ms)
+✔ replace clears password after failure and leaves key action explicit (5.570833ms)
+✔ clear warns that environment key remains and serializes clear without a value (4.3225ms)
+✔ stale provider load cannot overwrite a new backend and pending save disables all forms (4.435083ms)
+✔ saving one provider retains unsaved model changes in another provider (3.760375ms)
+✔ resolveThemeMode prefers settings over the legacy localStorage theme (0.360083ms)
+✔ resolveThemeMode falls back to legacy light/dark and then system (0.059625ms)
+✔ effectiveThemeForMode maps system mode to the current system theme (0.045625ms)
+✔ isThemeMode accepts only supported theme modes (0.040417ms)
+ℹ tests 125
+ℹ suites 0
+ℹ pass 125
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1114.275583
+
+> loom@0.1.0 build /Users/guojian/Workspace/naijoug/loom
+> tsc && vite build
+
+vite v7.3.3 building client environment for production...
+transforming...
+node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/regexes.js (74:0): A comment
+
+"/** Anchors a pattern source. The interpolation lives here rather than at the call site because
+ * esbuild will not drop a `@__PURE__` call whose own argument interpolates a variable, but it
+ * will drop `anchor(dateSource)`. Keeping it inline pinned `date` into every bundle. */"
+
+in "node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/regexes.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/util.js (400:0): A comment
+
+"// Wrapped in a `@__PURE__` IIFE: esbuild never tree-shakes a top-level initializer that contains a member access on `Number`, so the bare object literal survived into every bundle."
+
+in "node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/util.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+✓ 2208 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                               0.39 kB │ gzip:  0.26 kB
+dist/assets/inter-vietnamese-400-normal-DMkecbls.woff2        4.97 kB
+dist/assets/inter-greek-ext-400-normal-DGGRlc-M.woff2         5.26 kB
+dist/assets/geist-mono-cyrillic-400-normal-Ce5q_31Z.woff2     5.46 kB
+dist/assets/geist-mono-latin-ext-400-normal-Cgks_Qgx.woff2    6.42 kB
+dist/assets/inter-vietnamese-400-normal-Bbgyi5SW.woff         6.50 kB
+dist/assets/inter-greek-ext-400-normal-KugGGMne.woff          7.06 kB
+dist/assets/geist-mono-cyrillic-400-normal-BPBWmzPh.woff      7.16 kB
+dist/assets/inter-cyrillic-400-normal-obahsSVq.woff2          7.71 kB
+dist/assets/inter-greek-400-normal-B4URO6DV.woff2             7.78 kB
+dist/assets/geist-mono-latin-ext-400-normal-CxNRRMGd.woff     8.74 kB
+dist/assets/inter-cyrillic-400-normal-HOLc17fK.woff           9.78 kB
+dist/assets/inter-greek-400-normal-q2sYcFCs.woff              9.92 kB
+dist/assets/inter-cyrillic-ext-400-normal-BQZuk6qB.woff2     10.23 kB
+dist/assets/inter-cyrillic-ext-400-normal-DQukG94-.woff      13.34 kB
+dist/assets/geist-mono-latin-400-normal-LC9RFr9I.woff2       14.71 kB
+dist/assets/geist-mono-latin-400-normal-CoULgQGM.woff        19.17 kB
+dist/assets/inter-latin-400-normal-C38fXH4l.woff2            23.66 kB
+dist/assets/inter-latin-400-normal-CyCys3Eg.woff             30.70 kB
+dist/assets/geist-sans-latin-400-normal-gapTbOY8.woff2       33.40 kB
+dist/assets/inter-latin-ext-400-normal-C1nco2VV.woff2        35.00 kB
+dist/assets/geist-sans-latin-400-normal-BOaIZNA2.woff        38.91 kB
+dist/assets/inter-latin-ext-400-normal-77YHD8bZ.woff         47.56 kB
+dist/assets/index-BUWvQZ71.css                                4.15 kB │ gzip:  1.10 kB
+dist/assets/index-CuHNZJ47.css                                6.32 kB │ gzip:  1.76 kB
+dist/assets/index-DmVybLW0.css                                8.87 kB │ gzip:  2.66 kB
+dist/assets/SkillsPanel-C_ZPn3RM.css                          9.28 kB │ gzip:  2.07 kB
+dist/assets/chat-loiqEimb.css                                21.76 kB │ gzip:  4.65 kB
+dist/assets/chat-DGlYbUYI.js                                  5.11 kB │ gzip:  2.01 kB
+dist/assets/index-S04pXrTO.js                                 5.64 kB │ gzip:  2.16 kB
+dist/assets/index-L6Uz65y0.js                                12.68 kB │ gzip:  4.31 kB
+dist/assets/SkillsPanel-DEe1VHbE.js                          36.64 kB │ gzip: 10.49 kB
+dist/assets/index-SWZqnehQ.js                                49.31 kB │ gzip: 15.21 kB
+dist/assets/MarkdownView-CAUM5orJ.js                        175.62 kB │ gzip: 54.82 kB
+dist/assets/index-DJ7V2faV.js                               190.92 kB │ gzip: 63.64 kB
+dist/assets/InlineCardView-Dn7tVWBz.js                      201.61 kB │ gzip: 63.08 kB
+✓ built in 1.10s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.66s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.28s
+     Running unittests src/lib.rs (src-tauri/target/debug/deps/loom_lib-d29bd1656c194ecb)
+
+running 290 tests
+test agent_adapter::tests::stage_permissions_reject_missing_write_or_command_access ... ok
+test agent_diagnostics::tests::compact_version_uses_first_non_empty_line_and_limits_length ... ok
+test agent_adapter::tests::custom_adapter_rejects_shell_wrappers ... ok
+test app_update::tests::rejects_dmg_and_unbundled_install ... ok
+test agent_adapter::tests::resume_never_accepts_old_options_cross_programs_or_option_shaped_ids ... ok
+test agents::config::tests::resolution_prefers_path_and_candidates_are_home_relative ... ok
+test agent_adapter::tests::codex_adapter_maps_stage_to_sandbox ... ok
+test agent_adapter::tests::custom_adapter_expands_shared_placeholders ... ok
+test agent_adapter::tests::only_claude_appends_a_system_prompt_on_every_turn ... ok
+test chat::export::tests::generate_rollback_sample ... ignored, explicitly generates a local rollback sample; no network or agent calls
+test agent_adapter::tests::grok_adapter_uses_single_turn_and_streaming_json ... ok
+test agent_adapter::tests::native_resume_reasserts_current_policy_and_preserves_stdin ... ok
+test agent_adapter::opencode_tests::opencode_maps_modes_without_shell_or_prompt_option_injection ... ok
+test agents::stream::tests::usage_counts_do_not_destroy_structured_frames ... ok
+test agents::config::tests::defaults_include_opencode_and_preserve_command_overrides ... ok
+test chat::groups::isolation_tests::one_missing_project_does_not_hide_other_groups ... ok
+test chat::logs::tests::log_pages_never_return_a_cursor_inside_utf8_characters ... ok
+test chat::real_agent_tests::claude_file_permissions_in_new_and_resumed_chat ... ignored, requires LOOM_REAL_CHAT=1; real Claude file tools
+test chat::real_agent_tests::claude_inline_cards_acceptance ... ignored, requires LOOM_REAL_CHAT=1; real Claude inline card acceptance
+test chat::real_agent_tests::claude_mode_switch ... ignored, requires LOOM_REAL_CHAT=1; real Research to Code mode switch
+test chat::real_agent_tests::claude_stop_then_send ... ignored, requires LOOM_REAL_CHAT=1; real Claude cancellation and next turn
+test chat::real_agent_tests::claude_three_turns_resume_after_repository_reopen ... ignored, requires LOOM_REAL_CHAT=1 and a configured Claude account
+test chat::real_agent_tests::claude_to_codex_history_replay ... ignored, requires LOOM_REAL_CHAT=1; real cross-Agent history replay
+test chat::real_agent_tests::codex_file_permissions_in_new_and_resumed_chat ... ignored, requires LOOM_REAL_CHAT=1; real Codex file tools
+test chat::real_agent_tests::codex_mode_switch ... ignored, requires LOOM_REAL_CHAT=1; real Research to Code mode switch
+test chat::real_agent_tests::codex_stop_then_send ... ignored, requires LOOM_REAL_CHAT=1; real Codex cancellation and next turn
+test chat::real_agent_tests::codex_three_turns_resume_after_repository_reopen ... ignored, requires LOOM_REAL_CHAT=1 and a configured Codex account
+test chat::real_agent_tests::grok_file_permissions_in_new_and_resumed_chat ... ignored, requires LOOM_REAL_CHAT=1; real model file-tool probes in synthetic temporary projects
+test chat::real_agent_tests::grok_three_turns_resume_after_repository_reopen ... ignored, requires explicit LOOM_REAL_CHAT=1 and a configured Grok account; consumes model usage
+test chat::real_agent_tests::opencode_file_permissions_in_new_and_resumed_chat ... ignored, requires LOOM_REAL_CHAT=1 and a working OpenCode CLI
+test chat::real_agent_tests::opencode_stop_then_send ... ignored, requires LOOM_REAL_CHAT=1 and a working OpenCode CLI
+test chat::real_agent_tests::opencode_three_turns_resume_after_repository_reopen ... ignored, requires LOOM_REAL_CHAT=1 and a working OpenCode CLI
+test agent_diagnostics::tests::missing_command_has_no_resolved_path ... ok
+test chat::models::tests::tool_parts_emit_frontend_camel_case_and_read_legacy_snake_case ... ok
+test chat::groups::tests::counting_does_not_read_broken_transcripts_or_create_storage ... ok
+test app_update::tests::skills_admission_blocks_installer_and_reopens_after_failure ... ok
+test chat::file_changes::tests::compares_against_actual_dirty_contents_and_skips_unknown_baselines ... ok
+test chat::repository::tests::active_config_changes_are_rejected_using_the_actual_command_helpers ... ok
+test chat::repository::tests::archived_sessions_require_restore_and_failed_prepare_has_no_side_effects ... ok
+test chat::repository::tests::abandoned_turn_recovers_partial_output_once_and_can_run_again ... ok
+test chat::repository::tests::concurrent_duplicate_sends_only_prepare_once ... ok
+test chat::export::tests::legacy_export_preserves_original_v1_bytes_and_does_not_invent_run_evidence ... ok
+test chat::repository::tests::corrupt_sessions_remain_visible_as_errors_while_healthy_sessions_load ... ok
+test chat::repository::tests::failed_acceptance_does_not_leave_a_receipt_or_lease ... ok
+test chat::repository::tests::cancel_is_scoped_to_project_session_and_turn_even_before_spawn ... ok
+test chat::repository::tests::cursor_pagination_and_stale_streams_do_not_duplicate_or_reorder_content ... ok
+test chat::export::tests::transcript_redacts_message_content_and_parts_while_snapshot_stays_exact ... ok
+test chat::repository::tests::failed_completion_preserves_partial_text_and_prior_resume ... ok
+test chat::repository::tests::incomplete_tail_is_repaired_but_bad_committed_records_are_preserved_and_rejected ... ok
+test chat::repository::tests::finish_preserves_concurrent_title_edits_and_stale_finish_cannot_end_next_turn ... ok
+test chat::repository::tests::journal_replays_streamed_text_and_tools_when_snapshot_is_missing ... ok
+test app_update::tests::rejects_invalid_or_oversized_drafts ... ok
+test chat::export::tests::exports_complete_portable_snapshot_literal_markdown_and_log_prefixes_without_overwrite ... ok
+test chat::repository::tests::journal_write_failure_cannot_acknowledge_or_reserve_a_request ... ok
+test chat::repository::tests::invalid_ids_forged_cwd_and_future_schema_are_rejected_without_overwriting ... ok
+test chat::repository::tests::interrupted_accepted_send_is_returned_and_never_rerun ... ok
+test chat::export::tests::active_export_is_a_fixed_snapshot_and_does_not_capture_later_output ... ok
+test chat::repository::tests::journal_recovers_after_writer_process_exits_without_running_destructors ... ok
+test chat::repository::tests::operating_system_writer_lock_releases_when_last_owner_exits ... ok
+test chat::repository::tests::live_event_index_does_not_hide_replaced_corrupt_or_truncated_journals ... ok
+test chat::repository::tests::missing_or_corrupt_index_does_not_hide_authoritative_sessions ... ok
+test chat::repository::tests::newer_snapshot_or_missing_committed_history_is_not_overwritten_during_migration ... ok
+test chat::repository::tests::storage_failure_never_emits_a_successful_completion ... ok
+test chat::repository::tests::reading_and_listing_a_live_turn_do_not_reconcile_it_as_a_restart ... ok
+test chat::repository::tests::send_request_conflicts_and_new_request_ids_do_not_bypass_active_turn_lock ... ok
+test chat::repository::tests::send_receipt_survives_completion_archive_config_change_and_repository_reopen ... ok
+test chat::repository::tests::request_ids_are_bounded_and_scoped_to_each_project ... ok
+test chat::repository::tests::receipt_is_preserved_after_process_exit_without_destructors ... ok
+test chat::runtime::tests::cancellation_before_spawn_and_spawn_errors_leave_no_registry_entry ... ok
+test chat::repository::tests::terminal_event_is_built_after_final_snapshot_is_readable ... ok
+test chat::runtime::preparing_cancellation::cancellation_during_file_baseline_prevents_agent_spawn ... ok
+test chat::runtime::structured_failure_tests::provider_error_with_zero_exit_is_not_success_or_resumable ... ok
+test chat::runtime::tests::batched_tool_results_all_reach_the_stream_and_final_transcript ... ok
+test chat::repository::tests::symlink_directories_and_files_are_rejected_without_touching_target ... ok
+test chat::repository::tests::concurrent_create_and_updates_do_not_lose_sessions_or_mutations ... ok
+test chat::repository::tests::v1_migration_is_read_only_and_retries_an_incomplete_first_append ... ok
+test chat::runtime::structured_failure_tests::consecutive_text_blocks_become_separate_paragraphs ... ok
+test chat::runtime::tests::nonzero_exit_stays_failed_even_with_partial_output ... ok
+test chat::export::tests::damaged_missing_and_symlink_logs_are_explicit_and_export_root_cannot_escape ... ok
+test chat::runtime::tests::dropping_runtime_future_kills_its_process_and_releases_ownership ... ok
+test chat::runtime::tests::descendants_are_stopped_even_when_they_close_output_pipes ... ok
+test chat::runtime::tests::stderr_pressure_does_not_deadlock_stdout_and_owner_is_chat ... ok
+test chat::service::tests::recovery_keeps_logs_and_marks_unfinished_turn_interrupted_once ... ok
+test chat::shutdown::tests::exit_gate_defers_once_allows_only_after_ready_and_can_retry_failure ... ok
+test chat::runtime::tests::failed_log_observer_stops_the_process_and_releases_ownership ... ok
+test chat::tests::chat_stop_outcome_marks_timeout_aborted_with_error ... ok
+test chat::tests::chat_stop_outcome_user_abort_keeps_simple_stopped_copy ... ok
+test chat::tests::chat_turn_timeout_constant_is_within_product_window ... ok
+test chat::tests::normalizes_legacy_permission_modes ... ok
+test chat::tests::parse_falls_back_to_text_for_non_json ... ok
+test chat::tests::parses_claude_assistant_tool_use_part ... ok
+test chat::tests::parses_claude_stream_event_content_block_tool_use ... ok
+test chat::tests::parses_claude_tool_result_part ... ok
+test chat::tests::parses_codex_style_command_part ... ok
+test chat::tests::parses_grok_style_tool_use_part ... ok
+test chat::tests::permission_modes_map_to_conservative_or_write_stages ... ok
+test chat::tests::permission_tiers_drive_prepare_invocation_cli_flags ... ok
+test chat::tests::reconcile_interrupted_marks_streaming_aborted ... ok
+test chat::tests::session_needs_attention_from_flag_or_error ... ok
+test chat::tests::stop_reason_covers_abort_and_timeout ... ok
+test chat::tests::text_blocks_are_marked_so_the_runtime_can_separate_them ... ok
+test chat::tests::timeout_summary_is_readable ... ok
+test chat::tests::title_from_user_message_truncates_on_word_boundary ... ok
+test chat::service::tests::run_records_exit_configuration_and_separate_redacted_logs ... ok
+test chat::tools::fixtures::codex_file_change_and_opencode_tool_frames_preserve_results ... ok
+test chat::tools::tests::tool_result_pairs_with_call_and_preserves_bounded_diff ... ok
+test chat::tools::unknown_events::unknown_protocol_frames_preserve_text_and_report_a_warning ... ok
+test chat::turns::tests::invocation_audit_masks_prompt_and_secret_options_without_changing_execution ... ok
+test chat_context::tests::bounded_history_is_valid_json_and_keeps_latest_request_and_transcript ... ok
+test chat_context::tests::escaped_controls_do_not_drop_the_newest_message ... ok
+test chat_context::tests::execution_changes_clear_resume_and_are_rejected_during_a_turn ... ok
+test chat_context::tests::inline_cards_append_prompt_only_for_claude_and_rebind_resume ... ok
+test chat_context::tests::legacy_resume_requires_explicit_reset_and_fallback_keeps_history ... ok
+test chat_context::tests::native_resume_transports_only_new_input_for_each_builtin_adapter ... ok
+test chat::runtime::tests::utf8_across_reads_and_final_structured_messages_are_preserved ... ok
+test chat_context::tests::recent_history_retains_roles_statuses_and_chronological_order ... ok
+test chat_context::tests::rejected_resume_protocol_is_not_silently_bypassed ... ok
+test chat_context::tests::structured_resume_binds_all_execution_settings_without_storing_them ... ok
+test contracts::canonical_contract_fixture_matches_backend_manifest ... ok
+test contracts::chat_send_requires_a_client_request_identity ... ok
+test chat_context::tests::oversized_latest_input_is_rejected_instead_of_silently_truncated ... ok
+test contracts::command_manifest_matches_tauri_registration ... ok
+test contracts::event_manifest_matches_backend_emitters ... ok
+test contracts::persisted_model_samples_round_trip_through_rust_types ... ok
+test migrations::tests::current_document_is_read_without_rewriting ... ok
+test diagnostics::tests::diagnostic_bundle_ignores_legacy_task_logs_and_bounds_chat_tails ... ok
+test migrations::tests::future_document_is_preserved_and_backed_up ... ok
+test migrations::tests::invalid_payload_is_backed_up ... ok
+test migrations::tests::legacy_document_is_upgraded_to_versioned_envelope ... ok
+test models::id_tests::independent_generators_never_reuse_a_process_registry_id ... ok
+test chat::runtime::tests::stdin_is_written_concurrently_and_closed_at_end ... ok
+test process_supervisor::tests::closing_admission_tracks_non_process_work_and_rejects_new_operations ... ok
+test process_supervisor::tests::chat_ownership_is_not_a_synthetic_task_and_duplicate_ids_do_not_overwrite ... ok
+test process_supervisor::tests::disappearing_group_race_does_not_hide_live_permission_failures ... ok
+test process_supervisor::tests::invalid_process_groups_are_rejected_before_signalling ... ok
+test process_supervisor::tests::registry_tracks_task_kind_and_timeout_metadata ... ok
+test process_supervisor::tests::repeated_stop_sends_term_once_but_retries_a_failed_signal ... ok
+test process_supervisor::tests::admitted_late_registration_and_guard_drop_cleanup_are_owned_and_bounded ... ok
+test process_supervisor::tests::task_run_queries_stay_scoped_by_process_kind ... ok
+test process_supervisor::update_tests::update_never_reopens_shutdown_admission ... ok
+test process_supervisor::update_tests::update_waits_for_operations_and_recovers_after_failure ... ok
+test process_supervisor::tests::completed_registration_is_not_signalled_again_when_guard_drops ... ok
+test process_supervisor::tests::stop_request_records_reason_and_terminates_the_process_group ... ok
+test projects::tests::benchmark_project_analysis ... ignored, local performance probe; run through pnpm bench:local
+test projects::tests::package_command_suggestions_use_declared_package_manager ... ok
+test projects::tests::package_command_suggestions_use_lockfile_package_manager ... ok
+test session_capture::tests::captures_claude_session_and_resume_command ... ok
+test session_capture::tests::captures_codex_thread_session_and_resume_command ... ok
+test session_capture::tests::keeps_session_without_resume_for_unrecognized_command ... ok
+test settings::tests::invalid_settings_are_backed_up_and_reported ... ok
+test settings::tests::legacy_settings_are_migrated_on_read ... ok
+test settings::tests::missing_settings_returns_defaults ... ok
+test settings::tests::save_then_load_round_trips_and_clamps_timeout ... ok
+test skills::catalog_tests::empty_conventional_skills_directory_does_not_hide_other_packages ... ok
+test chat::tools::fixtures::actual_claude_and_codex_frames_pair_without_duplicate_cards ... ok
+test chat::runtime::tests::cancellation_escalates_past_ignored_term_and_keeps_partial ... ok
+test skills::catalog_tests::old_percent_encoded_id_roundtrips_and_invalid_ids_fail ... ok
+test projects::tests::analyzes_python_go_flutter_and_electron_projects ... ok
+test skills::catalog_tests::root_skill_and_related_files_are_read_without_execution_or_binary_decoding ... ok
+test skills::catalog_tests::symlink_source_escape_is_never_previewed_or_published ... ok
+test skills::catalog_tests::scan_reports_bad_packages_without_hiding_valid_skills_and_skips_archives ... ok
+test projects::tests::analyzes_current_loom_repository ... ok
+test skills::cli::interactive::tests::actual_fzf_matches_visible_text_and_returns_stable_row_identity ... ignored, requires an installed fzf; validates the real matching engine without a TTY
+test skills::catalog_tests::local_library_survives_reopen_and_removing_source_never_removes_content ... ok
+test chat::runtime::tests::output_budget_and_callback_failure_terminate_the_process ... ok
+Installing fzf through the explicitly requested Homebrew operation…
+test chat::repository::tests::streaming_uses_incremental_records_and_pages_have_a_byte_budget ... ok
+test skills::cli::interactive::tests::terminal_text_does_not_keep_control_sequences ... ok
+test skills::catalog_tests::unreadable_source_is_an_issue_not_a_successful_empty_source ... ok
+test chat::logs::tests::log_limits_utf8_cursors_and_no_overwrite_are_enforced ... ok
+test skills::cli::interactive::tests::ng_lists_groups_resolves_group_verbs_and_never_executes_extra_text ... ok
+test skills::cli_tests::actual_cli_recovers_a_fixture_from_another_data_directory ... ignored, explicit acceptance: requires LOOM_SKILLS_ACCEPTANCE_BINARY and briefly uses the real user coordination domain
+test skills::cli::interactive::tests::ng_without_fzf_falls_back_to_manual_list_but_tui_reports_missing_dependency ... ok
+test skills::catalog_tests::fixed_snapshot_refresh_preserves_old_revision_and_detects_tampering ... ok
+test chat::runtime::tests::timeout_escalates_past_ignored_term_and_cleans_registry ... ok
+test skills::cli_tests::cli_list_preserves_legacy_json_fields_without_registering_source ... ok
+test skills::cli::interactive::tests::dependency_timeout_is_logged_as_failed_and_releases_admission ... ok
+test skills::cli_tests::cli_missing_uninstall_and_plain_preview_remain_reviewable ... ok
+test skills::cli_tests::cli_rejects_ambiguous_short_names_before_installing ... ok
+test skills::cli::interactive::tests::tui_cancel_does_not_apply_and_apply_uses_the_original_reviewed_fingerprint ... ok
+test chat::shutdown::tests::shutdown_cases_in_isolated_processes ... ok
+test chat::service::tests::cancellation_timeout_spawn_failure_and_success_have_distinct_terminal_records ... ok
+test skills::cli_tests::cli_update_admission_and_preview_do_not_mutate_installation_targets ... ok
+test skills::cli_tests::doctor_missing_target_does_not_create_instruction_or_install_directories ... ok
+test skills::cli_tests::doctor_without_an_injection_file_is_not_applicable ... ok
+test skills::cli::interactive::tests::fzf_install_is_explicit_and_logs_a_supervised_static_command ... ok
+test skills::cli::interactive::tests::tui_policy_switch_controls_copy_and_wrappers ... ok
+test agent_diagnostics::timeout_tests::version_probe_is_bounded_and_unknown_is_explicit ... ok
+test skills::github_api::tests::real_public_github_api_materializes_and_installs_without_git ... ignored, explicit network acceptance: anonymous read of vercel-labs/agent-browser, installs only into a disposable project
+test skills::cli::interactive::tests::tui_previews_packages_and_repeats_install_then_uninstall_through_shared_service ... ok
+test skills::github_api::tests::secondary_limit_detection_does_not_return_untrusted_server_text ... ok
+test skills::github_api::tests::cancellation_interrupts_an_inflight_http_request ... ok
+test skills::github_api::tests::unsafe_paths_modes_sizes_and_duplicate_entries_are_rejected ... ok
+test skills::github_api::tests::auth_rate_limit_redirects_and_cancel_have_distinct_safe_results ... ok
+test skills::github_api::tests::api_and_git_modes_keep_distinct_sources ... ok
+test skills::cli_tests::cli_and_desktop_services_share_installs_and_live_instruction_refresh ... ok
+test skills::cli_tests::copy_source_updates_are_visible_without_marking_installed_instructions_broken ... ok
+test skills::github_api::tests::root_skill_and_nested_skill_keep_old_api_discovery_semantics ... ok
+test skills::cli_tests::cli_multiple_tools_use_coordinated_updates_and_record_failures ... ok
+test skills::cli_tests::custom_cli_target_requires_an_explicit_safe_directory_and_has_no_inferred_instructions ... ok
+test chat::runtime::tests::exited_parent_with_inherited_pipes_does_not_hang_or_leave_child ... ok
+test skills::github_api::tests::active_package_projection_excludes_archived_discovery_and_rejects_lfs ... ok
+test skills::cli_tests::cli_copy_force_and_orphan_uninstall_preserve_unmanaged_content ... ok
+test skills::installers_tests::a_stale_group_preview_cannot_update_the_other_members ... ok
+test skills::installers_tests::escaping_target_is_disabled_without_hiding_safe_targets ... ok
+test skills::installers_tests::fingerprints_distinguish_directory_structure_and_user_added_links ... ok
+test skills::installers_tests::cron_inject_file_never_creates_an_instruction_or_wrapper ... ok
+test skills::installers_tests::backups_are_ignored_by_git_and_not_discoverable_as_installed_skills ... ok
+test skills::installers_tests::doctor_detects_local_live_injection_changes_without_writing ... ok
+test skills::installers_tests::batch_uninstall_updates_a_shared_manifest_without_losing_other_records ... ok
+test skills::installers_tests::batch_uninstall_of_shared_instruction_users_removes_block_once ... ok
+test skills::installers_tests::future_malformed_and_symlink_manifests_block_replacement_and_uninstall ... ok
+test skills::installers_tests::legacy_manifests_are_not_implicitly_adopted ... ok
+test skills::github_api::tests::truncated_missing_or_corrupt_blobs_preserve_the_last_completed_source ... ok
+test skills::github_api::tests::complete_api_packages_keep_binary_scripts_nested_roots_and_pinned_installs ... ok
+test skills::installers_tests::instruction_edits_unknown_markers_and_shared_version_conflicts_are_preserved ... ok
+test skills::installers_tests::copy_install_is_idempotent_and_uninstalls_after_source_removal ... ok
+test skills::installers_tests::plans_capture_target_and_reject_later_manifest_or_context_changes ... ok
+test skills::installers_tests::pure_file_operation_defers_application_update_and_cancel_preserves_targets ... ok
+test skills::installers_tests::another_data_directory_shares_ownership_and_unknown_peers_prevent_deletion ... ok
+test skills::installers_tests::missing_and_malformed_instruction_diagnoses_do_not_write_or_repair ... ok
+test skills::installers_tests::status_reads_wait_for_a_short_commit_and_cancel_is_not_blocked_by_writer ... ok
+test skills::installers_tests::malformed_owned_block_refuses_update_and_uninstall_without_changes ... ok
+test skills::installers_tests::modified_copy_is_protected_until_explicit_replacement_and_backup_is_retained ... ok
+test skills::instructions_tests::instruction_process_child ... ignored, spawned by the parent with an isolated explicit fixture
+test skills::instructions_tests::malformed_duplicate_and_nested_markers_never_produce_a_span ... ok
+test skills::installers_tests::unmanaged_auto_skill_conflict_never_adds_instructions ... ok
+test skills::installers_tests::coordinated_shared_update_requires_all_users_and_changes_the_whole_group ... ok
+test skills::instructions_tests::recovery_rejects_unrelated_project_file_even_with_a_valid_journal ... ok
+test skills::installers_tests::unmanaged_content_and_edits_after_preview_cannot_be_overwritten ... ok
+test skills::operations::tests::abandoned_operation_is_marked_interrupted_and_not_reexecuted ... ok
+test skills::installers_tests::reviewed_batch_does_not_treat_external_instruction_edits_as_its_own_commit ... ok
+test skills::operations::tests::public_git_https_import_and_refresh_acceptance ... ignored, explicit anonymous public Git HTTPS acceptance; temporary library only
+test skills::installers_tests::symlink_install_removes_only_the_link_and_keeps_backups_outside_discovery ... ok
+test skills::operations::tests::cancellation_before_clone_is_persistent_and_never_creates_a_source ... ok
+test skills::sources::tests::credentials_traversal_unknown_hosts_and_shell_fragments_are_rejected ... ok
+test skills::sources::tests::old_case_alias_does_not_silently_merge_source_identity ... ok
+test skills::sources::tests::transport_changes_keep_identity_and_nested_gitlab_namespace ... ok
+
+running 1 test
+test skills::tests::abrupt_child_exit_leaves_recovery_marker_for_another_client ... ok
+test skills::tests::coordination_child ... ignored, spawned by coordination tests with an isolated explicit root
+test skills::tests::malformed_or_future_pending_index_blocks_even_unrelated_writes ... ok
+test skills::installers_tests::reviewed_multi_skill_plans_carry_only_their_verified_metadata_changes ... ok
+test skills::tests::metadata_symlinks_cannot_redirect_writes ... ok
+test skills::tests::metadata_is_durable_private_and_corruption_is_not_empty ... ok
+test skills::installers_tests::global_auto_instructions_use_tool_specific_paths_and_restore_existing_rules ... ok
+test skills::installers_tests::scoped_instruction_symlink_is_preserved_but_escape_and_stale_preview_are_blocked ... ok
+test skills::tests::operation_and_update_leases_are_mutually_exclusive_and_release ... ok
+test skills::tests::os_releases_lock_after_child_is_killed ... ok
+test skills::tests::pending_transactions_protect_overlapping_resources_across_data_directories ... ok
+test skills::tests::recovery_paths_reject_traversal_and_journals_outside_data_root ... ok
+
+running 1 test
+test skills::installers_tests::wrappers_are_opt_in_point_to_installed_packages_and_preserve_user_files ... ok
+test skills::transactions::tests::transaction_crash_child ... ignored, isolated subprocess used by recovery test
+test skills::translation::config::tests::corrupt_future_and_linked_configuration_is_never_overwritten ... ok
+test skills::transactions::tests::post_crash_user_changes_are_preserved_and_marker_remains ... ok
+
+running 1 test
+test skills::translation::config::tests::invalid_inputs_reject_without_echo_or_implicit_key_deletion ... ok
+test skills::transactions::tests::committed_receipt_clears_stale_marker_without_replaying ... ok
+test skills::translation::config::tests::explicit_key_changes_and_revision_conflicts_preserve_other_providers ... ok
+test skills::translation::local::tests::local_commands_are_isolated_and_never_embed_document_text ... ok
+test skills::translation::config::tests::provider_projection_never_returns_keys_and_reports_environment_precedence ... ok
+test skills::translation::config::tests::updater_and_pending_transaction_block_config_writes ... ok
+test skills::translation::local::tests::local_process_cancels_inflight_without_waiting_for_its_normal_exit ... ok
+test skills::instructions_tests::separate_processes_with_distinct_libraries_preserve_both_instruction_blocks ... ok
+test skills::transactions::tests::real_process_exit_is_recovered_by_a_new_client ... ok
+test skills::translation::local::tests::supervised_process_bounds_io_and_timeout_without_recording_text ... ok
+test skills::translation::tests::cancellation_during_execution_persists_cancelled_without_a_result ... ok
+test skills::translation::tests::cancelled_prepared_request_never_calls_remote_or_publishes_result ... ok
+test skills::installers_tests::shared_instructions_keep_other_users_and_preserve_crlf_and_permissions ... ok
+test skills::translation::remote::tests::http_transport_timeout_and_inflight_cancellation_are_recorded_without_retry ... ok
+test skills::transactions::tests::interruption_at_each_rename_recovers_from_another_data_directory ... ok
+test skills::translation::tests::real_translation_provider_acceptance ... ignored, explicit account-confirmed model call with synthetic documentation only
+test skills::translation::tests::history_reconciles_interrupted_requests_and_rejects_mismatched_operation_identity ... ok
+test skills::translation::tests::preparation_pins_content_and_keeps_secrets_and_text_out_of_records ... ok
+test skills::translation::remote::tests::http_transport_covers_success_auth_rate_limit_redirect_invalid_and_oversize ... ok
+test storage::tests::backs_up_incompatible_project_schema ... ok
+test storage::tests::ensure_project_store_adds_loom_to_gitignore ... ok
+test skills::translation::tests::summary_projection_preserves_title_description_and_references_only ... ok
+test skills::translation::tests::remote_requests_and_complete_responses_match_provider_contracts ... ok
+test skills::translation::tests::stored_result_requires_matching_committed_context ... ok
+test storage::tests::remove_recent_project_by_id_removes_only_matching_project ... ok
+test storage::tests::ensure_project_store_reuses_existing_loom_gitignore_pattern ... ok
+test storage::tests::ensure_project_store_appends_loom_to_existing_gitignore_once ... ok
+test skills::operations::tests::checkout_does_not_run_source_selected_smudge_filters ... ok
+test skills::translation::tests::four_provider_workflows_persist_versioned_results_without_mutating_source ... ok
+test skills::instructions_tests::instruction_ledger_and_manifest_recover_together_after_every_rename ... ok
+test skills::operations::tests::real_git_import_refresh_and_source_removal_preserve_previous_snapshot ... ok
+test skills::translation::tests::operation_list_bounds_returned_terminal_records_not_persisted_history ... ok
+test skills::operations::tests::git_refresh_does_not_update_installed_copy_or_symlink_until_reviewed ... ok
+test chat::repository::tests::live_event_pages_read_only_requested_records_after_indexing_long_history ... ok
+test skills::operations::tests::ssh_configuration_is_preserved_and_default_is_only_used_when_unconfigured ... ok
+test skills::installers_tests::coordinated_update_recovers_both_packages_manifests_and_shared_resources ... ok
+test skills::translation::tests::large_history_keeps_recent_results_and_old_active_requests_without_deleting_records ... ok
+
+test result: ok. 265 passed; 0 failed; 25 ignored; 0 measured; 0 filtered out; finished in 25.98s
+
+     Running unittests src/main.rs (src-tauri/target/debug/deps/loom-6e70af2b9f42cf46)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/bin/loom-skills.rs (src-tauri/target/debug/deps/loom_skills-b9b2bb0344a1eecd)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests loom_lib
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

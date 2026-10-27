@@ -1,0 +1,46 @@
+{
+  "date": "2026-10-26",
+  "recordedAt": "2026-10-26T08:34:44.852874-07:00",
+  "baseline": "ffe3127909129ccf220f7d8e8894103b15cfe576",
+  "branch": "main",
+  "localTrackingRef": "ffe3127909129ccf220f7d8e8894103b15cfe576",
+  "remoteFetched": false,
+  "changes": "Browser smoke adds project expansion reload coverage; documentation refreshed; product code unchanged.",
+  "checks": [
+    {
+      "command": "pnpm check",
+      "status": "passed",
+      "exitCode": 0,
+      "log": "check.log",
+      "sha256": "417605b35eb2a7add1be66b0139474c05d7e2b7dabeaa9ac2fd04f2a302972d7"
+    },
+    {
+      "command": "pnpm tauri build --no-bundle",
+      "status": "passed",
+      "exitCode": 0,
+      "log": "build.log",
+      "sha256": "0b518e47469636e9ef1fe0bf5ff8f13ea98623decabc1ca43c30fcef05bcda3d"
+    },
+    {
+      "command": "pnpm smoke:visual",
+      "status": "passed",
+      "exitCode": 0,
+      "log": "visual.log",
+      "sha256": "0260978a31b72f8ce1bf6a357ba6112f353db80fc675435d5ed90b78362ae32d"
+    }
+  ],
+  "frontend": {
+    "passed": 125,
+    "failed": 0
+  },
+  "rust": {
+    "passed": 265,
+    "failed": 0,
+    "ignored": 25
+  },
+  "realModelCalls": 0,
+  "nativeDesktopAcceptance": "not-run; previously handed to user",
+  "distribution": "not-run",
+  "previewCleanup": "debug.sh stop ran; status confirms web and desktop dev stopped",
+  "smokeScriptSha256": "e066d65da0fd3799f1cb598bdb0184714b819a7b26e96fe867a2e4cb5e269405"
+}

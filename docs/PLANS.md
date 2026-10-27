@@ -27,10 +27,10 @@
   > （代码完成，合成网页与 smoke:visual 已验证；桌面已由用户确认 Auto-run 与切换 Agent 提示条；已提交）按 Claude Design 画布打磨简化 Chat 的界面：lucide 图标替换文本字符，Research/Code 模式着色，Composer、斜杠菜单与 Agent 菜单补全信息，用应用内提示条替换 Auto-run 与切换 Agent 的 `window.confirm`，新会话页与设置页改为分区卡片；只改前端，不改存储与适配器。
 
 - 01:01-simple-chat-implementation.md
-  > （工程与资料收尾完成，待用户桌面验收；代码 `7e1dfcb`/`3dd9a9f`，首版资料 `0acbb10`；check 与 tauri no-bundle 通过；原生验收由用户接手，未合入 main）00:44 重构计划的执行拆解：10 个可独立 Review 的 PR（CLI 实测、入口收敛与 ErrorBoundary、Agent 探测与按项目聚合会话、OpenCode 适配与工具事件配对、会话界面（新会话只选模式）、Composer 斜杠命令与输入框内 Agent 选择、英文优先 i18n（可切简体中文）、设置精简、删除旧工作流、文档与真实验收），对应 Claude Design 初版 UI 画布与设计令牌。
+  > （工程与资料收尾完成，2026-10-26 当前 main 复核通过，待用户桌面验收；代码 `7e1dfcb`/`3dd9a9f`，首版资料 `0acbb10`；check 与 tauri no-bundle 通过；原生验收由用户接手；已核实本地 main 包含实现，补齐项目折叠刷新恢复的合成回归）00:44 重构计划的执行拆解：10 个可独立 Review 的 PR（CLI 实测、入口收敛与 ErrorBoundary、Agent 探测与按项目聚合会话、OpenCode 适配与工具事件配对、会话界面（新会话只选模式）、Composer 斜杠命令与输入框内 Agent 选择、英文优先 i18n（可切简体中文）、设置精简、删除旧工作流、文档与真实验收），对应 Claude Design 初版 UI 画布与设计令牌。
 
 - 00:44-simple-cli-chat-refactor.md
-  > （工程交付完成，当前重构入口；R0–R4 代码与 R5 资料已提交，产品验收待用户执行；成功标准 1/7/8 passed，2–5/9/10 partial，Grok blocked）把 Loom 收敛为 Claude Code 式本机 CLI Chat：会话按项目分组，会话级「Research / Code」模式（复用 explore/ask/auto，不改 schema）；界面英文优先、可切简体中文，Agent 在输入框中选择；基于现有 Chat 运行链，调用已安装的 Claude Code / Codex / OpenCode / Grok；新增 OpenCode 适配与通用探测，重做单列转录、工具卡片和斜杠命令 Composer，移除旧 Task 工作流，冻结新内核。
+  > （工程交付完成，2026-10-26 已核实实现进入本地 main；R0–R4 代码与 R5 资料已提交，产品验收待用户执行；成功标准 1/7/8 passed，2–5/9/10 partial，Grok blocked）把 Loom 收敛为 Claude Code 式本机 CLI Chat：会话按项目分组，会话级「Research / Code」模式（复用 explore/ask/auto，不改 schema）；界面英文优先、可切简体中文，Agent 在输入框中选择；基于现有 Chat 运行链，调用已安装的 Claude Code / Codex / OpenCode / Grok；新增 OpenCode 适配与通用探测，重做单列转录、工具卡片和斜杠命令 Composer，移除旧 Task 工作流，冻结新内核。
 
 ## 2026-10-15
 

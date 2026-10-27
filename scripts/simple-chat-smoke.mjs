@@ -254,12 +254,25 @@ async function main() {
     await waitFor(client, '!document.querySelector(".chat-settings")', 'back to active chat');
     if (!await evaluate(client, 'document.querySelector(".chat-session-header h1")?.textContent.includes("Refactor")')) throw Error('Settings lost active chat');
     await screenshot('chat-dark');
+    // Reverse both projects' defaults so a reload cannot pass by simply resetting the tree.
+    const projectExpansion = `Array.from(document.querySelectorAll('.chat-project-row > button[aria-expanded]')).map(button => ({ path: button.title, expanded: button.getAttribute('aria-expanded') }))`;
+    const originalExpansion = await evaluate(client, projectExpansion);
+    if (originalExpansion.length !== 2 || new Set(originalExpansion.map(project => project.expanded)).size !== 2) throw Error('Expected one expanded and one collapsed project');
+    const expectedExpansion = originalExpansion.map(project => ({ ...project, expanded: project.expanded === 'true' ? 'false' : 'true' }));
+    for (const project of expectedExpansion) {
+      const button = `Array.from(document.querySelectorAll('.chat-project-row > button[aria-expanded]')).find(button => button.title === ${JSON.stringify(project.path)})`;
+      await evaluate(client, `${button}.click()`);
+      await waitFor(client, `${button}?.getAttribute('aria-expanded') === ${JSON.stringify(project.expanded)}`, 'toggled project');
+    }
+    const expansionMatches = `JSON.stringify(${projectExpansion}) === ${JSON.stringify(JSON.stringify(expectedExpansion))}`;
+    await waitFor(client, expansionMatches, 'toggled project groups');
     await client.send('Page.reload');
     await waitFor(client, 'document.documentElement.lang === "zh-CN" && document.documentElement.dataset.theme === "dark"', 'persisted appearance');
+    await waitFor(client, expansionMatches, 'project expansion persists after reload');
     await client.send('Emulation.setDeviceMetricsOverride', { width: 700, height: 820, deviceScaleFactor: 1, mobile: false });
     await waitFor(client, '!document.querySelector(".chat-project-tree")', 'collapsed narrow sidebar');
     await screenshot('new-chat-narrow');
-    writeFileSync(join(output, 'result.json'), JSON.stringify({ status: 'passed', kind: 'synthetic-web-only', checks: ['new chat sends with selected Agent and mode', 'project groups', 'composer mode picker', 'tool cards and diff', 'light/dark', 'language persists after reload', 'Settings preserves selected chat', '700px sidebar collapse', 'no horizontal overflow'] }, null, 2));
+    writeFileSync(join(output, 'result.json'), JSON.stringify({ status: 'passed', kind: 'synthetic-web-only', checks: ['new chat sends with selected Agent and mode', 'project groups', 'project expansion persists after reload', 'composer mode picker', 'tool cards and diff', 'light/dark', 'language persists after reload', 'Settings preserves selected chat', '700px sidebar collapse', 'no horizontal overflow'] }, null, 2));
     await inlineCardsSmoke(client, { click, clickText, screenshot });
     await skillsSmoke(client, { evaluate, waitFor, click, clickText, screenshot });
     console.log(`Simple Chat browser smoke passed: ${output}`);

@@ -1,0 +1,13 @@
+
+> loom@0.1.0 smoke:visual /Users/guojian/Workspace/naijoug/loom
+> ./scripts/simple-chat-smoke.sh
+
+Loom local dev stopped
+Loom preview started
+URL: http://127.0.0.1:1420/?fixture=simple-chat
+PID: 11983
+Log: /tmp/loom-preview-vite.log
+OpenUI inline cards smoke passed: /Users/guojian/Workspace/naijoug/loom/designs/exports/openui-inline-cards
+Skills browser smoke passed: /Users/guojian/Workspace/naijoug/loom/designs/exports/skills
+Simple Chat browser smoke passed: /Users/guojian/Workspace/naijoug/loom/designs/exports/simple-chat
+Loom local dev stopped
