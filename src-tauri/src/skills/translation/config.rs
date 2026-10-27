@@ -166,10 +166,9 @@ impl RuntimeConfig {
             (ProviderId::Codex, "codex"),
             (ProviderId::ClaudeCode, "claude"),
         ] {
-            value.local.insert(
-                id,
-                crate::agents::config::resolve_executable(command).is_some(),
-            );
+            value
+                .local
+                .insert(id, crate::agent::resolve_executable(command).is_some());
         }
         Ok(value)
     }

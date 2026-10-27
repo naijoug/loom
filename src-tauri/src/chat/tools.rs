@@ -332,7 +332,7 @@ mod fixtures {
         ] {
             let mut parts = Vec::new();
             for line in input.lines() {
-                let line = crate::agents::stream::redact_stream_line(line);
+                let line = crate::agent::redact_stream_line(line);
                 for part in super::super::parse_chat_stream_line(mode, &line).parts {
                     merge_part(&mut parts, part);
                 }

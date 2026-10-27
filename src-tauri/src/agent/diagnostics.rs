@@ -1,4 +1,5 @@
-use crate::{agents, models::now_ms};
+use super::{capabilities, registry};
+use crate::models::now_ms;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tauri::AppHandle;
@@ -14,11 +15,11 @@ pub struct AgentDiagnostic {
     pub auth_status: String,
     pub detail: String,
     pub checked_at_ms: u128,
-    pub capabilities: crate::agent_adapter::AgentCapabilities,
+    pub capabilities: capabilities::AgentCapabilities,
 }
 
 fn resolve_command_path(command: &str) -> Option<String> {
-    agents::config::resolve_executable(command)
+    registry::resolve_executable(command)
 }
 
 fn compact_version(output: &[u8]) -> Option<String> {
@@ -31,7 +32,7 @@ fn compact_version(output: &[u8]) -> Option<String> {
 
 async fn diagnose_agent(agent: crate::models::AgentConfig) -> AgentDiagnostic {
     let checked_at_ms = now_ms();
-    let capabilities = crate::agent_adapter::capabilities(&agent.adapter_type);
+    let capabilities = capabilities::capabilities(&agent.adapter_type);
     if agent.adapter_type == "dummy" {
         return AgentDiagnostic {
             agent_id: agent.id,
@@ -158,7 +159,7 @@ pub async fn diagnose_agents(
     agent_id: Option<String>,
 ) -> Result<Vec<AgentDiagnostic>, String> {
     let mut diagnostics = Vec::new();
-    for agent in agents::load_agents(&app)?
+    for agent in registry::load_agents(&app)?
         .into_iter()
         .filter(|agent| agent_id.as_ref().is_none_or(|id| id == &agent.id))
     {

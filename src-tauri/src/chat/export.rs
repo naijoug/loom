@@ -87,16 +87,13 @@ fn markdown(
         // The readable transcript is meant to be shared, so it is redacted;
         // session.json stays the exact snapshot needed for rollback.
         out.push_str(&fence(
-            &crate::agents::redact_sensitive_text(&message.content),
+            &crate::agent::redact_sensitive_text(&message.content),
             "text",
         ));
         if !message.parts.is_empty() {
             out.push_str("### 消息分段\n\n");
             let parts = serde_json::to_string_pretty(&message.parts).map_err(|e| e.to_string())?;
-            out.push_str(&fence(
-                &crate::agents::redact_sensitive_text(&parts),
-                "json",
-            ));
+            out.push_str(&fence(&crate::agent::redact_sensitive_text(&parts), "json"));
         }
         if let Some(error) = &message.error_summary {
             out.push_str("### 错误\n\n");

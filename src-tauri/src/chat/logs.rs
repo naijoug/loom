@@ -16,7 +16,7 @@ pub(crate) fn redact(value: &str) -> String {
             if lower.contains("api-key") || lower.contains("authorization") {
                 "[REDACTED sensitive line]".into()
             } else {
-                crate::agents::redact_sensitive_text(line)
+                crate::agent::redact_sensitive_text(line)
             }
         })
         .collect::<Vec<_>>()

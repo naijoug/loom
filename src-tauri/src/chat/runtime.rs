@@ -5,8 +5,7 @@ use super::{
     CHAT_TURN_TIMEOUT_MS, STOP_REASON_TIMEOUT,
 };
 use crate::{
-    agent_adapter::PreparedAgentInvocation,
-    agents,
+    agent::{self, PreparedAgentInvocation},
     process_supervisor::{self, ProcessKind, ProcessMetadata, ProcessOwner},
     session_capture,
 };
@@ -513,7 +512,7 @@ impl Output {
             if self.lines > request.limits.max_lines {
                 return Err("output_limit: CLI emitted too many lines".into());
             }
-            let line = agents::stream::redact_stream_line(&line);
+            let line = agent::redact_stream_line(&line);
             observe(Observation::Log {
                 stderr,
                 line: line.clone(),
@@ -893,10 +892,10 @@ pub(crate) async fn run_owned(
         });
     }
     let adapter = match request.prepared.output_mode.as_str() {
-        "codex_json" => crate::agent_adapter::ADAPTER_CODEX,
-        "claude_stream_json" => crate::agent_adapter::ADAPTER_CLAUDE,
-        "streaming_json" => crate::agent_adapter::ADAPTER_GROK,
-        "opencode_json" => crate::agent_adapter::ADAPTER_OPENCODE,
+        "codex_json" => crate::agent::ADAPTER_CODEX,
+        "claude_stream_json" => crate::agent::ADAPTER_CLAUDE,
+        "streaming_json" => crate::agent::ADAPTER_GROK,
+        "opencode_json" => crate::agent::ADAPTER_OPENCODE,
         _ => "cli",
     };
     let captured = session_capture::capture_session_for_adapter(

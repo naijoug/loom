@@ -1,7 +1,7 @@
 //! Native session identifiers are data, bound to the invocation that created them.
 use super::{ChatResumeHandle, ChatSession};
 use crate::{
-    agent_adapter::{self, AgentStage},
+    agent::{self, AgentStage},
     models::AgentConfig,
     session_capture,
 };
@@ -64,7 +64,7 @@ pub(crate) fn resolve(
     if handle.version != 1
         || handle.adapter_type != binding.adapter_type
         || handle.config_fingerprint != binding.config_fingerprint
-        || !agent_adapter::valid_session_id(&handle.native_session_id)
+        || !agent::valid_session_id(&handle.native_session_id)
     {
         return Err(
             "续聊配置已变化或句柄无效。请在会话菜单选择“开新 CLI 会话”后重试；历史消息会保留。"
@@ -82,8 +82,7 @@ pub(crate) fn resolve(
 
 pub(crate) fn capture(binding: &ResumeBinding, command: &str) -> Option<ChatResumeHandle> {
     let native_session_id =
-        agent_adapter::parse_resume_session_id(&binding.adapter_type, &binding.program, command)
-            .ok()?;
+        agent::parse_resume_session_id(&binding.adapter_type, &binding.program, command).ok()?;
     Some(ChatResumeHandle {
         version: 1,
         adapter_type: binding.adapter_type.clone(),

@@ -18,8 +18,8 @@ pub(crate) mod runtime;
 mod service;
 pub(crate) mod shutdown;
 pub(crate) mod turns;
-use crate::agent_adapter::AgentStage;
-use crate::agents::load_agents;
+use crate::agent::load_agents;
+use crate::agent::AgentStage;
 use crate::chat_context::{prepare_chat_invocation, update_execution_config};
 use crate::models::{now_ms, IdGenerator};
 use crate::process_supervisor;
@@ -857,7 +857,7 @@ mod tests {
         permission_to_stage, ChatMessagePart,
     };
     // chat_stop_outcome / is_chat_stop_reason / chat_timeout_summary tested via super::
-    use crate::agent_adapter::{
+    use crate::agent::{
         prepare_invocation, AdapterInvocationRequest, AgentStage, ADAPTER_CLAUDE, ADAPTER_CODEX,
         ADAPTER_GROK,
     };

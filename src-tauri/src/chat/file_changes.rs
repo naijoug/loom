@@ -174,7 +174,7 @@ impl FileChanges {
         }
         let mut bounded = String::new();
         for line in preview.into_iter().take(40) {
-            let line = crate::agents::redact_sensitive_text(&line);
+            let line = crate::agent::redact_sensitive_text(&line);
             for character in line.chars().chain(std::iter::once('\n')) {
                 if bounded.len() + character.len_utf8() > 8192 {
                     break;

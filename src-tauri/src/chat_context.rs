@@ -1,5 +1,5 @@
 //! Bounded fallback context; native sessions receive only the new user input.
-use crate::agent_adapter::{self, AdapterInvocationRequest, AgentStage, PreparedAgentInvocation};
+use crate::agent::{self, AdapterInvocationRequest, AgentStage, PreparedAgentInvocation};
 use crate::chat::ChatSession;
 use crate::models::AgentConfig;
 use std::path::Path;
@@ -64,19 +64,19 @@ pub(crate) fn prepare_chat_invocation(
         chat_permission_mode: Some(&session.permission_mode),
         embed_prompt: !matches!(
             agent.adapter_type.as_str(),
-            agent_adapter::ADAPTER_CODEX | agent_adapter::ADAPTER_CLAUDE
+            agent::ADAPTER_CODEX | agent::ADAPTER_CLAUDE
         ),
         system_append,
         model: None,
     };
     // Preparing arguments has no side effects. Let the adapter decide whether
     // this handle is actually usable; an arbitrary stored string is not proof.
-    let prepared = agent_adapter::prepare_invocation(agent, &request)?;
+    let prepared = agent::prepare_invocation(agent, &request)?;
     let (invocation, prompt) = if prepared.resumed {
         (prepared, user_text.to_string())
     } else {
         let prompt = build_prompt(session, user_text);
-        let invocation = agent_adapter::prepare_invocation(
+        let invocation = agent::prepare_invocation(
             agent,
             &AdapterInvocationRequest {
                 prompt: &prompt,
@@ -168,7 +168,7 @@ fn build_prompt(session: &ChatSession, user_text: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::agent_adapter::{ADAPTER_CLAUDE, ADAPTER_CODEX, ADAPTER_GROK};
+    use crate::agent::{ADAPTER_CLAUDE, ADAPTER_CODEX, ADAPTER_GROK};
     use crate::chat::ChatMessage;
 
     fn session() -> ChatSession {

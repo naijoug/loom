@@ -1,4 +1,4 @@
-use crate::{agents, models::now_ms, projects::canonical_project_path, settings, storage};
+use crate::{agent, models::now_ms, projects::canonical_project_path, settings, storage};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::{
@@ -18,7 +18,7 @@ pub struct ExportDiagnosticBundleInput {
 }
 
 fn redact(value: &str, project: &Path) -> String {
-    let mut text = agents::redact_sensitive_text(value)
+    let mut text = agent::redact_sensitive_text(value)
         .replace(&project.to_string_lossy().to_string(), "<project>");
     if let Some(home) = std::env::var_os("HOME") {
         text = text.replace(&home.to_string_lossy().to_string(), "<home>");
@@ -82,7 +82,7 @@ fn collect_logs(project: &Path) -> Result<Vec<Value>, String> {
                 .collect::<Vec<_>>()
                 .into_iter()
                 .rev()
-                .map(agents::stream::redact_stream_line)
+                .map(agent::redact_stream_line)
                 .collect::<Vec<_>>()
                 .join("\n");
             logs.push(json!({"path":path.strip_prefix(project).unwrap_or(&path).to_string_lossy(), "tail":redact(&lines, project), "truncated":len > 65536 || text.lines().count() > 200}));
@@ -119,7 +119,7 @@ pub fn export_diagnostic_bundle(
         "system":{"os":std::env::consts::OS,"arch":std::env::consts::ARCH},
         "project":{"name":project.file_name().unwrap_or_default().to_string_lossy(),"path":"<project>"},
         "settings":settings::load_app_settings_for_app(&app)?,
-        "agents":agents::load_agents(&app)?.into_iter().map(|agent| json!({"id":agent.id,"adapterType":agent.adapter_type,"enabled":agent.enabled,"available":agent.available})).collect::<Vec<_>>(),
+        "agents":agent::load_agents(&app)?.into_iter().map(|agent| json!({"id":agent.id,"adapterType":agent.adapter_type,"enabled":agent.enabled,"available":agent.available})).collect::<Vec<_>>(),
         "logs":if input.include_log_tails { collect_logs(&project)? } else { Vec::new() },
         "note":"Chat logs only; legacy Task data is not read or modified. Log tails are bounded and may be incomplete. Review before sharing."
     });

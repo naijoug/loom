@@ -1,5 +1,5 @@
 //! Experimental OpenUI inline cards: the generated system prompt and its audit identity.
-use crate::{agent_adapter, models::AgentConfig};
+use crate::{agent, models::AgentConfig};
 use sha2::{Digest, Sha256};
 use std::sync::OnceLock;
 
@@ -14,7 +14,7 @@ pub(crate) fn prompt_sha256() -> &'static str {
 /// The prompt to append for this agent, or `None` when the setting is off or
 /// the adapter cannot accept an appended system prompt.
 pub(crate) fn system_append(enabled: bool, agent: &AgentConfig) -> Option<&'static str> {
-    (enabled && agent_adapter::capabilities(&agent.adapter_type).inline_cards).then_some(PROMPT)
+    (enabled && agent::capabilities(&agent.adapter_type).inline_cards).then_some(PROMPT)
 }
 
 /// Execution records show which prompt was sent without repeating ~5k characters per turn.

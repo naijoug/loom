@@ -138,7 +138,7 @@ fn persisted_model_samples_round_trip_through_rust_types() {
     assert_model_sample::<crate::chat::ChatExportInput>(samples, "chatExportInput");
     assert_model_sample::<crate::chat::ChatExportResult>(samples, "chatExportResult");
     assert_model_sample::<crate::chat::ChatMessagePart>(samples, "chatToolPart");
-    assert_model_sample::<crate::agent_diagnostics::AgentDiagnostic>(samples, "agentDiagnostic");
+    assert_model_sample::<crate::agent::diagnostics::AgentDiagnostic>(samples, "agentDiagnostic");
     assert_model_sample::<crate::learn::models::Study>(samples, "learnStudy");
     assert_model_sample::<crate::learn::models::Architecture>(samples, "learnArchitecture");
     assert_model_sample::<crate::learn::models::PageContent>(samples, "learnPageContent");

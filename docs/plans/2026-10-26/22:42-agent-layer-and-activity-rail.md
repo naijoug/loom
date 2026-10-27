@@ -1,6 +1,6 @@
 # Agent 调用层与左侧功能栏重构计划
 
-- 状态：实施中；P0、P1 已完成，下一步 P2（进度见第 0 节）
+- 状态：实施中；P0–P2 已完成，下一步 P3（进度见第 0 节）
 - 基线：`main` @ `d5b8c4b` 之上的未提交 Learn 工作区（含 2026-10-26 Agent 启动前检查与错误详情折叠）
 - 触发：用户要求参考 Codex 应用的布局，把 Chat 作为默认主页，Learn、Research、Discuss 作为并列功能；调用本机各种 Agent 做成独立的模块和层，上层模块只管调用，UI 只是交互入口
 - 范围：
@@ -22,6 +22,12 @@
   - 超时、取消、输出限额、进程组清理与 shutdown 已有 `chat::runtime` / `chat::shutdown` / `process_supervisor` 测试覆盖，未重复添加。
   - 与计划的偏差：测试数据复用已有的 `src-tauri/tests/fixtures/cli-streams/`，未新建 `agent-streams/`；runner 特征测试单独成文件，而非放进 `chat/mod.rs` tests，便于 P3 整体迁到 `agent/`。
   - 验证：`pnpm check` 通过（前端 130、Rust 296 通过 / 27 忽略）。首轮 `pnpm check` 中 `chat::shutdown::tests::shutdown_cases_in_isolated_processes` 失败一次（`killpg` 返回 EPERM，回合记为 Failed 而非 Cancelled），单独连跑 5 次与复跑全量均通过，判断为负载下的偶发问题，P3 迁移进程组清理时一并处理。
+
+- **P2 完成（2026-10-27）**：
+  - `agents.rs` + `agents/config.rs` → `agent/registry.rs`；`agent_adapter.rs` 拆为 `agent/capabilities.rs`（适配器 ID、能力类型与 `capabilities()`）和 `agent/invocation.rs`（`AgentStage`、参数准备、模型校验、续聊解析）；`agent_diagnostics.rs` → `agent/diagnostics.rs`；`agents/stream.rs` → `agent/stream.rs`。代码内容只改了 import 路径，函数体未动。
+  - `agent/mod.rs` 是功能模块的唯一入口（`load_agents`、`capabilities`、`prepare_invocation`、`check_startable`、`redact_*` 等再导出）；只有 `lib.rs` 的 Tauri 命令注册直接引用 `agent::registry` / `agent::diagnostics`（`generate_handler!` 需要命令所在模块路径），契约测试中的 `AgentDiagnostic` 也走 `agent::diagnostics`。
+  - Tauri 命令名与 `contracts/tauri-contract.json` 未变；`pnpm check` 通过（Rust 296 通过 / 27 忽略，与 P1 相同；P1 特征测试与契约测试通过）。纯移动，未重跑真实 Agent 测试，P3 改 runner 后重跑。
+  - 与计划的偏差：`stream.rs` 暂只含原 `agents/stream.rs` 的日志脱敏，`parse_chat_stream_line` 随 P3 迁入；`registry.rs` 合并了 `config.rs`（518 行），原 `pub(super)` 辅助函数保留写法，合并后可见范围变为 `agent` 模块，行为不变。
 
 ## 1. 目标
 

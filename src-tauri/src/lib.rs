@@ -1,6 +1,4 @@
-mod agent_adapter;
-mod agent_diagnostics;
-mod agents;
+mod agent;
 mod app_update;
 mod chat;
 mod chat_context;
@@ -67,10 +65,10 @@ pub fn run() {
             app_update::load_update_drafts,
             app_update::save_update_drafts,
             health_check,
-            agents::create_agent,
-            agents::delete_agent,
-            agent_diagnostics::diagnose_agents,
-            agents::list_agents,
+            agent::registry::create_agent,
+            agent::registry::delete_agent,
+            agent::diagnostics::diagnose_agents,
+            agent::registry::list_agents,
             chat::chat_list_sessions,
             chat::groups::chat_list_project_groups,
             chat::chat_create,
@@ -83,8 +81,8 @@ pub fn run() {
             chat::chat_clear_resume,
             chat::chat_send,
             chat::chat_abort,
-            agents::set_agent_enabled,
-            agents::update_agent,
+            agent::registry::set_agent_enabled,
+            agent::registry::update_agent,
             diagnostics::export_diagnostic_bundle,
             settings::load_app_settings,
             settings::save_app_settings,

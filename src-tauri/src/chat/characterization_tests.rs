@@ -6,7 +6,7 @@
 //! Regenerate the snapshots with `LOOM_UPDATE_GOLDEN=1` and review the diff.
 use super::runtime::{run_observed, run_owned, Limits, Observation, Request};
 use crate::{
-    agent_adapter::PreparedAgentInvocation,
+    agent::PreparedAgentInvocation,
     process_supervisor::{self, ProcessKind, ProcessOwner},
 };
 use serde_json::{json, Value};

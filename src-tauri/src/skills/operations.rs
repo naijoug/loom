@@ -367,7 +367,7 @@ async fn git_recorded(
         program: "git".into(),
         args: args
             .iter()
-            .map(|arg| crate::agents::redact_sensitive_text(arg))
+            .map(|arg| crate::agent::redact_sensitive_text(arg))
             .collect(),
         cwd: cwd.into(),
         started_at_ms: crate::models::now_ms(),
@@ -382,7 +382,7 @@ async fn git_recorded(
     execution.error = result
         .as_ref()
         .err()
-        .map(|error| crate::agents::redact_sensitive_text(&error.message));
+        .map(|error| crate::agent::redact_sensitive_text(&error.message));
     op.save()?;
     result
 }

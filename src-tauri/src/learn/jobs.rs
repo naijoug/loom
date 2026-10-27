@@ -8,7 +8,7 @@ use super::{
     store::{self, Store},
 };
 use crate::{
-    agent_adapter::{self, AdapterInvocationRequest, AgentStage},
+    agent::{self, AdapterInvocationRequest, AgentStage},
     chat::{
         runtime::{self, Limits, Observation},
         ChatMessagePart, STOP_REASON_ABORT, STOP_REASON_TIMEOUT,
@@ -499,12 +499,12 @@ impl Job {
             // Codex and Claude read stdin; Grok and OpenCode take the prompt as an argument.
             embed_prompt: !matches!(
                 agent.adapter_type.as_str(),
-                agent_adapter::ADAPTER_CODEX | agent_adapter::ADAPTER_CLAUDE
+                agent::ADAPTER_CODEX | agent::ADAPTER_CLAUDE
             ),
             system_append: None,
             model: study.model.as_deref(),
         };
-        let prepared = agent_adapter::prepare_invocation(agent, &request)?;
+        let prepared = agent::prepare_invocation(agent, &request)?;
         record
             .invocations
             .push(describe(&prepared.program, &prepared.args));
@@ -562,7 +562,7 @@ impl Job {
             )),
             "aborted" if self.cancel.load(Ordering::Relaxed) => Err(CANCELLED.into()),
             "aborted" => Err("The agent was stopped".into()),
-            _ => Err(crate::agents::redact_sensitive_text(
+            _ => Err(crate::agent::redact_sensitive_text(
                 outcome.error_summary.as_deref().unwrap_or("The agent failed"),
             )),
         };
@@ -584,7 +584,7 @@ fn describe(program: &str, args: &[String]) -> String {
             if arg.chars().count() > 160 {
                 format!("<{} chars>", arg.chars().count())
             } else {
-                crate::agents::redact_sensitive_text(arg)
+                crate::agent::redact_sensitive_text(arg)
             }
         })
         .collect();
@@ -629,7 +629,7 @@ mod tests {
             args: Vec::new(),
             working_directory_policy: "project_root".into(),
             capabilities: vec!["planning".into()],
-            adapter_type: agent_adapter::ADAPTER_CODEX.into(),
+            adapter_type: agent::ADAPTER_CODEX.into(),
             can_write_files: false,
             can_run_commands: false,
             enabled: true,

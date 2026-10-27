@@ -10,7 +10,7 @@ use super::{
     store::{self, Store},
 };
 use crate::{
-    agent_adapter,
+    agent,
     models::{now_ms, AgentConfig},
 };
 use std::{path::PathBuf, sync::Arc, time::Instant};
@@ -18,13 +18,13 @@ use std::{path::PathBuf, sync::Arc, time::Instant};
 #[tokio::test]
 #[ignore = "requires LOOM_REAL_LEARN=1 and a configured Claude account; consumes model usage"]
 async fn claude_studies_hexyl() {
-    study("claude", agent_adapter::ADAPTER_CLAUDE).await;
+    study("claude", agent::ADAPTER_CLAUDE).await;
 }
 
 #[tokio::test]
 #[ignore = "requires LOOM_REAL_LEARN=1 and a configured Codex account; consumes model usage"]
 async fn codex_studies_hexyl() {
-    study("codex", agent_adapter::ADAPTER_CODEX).await;
+    study("codex", agent::ADAPTER_CODEX).await;
 }
 
 async fn study(default_command: &str, adapter: &str) {

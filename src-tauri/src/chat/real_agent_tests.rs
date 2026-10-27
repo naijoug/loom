@@ -6,7 +6,7 @@ use super::{
     ChatMessage, ChatSendInput, ChatSession,
 };
 use crate::{
-    agent_adapter::{AgentStage, ADAPTER_GROK},
+    agent::{AgentStage, ADAPTER_GROK},
     chat_context::prepare_chat_invocation,
     models::{now_ms, AgentConfig, IdGenerator},
 };
@@ -20,19 +20,19 @@ async fn grok_three_turns_resume_after_repository_reopen() {
 #[tokio::test]
 #[ignore = "requires LOOM_REAL_CHAT=1 and a configured Claude account"]
 async fn claude_three_turns_resume_after_repository_reopen() {
-    three_turns("claude", crate::agent_adapter::ADAPTER_CLAUDE, false).await;
+    three_turns("claude", crate::agent::ADAPTER_CLAUDE, false).await;
 }
 
 #[tokio::test]
 #[ignore = "requires LOOM_REAL_CHAT=1 and a configured Codex account"]
 async fn codex_three_turns_resume_after_repository_reopen() {
-    three_turns("codex", crate::agent_adapter::ADAPTER_CODEX, false).await;
+    three_turns("codex", crate::agent::ADAPTER_CODEX, false).await;
 }
 
 #[tokio::test]
 #[ignore = "requires LOOM_REAL_CHAT=1; real cross-Agent history replay"]
 async fn claude_to_codex_history_replay() {
-    three_turns("claude", crate::agent_adapter::ADAPTER_CLAUDE, true).await;
+    three_turns("claude", crate::agent::ADAPTER_CLAUDE, true).await;
 }
 async fn three_turns(command: &str, adapter: &str, switch_agent: bool) {
     assert_eq!(
@@ -70,7 +70,7 @@ async fn three_turns(command: &str, adapter: &str, switch_agent: bool) {
     for index in 0..3 {
         if switch_agent && index == 2 {
             agent.command = "codex".into();
-            agent.adapter_type = crate::agent_adapter::ADAPTER_CODEX.into();
+            agent.adapter_type = crate::agent::ADAPTER_CODEX.into();
             agent.id = "switched-codex".into();
         }
 
@@ -226,22 +226,22 @@ async fn grok_file_permissions_in_new_and_resumed_chat() {
 #[tokio::test]
 #[ignore = "requires LOOM_REAL_CHAT=1; real Claude file tools"]
 async fn claude_file_permissions_in_new_and_resumed_chat() {
-    file_permissions("claude", crate::agent_adapter::ADAPTER_CLAUDE, false).await;
+    file_permissions("claude", crate::agent::ADAPTER_CLAUDE, false).await;
 }
 #[tokio::test]
 #[ignore = "requires LOOM_REAL_CHAT=1; real Codex file tools"]
 async fn codex_file_permissions_in_new_and_resumed_chat() {
-    file_permissions("codex", crate::agent_adapter::ADAPTER_CODEX, false).await;
+    file_permissions("codex", crate::agent::ADAPTER_CODEX, false).await;
 }
 #[tokio::test]
 #[ignore = "requires LOOM_REAL_CHAT=1; real Research to Code mode switch"]
 async fn claude_mode_switch() {
-    file_permissions("claude", crate::agent_adapter::ADAPTER_CLAUDE, true).await;
+    file_permissions("claude", crate::agent::ADAPTER_CLAUDE, true).await;
 }
 #[tokio::test]
 #[ignore = "requires LOOM_REAL_CHAT=1; real Research to Code mode switch"]
 async fn codex_mode_switch() {
-    file_permissions("codex", crate::agent_adapter::ADAPTER_CODEX, true).await;
+    file_permissions("codex", crate::agent::ADAPTER_CODEX, true).await;
 }
 async fn file_permissions(command: &str, adapter: &str, switch_mode: bool) {
     assert_eq!(std::env::var("LOOM_REAL_CHAT").as_deref(), Ok("1"));
@@ -402,12 +402,12 @@ async fn file_permissions(command: &str, adapter: &str, switch_mode: bool) {
 #[tokio::test]
 #[ignore = "requires LOOM_REAL_CHAT=1; real Claude cancellation and next turn"]
 async fn claude_stop_then_send() {
-    stop_then_send("claude", crate::agent_adapter::ADAPTER_CLAUDE).await;
+    stop_then_send("claude", crate::agent::ADAPTER_CLAUDE).await;
 }
 #[tokio::test]
 #[ignore = "requires LOOM_REAL_CHAT=1; real Codex cancellation and next turn"]
 async fn codex_stop_then_send() {
-    stop_then_send("codex", crate::agent_adapter::ADAPTER_CODEX).await;
+    stop_then_send("codex", crate::agent::ADAPTER_CODEX).await;
 }
 
 async fn stop_then_send(command: &str, adapter: &str) {
@@ -545,19 +545,19 @@ async fn stop_then_send(command: &str, adapter: &str) {
 #[ignore = "requires LOOM_REAL_CHAT=1 and a working OpenCode CLI"]
 async fn opencode_three_turns_resume_after_repository_reopen() {
     let command = std::env::var("LOOM_REAL_OPENCODE_COMMAND").unwrap_or_else(|_| "opencode".into());
-    three_turns(&command, crate::agent_adapter::ADAPTER_OPENCODE, false).await;
+    three_turns(&command, crate::agent::ADAPTER_OPENCODE, false).await;
 }
 #[tokio::test]
 #[ignore = "requires LOOM_REAL_CHAT=1 and a working OpenCode CLI"]
 async fn opencode_stop_then_send() {
     let command = std::env::var("LOOM_REAL_OPENCODE_COMMAND").unwrap_or_else(|_| "opencode".into());
-    stop_then_send(&command, crate::agent_adapter::ADAPTER_OPENCODE).await;
+    stop_then_send(&command, crate::agent::ADAPTER_OPENCODE).await;
 }
 #[tokio::test]
 #[ignore = "requires LOOM_REAL_CHAT=1 and a working OpenCode CLI"]
 async fn opencode_file_permissions_in_new_and_resumed_chat() {
     let command = std::env::var("LOOM_REAL_OPENCODE_COMMAND").unwrap_or_else(|_| "opencode".into());
-    file_permissions(&command, crate::agent_adapter::ADAPTER_OPENCODE, false).await;
+    file_permissions(&command, crate::agent::ADAPTER_OPENCODE, false).await;
 }
 
 /// OpenUI inline cards acceptance (plan O5): fixed prompts through the real Loom path with the
@@ -610,7 +610,7 @@ async fn claude_inline_cards_acceptance() {
         args: vec![],
         working_directory_policy: "project_root".into(),
         capabilities: vec![],
-        adapter_type: crate::agent_adapter::ADAPTER_CLAUDE.into(),
+        adapter_type: crate::agent::ADAPTER_CLAUDE.into(),
         can_write_files: true,
         can_run_commands: true,
         enabled: true,

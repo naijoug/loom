@@ -22,10 +22,10 @@ Learn 模块于 2026-10-26 按用户要求新增为顶层视图（入口在 Chat
 | `src/i18n/` | 英文源字典、受类型约束的简体中文、locale 持久化 |
 | `src/features/settings/SettingsPage.tsx` / `src/features/skills/SkillsPanel.tsx` | 设置侧边栏 Skills 板块，来源/搜索/详情/文件、安装到工具、已安装清单和恢复状态；设置切换保留 Chat 挂载 |
 | `skills/{catalog,repository,snapshots,operations,commands}.rs` | 有界扫描、来源登记、不可变快照、受控 Git 子进程与 typed IPC；来源移除只取消登记 |
-| `agents/config.rs` / `agent_diagnostics.rs` | PATH 优先、通用安装目录、命令覆盖、限时版本探测与能力声明 |
-| `agent_adapter.rs` / `chat_context.rs` | CLI 参数、权限、原生续聊和有界历史重放 |
+| `agent/{registry,capabilities,diagnostics}.rs` | Agent 调用层：PATH 优先、通用安装目录、命令覆盖、限时版本探测、启动前检查与能力声明；功能模块只经 `agent/mod.rs` 的公开接口调用 |
+| `agent/invocation.rs` / `chat_context.rs` | CLI 参数、权限、原生续聊和有界历史重放 |
 | `chat/{repository,journal,service,runtime}.rs` | v2 journal、幂等接收、输出限额、停止与恢复 |
-| `chat/tools.rs` / `chat/file_changes.rs` / `agents/stream.rs` | 工具解析、配对及有界文件差异；不破坏 JSON 信封的日志脱敏 |
+| `chat/tools.rs` / `chat/file_changes.rs` / `agent/stream.rs` | 工具解析、配对及有界文件差异；不破坏 JSON 信封的日志脱敏 |
 | `process_supervisor.rs` | 进程组归属、超时、TERM/KILL、应用退出协调 |
 | `projects.rs` / `storage.rs` / `settings.rs` | 项目登记、原子写入、设置与旧数据兼容 |
 | `diagnostics.rs` / `chat/export.rs` / `app_update.rs` | 有界诊断包、会话导出、应用内更新与草稿恢复 |

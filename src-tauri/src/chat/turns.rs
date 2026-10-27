@@ -1,7 +1,7 @@
 use super::{ChatInvocationSnapshot, ChatSession, ChatTurn, ChatTurnStatus};
 use crate::{
-    agent_adapter::PreparedAgentInvocation,
-    agents::redact_sensitive_text,
+    agent::redact_sensitive_text,
+    agent::PreparedAgentInvocation,
     models::{now_ms, AgentConfig},
 };
 

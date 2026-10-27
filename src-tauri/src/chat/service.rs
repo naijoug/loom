@@ -79,7 +79,7 @@ pub(super) fn finish_chat_turn(
                 Err(error) => {
                     turn.status = super::ChatTurnStatus::Failed;
                     turn.termination_reason = Some("runtime_error".into());
-                    turn.error_summary = Some(crate::agents::redact_sensitive_text(error));
+                    turn.error_summary = Some(crate::agent::redact_sensitive_text(error));
                 }
             }
         }
@@ -153,7 +153,7 @@ pub(super) fn finish_chat_turn(
 pub(super) mod tests {
     use super::*;
     use crate::{
-        agent_adapter::PreparedAgentInvocation,
+        agent::PreparedAgentInvocation,
         chat::{
             repository::BeginTurn, runtime, turns, ChatInvocationSnapshot, ChatLogStream,
             ChatMessage, ChatSendInput, ChatTurnStatus,

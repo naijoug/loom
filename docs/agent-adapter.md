@@ -1,10 +1,10 @@
 # 本机 CLI 适配器
 
-Loom 通过 Rust `agent_adapter.rs` 生成可执行文件、参数、cwd、stdin 方式、输出协议和必要的单次环境配置。React 只传会话、消息、Agent ID 和模式，不拼接命令。
+Loom 通过 Rust Agent 调用层 `src-tauri/src/agent/`（参数在 `invocation.rs`，能力在 `capabilities.rs`）生成可执行文件、参数、cwd、stdin 方式、输出协议和必要的单次环境配置。React 只传会话、消息、Agent ID 和模式，不拼接命令。
 
 ## 探测与配置
 
-`agents/config.rs` 先查 `$PATH`，再查当前 `$HOME` 下的 `.local/bin`、`.npm-global/bin`、`.opencode/bin`、`.grok/bin`，以及 `/opt/homebrew/bin`、`/usr/local/bin`。检查可执行位，不使用 shell，不包含写死的用户名目录。
+`agent/registry.rs` 先查 `$PATH`，再查当前 `$HOME` 下的 `.local/bin`、`.npm-global/bin`、`.opencode/bin`、`.grok/bin`，以及 `/opt/homebrew/bin`、`/usr/local/bin`。检查可执行位，不使用 shell，不包含写死的用户名目录。
 
 内建 Agent 为 Claude Code、Codex、OpenCode、Grok；Dummy 仅在 debug/test 构建出现。已保存的命令路径覆盖和启用状态不被重新探测覆盖。诊断直接执行 `--version`，两秒超时，失败显示 `unknown`；“已安装”只代表找到可执行文件，登录/模型可用性需真实调用验证。
 

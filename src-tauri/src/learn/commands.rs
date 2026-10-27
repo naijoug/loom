@@ -9,7 +9,7 @@ use super::{
     LEARN_EVENT,
 };
 use crate::{
-    agent_adapter,
+    agent,
     models::{now_ms, AgentConfig},
 };
 use std::sync::Arc;
@@ -50,7 +50,7 @@ fn resolve_agent(
     agent_id: &str,
     model: Option<&str>,
 ) -> Result<AgentConfig, String> {
-    let agent = crate::agents::load_agents(app)?
+    let agent = crate::agent::load_agents(app)?
         .into_iter()
         .find(|agent| agent.id == agent_id)
         .ok_or("Agent not found")?;
@@ -60,14 +60,14 @@ fn resolve_agent(
     if !agent.available {
         return Err(format!("{} was not found on this machine", agent.name));
     }
-    if !agent_adapter::capabilities(&agent.adapter_type).model_selection {
+    if !agent::capabilities(&agent.adapter_type).model_selection {
         return Err(format!(
             "{} is not supported by Learn; choose a built-in agent",
             agent.name
         ));
     }
     if let Some(model) = model {
-        agent_adapter::validate_model_name(model)?;
+        agent::validate_model_name(model)?;
     }
     Ok(agent)
 }
@@ -80,7 +80,7 @@ async fn ready_agent(
     model: Option<&str>,
 ) -> Result<AgentConfig, String> {
     let agent = resolve_agent(app, agent_id, model)?;
-    crate::agent_diagnostics::check_startable(&agent).await?;
+    crate::agent::check_startable(&agent).await?;
     Ok(agent)
 }
 

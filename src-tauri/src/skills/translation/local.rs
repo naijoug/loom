@@ -147,7 +147,7 @@ pub(super) async fn translate(
         ProviderId::ClaudeCode => "claude",
         _ => return Err(SkillsError::invalid("Expected local provider")),
     };
-    let executable = crate::agents::config::resolve_executable(name).ok_or_else(|| {
+    let executable = crate::agent::resolve_executable(name).ok_or_else(|| {
         SkillsError::new(ErrorCode::AuthRequired, "Local translation CLI unavailable")
     })?;
     translate_program(op, provider, context, text, &executable).await
