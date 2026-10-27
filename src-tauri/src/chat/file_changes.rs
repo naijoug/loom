@@ -231,7 +231,7 @@ mod tests {
         let mut snapshot = FileChanges::capture(&root);
         fs::write(root.join("a.txt"), "new content\n").unwrap();
         let line = serde_json::json!({"type":"item.completed","item":{"id":"patch","type":"file_change","status":"completed","changes":[{"path":"a.txt","kind":"update"}]}}).to_string();
-        let mut parts = super::super::parse_chat_stream_line("codex_json", &line).parts;
+        let mut parts = crate::agent::parse_line("codex_json", &line).parts;
         snapshot.enrich(&line, &mut parts);
         let ChatMessagePart::Tool { metadata, .. } = &parts[0] else {
             panic!()

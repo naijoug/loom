@@ -8,13 +8,12 @@ use super::{
     store::{self, Store},
 };
 use crate::{
-    agent::{self, AdapterInvocationRequest, AgentStage},
-    chat::{
-        runtime::{self, Limits, Observation},
-        ChatMessagePart, STOP_REASON_ABORT, STOP_REASON_TIMEOUT,
+    agent::{
+        self, AdapterInvocationRequest, AgentStage, Limits, MessagePart, Observation, RunSpec,
+        STOP_REASON_ABORT, STOP_REASON_TIMEOUT,
     },
     models::{now_ms, AgentConfig},
-    process_supervisor::ProcessOwner,
+    process_supervisor::{ProcessKind, ProcessOwner},
 };
 use std::{
     sync::{
@@ -510,12 +509,14 @@ impl Job {
             .push(describe(&prepared.program, &prepared.args));
         let run_id = format!("{}-a{attempt}", self.job_id);
         let stdin_text = prepared.stdin_prompt.then(|| prompt.to_string());
-        let request = runtime::Request {
+        let spec = RunSpec {
             prepared,
-            project_key: checkout.to_string_lossy().into_owned(),
-            session_id: self.study_id.clone(),
-            turn_id: run_id.clone(),
-            message_id: run_id,
+            run_id,
+            owner: ProcessOwner::Learn {
+                study_id: self.study_id.clone(),
+                job_id: self.job_id.clone(),
+            },
+            kind: ProcessKind::Learn,
             stdin_text,
             limits: Limits {
                 timeout,
@@ -524,16 +525,13 @@ impl Job {
                 max_lines: 200_000,
                 ..Limits::default()
             },
+            enrich: None,
         };
         let cancel = self.cancel.clone();
         let store = self.store.clone();
         let (study_id, job_id) = (self.study_id.clone(), self.job_id.clone());
-        let outcome = runtime::run_owned(
-            request,
-            Some(ProcessOwner::Learn {
-                study_id: self.study_id.clone(),
-                job_id: self.job_id.clone(),
-            }),
+        let outcome = agent::run(
+            spec,
             move || cancel.load(Ordering::Relaxed).then_some(STOP_REASON_ABORT),
             |_| Ok(()),
             move |observation| {
@@ -548,7 +546,7 @@ impl Job {
         let tool_calls = outcome
             .parts
             .iter()
-            .filter(|p| matches!(p, ChatMessagePart::Tool { .. }))
+            .filter(|p| matches!(p, MessagePart::Tool { .. }))
             .count();
         record.tool_calls += tool_calls;
         let result = match outcome.status.as_str() {

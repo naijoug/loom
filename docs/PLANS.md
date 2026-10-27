@@ -3,7 +3,7 @@
 ## 2026-10-26
 
 - 22:42-agent-layer-and-activity-rail.md
-  > （P0–P2 已完成：Learn 提交 `849d223`，真实 Codex Chat 基线通过，特征测试 `7049270`，Agent 配置/能力/参数/诊断已迁入 `src-tauri/src/agent/`；下一步 P3 runner）按用户要求参考 Codex 布局：新增独立 Rust `agent/` 调用层（配置、能力、参数、启动前检查、runner、流解析、错误约定），Chat 与 Learn 只经它调用 Agent、功能模块互不引用（`check-layers.mjs` 守护）；前端左侧功能栏以 Chat 为默认主页，Learn / Research / Discuss 并列，Settings 置底；Research（单 Agent 带引用报告 + 追问）与 Discuss（2–4 Agent 两轮 + 汇总）作为 MVP。P0 先提交 Learn，P1 特征测试保护 P2–P4 纯重构，P5 导航，P6/P7 新功能，P8 文档验收。
+  > （P0–P3 已完成：Learn 提交 `849d223`，特征测试 `7049270`，Agent 配置/能力/参数/诊断迁入 `src-tauri/src/agent/`；通用 runner `agent::run` 与 `AgentEvent`/`AgentOutcome` 落地，Learn 不再引用 Chat，`check-layers.mjs` 接入 `pnpm check`，真实 Codex Chat 复跑通过；下一步 P4 统一启动前检查与错误格式）按用户要求参考 Codex 布局：新增独立 Rust `agent/` 调用层（配置、能力、参数、启动前检查、runner、流解析、错误约定），Chat 与 Learn 只经它调用 Agent、功能模块互不引用（`check-layers.mjs` 守护）；前端左侧功能栏以 Chat 为默认主页，Learn / Research / Discuss 并列，Settings 置底；Research（单 Agent 带引用报告 + 追问）与 Discuss（2–4 Agent 两轮 + 汇总）作为 MVP。P0 先提交 Learn，P1 特征测试保护 P2–P4 纯重构，P5 导航，P6/P7 新功能，P8 文档验收。
 
 - 19:26-learn-repo-study-module.md
   > （L0–L5、L7 已实施，待用户验收；L6 未做）顶层 Learn：输入公开 GitHub 地址并选择 Agent 与模型，加固浅克隆固定 commit，Rust 静态清单 + 只读 CLI 生成经校验的架构、L1–L3 模块 Wiki 与术语表，`loom-src:` 引用在应用内查看器定位；适配器新增模型选择。check、Learn 视觉矩阵通过；真实研究 Codex 完成、Claude 本机代理认证失败（blocked），见验收记录；计划第 0 节列出实现偏差。

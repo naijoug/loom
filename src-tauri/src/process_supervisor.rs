@@ -107,6 +107,25 @@ impl ProcessMetadata {
         }
     }
 
+    pub fn owned(
+        run_id: impl Into<String>,
+        owner: ProcessOwner,
+        kind: ProcessKind,
+        process_id: u32,
+        timeout_ms: u64,
+    ) -> Self {
+        Self {
+            run_id: run_id.into(),
+            owner,
+            kind,
+            process_id,
+            started_at_ms: now_ms(),
+            timeout_ms: Some(timeout_ms),
+            termination_reason: None,
+            termination_signal_sent: false,
+        }
+    }
+
     pub fn chat(
         run_id: impl Into<String>,
         project_key: impl Into<String>,
@@ -115,20 +134,12 @@ impl ProcessMetadata {
         timeout_ms: u64,
     ) -> Self {
         let run_id = run_id.into();
-        Self {
-            owner: ProcessOwner::Chat {
-                project_key: project_key.into(),
-                session_id: session_id.into(),
-                turn_id: run_id.clone(),
-            },
-            run_id,
-            kind: ProcessKind::Chat,
-            process_id,
-            started_at_ms: now_ms(),
-            timeout_ms: Some(timeout_ms),
-            termination_reason: None,
-            termination_signal_sent: false,
-        }
+        let owner = ProcessOwner::Chat {
+            project_key: project_key.into(),
+            session_id: session_id.into(),
+            turn_id: run_id.clone(),
+        };
+        Self::owned(run_id, owner, ProcessKind::Chat, process_id, timeout_ms)
     }
 }
 

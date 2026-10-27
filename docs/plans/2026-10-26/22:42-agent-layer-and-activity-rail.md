@@ -1,6 +1,6 @@
 # Agent 调用层与左侧功能栏重构计划
 
-- 状态：实施中；P0–P2 已完成，下一步 P3（进度见第 0 节）
+- 状态：实施中；P0–P3 已完成，下一步 P4（进度见第 0 节）
 - 基线：`main` @ `d5b8c4b` 之上的未提交 Learn 工作区（含 2026-10-26 Agent 启动前检查与错误详情折叠）
 - 触发：用户要求参考 Codex 应用的布局，把 Chat 作为默认主页，Learn、Research、Discuss 作为并列功能；调用本机各种 Agent 做成独立的模块和层，上层模块只管调用，UI 只是交互入口
 - 范围：
@@ -28,6 +28,29 @@
   - `agent/mod.rs` 是功能模块的唯一入口（`load_agents`、`capabilities`、`prepare_invocation`、`check_startable`、`redact_*` 等再导出）；只有 `lib.rs` 的 Tauri 命令注册直接引用 `agent::registry` / `agent::diagnostics`（`generate_handler!` 需要命令所在模块路径），契约测试中的 `AgentDiagnostic` 也走 `agent::diagnostics`。
   - Tauri 命令名与 `contracts/tauri-contract.json` 未变；`pnpm check` 通过（Rust 296 通过 / 27 忽略，与 P1 相同；P1 特征测试与契约测试通过）。纯移动，未重跑真实 Agent 测试，P3 改 runner 后重跑。
   - 与计划的偏差：`stream.rs` 暂只含原 `agents/stream.rs` 的日志脱敏，`parse_chat_stream_line` 随 P3 迁入；`registry.rs` 合并了 `config.rs`（518 行），原 `pub(super)` 辅助函数保留写法，合并后可见范围变为 `agent` 模块，行为不变。
+
+- **P3 完成（2026-10-27）**：
+  - `agent/runner.rs`：从 `chat/runtime.rs` 抽出通用 runner `agent::run(RunSpec, cancelled, emit, observe)`，含启动登记、stdin、超时/取消/输出限额、进程组清理、停止原因与 `stop_outcome`；默认超时常量改名 `DEFAULT_TIMEOUT_MS`。`RunSpec` 由调用方给出 `ProcessOwner` / `ProcessKind` 和可选的行补充回调 `LineEnricher`。
+  - `agent/event.rs`：`AgentEvent`（`Text` / `Part` / `Done`）、`AgentOutcome`，以及从 `chat/models.rs` 移入的 `MessagePart`（Chat 侧以 `ChatMessagePart` 别名再导出，序列化格式不变）、`DiffStats`、`ToolMetadata`。
+  - `agent/stream.rs`：迁入 `parse_chat_stream_line` 及其辅助函数（改名 `parse_line`）；`chat/tools.rs` → `agent/tools.rs`。
+  - `chat/runtime.rs` 只剩 Chat 薄封装：Chat 进程所有者、可写 Codex 的文件变更基线（作为 `LineEnricher` 传入）、`AgentEvent` → `ChatStreamEvent` 映射；`ChatTurnOutcome` 是 `AgentOutcome` 的别名。持久化字符串（`chat_abort`、`chat_timeout`、`app_shutdown` 等）不变。
+  - `learn/jobs.rs` 改用 `agent::run`，不再引用 `crate::chat`；`ProcessMetadata::owned` 支持任意所有者。
+  - `scripts/check-layers.mjs` 接入 `scripts/check.sh`：`agent/` 不引用功能模块；Learn 与 Chat 互不引用；chat/learn/chat_context 的生产代码不直接起进程（白名单 `learn/fetch.rs` 的 git）。已用临时违规改动验证脚本会失败。
+  - 验证：
+    - `pnpm check` 通过（Rust 296 通过 / 27 忽略，P1 golden 快照未变）；
+    - 真实 Codex Chat：`codex_three_turns_resume_after_repository_reopen`、`codex_stop_then_send` 通过（63.4 s，同样用缓存的 Codex 0.153.0）；
+    - 真实 Codex Learn：`learn::real_tests::codex_studies_hexyl` 通过（951 s），全部阶段 Done，11 页引用全部有效（invalid 0），源码覆盖 7/7；
+    - 未跑 `smoke:visual`：本阶段未改前端代码，IPC 事件格式由特征快照与契约测试固定。
+  - 与计划的偏差：
+    - 未新增 `ProcessOwner::Feature`：当前没有调用方，`-D warnings` 下会成为死代码；随 P6 Research 一起加。
+    - `RunSpec` 接收已准备好的 `PreparedAgentInvocation`，而不是 Agent 配置 + 权限 + 提示词；把参数准备并入 run 属于 P4 统一启动前检查。
+    - `AgentEvent` 只有 `Text` / `Part` / `Done`；启动与日志行仍走单独的 `Observation` 回调（Chat 的进程登记与日志写入依赖它）。
+    - 新增计划未列出的 `agent/event.rs`、`agent/tools.rs`。
+    - 空输出占位文案“（Agent 没有返回可见文本）”与停止/超时中文提示仍在 runner 内，统一错误格式在 P4 处理。
+    - runner 的超时/取消/限额测试仍在 `chat/runtime.rs`，经 Chat 薄封装调用 `agent::run`；停止原因测试已移到 `agent/runner.rs`。
+    - S1 只部分落实：chat 的停止/关停（`chat/mod.rs`、`service.rs`、`shutdown.rs`、`repository.rs`）与 `learn/jobs.rs` 的 `is_shutting_down` 仍直接用 `process_supervisor`，脚本未检查这一项；P4/P8 由 `agent` 暴露停止与关停接口后收紧。
+    - S2 前端规则未接入：`settings`→`chat`/`app-update`/`skills`、`learn`→`chat`、`skills`→`chat`、`chat`→`app-update` 目前存在跨 feature 导入（Markdown、AgentPicker 等），随 P5 抽共享组件后再加。
+    - `session_capture.rs` 仍在 crate 顶层，由 `agent/` 引用。
 
 ## 1. 目标
 

@@ -1,4 +1,7 @@
-use super::{summarize_json, ChatMessagePart, DiffStats, ToolMetadata};
+use super::{
+    event::{DiffStats, MessagePart, ToolMetadata},
+    stream::summarize_json,
+};
 use serde_json::Value;
 
 fn text(value: &Value, keys: &[&str]) -> Option<String> {
@@ -68,7 +71,7 @@ fn metadata(name: &str, input: Option<&Value>, call_id: Option<String>) -> ToolM
     details
 }
 
-pub(super) fn content_part(item: &Value) -> Option<ChatMessagePart> {
+pub(super) fn content_part(item: &Value) -> Option<MessagePart> {
     match item.get("type")?.as_str()? {
         "tool_use" | "tool_call" | "function_call" => {
             let name = text(item, &["name"])
@@ -78,7 +81,7 @@ pub(super) fn content_part(item: &Value) -> Option<ChatMessagePart> {
                 .get("input")
                 .or_else(|| item.get("arguments"))
                 .or_else(|| item.pointer("/function/arguments"));
-            Some(ChatMessagePart::Tool {
+            Some(MessagePart::Tool {
                 metadata: metadata(&name, input, text(item, &["id", "call_id"])),
                 name,
                 input_summary: input
@@ -90,7 +93,7 @@ pub(super) fn content_part(item: &Value) -> Option<ChatMessagePart> {
         }
         "tool_result" => {
             let call_id = text(item, &["tool_use_id", "call_id"]);
-            Some(ChatMessagePart::Tool {
+            Some(MessagePart::Tool {
                 name: text(item, &["name"])
                     .or_else(|| call_id.clone())
                     .unwrap_or_else(|| "tool_result".into()),
@@ -118,7 +121,7 @@ pub(super) fn content_part(item: &Value) -> Option<ChatMessagePart> {
     }
 }
 
-pub(super) fn event_part(value: &Value) -> Option<ChatMessagePart> {
+pub(super) fn event_part(value: &Value) -> Option<MessagePart> {
     if let Some(block) = value.get("content_block") {
         return content_part(block);
     }
@@ -139,7 +142,7 @@ pub(super) fn event_part(value: &Value) -> Option<ChatMessagePart> {
             .pointer("/metadata/exit")
             .and_then(Value::as_i64)
             .and_then(|code| i32::try_from(code).ok());
-        return Some(ChatMessagePart::Tool {
+        return Some(MessagePart::Tool {
             metadata: details,
             name,
             input_summary: state
@@ -221,7 +224,7 @@ pub(super) fn event_part(value: &Value) -> Option<ChatMessagePart> {
         let failed = details.exit_code.is_some_and(|code| code != 0) || item["status"] == "failed";
         let done =
             event.contains("completed") || event.ends_with("_end") || item["status"] == "completed";
-        return Some(ChatMessagePart::Tool {
+        return Some(MessagePart::Tool {
             metadata: details,
             name: name.into(),
             input_summary: text(item, &["command", "cmd", "query"]).or_else(|| {
@@ -249,8 +252,8 @@ pub(super) fn event_part(value: &Value) -> Option<ChatMessagePart> {
 }
 
 /// Same call id updates one card in runtime, persisted projection and frontend.
-pub(super) fn merge_part(parts: &mut Vec<ChatMessagePart>, incoming: ChatMessagePart) {
-    let ChatMessagePart::Tool {
+pub(crate) fn merge_part(parts: &mut Vec<MessagePart>, incoming: MessagePart) {
+    let MessagePart::Tool {
         metadata,
         name,
         input_summary,
@@ -262,8 +265,8 @@ pub(super) fn merge_part(parts: &mut Vec<ChatMessagePart>, incoming: ChatMessage
         return;
     };
     if let Some(id) = &metadata.call_id {
-        if let Some(ChatMessagePart::Tool { metadata: old, name: old_name, input_summary: old_input, output_summary: old_output, status: old_status }) =
-            parts.iter_mut().find(|part| matches!(part, ChatMessagePart::Tool { metadata, .. } if metadata.call_id.as_ref() == Some(id)))
+        if let Some(MessagePart::Tool { metadata: old, name: old_name, input_summary: old_input, output_summary: old_output, status: old_status }) =
+            parts.iter_mut().find(|part| matches!(part, MessagePart::Tool { metadata, .. } if metadata.call_id.as_ref() == Some(id)))
         {
             if name != id && name != "tool_result" && name != "tool" { *old_name = name.clone(); }
             if input_summary.is_some() { *old_input = input_summary.clone(); }
@@ -292,7 +295,7 @@ mod tests {
         let mut parts = vec![use_part];
         merge_part(&mut parts, result);
         assert_eq!(parts.len(), 1);
-        let ChatMessagePart::Tool {
+        let MessagePart::Tool {
             name,
             metadata,
             status,
@@ -333,13 +336,13 @@ mod fixtures {
             let mut parts = Vec::new();
             for line in input.lines() {
                 let line = crate::agent::redact_stream_line(line);
-                for part in super::super::parse_chat_stream_line(mode, &line).parts {
+                for part in super::super::stream::parse_line(mode, &line).parts {
                     merge_part(&mut parts, part);
                 }
             }
             assert_eq!(parts.len(), expected, "{mode}");
             for part in parts {
-                let ChatMessagePart::Tool {
+                let MessagePart::Tool {
                     metadata, status, ..
                 } = part
                 else {
@@ -353,7 +356,7 @@ mod fixtures {
     #[test]
     fn codex_file_change_and_opencode_tool_frames_preserve_results() {
         let part = event_part(&serde_json::json!({"type":"item.completed","item":{"id":"patch-1","type":"file_change","changes":[{"path":"a.rs","diff":"--- a\n+++ b\n-old\n+new"}],"status":"completed"}})).unwrap();
-        let ChatMessagePart::Tool { metadata, .. } = part else {
+        let MessagePart::Tool { metadata, .. } = part else {
             panic!()
         };
         assert_eq!(
@@ -364,7 +367,7 @@ mod fixtures {
             })
         );
         let part = event_part(&serde_json::json!({"type":"tool_use","part":{"callID":"open-1","tool":"bash","state":{"status":"completed","input":{"command":"pwd"},"output":"/project","metadata":{"exit":0}}}})).unwrap();
-        let ChatMessagePart::Tool {
+        let MessagePart::Tool {
             metadata,
             status,
             output_summary,
@@ -383,7 +386,7 @@ mod fixtures {
 mod unknown_events {
     #[test]
     fn unknown_protocol_frames_preserve_text_and_report_a_warning() {
-        let parsed = super::super::parse_chat_stream_line(
+        let parsed = super::super::stream::parse_line(
             "opencode_json",
             r#"{"type":"future_notice","payload":"new content"}"#,
         );

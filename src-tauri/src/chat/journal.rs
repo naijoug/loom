@@ -284,7 +284,7 @@ pub(super) fn apply(session: &mut ChatSession, event: &ChatEvent) -> Result<(), 
                 message.content.push_str(&stream.delta);
             }
             if let Some(part) = &stream.part {
-                super::tools::merge_part(&mut message.parts, part.clone());
+                crate::agent::merge_part(&mut message.parts, part.clone());
             }
             session.updated_at_ms = event.timestamp_ms;
         }

@@ -24,8 +24,10 @@ Learn 模块于 2026-10-26 按用户要求新增为顶层视图（入口在 Chat
 | `skills/{catalog,repository,snapshots,operations,commands}.rs` | 有界扫描、来源登记、不可变快照、受控 Git 子进程与 typed IPC；来源移除只取消登记 |
 | `agent/{registry,capabilities,diagnostics}.rs` | Agent 调用层：PATH 优先、通用安装目录、命令覆盖、限时版本探测、启动前检查与能力声明；功能模块只经 `agent/mod.rs` 的公开接口调用 |
 | `agent/invocation.rs` / `chat_context.rs` | CLI 参数、权限、原生续聊和有界历史重放 |
-| `chat/{repository,journal,service,runtime}.rs` | v2 journal、幂等接收、输出限额、停止与恢复 |
-| `chat/tools.rs` / `chat/file_changes.rs` / `agent/stream.rs` | 工具解析、配对及有界文件差异；不破坏 JSON 信封的日志脱敏 |
+| `agent/runner.rs` / `agent/event.rs` | 通用 runner `agent::run`：启动并登记进程（`ProcessOwner` 由调用方给出）、stdin、超时/取消/输出限额、进程组清理，输出 `AgentEvent`（文本/工具片段/结束）与 `AgentOutcome`；Chat、Learn 都经它启动 Agent CLI |
+| `agent/stream.rs` / `agent/tools.rs` | 各 CLI 流式 JSON 的通用解析、工具片段生成与按 `callId` 合并；不破坏 JSON 信封的日志脱敏 |
+| `chat/{repository,journal,service}.rs` | v2 journal、幂等接收、停止与恢复 |
+| `chat/runtime.rs` / `chat/file_changes.rs` | Chat 薄封装：Chat 进程所有者、可写 Codex 的有界文件差异（作为 runner 的行补充回调），把 `AgentEvent` 映射为 `ChatStreamEvent` |
 | `process_supervisor.rs` | 进程组归属、超时、TERM/KILL、应用退出协调 |
 | `projects.rs` / `storage.rs` / `settings.rs` | 项目登记、原子写入、设置与旧数据兼容 |
 | `diagnostics.rs` / `chat/export.rs` / `app_update.rs` | 有界诊断包、会话导出、应用内更新与草稿恢复 |
@@ -38,7 +40,7 @@ Learn 模块于 2026-10-26 按用户要求新增为顶层视图（入口在 Chat
 ```text
 Composer → typed IPC → registered canonical project
          → ChatRepository.begin_once → context / adapter
-         → runtime / process supervisor
+         → chat::runtime → agent::run / process supervisor
          → journal + per-turn stdout/stderr
          → chat-event → ChatProjection → transcript
 ```

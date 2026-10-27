@@ -15,7 +15,7 @@ Skills 原生验收可先用 `pnpm tauri build --debug --bundles app` 构建，�
 
 | 命令 | 范围 |
 |---|---|
-| `pnpm check` | release 文档校验、OpenUI 提示词同步检查、前端测试/build、Rust fmt/clippy/test |
+| `pnpm check` | 分层检查（`scripts/check-layers.mjs`）、release 文档校验、OpenUI 提示词同步检查、前端测试/build、Rust fmt/clippy/test |
 | `pnpm tauri build --no-bundle` | 编译桌面程序，不做发布或分发验收 |
 | `pnpm smoke:chat` | 生产 Chat 仓储/runtime 的真实本地 fixture 进程，无模型请求 |
 | `pnpm smoke:visual` | `simple-chat-smoke.sh`：按规定启动/停止预览，Chrome 检查新会话、分组、工具差异、主题、语言和窄窗口 |
@@ -24,6 +24,7 @@ Skills 原生验收可先用 `pnpm tauri build --debug --bundles app` 构建，�
 | `pnpm e2e:complete` | 完整工程门禁和浏览器检查；可选发布构建仍需独立分发验证 |
 | `node scripts/simple-chat-reachability.mjs` | 扫描 main.tsx / lib.rs 模块依赖，写入 `docs/reviews/simple-chat/reachability.json` |
 | `pnpm openui:prompt` | 从 `src/features/chat/openui/library.tsx` 生成内联卡片提示词 `src-tauri/resources/openui-inline-prompt.md`；改组件库后必须重新生成，`--check` 只校验不写入 |
+| `node scripts/check-layers.mjs` | Rust 分层规则：`agent/` 不引用功能模块；Learn 与 Chat 互不引用；chat/learn 生产代码不直接起进程（白名单：`learn/fetch.rs` 的 git），Agent CLI 只经 `agent::run` 启动 |
 | `pnpm check:core` | 显式选择冻结内核检查，不属于主门禁 |
 
 网页截图与机器结果位于 `designs/exports/simple-chat/`。Chrome 可用 `CHROME` 覆盖可执行文件；截图是合成界面证据，不能替代真实 CLI 或 Tauri 交互。

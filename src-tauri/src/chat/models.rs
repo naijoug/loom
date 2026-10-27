@@ -32,66 +32,7 @@ fn default_message_parts() -> Vec<ChatMessagePart> {
     Vec::new()
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ToolMetadata {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub call_id: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub kind: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub target: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub exit_code: Option<i32>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub diff_stats: Option<DiffStats>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub diff_preview: Option<String>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct DiffStats {
-    pub added: usize,
-    pub removed: usize,
-}
-
-/// text | tool | error parts (M0 sketch). Flexible fields for forward-compat JSON.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(
-    tag = "type",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
-pub enum ChatMessagePart {
-    Text {
-        text: String,
-    },
-    Tool {
-        #[serde(flatten)]
-        metadata: ToolMetadata,
-        name: String,
-        #[serde(
-            default,
-            alias = "input_summary",
-            skip_serializing_if = "Option::is_none"
-        )]
-        input_summary: Option<String>,
-        #[serde(
-            default,
-            alias = "output_summary",
-            skip_serializing_if = "Option::is_none"
-        )]
-        output_summary: Option<String>,
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        status: Option<String>,
-    },
-    Error {
-        message: String,
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        code: Option<String>,
-    },
-}
+pub use crate::agent::{DiffStats, MessagePart as ChatMessagePart};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

@@ -1,10 +1,11 @@
-//! Characterization tests that pin the current agent runner behaviour before it
-//! moves out of Chat (agent layer plan, P1). Recorded CLI streams are replayed
-//! through the real runner and compared with checked-in golden snapshots; any
-//! change to events, outcome or logs must be deliberate.
+//! Characterization tests that pinned the agent runner behaviour before it
+//! moved out of Chat (agent layer plan, P1) and keep it fixed afterwards.
+//! Recorded CLI streams are replayed through Chat's runner path and compared
+//! with checked-in golden snapshots; any change to events, outcome or logs
+//! must be deliberate.
 //!
 //! Regenerate the snapshots with `LOOM_UPDATE_GOLDEN=1` and review the diff.
-use super::runtime::{run_observed, run_owned, Limits, Observation, Request};
+use super::runtime::{run_observed, Limits, Observation, Request};
 use crate::{
     agent::PreparedAgentInvocation,
     process_supervisor::{self, ProcessKind, ProcessOwner},
@@ -220,9 +221,18 @@ async fn non_chat_owner_registers_the_process_under_learn() {
         job_id: "job".into(),
     };
     let mut seen = None;
-    let outcome = run_owned(
-        shell(turn, "plain", "echo hello"),
-        Some(owner.clone()),
+    let replay = shell(turn, "plain", "echo hello");
+    let spec = crate::agent::RunSpec {
+        prepared: replay.prepared,
+        run_id: turn.into(),
+        owner: owner.clone(),
+        kind: ProcessKind::Learn,
+        stdin_text: None,
+        limits: Limits::default(),
+        enrich: None,
+    };
+    let outcome = crate::agent::run(
+        spec,
         || None,
         |_| Ok(()),
         |observation| {
