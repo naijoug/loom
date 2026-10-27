@@ -118,7 +118,8 @@ async function evaluate(client, expression) {
   return result.result.value;
 }
 
-async function waitFor(client, expression, label, attempts = 80) {
+// ~20 s at the default: CI macOS runners vary widely in speed, and a failing check only costs the wait.
+async function waitFor(client, expression, label, attempts = 200) {
   // A reload or navigation can briefly leave no document; treat a throwing check as "not yet".
   let lastError;
   for (let index = 0; index < attempts; index += 1) {
@@ -133,6 +134,8 @@ async function waitFor(client, expression, label, attempts = 80) {
   }
   const debug = await evaluate(client, `({
     href: window.location.href,
+    viewport: innerWidth,
+    narrow: matchMedia('(max-width: 759px)').matches,
     text: document.body?.innerText?.slice(0, 500) ?? '',
   })`);
   throw new Error(`Timed out waiting for ${label}: ${JSON.stringify(debug)}${lastError ? ` (last error: ${lastError.message})` : ''}`);
