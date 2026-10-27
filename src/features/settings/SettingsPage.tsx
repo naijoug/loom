@@ -1,18 +1,17 @@
 import { lazy, Suspense, useContext, useEffect, useState, type FormEvent } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
-import { Activity, ArrowLeft, BookOpen, Bot, FlaskConical, Info, Monitor, Moon, Palette, RefreshCw, Plus, Sun } from "lucide-react";
+import { Activity, BookOpen, Bot, FlaskConical, Info, Monitor, Moon, Palette, RefreshCw, Plus, Sun } from "lucide-react";
 import { invokeCommand, TAURI_COMMANDS } from "../../api";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useLocale, useT } from "../../i18n";
-import type { AgentConfig, AgentDiagnostic, HealthCheckResult } from "../../domain";
+import type { AgentConfig, HealthCheckResult } from "../../domain";
 import { useAgentCatalog } from "../../hooks/useAgentCatalog";
 import { hasTauriRuntime } from "../../hooks/runtime";
 import { useAppState } from "../../state/AppStateContext";
-import { UpdateButton } from "../app-update/UpdateProvider";
+import { UpdateButton } from "../../components/app-update/UpdateProvider";
 import { defaultAgentDraft, draftFromAgent, isBuiltInAgent } from "./agentDraft";
-import { agentHealth, agentStatusKey } from "../chat/AgentPicker";
-import { setInlineCardsEnabled, useInlineCardsEnabled } from "../chat/openui/inlineCardsSetting";
-import "../chat/chat.css";
+import { agentHealth, agentStatusKey } from "../../components/AgentPicker";
+import { setInlineCardsEnabled, useInlineCardsEnabled } from "../../hooks/inlineCardsSetting";
 import "./settings.css";
 import { SkillsPreviewContext } from "../skills/previewContext";
 
@@ -21,7 +20,7 @@ const SkillsPanel = lazy(() => import("../skills/SkillsPanel").then(module => ({
 type SettingsTab = "skills" | "agents" | "appearance" | "experiments" | "diagnostics" | "about";
 const tabIcons = { skills: BookOpen, agents: Bot, appearance: Palette, experiments: FlaskConical, diagnostics: Activity, about: Info } as const;
 const themeIcons = { system: Monitor, dark: Moon, light: Sun } as const;
-export function SettingsPage({ onBack }: { onBack: () => void }) {
+export function SettingsPage() {
   const t = useT();
   const skillsPreview = useContext(SkillsPreviewContext);
   const { state } = useAppState();
@@ -29,7 +28,7 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
   const { locale, setLocale } = useLocale();
   const { loadAgents, diagnoseAgents, createAgent, updateAgent, deleteAgent, setAgentEnabled } = useAgentCatalog();
   const [tab, setTab] = useState<SettingsTab>("agents");
-  const [diagnostics, setDiagnostics] = useState<AgentDiagnostic[]>([]);
+  const diagnostics = state.agentDiagnostics;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -42,17 +41,17 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
   const inlineCards = useInlineCardsEnabled();
   useEffect(() => {
     void loadAgents();
-    void diagnoseAgents().then(setDiagnostics).catch(error => setError(String(error)));
+    void diagnoseAgents().catch(error => setError(String(error)));
     if (hasTauriRuntime()) void invokeCommand<HealthCheckResult>(TAURI_COMMANDS.healthCheck).then(result => setVersion(result.version)).catch(error => setError(String(error)));
   }, [loadAgents, diagnoseAgents]);
   async function detect() {
     setBusy(true); setError("");
-    try { await loadAgents(); setDiagnostics(await diagnoseAgents()); }
+    try { await loadAgents(); await diagnoseAgents(); }
     catch (error) { setError(String(error)); } finally { setBusy(false); }
   }
   async function testAgent(id: string) {
     setBusy(true); setError("");
-    try { const result = await diagnoseAgents(id); setDiagnostics(previous => [...previous.filter(item => item.agentId !== id), ...result]); }
+    try { await diagnoseAgents(id); }
     catch (error) { setError(String(error)); } finally { setBusy(false); }
   }
   function edit(agent?: AgentConfig) {
@@ -64,7 +63,7 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
     try {
       const input = { ...draft, name: draft.name.trim(), command: draft.command.trim(), args: args.split(/\r?\n/).map(value => value.trim()).filter(Boolean) };
       const result = editing ? await updateAgent(editing, input) : await createAgent(input);
-      if (result) { setFormOpen(false); setDiagnostics(await diagnoseAgents()); }
+      if (result) { setFormOpen(false); await diagnoseAgents(); }
     } catch (error) { setError(String(error)); } finally { setBusy(false); }
   }
   async function exportDiagnostics() {
@@ -78,7 +77,7 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
   }
   const description = tab === "skills" ? t("skillsSettingsDesc") : tab === "agents" ? t("agentsDesc") : tab === "appearance" ? t("appearanceDesc") : tab === "experiments" ? t("experimentsDesc") : tab === "diagnostics" ? t("diagnosticsHint") : t("aboutHint");
   return <div className="chat-settings">
-    <aside><button type="button" className="settings-back" onClick={onBack}><ArrowLeft size={15} aria-hidden="true" />{t("back")}</button><h1>{t("settings")}</h1>
+    <aside data-tauri-drag-region><h1>{t("settings")}</h1>
       <nav>{(["agents", "skills", "appearance", "experiments", "diagnostics", "about"] as const).map(id => {
         const Icon = tabIcons[id];
         return <button type="button" key={id} aria-current={tab === id ? "page" : undefined} onClick={() => setTab(id)}><Icon size={15} aria-hidden="true" />{t(id)}</button>;

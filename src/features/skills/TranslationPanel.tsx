@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { SkillsApi, SkillDetail, TranslationProviderId, TranslationProviders, TranslationResult, TranslationSourceMode, TranslationSummary } from "../../api/skills";
 import { useT } from "../../i18n";
-import { Markdown } from "../chat/MarkdownView";
+import { Markdown } from "../../components/Markdown";
 import { skillsError } from "./model";
 type Api = Pick<SkillsApi, "translationProviders" | "translate" | "translationHistory" | "translationResult" | "cancel">;
 export function TranslationPanel({ api, detail, desktop, initialMode = "markdown" }: { api: Api; detail: SkillDetail; desktop: boolean; initialMode?: TranslationSourceMode }) {

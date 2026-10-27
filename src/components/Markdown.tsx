@@ -3,10 +3,10 @@ import ReactMarkdown, { defaultUrlTransform, type Components } from "react-markd
 import remarkCjkFriendly from "remark-cjk-friendly";
 import remarkGfm from "remark-gfm";
 import { isExternalUrl, openExternalLink } from "./externalLink";
-import { InlineCard } from "./openui/InlineCard";
+import "./Markdown.css";
 
-/** Present when experimental inline cards are on; `openui-lang` blocks then render as cards. */
-export interface MarkdownCards { streaming: boolean; onInsert?: (text: string) => void }
+/** Replaces a fenced code block (e.g. Chat's `openui-lang` inline cards); `undefined` keeps the plain block. Pass a stable function. */
+export type MarkdownCodeRenderer = (language: string | undefined, text: string) => ReactNode | undefined;
 /** Learn wiki pages: `loom-src:` opens the source viewer, `loom-wiki:` another page. Absent elsewhere, so Chat drops both schemes. */
 export interface MarkdownLinks { onSource: (target: string) => void; onWiki: (target: string) => void; sourceStatus?: (target: string) => string | undefined }
 const keepLoomLinks = (url: string) => /^loom-(src|wiki):/.test(url) ? url : defaultUrlTransform(url);
@@ -43,14 +43,15 @@ function LoomLink({ href, links, children }: { href: string; links: MarkdownLink
   return <button type="button" className="learn-src-link" data-status={status} title={target} onClick={() => links.onSource(target)}>{children}</button>;
 }
 
-function components(cards?: MarkdownCards, links?: MarkdownLinks): Components {
+function components(renderCode?: MarkdownCodeRenderer, links?: MarkdownLinks): Components {
   return {
     pre({ node }) {
       const code = (node as HastNode | undefined)?.children?.find(child => child.tagName === "code");
       const classes = code?.properties?.className;
       const language = (Array.isArray(classes) ? classes : []).map(String).find(name => name.startsWith("language-"))?.slice(9);
       const text = textOf(code).replace(/\n$/, "");
-      if (cards && language === "openui-lang") return <InlineCard source={text} streaming={cards.streaming} onInsert={cards.onInsert} />;
+      const custom = renderCode?.(language, text);
+      if (custom !== undefined) return custom;
       return <pre><code data-language={language}>{text}</code></pre>;
     },
     code: ({ children }) => <code>{children}</code>,
@@ -63,8 +64,7 @@ function components(cards?: MarkdownCards, links?: MarkdownLinks): Components {
 
 const REMARK_PLUGINS = [remarkGfm, remarkCjkFriendly, literalHtml];
 
-export function Markdown({ text, cards, links }: { text: string; cards?: MarkdownCards; links?: MarkdownLinks }) {
-  const enabled = !!cards, streaming = !!cards?.streaming, onInsert = cards?.onInsert;
-  const overrides = useMemo(() => components(enabled ? { streaming, onInsert } : undefined, links), [enabled, streaming, onInsert, links]);
+export function Markdown({ text, renderCode, links }: { text: string; renderCode?: MarkdownCodeRenderer; links?: MarkdownLinks }) {
+  const overrides = useMemo(() => components(renderCode, links), [renderCode, links]);
   return <div className="chat-markdown"><ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={overrides} urlTransform={links ? keepLoomLinks : defaultUrlTransform}>{text}</ReactMarkdown></div>;
 }

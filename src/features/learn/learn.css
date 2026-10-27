@@ -1,7 +1,4 @@
-/* Learn. Builds on the Chat shell (.chat-page tokens, buttons and sidebar). */
-.learn-sidebar header { justify-content: flex-start; }
-.learn-back { display: inline-flex !important; align-items: center; gap: 8px; color: var(--chat-muted) !important; font-size: 13px; }
-.learn-back:hover { color: var(--chat-text) !important; }
+/* Learn. Builds on the shared workspace frame (styles/workspace.css: buttons, list sidebar, main column). */
 .learn-study-list { margin: 0 !important; padding: 2px 0 !important; list-style: none; }
 .learn-study-status { flex-shrink: 0; width: 7px; height: 7px; border-radius: 50%; background: var(--chat-dim); }
 .learn-study-status[data-status="ready"] { background: var(--chat-ok); }
@@ -22,6 +19,9 @@
 .learn-new input, .learn-new select { font: inherit; font-size: 13.5px; color: var(--chat-text); border: 1px solid var(--chat-border-strong); background: var(--chat-input); border-radius: 7px; padding: 8px 10px; min-width: 0; }
 .learn-new input[aria-invalid] { border-color: var(--chat-danger); }
 .learn-new-row { display: flex; gap: 12px; flex-wrap: wrap; }
+.learn-new-agent { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--chat-text-2); }
+.learn-new-agent-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.learn-new-agent .chat-agent-button { height: 34px; border: 1px solid var(--chat-border-strong) !important; background: var(--chat-input) !important; color: var(--chat-text) !important; }
 .learn-new-row label { min-width: 160px; }
 .learn-new .chat-primary-button { align-self: flex-start; }
 

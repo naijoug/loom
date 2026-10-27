@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { ArrowUp, Square } from "lucide-react";
 import type { AgentConfig, AgentDiagnostic, ChatPermissionMode } from "../../domain";
 import { useT } from "../../i18n";
-import { AgentPicker, isAgentUnusable } from "./AgentPicker";
+import { AgentPicker, isAgentUnusable } from "../../components/AgentPicker";
 import { ErrorText } from "../../components/common/ErrorText";
 import { ModePicker } from "./ModePicker";
 import { ConfirmBanner, type Confirmation } from "./ConfirmBanner";
@@ -78,7 +78,7 @@ export function ChatComposer(props: ChatComposerProps) {
         }} />
       <div className="chat-composer-actions">
         {props.leading}
-        <AgentPicker agents={agents} diagnostics={diagnostics} value={agentId} onChange={onAgentChange} disabled={sending} />
+        <AgentPicker agents={agents} diagnostics={diagnostics} value={agentId} onChange={onAgentChange} disabled={sending} note={t("agentMenuNote")} />
         <ModePicker value={permissionMode} onChange={onPermissionChange} disabled={sending} />
         <button type="button" className="chat-send" data-running={sending} aria-label={t(sending ? "stop" : "send")} title={sending ? `${t("stop")} (Esc)` : `${t("send")} (Enter)`}
           disabled={sending ? aborting : !draft.trim() || (!allowed && !draft.startsWith("/"))}

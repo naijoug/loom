@@ -5,7 +5,7 @@ import ReactDOM from "react-dom/client";
 import "./styles/theme.css";
 import App from "./App";
 import { createPreviewState } from "./features/chat/preview";
-import { UpdateProvider } from "./features/app-update/UpdateProvider";
+import { UpdateProvider } from "./components/app-update/UpdateProvider";
 import { ErrorBoundary } from "./components/common/ErrorBoundary";
 import { I18nProvider } from "./i18n";
 

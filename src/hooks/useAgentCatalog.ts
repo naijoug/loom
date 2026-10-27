@@ -1,6 +1,6 @@
 import { useCallback } from "react";
-import { invokeCommand, TAURI_COMMANDS } from "../api";
-import type { AgentConfig, AgentDiagnostic, AgentConfigInput } from "../domain";
+import { agentsApi } from "../api/agents";
+import type { AgentDiagnostic, AgentConfigInput } from "../domain";
 import { useAppState } from "../state/AppStateContext";
 import { hasTauriRuntime } from "./runtime";
 
@@ -23,7 +23,7 @@ export function useAgentCatalog() {
     try {
       dispatch({
         type: "agents/loaded",
-        agents: await invokeCommand<AgentConfig[]>(TAURI_COMMANDS.listAgents),
+        agents: await agentsApi.list(),
       });
     } catch (error) {
       dispatch({ type: "agents/loadFailed", error: toErrorMessage(error) });
@@ -36,7 +36,7 @@ export function useAgentCatalog() {
       try {
         assertTauriRuntime("Creating an Agent");
 
-        const agent = await invokeCommand<AgentConfig>(TAURI_COMMANDS.createAgent, { input });
+        const agent = await agentsApi.create(input);
         dispatch({ type: "agents/created", agent });
         return agent;
       } catch (error) {
@@ -53,10 +53,7 @@ export function useAgentCatalog() {
       try {
         assertTauriRuntime("Updating an Agent");
 
-        const agents = await invokeCommand<AgentConfig[]>(TAURI_COMMANDS.setAgentEnabled, {
-          agentId,
-          enabled,
-        });
+        const agents = await agentsApi.setEnabled(agentId, enabled);
         dispatch({ type: "agents/loaded", agents });
         return agents;
       } catch (error) {
@@ -73,10 +70,7 @@ export function useAgentCatalog() {
       try {
         assertTauriRuntime("Updating an Agent");
 
-        const agents = await invokeCommand<AgentConfig[]>(TAURI_COMMANDS.updateAgent, {
-          agentId,
-          input,
-        });
+        const agents = await agentsApi.update(agentId, input);
         dispatch({ type: "agents/loaded", agents });
         return agents;
       } catch (error) {
@@ -93,7 +87,7 @@ export function useAgentCatalog() {
       try {
         assertTauriRuntime("Deleting an Agent");
 
-        const agents = await invokeCommand<AgentConfig[]>(TAURI_COMMANDS.deleteAgent, { agentId });
+        const agents = await agentsApi.remove(agentId);
         dispatch({ type: "agents/loaded", agents });
         return agents;
       } catch (error) {
@@ -108,8 +102,10 @@ export function useAgentCatalog() {
     if (!hasTauriRuntime()) {
       return [] as AgentDiagnostic[];
     }
-    return invokeCommand<AgentDiagnostic[]>(TAURI_COMMANDS.diagnoseAgents, { agentId });
-  }, []);
+    const diagnostics = await agentsApi.diagnose(agentId);
+    dispatch({ type: "agents/diagnosed", diagnostics });
+    return diagnostics;
+  }, [dispatch]);
 
   return { loadAgents, createAgent, setAgentEnabled, updateAgent, deleteAgent, diagnoseAgents };
 }

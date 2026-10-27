@@ -1,0 +1,16 @@
+/* App frame: activity rail + feature panes. Layout spec: designs/activity-rail/README.md. */
+.app-shell { display: flex; height: 100vh; width: 100%; background: var(--chat-bg); color: var(--chat-text); }
+.app-shell-content { position: relative; flex: 1; min-width: 0; height: 100%; }
+.app-shell-pane { height: 100%; }
+.app-shell-pane[hidden] { display: none; }
+
+.activity-rail { flex: 0 0 52px; width: 52px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 0 0 10px; background: var(--chat-sidebar); border-right: 1px solid var(--chat-border); }
+.activity-rail-drag { flex: 0 0 8px; align-self: stretch; }
+/* macOS overlay title bar: keep the rail clear of the window controls. */
+.app-shell[data-traffic-lights] .activity-rail-drag { flex-basis: 38px; }
+.activity-rail-spacer { flex: 1; align-self: stretch; }
+.activity-rail-item { position: relative; display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 9px; background: none; color: var(--chat-muted); cursor: pointer; transition: none; }
+.activity-rail-item:hover { background: var(--chat-selected); color: var(--chat-text); }
+.activity-rail-item[aria-current="page"] { background: var(--chat-selected); color: var(--chat-accent); }
+.activity-rail-item[aria-current="page"]::before { content: ""; position: absolute; left: -8px; top: 9px; width: 3px; height: 18px; border-radius: 0 2px 2px 0; background: var(--chat-accent); }
+.activity-rail-item:focus-visible { outline: 2px solid var(--chat-accent); outline-offset: 1px; }

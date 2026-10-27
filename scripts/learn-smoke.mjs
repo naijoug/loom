@@ -10,15 +10,16 @@ export async function learnSmoke(client, { evaluate, waitFor, click, clickText, 
     await client.send('Emulation.setDeviceMetricsOverride',{width,height:820,deviceScaleFactor:1,mobile:false});
     await evaluate(client,`(localStorage.removeItem('loom-learn-study'),localStorage.setItem('loom-app-settings',JSON.stringify({...JSON.parse(localStorage.getItem('loom-app-settings')||'{}'),locale:${JSON.stringify(locale)},themeMode:${JSON.stringify(theme)}})))`);
     await client.send('Page.navigate',{url:root+scenario});
-    await waitFor(client,'Boolean(document.querySelector(".chat-tree-nav"))','Learn navigation');
+    await waitFor(client,`document.documentElement.lang===${JSON.stringify(locale)}&&Boolean(document.querySelector(".activity-rail-item[data-view=learn]"))`,'Learn rail item');
     // Repeat the idempotent click until the lazily loaded view appears.
-    await waitFor(client,'Boolean(document.querySelector("[data-testid=learn-page]"))||(document.querySelector(".chat-tree-nav")?.click(),false)','Learn page',300);
+    await waitFor(client,'Boolean(document.querySelector("[data-testid=learn-page]"))||(document.querySelector(".activity-rail-item[data-view=learn]")?.click(),false)','Learn page',300);
   };
   const page=async title=>{await clickText('.learn-wiki-tree button',title);await waitFor(client,`document.querySelector(".learn-article h1")?.textContent===${JSON.stringify(title)}`,`${title} page`);};
 
   await open();await waitFor(client,'document.querySelector(".learn-article h1")?.textContent==="hexyl"','overview');
   if(await evaluate(client,'getComputedStyle(document.querySelector(".learn-page")).paddingTop!=="0px"'))throw Error('Learn root inherited article padding');
   if(await evaluate(client,'Math.abs(document.querySelector(".learn-page").getBoundingClientRect().height-innerHeight)>1'))throw Error('Learn page does not fill the window');
+  if(await evaluate(client,'document.querySelector(".activity-rail-item[aria-current=page]")?.dataset.view!=="learn"'))throw Error('Rail does not mark Learn as current');
   await screenshot('ready-en-light',output);
   await click('.learn-article .learn-src-link');
   await waitFor(client,'document.querySelectorAll(".learn-code-line[data-marked]").length===5','highlighted source range');

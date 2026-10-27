@@ -4,7 +4,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { skillsApi, type SkillsApi, type SkillDetail, type SkillsLibrary, type SkillsOperation } from "../../api/skills";
 import { hasTauriRuntime } from "../../hooks/runtime";
 import { useT } from "../../i18n";
-import { Markdown } from "../chat/MarkdownView";
+import { Markdown } from "../../components/Markdown";
 import { mergeOperation, operationActionKey, skillBody, skillsError, visibleSkills } from "./model";
 import { InstallPanel } from "./InstallPanel";
 import { InstalledSkills } from "./InstalledSkills";

@@ -1,8 +1,6 @@
-.chat-settings { display: flex; height: 100vh; background: var(--chat-bg); color: var(--chat-text); font-family: "Geist Sans", "PingFang SC", sans-serif; font-size: 13px; -webkit-font-smoothing: antialiased; }
+.chat-settings { display: flex; height: 100%; background: var(--chat-bg); color: var(--chat-text); font-family: "Geist Sans", "PingFang SC", sans-serif; font-size: 13px; -webkit-font-smoothing: antialiased; }
 .chat-settings > aside { width: 240px; flex-shrink: 0; padding: 36px 10px 20px; background: var(--chat-sidebar); border-right: 1px solid var(--chat-border); }
-.settings-back { display: flex !important; gap: 8px; align-items: center; color: var(--chat-muted); width: 100%; }
-.settings-back:hover { color: var(--chat-text); }
-.chat-settings h1 { font-size: 13px; font-weight: 500; color: var(--chat-dim); margin: 22px 10px 8px; }
+.chat-settings h1 { font-size: 13px; font-weight: 500; color: var(--chat-dim); margin: 0 10px 8px; }
 .chat-settings > aside nav button { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; margin-bottom: 2px; padding: 8px 10px; color: var(--chat-text-2); }
 .chat-settings > aside nav button svg { color: var(--chat-muted); }
 .chat-settings > aside nav [aria-current="page"] { background: var(--chat-selected); color: var(--chat-text); }
@@ -41,7 +39,7 @@
 .settings-status { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
 .settings-row-actions { white-space: nowrap; text-align: right; }
 .settings-row-actions button { padding: 4px 9px; font-size: 12px; margin-left: 4px; }
-.settings-switch { display: inline-flex; cursor: pointer; }
+.settings-switch { position: relative; display: inline-flex; cursor: pointer; }
 .settings-switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .settings-switch span { position: relative; width: 28px; height: 16px; border-radius: 99px; background: var(--chat-border-strong); transition: background .15s ease; }
 .settings-switch span::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--chat-surface); box-shadow: 0 1px 2px #0004; transition: transform .15s ease; }

@@ -39,10 +39,10 @@ test('default Chat and Settings never load Task data or subscribe to Planning ev
  assert.equal([...document.querySelectorAll('.chat-project-tree button')].some(node=>node.textContent==='Skills'),false);
  assert.ok(document.querySelector('[data-testid="skills-panel"]'));
  assert.equal(document.querySelector('[data-testid="chat-page"]'),mountedChat);
- assert.equal(mountedChat.closest('.app-chat-container').hidden,true);
+ assert.equal(mountedChat.closest('.app-shell-pane').hidden,true);
  await act(async()=>dispatch({type:'app/viewSelected',view:'chat'}));
  assert.equal(document.querySelector('[data-testid="chat-page"]'),mountedChat);
- assert.equal(mountedChat.closest('.app-chat-container').hidden,false);
+ assert.equal(mountedChat.closest('.app-shell-pane').hidden,false);
  await act(async()=>dispatch({type:'app/viewSelected',view:'settings'}));
  assert.match(document.body.textContent,/Appearance/);
  assert.equal(calls.some(call=>/task|planning|command_run/.test(call.command)),false);
@@ -81,7 +81,7 @@ test('an active Chat keeps receiving stream events while Settings Skills is visi
  const chat=document.querySelector('[data-testid="chat-page"]');assert.match(chat.textContent,/Before settings/);
  await act(async()=>dispatch({type:'app/viewSelected',view:'settings'}));
  await act(async()=>[...document.querySelectorAll('.chat-settings > aside nav button')].find(node=>node.textContent==='Skills').dispatchEvent(new window.MouseEvent('click',{bubbles:true})));
- assert.ok(chat.closest('.app-chat-container').hidden);
+ assert.ok(chat.closest('.app-shell-pane').hidden);
  const listener=listeners.get('loom://chat-event');assert.equal(typeof listener,'function');
  await act(async()=>listener({event:'loom://chat-event',id:1,payload:{schemaVersion:2,projectKey:'/p',sessionId:'chat-live',seq:2,timestampMs:2,kind:'stream',payload:{sessionId:'chat-live',turnId:'live-turn',messageId:'assistant',delta:' STREAM_WHILE_SKILLS_OPEN',done:false}}}));
  await act(async()=>dispatch({type:'app/viewSelected',view:'chat'}));

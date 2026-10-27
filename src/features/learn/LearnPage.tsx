@@ -1,5 +1,5 @@
 import { useContext, useEffect, useState } from "react";
-import { ArrowLeft, GraduationCap, LoaderCircle, Plus } from "lucide-react";
+import { GraduationCap, LoaderCircle, Plus } from "lucide-react";
 import { tauriLearnApi, type LearnStudySummary } from "../../api/learn";
 import { hasTauriRuntime } from "../../hooks/runtime";
 import { useT } from "../../i18n";
@@ -7,10 +7,9 @@ import { useAppState } from "../../state/AppStateContext";
 import { NewStudyForm } from "./NewStudyForm";
 import { LearnPreviewContext } from "./previewContext";
 import { StudyView } from "./StudyView";
-import "../chat/chat.css";
 import "./learn.css";
 
-export function LearnPage({ onBack }: { onBack: () => void }) {
+export function LearnPage() {
   const t = useT();
   const { state } = useAppState();
   const preview = useContext(LearnPreviewContext);
@@ -43,9 +42,7 @@ export function LearnPage({ onBack }: { onBack: () => void }) {
   const select = (id: string | null) => { setNewStudy(id === null); setSelected(id ?? selected); };
   return <div className="chat-page learn-page" data-testid="learn-page">
     <aside className="chat-project-tree learn-sidebar">
-      <header>
-        <button type="button" className="learn-back" onClick={onBack}><ArrowLeft size={15} aria-hidden="true" />{t("learnBackToChat")}</button>
-      </header>
+      <header data-tauri-drag-region />
       <div className="chat-project-heading"><span>{t("learnStudies")}</span>
         <button type="button" className="chat-icon-button" aria-label={t("learnNewStudy")} title={t("learnNewStudy")} aria-pressed={creating} onClick={() => select(null)}><Plus size={15} /></button></div>
       <nav aria-label={t("learnStudies")}><ul className="learn-study-list">
@@ -64,7 +61,7 @@ export function LearnPage({ onBack }: { onBack: () => void }) {
     <main className="chat-main learn-main">
       <div className="chat-window-bar" data-tauri-drag-region />
       {!available ? <div className="learn-main-empty"><span className="chat-empty-mark"><GraduationCap size={24} /></span><p>{t("learnDesktopOnly")}</p></div>
-        : creating ? <NewStudyForm api={api} agents={state.agents} onCreated={id => { select(id); setRevision(value => value + 1); }} />
+        : creating ? <NewStudyForm api={api} agents={state.agents} diagnostics={state.agentDiagnostics} onCreated={id => { select(id); setRevision(value => value + 1); }} />
         : <StudyView api={api} studyId={selected!} revision={revision} onDeleted={() => { setSelected(null); setRevision(value => value + 1); }} />}
     </main>
   </div>;

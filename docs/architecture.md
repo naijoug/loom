@@ -14,13 +14,15 @@ Learn 模块于 2026-10-26 按用户要求新增为顶层视图（入口在 Chat
 
 | 模块 | 职责 |
 |---|---|
-| `src/App.tsx` | Chat / Learn / Settings；Learn 或设置打开时保留 Chat 挂载、草稿与活动会话 |
-| `src/features/chat/ProjectTree.tsx` | 最近项目、按需展开会话、搜索、归档过滤、折叠状态 |
+| `src/App.tsx` / `src/shell/` | 外壳：`features.ts` 功能注册表（Chat、Learn）、`ActivityRail` 左侧功能栏（底部 Settings，⌘1…4 / ⌘, 切换）、`AppShell` 挂载各功能窗格；Chat 常驻挂载，其它功能首次访问后保持挂载，Settings 仅打开时挂载；切换不打断草稿与活动会话 |
+| `src/components/` / `src/hooks/` / `src/api/` | 跨功能共享：`Markdown`（安全渲染，代码块可由调用方接管）、`AgentPicker`（Agent 菜单与按诊断能力显示的模型输入）、`externalLink`、`common/ErrorText`、`app-update/`；`hooks/inlineCardsSetting`；`api/agents.ts` Agent 命令封装。共享层不引用 `features/`，`features/<x>` 之间不互相引用（`settings→skills` 例外），由 `scripts/check-layers.mjs` 检查 |
+| `src/styles/workspace.css` | 各功能共用的列表侧栏、主列、按钮与输入基础样式 |
+| `src/features/chat/ProjectTree.tsx` | 最近项目、按需展开会话、搜索、归档过滤、折叠状态；底部只保留归档切换 |
 | `ChatPage` / `useChatBridge` / `ChatProjection` | 会话选择、异步归属、序号补流与快照协调 |
-| `ChatComposer` / `AgentPicker` / `ModeSwitch` | 发送、停止、IME 保护、斜杠命令、模式和 Agent 选择 |
-| `ChatTranscript` / `ToolCallCard` / `MarkdownView` | 纯文本安全渲染、工具 ID 配对投影、差异预览 |
+| `ChatComposer` / `ModeSwitch`（共享 `AgentPicker`） | 发送、停止、IME 保护、斜杠命令、模式和 Agent 选择 |
+| `ChatTranscript` / `ToolCallCard` / `ChatMarkdown`（共享 `Markdown` + OpenUI 内联卡片） | 纯文本安全渲染、工具 ID 配对投影、差异预览 |
 | `src/i18n/` | 英文源字典、受类型约束的简体中文、locale 持久化 |
-| `src/features/settings/SettingsPage.tsx` / `src/features/skills/SkillsPanel.tsx` | 设置侧边栏 Skills 板块，来源/搜索/详情/文件、安装到工具、已安装清单和恢复状态；设置切换保留 Chat 挂载 |
+| `src/features/settings/SettingsPage.tsx` / `src/features/skills/SkillsPanel.tsx` | 设置侧边栏 Skills 板块，来源/搜索/详情/文件、安装到工具、已安装清单和恢复状态；由功能栏底部进入，切换保留 Chat 挂载 |
 | `skills/{catalog,repository,snapshots,operations,commands}.rs` | 有界扫描、来源登记、不可变快照、受控 Git 子进程与 typed IPC；来源移除只取消登记 |
 | `agent/{registry,capabilities,diagnostics}.rs` | Agent 调用层：PATH 优先、通用安装目录、命令覆盖、限时版本探测、带缓存的启动前检查（Chat 发送、Learn 开始前）与能力声明；功能模块只经 `agent/mod.rs` 的公开接口调用 |
 | `agent/error.rs` | `AgentError`：面向用户的错误统一为“摘要 + 空行 + 原始详情”，前端 `components/common/ErrorText` 解析展示 |
@@ -32,7 +34,7 @@ Learn 模块于 2026-10-26 按用户要求新增为顶层视图（入口在 Chat
 | `process_supervisor.rs` | 进程组归属、超时、TERM/KILL、应用退出协调 |
 | `projects.rs` / `storage.rs` / `settings.rs` | 项目登记、原子写入、设置与旧数据兼容 |
 | `diagnostics.rs` / `chat/export.rs` / `app_update.rs` | 有界诊断包、会话导出、应用内更新与草稿恢复 |
-| `src/features/learn/` | Learn 研究列表、新建表单、阶段/日志、Wiki 目录与页面、架构图、源码查看器；入口为 Chat 侧边栏 Learn 按钮 |
+| `src/features/learn/` | Learn 研究列表、新建表单、阶段/日志、Wiki 目录与页面、架构图、源码查看器；入口为左侧功能栏 Learn；新建表单使用共享 `AgentPicker` |
 | `learn/{store,fetch,inventory,source,generate,jobs,commands}.rs` / `git_fetch.rs` | 研究存储与作业登记、加固浅克隆、静态清单、受限源码读取、提示词与输出/引用校验、只读 Agent 作业、typed IPC；Git 加固配置与 Skills 共享 |
 | `contracts/tauri-contract.json` | Rust/TypeScript 共同验证的命令、事件和模型样本 |
 

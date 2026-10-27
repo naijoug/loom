@@ -4,8 +4,8 @@ const dom=new JSDOM('<div id="root"></div>',{url:'http://localhost'});
 global.window=dom.window;global.document=dom.window.document;global.navigator=dom.window.navigator;
 global.IS_REACT_ACT_ENVIRONMENT=true;
 const React=require('react'),{act}=React,{createRoot}=require('react-dom/client'),{renderToStaticMarkup}=require('react-dom/server');
-const {Markdown}=require('../../.tmp/test-build/src/features/chat/MarkdownView.js');
-const {isExternalUrl}=require('../../.tmp/test-build/src/features/chat/externalLink.js');
+const {Markdown}=require('../../.tmp/test-build/src/components/Markdown.js');
+const {isExternalUrl}=require('../../.tmp/test-build/src/components/externalLink.js');
 
 const html=text=>renderToStaticMarkup(React.createElement(Markdown,{text}));
 

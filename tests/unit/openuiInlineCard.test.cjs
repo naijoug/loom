@@ -7,7 +7,7 @@ const React=require('react'),{act}=React,{createRoot}=require('react-dom/client'
 const {ChatTranscript}=require('../../.tmp/test-build/src/features/chat/ChatTranscript.js');
 const {inlineCardText}=require('../../.tmp/test-build/src/features/chat/openui/library.js');
 const {loadAppSettings}=require('../../.tmp/test-build/src/hooks/useSettingsBridge.js');
-const {setInlineCardsEnabled}=require('../../.tmp/test-build/src/features/chat/openui/inlineCardsSetting.js');
+const {setInlineCardsEnabled}=require('../../.tmp/test-build/src/hooks/inlineCardsSetting.js');
 
 const card=`root = CardStack([files, todo])
 files = FileList([{path: "src/main.tsx", note: "React entry"}], "Entry")

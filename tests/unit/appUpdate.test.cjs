@@ -6,8 +6,8 @@ dom.window.HTMLDialogElement.prototype.showModal=function(){this.open=true};
 dom.window.HTMLDialogElement.prototype.close=function(){this.open=false};
 const React=require('react');const {act}=React;const {createRoot}=require('react-dom/client');
 const api=require('../../.tmp/test-build/src/api/tauriClient.js');
-const {UpdateProvider,UpdateButton,useUpdateDrafts}=require('../../.tmp/test-build/src/features/app-update/UpdateProvider.js');
-const {initialUpdate,newerSnapshot,downloadPercent}=require('../../.tmp/test-build/src/features/app-update/model.js');
+const {UpdateProvider,UpdateButton,useUpdateDrafts}=require('../../.tmp/test-build/src/components/app-update/UpdateProvider.js');
+const {initialUpdate,newerSnapshot,downloadPercent}=require('../../.tmp/test-build/src/components/app-update/model.js');
 const button=text=>[...document.querySelectorAll(document.querySelector('dialog')?'dialog button':'button')].find(node=>node.textContent.trim()===text);
 const flush=async()=>{await new Promise(resolve=>setImmediate(resolve));};
 

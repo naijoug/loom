@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FolderPlus, PanelLeftOpen } from "lucide-react";
-import type { AgentDiagnostic, ChatPermissionMode, ChatSession, ProjectSummary } from "../../domain";
+import type { ChatPermissionMode, ChatSession, ProjectSummary } from "../../domain";
 import { useAppState } from "../../state/AppStateContext";
 import { useAgentCatalog } from "../../hooks/useAgentCatalog";
 import { useProjectBridge } from "../../hooks/useProjectBridge";
@@ -9,18 +9,18 @@ import { useT } from "../../i18n";
 import { chatAbort, chatClearResume, chatCreate, chatSetAgent, chatUpdateMeta } from "../../api/chatClient";
 import { AddProjectModal } from "../../components/Sidebar/AddProjectModal";
 import { ErrorBoundary } from "../../components/common/ErrorBoundary";
-import { UpdateButton, useUpdateDrafts } from "../app-update/UpdateProvider";
+import { UpdateButton, useUpdateDrafts } from "../../components/app-update/UpdateProvider";
 import { useChatBridge } from "./useChatBridge";
 import { useChatExport } from "./useChatExport";
 import { mockChatStore } from "./mockStore";
 import { chatSendController } from "./state/ChatSendController";
-import { defaultAgentId, isAgentUnusable } from "./AgentPicker";
+import { defaultAgentId, isAgentUnusable } from "../../components/AgentPicker";
 import { ProjectTree } from "./ProjectTree";
 import { ProjectPicker } from "./ProjectPicker";
 import { ChatSessionHeader } from "./ChatSessionHeader";
 import { ChatTranscript } from "./ChatTranscript";
 import { ChatComposer } from "./ChatComposer";
-import { useInlineCardsEnabled } from "./openui/inlineCardsSetting";
+import { useInlineCardsEnabled } from "../../hooks/inlineCardsSetting";
 import { ChatExportNotice } from "./ChatExportNotice";
 import { EmptySession } from "./EmptySession";
 import type { Confirmation } from "./ConfirmBanner";
@@ -51,7 +51,7 @@ export function ChatPage() {
   useUpdateDrafts("legacy-chat", drafts, saved => setDrafts(previous => ({ ...saved, ...previous })));
   const [newMode, setNewMode] = useState<ChatPermissionMode>("explore");
   const [newAgent, setNewAgent] = useState("");
-  const [diagnostics, setDiagnostics] = useState<AgentDiagnostic[]>([]);
+  const diagnostics = state.agentDiagnostics;
   const draftAgent = defaultAgentId(agents.map(agent => diagnostics.some(diagnostic => diagnostic.agentId === agent.id && isAgentUnusable(diagnostic.status)) ? { ...agent, available: false } : agent), newAgent || localStorage.getItem("loom-last-agent"));
   const [revision, setRevision] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -73,7 +73,7 @@ export function ChatPage() {
   const isCurrent = () => current.current.projectPath === projectPath && current.current.sessionId === sessionId;
   const exportState = useChatExport(useBackend ? projectPath : null, useBackend ? sessionId : null);
   const refreshDiagnostics = useCallback(async () => {
-    try { setDiagnostics(await diagnoseAgents()); }
+    try { await diagnoseAgents(); }
     catch (error) { setError(String(error)); }
   }, [diagnoseAgents]);
   useEffect(() => { void loadAgents(); void loadRecentProjects(); void refreshDiagnostics(); }, [loadAgents, loadRecentProjects, refreshDiagnostics]);
@@ -201,12 +201,11 @@ export function ChatPage() {
     else if (parsed.command === "export") await exportState.exportSession();
   }
   const selectedDiagnostic = diagnostics.find(item => item.agentId === session?.agentId);
-  const trafficLights = useBackend && /Mac/.test(navigator.userAgent);
   const newChat = Boolean(project && !sessionId);
-  return <div className={`chat-page${collapsed ? " sidebar-collapsed" : ""}`} data-traffic-lights={trafficLights || undefined} data-testid="chat-page">
+  return <div className={`chat-page${collapsed ? " sidebar-collapsed" : ""}`} data-testid="chat-page">
     {!collapsed && <ProjectTree projects={state.projects.recent} agents={state.agents} projectPath={projectPath} sessionId={sessionId}
       useBackend={useBackend} revision={revision} onSelect={select} onAdd={() => setAddProjectOpen(true)}
-      onSettings={() => dispatch({ type: "app/viewSelected", view: "settings" })} onLearn={() => dispatch({ type: "app/viewSelected", view: "learn" })} onCollapse={() => setCollapsed(true)} />}
+      onCollapse={() => setCollapsed(true)} />}
     <main className={`chat-main${newChat ? " chat-main-new" : ""}`}>
       <div className="chat-window-bar" data-tauri-drag-region>
         {collapsed && <button type="button" className="chat-icon-button" aria-label={t("expandSidebar")} title={t("expandSidebar")} onClick={() => setCollapsed(false)}><PanelLeftOpen size={16} /></button>}

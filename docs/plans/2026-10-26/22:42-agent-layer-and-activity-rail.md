@@ -1,6 +1,6 @@
 # Agent 调用层与左侧功能栏重构计划
 
-- 状态：实施中；P0–P4 已完成，下一步 P5（进度见第 0 节）
+- 状态：实施中；P0–P5 已完成，下一步 P6（进度见第 0 节）
 - 基线：`main` @ `d5b8c4b` 之上的未提交 Learn 工作区（含 2026-10-26 Agent 启动前检查与错误详情折叠）
 - 触发：用户要求参考 Codex 应用的布局，把 Chat 作为默认主页，Learn、Research、Discuss 作为并列功能；调用本机各种 Agent 做成独立的模块和层，上层模块只管调用，UI 只是交互入口
 - 范围：
@@ -70,6 +70,32 @@
     - Skills 本地翻译未改用 `agent::run`，在 `docs/agent-adapter.md` 记为例外：它需要原始 stdout（Claude 的单个 JSON 结果），而 runner 解析前逐行脱敏，可能改写译文中形似密钥的示例；它也不走 Agent 配置。`check-layers.mjs` 暂不扫描 `skills/`。
     - Learn 新建研究表单仍只按 `available` 过滤 Agent，未读取诊断；损坏的 Agent 在开始时被 `check_startable` 拦下。
     - 新 Chat 回合的错误文本格式变化（旧：`agent exited with status exit status: N; stderr: …`），旧会话由 `ErrorText` 兼容读取。
+
+- **P5 完成（2026-10-27）**：
+  - 布局稿 `designs/activity-rail/README.md`（按“默认决策执行”的指示直接实施，未单独确认）。
+  - `src/shell/`：
+    - `features.ts` 功能注册表（Chat、Learn，懒加载），`AppView = FeatureId | "settings"`；
+    - `ActivityRail.tsx` 左侧 52px 功能栏：注册表顺序在上、Settings 置底，当前项 `aria-current="page"`，提示含快捷键，按钮带 `data-view`；macOS 顶部 38px 拖拽区；
+    - `AppShell.tsx`（由 `features/chat/ChatShell.tsx` 改写）：⌘1…4 / ⌘,（其它平台 Ctrl）切换，输入法组合中不响应；Chat 常驻挂载，其它功能首次访问后保持挂载，Settings 仅打开时挂载。
+  - 共享层：
+    - `features/chat/MarkdownView.tsx` → `components/Markdown.tsx`，代码块渲染改为调用方传入的 `renderCode`；Chat 的 OpenUI 内联卡片包装为 `features/chat/ChatMarkdown.tsx`；
+    - `AgentPicker`、`externalLink` → `components/`；`AgentPicker` 新增 `placement`、`note`、可选 `model`（仅诊断报告 `modelSelection` 时显示模型输入）；
+    - `features/app-update/` → `components/app-update/`，`inlineCardsSetting` → `hooks/`，删除 `components/Settings/` 转发壳；
+    - `api/agents.ts` 封装 Agent 命令；Agent 诊断进入全局状态 `agentDiagnostics`（`agents/diagnosed` 按 id 合并），Chat、Learn、Settings 共用；
+    - 共用样式从 `chat.css` 拆到 `styles/workspace.css`、`components/Markdown.css`、`components/AgentPicker.css`，功能之间不再互相引入 CSS。
+  - 功能调整：Chat 侧栏底部移除 Learn / Settings，只留“归档”；Learn、Settings 移除返回按钮；Learn 新建表单改用共享 `AgentPicker`，同时排除诊断为不可用（含 `broken`）的 Agent，模型只在显示时提交（P4 偏差“Learn 只按 `available` 过滤”已解决）。
+  - `check-layers.mjs` 规则 4：`features/<x>` 不引用其它功能的代码或 CSS，`components` / `hooks` / `api` 不引用 `features/`；已用临时违规导入验证脚本会失败。
+  - 验证：
+    - `pnpm check` 通过（前端 136，新增注册表 / 快捷键 / 切换保留 Chat 草稿、模型输入随能力显示共 4 项；Rust 298 通过 / 27 忽略）；
+    - `pnpm smoke:visual` 通过：新增功能栏矩阵（zh/en × 深浅 × 700px：52px、当前项、⌘/Ctrl+2 与 ⌘/Ctrl+, 切换、无横向溢出）与 S6（1280px 打开会话写草稿，切到 Learn 再回来会话与草稿保持），截图在 `designs/exports/activity-rail/`（不入库）；Learn / Skills / 内联卡片 smoke 改由功能栏进入后通过。
+    - 未做：桌面人工检查“切换功能时进行中的 Chat 回合不中断”。Chat 常驻挂载由单测与 S6 覆盖，但真实流式回合未在桌面上切换验证。
+  - 与计划的偏差：
+    - `AgentPicker` 未加权限参数：Chat 的权限仍由 `ModePicker` 负责，Learn 固定只读，没有调用方需要。
+    - 注册表未加 `enabled` 字段：当前功能都启用，P6/P7 需要隐藏时再加。
+    - Settings 不保持挂载：它没有需要保留的界面状态，关闭即卸载可减少常驻组件。
+    - 规则 4 白名单 `settings→skills`：Skills 是设置的一个分区。
+    - 共享组件的类名沿用 `chat-` 前缀，避免大面积改样式；新组件用 `activity-rail-*`、`app-shell-*`、`agent-model-input`。
+    - 计划未列出的移动：`app-update` 放 `components/app-update/`，`inlineCardsSetting` 放 `hooks/`。
 
 ## 1. 目标
 

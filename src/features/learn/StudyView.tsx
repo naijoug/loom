@@ -3,8 +3,8 @@ import { CircleAlert, CircleCheck, CircleDashed, ExternalLink, FileText, FolderT
 import { parseSourceTarget, type LearnApi, type LearnLogStream, type LearnPageContent, type LearnPageInfo, type LearnStageState, type LearnStudyDetail } from "../../api/learn";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { Markdown, type MarkdownLinks } from "../chat/MarkdownView";
-import { openExternalLink } from "../chat/externalLink";
+import { Markdown, type MarkdownLinks } from "../../components/Markdown";
+import { openExternalLink } from "../../components/externalLink";
 import { ArchitectureDiagram } from "./ArchitectureDiagram";
 import { ErrorText } from "../../components/common/ErrorText";
 import { SourceViewer, type SourceTarget } from "./SourceViewer";

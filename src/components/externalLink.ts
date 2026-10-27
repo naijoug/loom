@@ -1,5 +1,5 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { hasTauriRuntime } from "../../hooks/runtime";
+import { hasTauriRuntime } from "../hooks/runtime";
 
 /** Only web and mail links leave Loom; anything else (file paths, custom schemes) stays plain text. */
 export function isExternalUrl(href: string | null | undefined): href is string {

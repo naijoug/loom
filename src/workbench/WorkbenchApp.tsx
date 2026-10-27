@@ -1,4 +1,4 @@
-import { UpdateButton, useUpdateDrafts } from "../features/app-update/UpdateProvider";
+import { UpdateButton, useUpdateDrafts } from "../components/app-update/UpdateProvider";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { ArrowUp, Archive, ArchiveRestore, Check, ChevronDown, Circle, Flag, Folder, FolderPlus, Inbox, MessageSquare, MoreHorizontal, PanelLeft, Plus, Search, Square, Star, X, Wrench } from "lucide-react";

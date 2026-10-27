@@ -1,7 +1,7 @@
 import type { ChatMessage, ChatTurn } from "../../domain";
 import { useT } from "../../i18n";
 import { ChatRunDetails } from "./ChatRunDetails";
-import { Markdown } from "./MarkdownView";
+import { ChatMarkdown } from "./ChatMarkdown";
 import { ToolCallCard } from "./ToolCallCard";
 import { chatMessageErrorFallbackText } from "../../domain";
 import { ErrorText } from "../../components/common/ErrorText";
@@ -27,8 +27,8 @@ export function ChatTranscript({ messages, turns, projectPath, sessionId, toolEv
       return <article key={message.id} className={message.role === "user" ? "chat-user-row" : "chat-turn"} data-status={message.status} data-role={message.role}>
         <div className={message.role === "user" ? "chat-user-bubble" : "chat-turn-body"}>
           {message.role === "user" ? message.content : <>
-            {message.content && <Markdown text={message.content} cards={cards} />}
-            {!message.content && parts.filter(part => part.type === "text").map((part, index) => part.type === "text" && <Markdown key={index} text={part.text} cards={cards} />)}
+            {message.content && <ChatMarkdown text={message.content} cards={cards} />}
+            {!message.content && parts.filter(part => part.type === "text").map((part, index) => part.type === "text" && <ChatMarkdown key={index} text={part.text} cards={cards} />)}
             {tools.length > 0 && <div className="chat-tool-group">{tools.map((part, index) => part.type === "tool" ? <ToolCallCard key={part.callId ?? index} part={part} /> : null)}</div>}
             {parts.map((part, index) => part.type === "error" ? <ErrorText className="chat-error" alert key={index} text={part.message} code={part.code} /> : null)}
             {error && <ErrorText className="chat-error" alert text={error} />}

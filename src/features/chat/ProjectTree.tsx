@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Archive, ChevronRight, FolderPlus, GraduationCap, LoaderCircle, PanelLeftClose, Plus, Search, Settings } from "lucide-react";
+import { Archive, ChevronRight, FolderPlus, LoaderCircle, PanelLeftClose, Plus, Search } from "lucide-react";
 import { chatListProjectGroups } from "../../api/chatClient";
 import type { ChatProjectGroup } from "../../domain/chat";
 import type { AgentConfig, ProjectSummary } from "../../domain";
@@ -7,10 +7,10 @@ import { useT } from "../../i18n";
 import { mockChatStore } from "./mockStore";
 import { normalizePermissionMode, PERMISSION_LABELS } from "./permissionMode";
 
-export function ProjectTree({ projects, agents, projectPath, sessionId, useBackend, revision, onSelect, onAdd, onSettings, onLearn, onCollapse }: {
+export function ProjectTree({ projects, agents, projectPath, sessionId, useBackend, revision, onSelect, onAdd, onCollapse }: {
   projects: ProjectSummary[]; agents: AgentConfig[]; projectPath: string | null; sessionId: string | null;
   useBackend: boolean; revision: number; onSelect: (project: ProjectSummary, session: string | null) => void;
-  onAdd: () => void; onSettings: () => void; onLearn?: () => void; onCollapse: () => void;
+  onAdd: () => void; onCollapse: () => void;
 }) {
   const t = useT();
   const [groups, setGroups] = useState<ChatProjectGroup[]>([]);
@@ -71,8 +71,7 @@ export function ProjectTree({ projects, agents, projectPath, sessionId, useBacke
         })}{group && !sessions.length && <li className="chat-tree-empty">{t("noChats")}</li>}</ul>}
       </section>;
     })}</nav>
-    {onLearn && <button type="button" className="chat-tree-nav" onClick={onLearn}><GraduationCap size={15} aria-hidden="true" />{t("learn")}</button>}
-    <footer><button type="button" onClick={onSettings}><Settings size={15} aria-hidden="true" />{t("settings")}</button>
-      <button type="button" className="chat-icon-button" aria-pressed={archived} aria-label={t("archived")} title={t("archived")} onClick={() => setArchived(!archived)}><Archive size={15} /></button></footer>
+    {/* Learn and Settings live on the activity rail; the sidebar keeps only the project and session tree. */}
+    <footer><button type="button" aria-pressed={archived} onClick={() => setArchived(!archived)}><Archive size={15} aria-hidden="true" />{t("archived")}</button></footer>
   </aside>;
 }

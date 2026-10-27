@@ -8,7 +8,7 @@ const React=require('react'),{act}=React,{createRoot}=require('react-dom/client'
 const {parseSourceTarget,LEARN_ADAPTERS}=require('../../.tmp/test-build/src/api/learn.js');
 const {learnAgents}=require('../../.tmp/test-build/src/features/learn/NewStudyForm.js');
 const {splitError}=require('../../.tmp/test-build/src/components/common/ErrorText.js');
-const {Markdown}=require('../../.tmp/test-build/src/features/chat/MarkdownView.js');
+const {Markdown}=require('../../.tmp/test-build/src/components/Markdown.js');
 const {AppStateProvider,useAppState}=require('../../.tmp/test-build/src/state/AppStateContext.js');
 const {initialAppState}=require('../../.tmp/test-build/src/state/reducer.js');
 const {ThemeProvider}=require('../../.tmp/test-build/src/contexts/ThemeContext.js');
@@ -71,7 +71,7 @@ test('Learn view keeps Chat mounted, opens wiki pages and jumps to cited source 
   if(command==='list_recent_projects')return [project];
   if(command==='chat_list_project_groups')return [{project,sessionCount:0,sessions:[]}];
   if(command==='list_agents')return [agent];
-  if(command==='diagnose_agents')return [];
+  if(command==='diagnose_agents')return [{agentId:'agent-claude',status:'ready',authStatus:'unknown',detail:'',checkedAtMs:1,capabilities:{structuredStream:true,toolEvents:true,nativeResume:true,inlineCards:false,modelSelection:true,modes:[]}}];
   if(command==='load_app_settings')return {};
   if(command==='health_check')return {version:'test'};
   if(command==='learn_list_studies')return {studies:[{studyId:study.studyId,owner:'sharkdp',repo:'hexyl',agentName:'Claude Code',status:'ready',pagesReady:3,pagesTotal:4,updatedAtMs:2}],storageErrors:[]};
@@ -87,13 +87,15 @@ test('Learn view keeps Chat mounted, opens wiki pages and jumps to cited source 
  function Harness(){dispatch=useAppState().dispatch;return React.createElement(AppContent)}
  await act(async()=>root.render(React.createElement(ThemeProvider,null,React.createElement(AppStateProvider,{initialStateOverride:{...initialAppState,projects:{current:project,recent:[project]},app:{...initialAppState.app,activeProjectId:'p'}}},React.createElement(Harness)))));
  const chat=document.querySelector('[data-testid="chat-page"]');
- const learnButton=[...document.querySelectorAll('.chat-tree-nav')].find(node=>node.textContent==='Learn');
+ // Learn opens from the activity rail; the Chat sidebar no longer links to it.
+ assert.equal(document.querySelector('.chat-tree-nav'),null);
+ const learnButton=document.querySelector('.activity-rail-item[aria-label="Learn (Ctrl+2)"]');
  assert.ok(learnButton);
  await act(async()=>learnButton.dispatchEvent(new window.MouseEvent('click',{bubbles:true})));
  await act(async()=>{await new Promise(r=>setTimeout(r,20));});
  assert.ok(document.querySelector('[data-testid="learn-page"]'));
  assert.equal(document.querySelector('[data-testid="chat-page"]'),chat);
- assert.equal(chat.closest('.app-chat-container').hidden,true);
+ assert.equal(chat.closest('.app-shell-pane').hidden,true);
  assert.match(document.querySelector('.learn-study-title h1').textContent,/sharkdp\/hexyl/);
  assert.deepEqual([...document.querySelectorAll('.learn-wiki-tree button')].map(b=>b.textContent.replace(/Not generated/,'')),['Overview','Architecture','CLI','Glossary']);
  const src=document.querySelector('.learn-src-link');

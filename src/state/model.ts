@@ -1,12 +1,15 @@
-import type { AgentConfig, ProjectSummary } from "../domain";
-export type AppView = "chat" | "learn" | "settings";
+import type { AgentConfig, AgentDiagnostic, ProjectSummary } from "../domain";
+import type { FeatureId } from "../shell/features";
+/** Registered features plus Settings, which lives at the bottom of the activity rail. */
+export type AppView = FeatureId | "settings";
 export interface AppSlice {
   currentView: AppView; activeProjectId: string | null;
   isLoadingProjects: boolean; isLoadingAgents: boolean;
   projectError: string | null; agentError: string | null;
 }
 export interface ProjectsSlice { recent: ProjectSummary[]; current: ProjectSummary | null; }
-export interface AppState { app: AppSlice; projects: ProjectsSlice; agents: AgentConfig[]; }
+/** `agentDiagnostics`: latest `diagnose_agents` result per agent, shared so every feature's AgentPicker shows the same status. */
+export interface AppState { app: AppSlice; projects: ProjectsSlice; agents: AgentConfig[]; agentDiagnostics: AgentDiagnostic[]; }
 export type AppAction =
   | { type: "app/viewSelected"; view: AppView }
   | { type: "projects/loadStarted" }
@@ -18,8 +21,9 @@ export type AppAction =
   | { type: "agents/loadStarted" }
   | { type: "agents/loadFailed"; error: string }
   | { type: "agents/loaded"; agents: AgentConfig[] }
-  | { type: "agents/created"; agent: AgentConfig };
+  | { type: "agents/created"; agent: AgentConfig }
+  | { type: "agents/diagnosed"; diagnostics: AgentDiagnostic[] };
 export const initialAppState: AppState = {
   app: { currentView: "chat", activeProjectId: null, isLoadingProjects: false, isLoadingAgents: false, projectError: null, agentError: null },
-  projects: { recent: [], current: null }, agents: [],
+  projects: { recent: [], current: null }, agents: [], agentDiagnostics: [],
 };

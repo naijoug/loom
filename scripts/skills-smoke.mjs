@@ -9,10 +9,10 @@ export async function skillsSmoke(client, { evaluate, waitFor, click, clickText,
     await client.send('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:false});
     await evaluate(client,`localStorage.setItem('loom-app-settings',JSON.stringify({...JSON.parse(localStorage.getItem('loom-app-settings')||'{}'),locale:${JSON.stringify(locale)},themeMode:${JSON.stringify(theme)}}))`);
     await client.send('Page.navigate',{url:root+scenario});
-    await waitFor(client,'Boolean(document.querySelector(".chat-project-tree footer button"))','chat navigation');
+    await waitFor(client,'Boolean(document.querySelector(".activity-rail-item[data-view=settings]"))','chat navigation');
     // Both clicks are idempotent; repeat them until the lazily loaded view appears so a click that lands
     // before the new document or chunk is ready does not stall slow CI runners.
-    await waitFor(client,'Boolean(document.querySelector(".chat-settings"))||(document.querySelector(".chat-project-tree footer button")?.click(),false)','settings',300);
+    await waitFor(client,'Boolean(document.querySelector(".chat-settings"))||(document.querySelector(".activity-rail-item[data-view=settings]")?.click(),false)','settings',300);
     await waitFor(client,`Boolean(document.querySelector(".skills-page"))||(Array.from(document.querySelectorAll(".chat-settings nav button")).find(e=>e.textContent.trim()===${JSON.stringify(locale==='en'?'Skills':'技能')})?.click(),false)`,'Skills page',300);
     if(scenario==='ready'||scenario==='cancel')await waitFor(client,'Boolean(document.querySelector(".skills-detail header h2"))','skill detail');
   };
@@ -42,9 +42,9 @@ export async function skillsSmoke(client, { evaluate, waitFor, click, clickText,
   for(const scenario of ['empty','loading','error']){await open(scenario);if(scenario==='loading')await waitFor(client,'document.querySelector(".skills-page").getAttribute("aria-busy")==="true"','loading');if(scenario==='error')await waitFor(client,'document.querySelector(".skills-error")?.textContent.includes("Synthetic source unavailable")','source error');await screenshot(scenario,output);}
   await open('cancel');await clickText('.skills-tabs button','Translate');await waitFor(client,'document.querySelector(".skills-translation-panel select")?.value==="codex"','cancel provider');await clickText('.skills-translation-panel button','Translate');await waitFor(client,'document.querySelector(".skills-translation-panel")?.textContent.includes("Cancel")','cancel button');await clickText('.skills-translation-panel button','Cancel');await waitFor(client,'document.querySelector(".skills-translation-panel")?.textContent.includes("Cancelled")','cancelled');await evaluate(client,'document.querySelector(".skills-translation-panel").scrollIntoView({block:"start"})');await screenshot('translation-cancelled',output);
   checks.push('empty/loading/error; inflight translation cancellation');
-  await click('.chat-settings aside > button');await waitFor(client,'Boolean(document.querySelector("textarea"))','Chat restored');
+  await click('.activity-rail-item[data-view=chat]');await waitFor(client,'Boolean(document.querySelector("textarea"))','Chat restored');
   await evaluate(client,`(()=>{const input=document.querySelector('textarea');Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(input,'Draft survives Skills');input.dispatchEvent(new Event('input',{bubbles:true}));})()`);
-  await click('.chat-project-tree footer button');await waitFor(client,'Boolean(document.querySelector(".chat-settings"))','settings');await clickText('.chat-settings nav button','Skills');await waitFor(client,'Boolean(document.querySelector(".skills-page"))','Skills during draft');await click('.chat-settings aside > button');await waitFor(client,'document.querySelector("textarea")?.value==="Draft survives Skills"','draft preserved');checks.push('Chat draft survives Settings/Skills roundtrip');
+  await click('.activity-rail-item[data-view=settings]');await waitFor(client,'Boolean(document.querySelector(".chat-settings"))','settings');await clickText('.chat-settings nav button','Skills');await waitFor(client,'Boolean(document.querySelector(".skills-page"))','Skills during draft');await click('.activity-rail-item[data-view=chat]');await waitFor(client,'document.querySelector("textarea")?.value==="Draft survives Skills"','draft preserved');checks.push('Chat draft survives Settings/Skills roundtrip');
   writeFileSync(join(output,'result.json'),JSON.stringify({status:'passed',kind:'synthetic-web-only',checks},null,2));
   console.log(`Skills browser smoke passed: ${output}`);
 }

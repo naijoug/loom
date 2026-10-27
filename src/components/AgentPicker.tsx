@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, ChevronDown } from "lucide-react";
-import type { AgentConfig, AgentDiagnostic } from "../../domain";
-import { useT } from "../../i18n";
+import type { AgentConfig, AgentDiagnostic } from "../domain";
+import { useT } from "../i18n";
+import "./AgentPicker.css";
 
 export function defaultAgentId(agents: AgentConfig[], previous?: string | null): string {
   const available = agents.filter(agent => agent.enabled && agent.available && agent.adapterType !== "dummy");
@@ -24,10 +25,23 @@ export function agentHealth(agent: AgentConfig | undefined, diagnostic?: AgentDi
   if (!agent?.available || isAgentUnusable(diagnostic?.status)) return "down";
   return diagnostic ? "ok" : "unknown";
 }
-export function AgentPicker({ agents, diagnostics, value, onChange, disabled }: {
+/** Model override for one run; the UI passes only the name, the backend builds the CLI arguments. */
+export interface AgentModelInput { value: string; onChange: (model: string) => void; invalid?: boolean }
+/** True when the agent's diagnosis says it accepts a per-run model. */
+export function agentSupportsModel(diagnostics: AgentDiagnostic[], agentId: string): boolean {
+  return !!diagnostics.find(item => item.agentId === agentId)?.capabilities?.modelSelection;
+}
+/**
+ * Shared Agent menu: availability and diagnosis per Agent; unusable ones are listed with the reason but cannot be picked.
+ * `model` adds a model field, shown only for Agents with `modelSelection` (Chat leaves it out).
+ * `placement="down"` opens the menu below the button (forms); the default opens upward (composer).
+ */
+export function AgentPicker({ agents, diagnostics, value, onChange, disabled, model, placement = "up", note }: {
   agents: AgentConfig[]; diagnostics: AgentDiagnostic[]; value: string; onChange: (id: string) => void; disabled: boolean;
+  model?: AgentModelInput; placement?: "up" | "down"; /** Footer line in the menu, e.g. what switching does in this feature. */ note?: string;
 }) {
   const t = useT();
+  const showModel = !!model && agentSupportsModel(diagnostics, value);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const current = agents.find(agent => agent.id === value);
@@ -38,7 +52,7 @@ export function AgentPicker({ agents, diagnostics, value, onChange, disabled }: 
     ref.current?.querySelector<HTMLButtonElement>('[role="menuitemradio"]:not(:disabled)')?.focus();
     return () => document.removeEventListener("mousedown", close);
   }, [open]);
-  return <div className="chat-agent-picker" ref={ref} onKeyDown={event => {
+  return <><div className="chat-agent-picker" ref={ref} onKeyDown={event => {
     if (event.key === "Escape") { event.stopPropagation(); setOpen(false); ref.current?.querySelector<HTMLButtonElement>("button")?.focus(); }
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       const buttons = Array.from(ref.current?.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]:not(:disabled)') ?? []);
@@ -53,7 +67,7 @@ export function AgentPicker({ agents, diagnostics, value, onChange, disabled }: 
       <span className="chat-agent-name">{current?.name ?? t("selectAgent")}</span>
       <ChevronDown size={13} aria-hidden="true" />
     </button>
-    {open && <div className="chat-agent-menu" role="menu" aria-label={t("agents")}>
+    {open && <div className="chat-agent-menu" role="menu" aria-label={t("agents")} data-placement={placement}>
       {agents.filter(agent => agent.enabled && agent.adapterType !== "dummy").map(agent => {
         const diagnostic = diagnostics.find(item => item.agentId === agent.id);
         const caps = diagnostic?.capabilities;
@@ -69,7 +83,10 @@ export function AgentPicker({ agents, diagnostics, value, onChange, disabled }: 
           </span>
         </button>;
       })}
-      <p className="chat-agent-note">{t("agentMenuNote")}</p>
+      {note && <p className="chat-agent-note">{note}</p>}
     </div>}
-  </div>;
+  </div>
+  {showModel && <input className="agent-model-input" value={model.value} placeholder={t("agentModelPlaceholder")} aria-label={t("agentModel")} spellCheck={false}
+    aria-invalid={model.invalid || undefined} disabled={disabled} onChange={event => model.onChange(event.target.value)} />}
+  </>;
 }

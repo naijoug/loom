@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { loadAppSettings, patchAppSettings } from "../../../hooks/useSettingsBridge";
+import { loadAppSettings, patchAppSettings } from "./useSettingsBridge";
 
 // Shared by Chat and Settings, which stay mounted together; kept free of OpenUI imports.
 let enabled = false;

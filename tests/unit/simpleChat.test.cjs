@@ -7,7 +7,7 @@ const React=require('react'),{act}=React,{createRoot}=require('react-dom/client'
 const {ChatComposer}=require('../../.tmp/test-build/src/features/chat/ChatComposer.js');
 const {ChatTranscript}=require('../../.tmp/test-build/src/features/chat/ChatTranscript.js');
 const {ToolCallCard}=require('../../.tmp/test-build/src/features/chat/ToolCallCard.js');
-const {defaultAgentId}=require('../../.tmp/test-build/src/features/chat/AgentPicker.js');
+const {defaultAgentId}=require('../../.tmp/test-build/src/components/AgentPicker.js');
 const {parseSlashCommand,filterSlashCommands}=require('../../.tmp/test-build/src/features/chat/slashCommands.js');
 const {normalizePermissionMode}=require('../../.tmp/test-build/src/features/chat/permissionMode.js');
 const {mergeChatPart}=require('../../.tmp/test-build/src/features/chat/state/ChatProjection.js');

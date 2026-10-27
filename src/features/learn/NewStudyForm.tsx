@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from "react";
 import { GraduationCap, LoaderCircle } from "lucide-react";
 import { LEARN_ADAPTERS, type CreateStudyInput, type LearnApi, type LearnDepth, type LearnLanguage } from "../../api/learn";
-import type { AgentConfig } from "../../domain";
+import type { AgentConfig, AgentDiagnostic } from "../../domain";
+import { AgentPicker, agentSupportsModel, isAgentUnusable } from "../../components/AgentPicker";
 import { useLocale, useT } from "../../i18n";
 import { ErrorText } from "../../components/common/ErrorText";
 
@@ -11,7 +12,7 @@ export function learnAgents(agents: AgentConfig[]) {
   return agents.filter(agent => agent.enabled && LEARN_ADAPTERS.includes(agent.adapterType));
 }
 
-export function NewStudyForm({ api, agents, onCreated }: { api: LearnApi; agents: AgentConfig[]; onCreated: (studyId: string) => void }) {
+export function NewStudyForm({ api, agents, diagnostics, onCreated }: { api: LearnApi; agents: AgentConfig[]; diagnostics: AgentDiagnostic[]; onCreated: (studyId: string) => void }) {
   const t = useT();
   const { locale } = useLocale();
   const eligible = learnAgents(agents);
@@ -27,12 +28,15 @@ export function NewStudyForm({ api, agents, onCreated }: { api: LearnApi; agents
   const urlInvalid = trimmed !== "" && !GITHUB_URL.test(trimmed);
   const modelInvalid = model.trim() !== "" && (/\s/.test(model.trim()) || model.trim().startsWith("-") || model.trim().length > 128);
   const selected = eligible.find(agent => agent.id === agentId);
-  const canSubmit = !busy && trimmed !== "" && !urlInvalid && !modelInvalid && !!selected?.available;
+  const usable = !!selected?.available && !isAgentUnusable(diagnostics.find(item => item.agentId === agentId)?.status);
+  // The model field shows only for agents that accept one; a value typed for another agent is not sent.
+  const modelShown = agentSupportsModel(diagnostics, agentId);
+  const canSubmit = !busy && trimmed !== "" && !urlInvalid && !(modelShown && modelInvalid) && usable;
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (!canSubmit) return;
     setBusy(true); setError("");
-    const input: CreateStudyInput = { url: trimmed, gitRef: gitRef.trim() || undefined, agentId, model: model.trim() || undefined, language, depth };
+    const input: CreateStudyInput = { url: trimmed, gitRef: gitRef.trim() || undefined, agentId, model: modelShown ? model.trim() || undefined : undefined, language, depth };
     try { onCreated((await api.create(input)).study.studyId); }
     catch (reason) { setError(String(reason)); }
     finally { setBusy(false); }
@@ -45,16 +49,13 @@ export function NewStudyForm({ api, agents, onCreated }: { api: LearnApi; agents
       <input type="url" required autoFocus placeholder="https://github.com/owner/repo" value={url} aria-invalid={urlInvalid || undefined} onChange={event => setUrl(event.target.value)} />
       {urlInvalid && <small className="learn-error">{t("learnRepoUrlInvalid")}</small>}
     </label>
-    <div className="learn-new-row">
-      <label>{t("learnAgent")}
-        <select value={agentId} onChange={event => setAgentId(event.target.value)}>
-          {!eligible.length && <option value="">{t("learnNoAgent")}</option>}
-          {eligible.map(agent => <option key={agent.id} value={agent.id} disabled={!agent.available}>{agent.name}{agent.available ? "" : ` (${t("unavailable")})`}</option>)}
-        </select>
-      </label>
-      <label>{t("learnModel")}
-        <input value={model} placeholder={t("learnModelDefault")} spellCheck={false} aria-invalid={modelInvalid || undefined} onChange={event => setModel(event.target.value)} />
-      </label>
+    <div className="learn-new-agent" role="group" aria-label={t("learnAgent")}>
+      <span>{t("learnAgent")}</span>
+      <div className="learn-new-agent-controls">
+        <AgentPicker agents={eligible} diagnostics={diagnostics} value={agentId} onChange={setAgentId} disabled={busy} placement="down"
+          model={{ value: model, onChange: setModel, invalid: modelInvalid }} />
+      </div>
+      {!eligible.length && <small className="learn-note">{t("learnNoAgent")}</small>}
     </div>
     <div className="learn-new-row">
       <label>{t("learnLanguage")}
@@ -71,7 +72,7 @@ export function NewStudyForm({ api, agents, onCreated }: { api: LearnApi; agents
         <input value={gitRef} placeholder={t("learnRefDefault")} spellCheck={false} onChange={event => setGitRef(event.target.value)} />
       </label>
     </div>
-    <p className="learn-note">{t("learnModelHint")}</p>
+    {modelShown && <p className="learn-note">{t("learnModelHint")}</p>}
     {error && <ErrorText text={error} alert className="learn-error" />}
     <button type="submit" className="chat-primary-button" disabled={!canSubmit}>{busy && <LoaderCircle size={14} className="chat-spin" aria-hidden="true" />}{t("learnStart")}</button>
   </form>;

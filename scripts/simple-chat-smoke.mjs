@@ -9,6 +9,7 @@ const baseUrl = "http://127.0.0.1:1420/?fixture=simple-chat";
 const port = 9331;
 const output = join(process.cwd(), "designs/exports/simple-chat");
 const cardsOutput = join(process.cwd(), "designs/exports/openui-inline-cards");
+const railOutput = join(process.cwd(), "designs/exports/activity-rail");
 const userDataDir = join(tmpdir(), `loom-chat-smoke-${process.pid}`);
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -144,6 +145,60 @@ async function waitFor(client, expression, label, attempts = 200) {
 }
 
 
+// Activity rail matrix (designs/activity-rail/README.md): zh/en × dark/light at 700px. The rail stays 52px wide,
+// marks the current feature, Cmd/Ctrl+number switches features, and switching keeps the open Chat session.
+async function railMatrixSmoke(client, { screenshot }) {
+  mkdirSync(railOutput, { recursive: true });
+  const checks = [];
+  const railState = `({ width: Math.round(document.querySelector('.activity-rail')?.getBoundingClientRect().width ?? 0), current: document.querySelector('.activity-rail-item[aria-current=page]')?.getAttribute('aria-label') ?? '', labels: Array.from(document.querySelectorAll('.activity-rail-item')).map(item => item.getAttribute('aria-label')) })`;
+  const pressShortcut = key => evaluate(client, `(() => { const mac = /Mac/.test(navigator.userAgent); dispatchEvent(new KeyboardEvent('keydown', { key: ${JSON.stringify(key)}, metaKey: mac, ctrlKey: !mac, bubbles: true })); })()`);
+  await client.send('Emulation.setDeviceMetricsOverride', { width: 700, height: 820, deviceScaleFactor: 1, mobile: false });
+  for (const locale of ['en', 'zh-CN']) {
+    for (const theme of ['light', 'dark']) {
+      const name = `${locale === 'en' ? 'en' : 'zh'}-${theme}`;
+      await evaluate(client, `localStorage.setItem('loom-app-settings', JSON.stringify({ ...JSON.parse(localStorage.getItem('loom-app-settings') || '{}'), themeMode: ${JSON.stringify(theme)}, locale: ${JSON.stringify(locale)} }))`);
+      await client.send('Page.navigate', { url: baseUrl });
+      await waitFor(client, `document.documentElement.lang === ${JSON.stringify(locale)} && document.documentElement.dataset.theme === ${JSON.stringify(theme)} && Boolean(document.querySelector('.activity-rail'))`, `${name} appearance`);
+      const chat = await evaluate(client, railState);
+      const [chatLabel, learnLabel, settingsLabel] = chat.labels;
+      if (chat.width !== 52 || chat.labels.length !== 3 || chat.current !== chatLabel) throw Error(`Rail on Chat (${name}): ${JSON.stringify(chat)}`);
+      // Open a session, then leave and come back: the same session must still be open.
+      await waitFor(client, 'Boolean(document.querySelector("[aria-label=\'Expand sidebar\'], [aria-label=\'展开侧栏\']"))', 'collapsed narrow sidebar');
+      await screenshot(`chat-${name}`, railOutput);
+      await pressShortcut('2');
+      await waitFor(client, 'Boolean(document.querySelector("[data-testid=learn-page]")) && !document.querySelector("[data-testid=learn-page]").closest("[hidden]")', `${name} Learn via shortcut`);
+      if ((await evaluate(client, railState)).current !== learnLabel) throw Error(`Rail did not mark Learn (${name})`);
+      await screenshot(`learn-${name}`, railOutput);
+      await pressShortcut(',');
+      await waitFor(client, 'Boolean(document.querySelector(".chat-settings"))', `${name} Settings via shortcut`);
+      if ((await evaluate(client, railState)).current !== settingsLabel) throw Error(`Rail did not mark Settings (${name})`);
+      await screenshot(`settings-${name}`, railOutput);
+      await evaluate(client, `document.querySelector('.activity-rail-item[data-view=chat]').click()`);
+      await waitFor(client, '!document.querySelector(".chat-settings") && !document.querySelector("[data-testid=chat-page]").closest("[hidden]")', `${name} back to Chat`);
+      checks.push(`${name}: rail 52px, current item marked, Cmd/Ctrl+2 and Cmd/Ctrl+, switch, no horizontal overflow`);
+    }
+  }
+  // S6: a session opened before switching is still open after Learn and Settings.
+  // The sidebar collapsed at 700px stays collapsed when the window widens, so reload at the wide size.
+  await client.send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 820, deviceScaleFactor: 1, mobile: false });
+  await client.send('Page.navigate', { url: baseUrl });
+  await waitFor(client, 'Boolean(document.querySelector(".chat-project-row"))', 'wide sidebar');
+  const refactorRow = `Array.from(document.querySelectorAll('.chat-tree-session')).find(e => e.textContent.includes('Refactor the chat entry'))`;
+  await evaluate(client, `${refactorRow} || Array.from(document.querySelectorAll('.chat-project-row > button[aria-expanded=false]')).find(e => e.textContent === 'loom')?.click()`);
+  await waitFor(client, `Boolean(${refactorRow})`, 'loom sessions');
+  await evaluate(client, `${refactorRow}.click()`);
+  await waitFor(client, 'document.querySelector(".chat-session-header h1")?.textContent.includes("Refactor")', 'open session');
+  await evaluate(client, `(() => { const input = document.querySelector('textarea'); Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(input, 'Unsent rail draft'); input.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+  await pressShortcut('2');
+  await waitFor(client, '!document.querySelector("[data-testid=learn-page]").closest("[hidden]")', 'Learn');
+  await pressShortcut('1');
+  await waitFor(client, '!document.querySelector("[data-testid=chat-page]").closest("[hidden]")', 'Chat');
+  if (!await evaluate(client, 'document.querySelector(".chat-session-header h1")?.textContent.includes("Refactor") && document.querySelector("textarea").value === "Unsent rail draft"')) throw Error('Switching features lost the open session or its draft');
+  await screenshot('chat-wide-after-switching', railOutput);
+  checks.push('S6: open session and unsent draft survive Learn and back');
+  writeFileSync(join(railOutput, 'result.json'), JSON.stringify({ status: 'passed', kind: 'synthetic-web-only', checks }, null, 2));
+}
+
 // OpenUI inline cards (experiment): opt in through Settings, check rendering, fallback and the
 // insert-only shell action, and fail on any request that leaves the local dev server.
 async function inlineCardsSmoke(client, { click, clickText, screenshot }) {
@@ -167,14 +222,14 @@ async function inlineCardsSmoke(client, { click, clickText, screenshot }) {
   };
   await openCardSession();
   if (await evaluate(client, 'document.querySelectorAll(".chat-inline-card").length')) throw Error('Inline cards rendered while the experiment is off');
-  await click('.chat-project-tree footer button');
+  await click('.activity-rail-item[data-view=settings]');
   await waitFor(client, 'Boolean(document.querySelector(".chat-settings"))', 'settings');
   await clickText('.chat-settings nav button', 'Experiments');
   await waitFor(client, 'Boolean(document.querySelector(".settings-toggle-row [role=switch]"))', 'experiments switch');
   await screenshot('settings-experiments', cardsOutput);
   await click('.settings-toggle-row [role=switch]');
   await waitFor(client, 'document.querySelector(".settings-toggle-row [role=switch]").checked', 'experiment enabled');
-  await click('.chat-settings aside > button');
+  await click('.activity-rail-item[data-view=chat]');
   await openCardSession();
   await waitFor(client, 'Boolean(document.querySelector(".chat-card-stack")) && Boolean(document.querySelector(".chat-inline-card-note"))', 'rendered and fallback cards', 300);
   await screenshot('cards-light', cardsOutput);
@@ -242,7 +297,7 @@ async function main() {
     await waitFor(client, 'document.querySelectorAll(".chat-tool-card").length === 3', 'tool cards');
     await click('.chat-tool-card[data-kind="edit"] > button');
     await screenshot('chat-light');
-    await click('.chat-project-tree footer button');
+    await click('.activity-rail-item[data-view=settings]');
     await waitFor(client, 'Boolean(document.querySelector(".chat-settings"))', 'settings');
     await clickText('.chat-settings nav button', 'Appearance');
     await clickText('.chat-settings [role="radio"]', 'Dark');
@@ -251,7 +306,7 @@ async function main() {
     await clickText('.chat-settings [role="radio"]', '简体中文');
     await waitFor(client, 'document.documentElement.lang === "zh-CN"', 'Chinese language');
     await screenshot('settings-chinese');
-    await click('.chat-settings aside > button');
+    await click('.activity-rail-item[data-view=chat]');
     await waitFor(client, '!document.querySelector(".chat-settings")', 'back to active chat');
     if (!await evaluate(client, 'document.querySelector(".chat-session-header h1")?.textContent.includes("Refactor")')) throw Error('Settings lost active chat');
     await screenshot('chat-dark');
@@ -274,6 +329,7 @@ async function main() {
     await waitFor(client, '!document.querySelector(".chat-project-tree")', 'collapsed narrow sidebar');
     await screenshot('new-chat-narrow');
     writeFileSync(join(output, 'result.json'), JSON.stringify({ status: 'passed', kind: 'synthetic-web-only', checks: ['new chat sends with selected Agent and mode', 'project groups', 'project expansion persists after reload', 'composer mode picker', 'tool cards and diff', 'light/dark', 'language persists after reload', 'Settings preserves selected chat', '700px sidebar collapse', 'no horizontal overflow'] }, null, 2));
+    await railMatrixSmoke(client, { screenshot });
     await inlineCardsSmoke(client, { click, clickText, screenshot });
     await skillsSmoke(client, { evaluate, waitFor, click, clickText, screenshot });
     await learnSmoke(client, { evaluate, waitFor, click, clickText, screenshot });
