@@ -136,6 +136,7 @@ async function waitFor(client, expression, label, attempts = 200) {
     href: window.location.href,
     viewport: innerWidth,
     narrow: matchMedia('(max-width: 759px)').matches,
+    events: window.__narrowEvents ?? null,
     text: document.body?.innerText?.slice(0, 500) ?? '',
   })`);
   throw new Error(`Timed out waiting for ${label}: ${JSON.stringify(debug)}${lastError ? ` (last error: ${lastError.message})` : ''}`);
@@ -189,6 +190,8 @@ async function inlineCardsSmoke(client, { click, clickText, screenshot }) {
   await openCardSession();
   await waitFor(client, 'Boolean(document.querySelector(".chat-card-stack")) && document.querySelector(".chat-inline-card-note")?.textContent.includes("源码")', 'Chinese card fallback');
   await screenshot('cards-dark-zh', cardsOutput);
+  // Count the events the sidebar relies on so a timeout shows whether the narrow change ever reached the page.
+  await evaluate(client, `(() => { window.__narrowEvents = { change: 0, resize: 0 }; matchMedia('(max-width: 759px)').addEventListener('change', () => window.__narrowEvents.change++); addEventListener('resize', () => window.__narrowEvents.resize++); })()`);
   await client.send('Emulation.setDeviceMetricsOverride', { width: 700, height: 820, deviceScaleFactor: 1, mobile: false });
   await waitFor(client, '!document.querySelector(".chat-project-tree")', 'collapsed narrow sidebar');
   await screenshot('cards-narrow', cardsOutput);
@@ -199,7 +202,7 @@ async function inlineCardsSmoke(client, { click, clickText, screenshot }) {
 
 async function main() {
   mkdirSync(output, { recursive: true });
-  const child = spawn(chrome, ['--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check', `--remote-debugging-port=${port}`, `--user-data-dir=${userDataDir}`, 'about:blank'], { stdio: 'ignore' });
+  const child = spawn(chrome, ['--headless=new', '--disable-gpu', '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding', '--no-first-run', '--no-default-browser-check', `--remote-debugging-port=${port}`, `--user-data-dir=${userDataDir}`, 'about:blank'], { stdio: 'ignore' });
   let client;
   try {
     const pages = await waitForJson(`http://127.0.0.1:${port}/json/list`);
