@@ -8,14 +8,16 @@ Task/Board/Planning 的 UI、命令及独占模块已删除。`crates/`、`packa
 
 Skills 模块自 2026-10-21 开始按 [迁移计划](plans/2026-10-21/06:12-skills-module-migration.md) 实施。用户已明确入口位于 Settings 侧边栏，Skills 不新增顶层视图。当前已接通本地/Git/GitHub API 来源、固定快照、操作记录，以及 copy/symlink 安装、显式更新/卸载、共享指令/wrapper、只读诊断、事务恢复和无窗口 CLI 核心；管理功能继续由 Loom 维护；2026-10-25 用户取消旧数据迁移并授权源 Manager 代码退役，真实账号/桌面隔离验证限制单独保留。契约与状态见 [Skills 契约](architecture/skills-contracts.md)，不挂载冻结 Workbench。
 
-Learn 模块于 2026-10-26 按用户要求新增为顶层视图（入口在 Chat 侧边栏），输入公开 GitHub 仓库与 Agent/模型，生成架构、分级模块 Wiki 和可定位的源码引用。数据只写应用数据目录，Agent 以只读权限在 checkout 中运行。契约见 [Learn 契约](architecture/learn-contracts.md)。
+Learn 模块于 2026-10-26 按用户要求新增为顶层视图（最初入口在 Chat 侧边栏，2026-10-27 起为左侧功能栏），输入公开 GitHub 仓库与 Agent/模型，生成架构、分级模块 Wiki 和可定位的源码引用。数据只写应用数据目录，Agent 以只读权限在 checkout 中运行。契约见 [Learn 契约](architecture/learn-contracts.md)。
+
+Research 模块于 2026-10-27 按 [Agent 调用层与左侧功能栏计划](plans/2026-10-26/22:42-agent-layer-and-activity-rail.md) P6 新增为顶层视图：对可选项目提问，单个 Agent 只读调研并输出带引用的报告，可追问、停止和重试。数据只写应用数据目录。契约见 [Research 契约](architecture/research-contracts.md)。
 
 ## 生产模块
 
 | 模块 | 职责 |
 |---|---|
-| `src/App.tsx` / `src/shell/` | 外壳：`features.ts` 功能注册表（Chat、Learn）、`ActivityRail` 左侧功能栏（底部 Settings，⌘1…4 / ⌘, 切换）、`AppShell` 挂载各功能窗格；Chat 常驻挂载，其它功能首次访问后保持挂载，Settings 仅打开时挂载；切换不打断草稿与活动会话 |
-| `src/components/` / `src/hooks/` / `src/api/` | 跨功能共享：`Markdown`（安全渲染，代码块可由调用方接管）、`AgentPicker`（Agent 菜单与按诊断能力显示的模型输入）、`externalLink`、`common/ErrorText`、`app-update/`；`hooks/inlineCardsSetting`；`api/agents.ts` Agent 命令封装。共享层不引用 `features/`，`features/<x>` 之间不互相引用（`settings→skills` 例外），由 `scripts/check-layers.mjs` 检查 |
+| `src/App.tsx` / `src/shell/` | 外壳：`features.ts` 功能注册表（Chat、Learn、Research）、`ActivityRail` 左侧功能栏（底部 Settings，⌘1…4 / ⌘, 切换）、`AppShell` 挂载各功能窗格；Chat 常驻挂载，其它功能首次访问后保持挂载，Settings 仅打开时挂载；切换不打断草稿与活动会话 |
+| `src/components/` / `src/hooks/` / `src/api/` | 跨功能共享：`Markdown`（安全渲染，代码块可由调用方接管；`loom-src:` / `loom-wiki:` 仅在调用方传入链接处理器时成为操作）、`SourceViewer`（目录浏览、行号、范围高亮，经调用方给出的 `SourceReader` 读取）、`AgentPicker`（Agent 菜单与按诊断能力显示的模型输入）、`externalLink`、`common/ErrorText`、`app-update/`；`hooks/inlineCardsSetting`；`api/agents.ts` Agent 命令封装，`api/sourceFiles.ts` 源码引用类型与解析。共享层不引用 `features/`，`features/<x>` 之间不互相引用（`settings→skills` 例外），由 `scripts/check-layers.mjs` 检查 |
 | `src/styles/workspace.css` | 各功能共用的列表侧栏、主列、按钮与输入基础样式 |
 | `src/features/chat/ProjectTree.tsx` | 最近项目、按需展开会话、搜索、归档过滤、折叠状态；底部只保留归档切换 |
 | `ChatPage` / `useChatBridge` / `ChatProjection` | 会话选择、异步归属、序号补流与快照协调 |
@@ -24,10 +26,10 @@ Learn 模块于 2026-10-26 按用户要求新增为顶层视图（入口在 Chat
 | `src/i18n/` | 英文源字典、受类型约束的简体中文、locale 持久化 |
 | `src/features/settings/SettingsPage.tsx` / `src/features/skills/SkillsPanel.tsx` | 设置侧边栏 Skills 板块，来源/搜索/详情/文件、安装到工具、已安装清单和恢复状态；由功能栏底部进入，切换保留 Chat 挂载 |
 | `skills/{catalog,repository,snapshots,operations,commands}.rs` | 有界扫描、来源登记、不可变快照、受控 Git 子进程与 typed IPC；来源移除只取消登记 |
-| `agent/{registry,capabilities,diagnostics}.rs` | Agent 调用层：PATH 优先、通用安装目录、命令覆盖、限时版本探测、带缓存的启动前检查（Chat 发送、Learn 开始前）与能力声明；功能模块只经 `agent/mod.rs` 的公开接口调用 |
+| `agent/{registry,capabilities,diagnostics}.rs` | Agent 调用层：PATH 优先、通用安装目录、命令覆盖、限时版本探测、带缓存的启动前检查（Chat 发送、Learn / Research 开始前）与能力声明；功能模块只经 `agent/mod.rs` 的公开接口调用 |
 | `agent/error.rs` | `AgentError`：面向用户的错误统一为“摘要 + 空行 + 原始详情”，前端 `components/common/ErrorText` 解析展示 |
 | `agent/invocation.rs` / `chat_context.rs` | CLI 参数、权限、原生续聊和有界历史重放 |
-| `agent/runner.rs` / `agent/event.rs` | 通用 runner `agent::run`：启动并登记进程（`ProcessOwner` 由调用方给出）、stdin、超时/取消/输出限额、进程组清理，输出 `AgentEvent`（文本/工具片段/结束）与 `AgentOutcome`；Chat、Learn 都经它启动 Agent CLI |
+| `agent/runner.rs` / `agent/event.rs` | 通用 runner `agent::run`：启动并登记进程（`ProcessOwner` 由调用方给出）、stdin、超时/取消/输出限额、进程组清理，输出 `AgentEvent`（文本/工具片段/结束）与 `AgentOutcome`；Chat、Learn、Research 都经它启动 Agent CLI |
 | `agent/stream.rs` / `agent/tools.rs` | 各 CLI 流式 JSON 的通用解析、工具片段生成与按 `callId` 合并；不破坏 JSON 信封的日志脱敏 |
 | `chat/{repository,journal,service}.rs` | v2 journal、幂等接收、停止与恢复 |
 | `chat/runtime.rs` / `chat/file_changes.rs` | Chat 薄封装：Chat 进程所有者、可写 Codex 的有界文件差异（作为 runner 的行补充回调），把 `AgentEvent` 映射为 `ChatStreamEvent` |
@@ -35,7 +37,10 @@ Learn 模块于 2026-10-26 按用户要求新增为顶层视图（入口在 Chat
 | `projects.rs` / `storage.rs` / `settings.rs` | 项目登记、原子写入、设置与旧数据兼容 |
 | `diagnostics.rs` / `chat/export.rs` / `app_update.rs` | 有界诊断包、会话导出、应用内更新与草稿恢复 |
 | `src/features/learn/` | Learn 研究列表、新建表单、阶段/日志、Wiki 目录与页面、架构图、源码查看器；入口为左侧功能栏 Learn；新建表单使用共享 `AgentPicker` |
-| `learn/{store,fetch,inventory,source,generate,jobs,commands}.rs` / `git_fetch.rs` | 研究存储与作业登记、加固浅克隆、静态清单、受限源码读取、提示词与输出/引用校验、只读 Agent 作业、typed IPC；Git 加固配置与 Skills 共享 |
+| `learn/{store,fetch,inventory,generate,jobs,commands}.rs` / `git_fetch.rs` | 研究存储与作业登记、加固浅克隆、静态清单、提示词与输出/引用校验、只读 Agent 作业、typed IPC；Git 加固配置与 Skills 共享 |
+| `source_files.rs` | Learn 与 Research 共用：`loom-src:` 引用解析与校验、受限源码读取与目录列表（拒绝逃逸与 symlink） |
+| `src/features/research/` | Research 列表、新建表单（共享 `AgentPicker`）、问答与报告、追问、停止 / 重试、作业日志；入口为左侧功能栏 Research |
+| `research/{store,prompt,jobs,commands}.rs` | 研究存储与作业登记、报告 / 追问提示词与历史回放、只读 Agent 作业（原生续聊优先，失败回放；运行前后比对项目 git 状态）、typed IPC |
 | `contracts/tauri-contract.json` | Rust/TypeScript 共同验证的命令、事件和模型样本 |
 
 ## 执行与存储

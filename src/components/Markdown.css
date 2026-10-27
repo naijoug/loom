@@ -26,3 +26,9 @@
 .chat-markdown :is(th, td) { padding: 6px 12px; border: 1px solid var(--chat-border); text-align: left; vertical-align: top; }
 .chat-markdown th { background: var(--chat-raised); color: var(--chat-text); font-weight: 600; white-space: nowrap; }
 .chat-markdown tbody tr:nth-child(even) { background: color-mix(in srgb, var(--chat-raised) 45%, transparent); }
+
+/* `loom-src:` / `loom-wiki:` links (Learn, Research); an unverified source reference is marked. */
+.loom-src-link { display: inline !important; padding: 0 2px !important; border-radius: 4px !important; color: var(--chat-accent) !important; font: inherit !important; text-decoration: underline dotted; text-underline-offset: 3px; }
+.loom-src-link:not([data-status="valid"]) { color: var(--chat-danger) !important; text-decoration-style: wavy; }
+.loom-src-link:not([data-status="valid"])::after { content: " ⚠"; font-size: 11px; }
+.loom-wiki-link { color: var(--chat-accent); }

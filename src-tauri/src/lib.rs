@@ -13,9 +13,11 @@ mod migrations;
 pub mod models;
 pub mod process_supervisor;
 mod projects;
+mod research;
 mod session_capture;
 mod settings;
 pub mod skills;
+mod source_files;
 mod storage;
 
 use serde::Serialize;
@@ -120,6 +122,17 @@ pub fn run() {
             learn::commands::learn_list_tree,
             learn::commands::learn_read_source,
             learn::commands::learn_delete_study,
+            research::commands::research_list,
+            research::commands::research_create,
+            research::commands::research_get,
+            research::commands::research_read_turn,
+            research::commands::research_ask,
+            research::commands::research_retry,
+            research::commands::research_cancel,
+            research::commands::research_read_job_logs,
+            research::commands::research_list_tree,
+            research::commands::research_read_source,
+            research::commands::research_delete,
         ]);
     #[cfg(target_os = "macos")]
     let builder = builder

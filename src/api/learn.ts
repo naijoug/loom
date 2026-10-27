@@ -1,5 +1,7 @@
 import { TAURI_COMMANDS, TAURI_EVENTS } from "./contract";
 import { invokeCommand, listenToEvent } from "./tauriClient";
+import type { RefStats, SourceRef, SourceText, TreeEntry } from "./sourceFiles";
+export { parseSourceTarget } from "./sourceFiles";
 
 export type LearnStageStatus = "pending" | "running" | "done" | "failed" | "cancelled" | "interrupted";
 export type LearnLanguage = "en" | "zh-CN";
@@ -9,7 +11,7 @@ export interface LearnStageState {
   stage: string; status: LearnStageStatus; jobId?: string;
   startedAtMs?: number; finishedAtMs?: number; error?: string; warnings: string[];
 }
-export interface LearnRefStats { valid: number; invalid: number }
+export type LearnRefStats = RefStats;
 export interface LearnPageInfo {
   pageId: string; title: string; kind: "overview" | "architecture" | "module" | "glossary" | string;
   moduleId?: string; level?: number; ready: boolean; refs?: LearnRefStats;
@@ -40,10 +42,10 @@ export interface LearnArchitecture {
   learningPath: { level: number; title: string; goal: string; moduleIds: string[] }[];
 }
 export interface LearnStudyDetail { study: LearnStudy; architecture?: LearnArchitecture }
-export interface LearnSourceRef { target: string; path: string; startLine: number; endLine: number; status: "valid" | "missing" | "range" | "outside" | string }
+export type LearnSourceRef = SourceRef;
 export interface LearnPageContent { pageId: string; markdown: string; refs: LearnSourceRef[] }
-export interface LearnSourceText { path: string; text: string; firstLine: number; totalLines: number; truncated: boolean; language: string }
-export interface LearnTreeEntry { name: string; path: string; kind: "dir" | "file" | "symlink" | string; size: number }
+export type LearnSourceText = SourceText;
+export type LearnTreeEntry = TreeEntry;
 export interface LearnJobLogChunk { text: string; nextOffset: number; hasMore: boolean }
 export interface LearnEvent { studyId: string; jobId?: string; stage: string; status: LearnStageStatus | "deleted" | string; error?: string }
 export interface CreateStudyInput { url: string; gitRef?: string; agentId: string; model?: string; language: LearnLanguage; depth: LearnDepth }
@@ -80,13 +82,3 @@ export const tauriLearnApi: LearnApi = {
 
 /** Built-in adapters accept `--model`; custom agents are not offered for Learn. */
 export const LEARN_ADAPTERS = ["claude_code_cli", "codex_cli", "opencode_cli", "grok_cli"];
-
-/** `loom-src:path#L3-L9` → path and range; mirrors `generate::parse_target`. */
-export function parseSourceTarget(target: string): { path: string; startLine?: number; endLine?: number } {
-  const [rawPath, anchor = ""] = target.split("#", 2);
-  const path = decodeURIComponent(rawPath).replace(/^\.\//, "");
-  const match = /^L(\d+)(?:-L?(\d+))?$/.exec(anchor);
-  if (!match) return { path };
-  const startLine = Number(match[1]);
-  return { path, startLine, endLine: match[2] ? Math.max(startLine, Number(match[2])) : startLine };
-}

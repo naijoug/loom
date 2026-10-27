@@ -47,10 +47,10 @@ test('Chat markdown drops loom links while Learn pages turn them into source and
  const links={onSource:t=>opened.push(t),onWiki:t=>wiki.push(t),sourceStatus:t=>t.startsWith('gone')?'missing':'valid'};
  const root=createRoot(document.getElementById('root'));
  act(()=>root.render(React.createElement(Markdown,{text,links})));
- const buttons=[...document.querySelectorAll('.learn-src-link')];
+ const buttons=[...document.querySelectorAll('.loom-src-link')];
  assert.deepEqual(buttons.map(b=>b.dataset.status),['valid','missing']);
  act(()=>buttons[0].dispatchEvent(new window.MouseEvent('click',{bubbles:true})));
- act(()=>document.querySelector('.learn-wiki-link').dispatchEvent(new window.MouseEvent('click',{bubbles:true,cancelable:true})));
+ act(()=>document.querySelector('.loom-wiki-link').dispatchEvent(new window.MouseEvent('click',{bubbles:true,cancelable:true})));
  assert.deepEqual(opened,['src/main.rs#L1-L3']);
  assert.deepEqual(wiki,['module/core']);
  act(()=>root.unmount());dom.window.close();
@@ -98,12 +98,12 @@ test('Learn view keeps Chat mounted, opens wiki pages and jumps to cited source 
  assert.equal(chat.closest('.app-shell-pane').hidden,true);
  assert.match(document.querySelector('.learn-study-title h1').textContent,/sharkdp\/hexyl/);
  assert.deepEqual([...document.querySelectorAll('.learn-wiki-tree button')].map(b=>b.textContent.replace(/Not generated/,'')),['Overview','Architecture','CLI','Glossary']);
- const src=document.querySelector('.learn-src-link');
+ const src=document.querySelector('.loom-src-link');
  assert.equal(src.dataset.status,'valid');
  await act(async()=>src.dispatchEvent(new window.MouseEvent('click',{bubbles:true})));
  await act(async()=>{await new Promise(r=>setTimeout(r,10));});
  assert.deepEqual(calls.find(c=>c.command==='learn_read_source').args,{studyId:study.studyId,path:'src/main.rs',startLine:2,endLine:3});
- assert.deepEqual([...document.querySelectorAll('.learn-code-line[data-marked]')].map(l=>l.querySelector('.learn-code-number').textContent),['2','3']);
+ assert.deepEqual([...document.querySelectorAll('.source-code-line[data-marked]')].map(l=>l.querySelector('.source-code-number').textContent),['2','3']);
  const archButton=[...document.querySelectorAll('.learn-wiki-tree button')].find(b=>b.textContent==='Architecture');
  await act(async()=>archButton.dispatchEvent(new window.MouseEvent('click',{bubbles:true})));
  await act(async()=>{await new Promise(r=>setTimeout(r,10));});

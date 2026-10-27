@@ -7,7 +7,8 @@ import { Markdown, type MarkdownLinks } from "../../components/Markdown";
 import { openExternalLink } from "../../components/externalLink";
 import { ArchitectureDiagram } from "./ArchitectureDiagram";
 import { ErrorText } from "../../components/common/ErrorText";
-import { SourceViewer, type SourceTarget } from "./SourceViewer";
+import { SourceViewer } from "../../components/SourceViewer";
+import type { SourceReader, SourceTarget } from "../../api/sourceFiles";
 
 const PIPELINE = ["fetch", "inventory", "architecture"] as const;
 const STAGE_LABEL: Record<string, MessageKey> = { fetch: "learnStageFetch", inventory: "learnStageInventory", architecture: "learnStageArchitecture", glossary: "learnStageGlossary" };
@@ -41,6 +42,10 @@ export function StudyView({ api, studyId, revision, onDeleted }: { api: LearnApi
     return () => { disposed = true; };
   }, [api, studyId, pageId, ready, revision]);
   const openSource = useCallback((target: SourceTarget) => { setSource(target); setSourceOpen(true); }, []);
+  const reader = useMemo<SourceReader>(() => ({
+    readSource: (path, startLine, endLine) => api.readSource(studyId, path, startLine, endLine),
+    listTree: dir => api.listTree(studyId, dir),
+  }), [api, studyId]);
   const refStatus = useMemo(() => new Map(page?.refs.map(ref => [ref.target, ref.status]) ?? []), [page]);
   const links = useMemo<MarkdownLinks>(() => ({
     onSource: target => openSource(parseSourceTarget(target)),
@@ -72,7 +77,7 @@ export function StudyView({ api, studyId, revision, onDeleted }: { api: LearnApi
         {running ? <button type="button" onClick={() => void api.cancel(studyId)}><Square size={13} aria-hidden="true" />{t("cancel")}</button>
           : failedPipeline ? <button type="button" className="chat-primary-button" onClick={() => void generate(failedPipeline === "architecture" ? "architecture" : "fetch")}><Play size={13} aria-hidden="true" />{t("learnRetry")}</button>
           : architectureDone && missing > 0 && <button type="button" className="chat-primary-button" onClick={() => void generate("all")}><Play size={13} aria-hidden="true" />{t("learnGenerateAll", { count: missing })}</button>}
-        <button type="button" className="chat-icon-button" aria-pressed={sourceOpen} aria-label={t("learnBrowseFiles")} title={t("learnBrowseFiles")} disabled={!study.commit} onClick={() => setSourceOpen(!sourceOpen)}><FolderTree size={15} /></button>
+        <button type="button" className="chat-icon-button" aria-pressed={sourceOpen} aria-label={t("sourceBrowse")} title={t("sourceBrowse")} disabled={!study.commit} onClick={() => setSourceOpen(!sourceOpen)}><FolderTree size={15} /></button>
         <button type="button" className="chat-icon-button" aria-pressed={logsOpen} aria-label={t("learnLogs")} title={t("learnLogs")} disabled={!latestJob} onClick={() => setLogsOpen(!logsOpen)}><ScrollText size={15} /></button>
         <button type="button" className="chat-icon-button" aria-label={t("learnOpenGithub")} title={t("learnOpenGithub")} onClick={() => openExternalLink(study.url)}><ExternalLink size={15} /></button>
         <button type="button" className="chat-icon-button" aria-label={t("learnDelete")} title={t("learnDelete")} disabled={!!running} onClick={() => setConfirmDelete(true)}><Trash2 size={15} /></button>
@@ -108,7 +113,7 @@ export function StudyView({ api, studyId, revision, onDeleted }: { api: LearnApi
               </>}
           </>}
       </article>
-      {sourceOpen && <SourceViewer api={api} studyId={studyId} target={source} onOpen={openSource} onClose={() => setSourceOpen(false)} />}
+      {sourceOpen && <SourceViewer reader={reader} target={source} onOpen={openSource} onClose={() => setSourceOpen(false)} />}
     </div>
   </div>;
 }

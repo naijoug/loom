@@ -1,0 +1,25 @@
+/* Shared read-only source viewer (Learn, Research). Its host lays out next to it; below 900px it overlays the host (give the host position: relative). */
+.source-note { color: var(--chat-muted); font-size: 12.5px; margin: 0; line-height: 1.5; }
+.source-error { color: var(--chat-danger); font-size: 12.5px; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.source-viewer { width: min(46%, 620px); flex: 0 0 auto; display: flex; flex-direction: column; min-height: 0; border-left: 1px solid var(--chat-border); background: var(--chat-surface); }
+.source-viewer header { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-bottom: 1px solid var(--chat-border); }
+.source-viewer header code { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--chat-text-2); direction: rtl; text-align: left; }
+.source-viewer > .source-note, .source-viewer > .source-error { padding: 10px 12px; }
+.source-code { flex: 1; overflow: auto; }
+.source-code > .source-note, .source-code > .source-error { padding: 8px 12px; }
+.source-code pre { margin: 0; padding: 6px 0 24px; font-size: 12px; line-height: 1.55; }
+.source-code-line { display: flex; min-width: max-content; }
+.source-code-line[data-marked] { background: color-mix(in srgb, var(--chat-accent) 16%, transparent); box-shadow: inset 2px 0 0 var(--chat-accent); }
+.source-code-number { flex: 0 0 52px; text-align: right; padding-right: 12px; color: var(--chat-dim); user-select: none; }
+.source-code-line code { white-space: pre; padding-right: 16px; }
+.source-tree { flex: 1; overflow: auto; padding: 6px; }
+.source-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; padding: 2px 2px 6px; font-size: 12px; }
+.source-crumbs span { display: inline-flex; align-items: center; color: var(--chat-dim); }
+.source-crumbs button { padding: 2px 6px !important; font-size: 12px; color: var(--chat-text-2); }
+.source-tree ul { list-style: none; margin: 0; padding: 0; }
+.source-tree li button { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; padding: 4px 8px !important; font-size: 12.5px; color: var(--chat-text-2); }
+.source-tree li svg { color: var(--chat-muted); flex-shrink: 0; }
+
+@media (max-width: 900px) {
+  .source-viewer { position: absolute; inset: 0 0 0 auto; width: min(92%, 560px); z-index: 2; box-shadow: var(--chat-shadow); }
+}

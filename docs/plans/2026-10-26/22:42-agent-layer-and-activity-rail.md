@@ -1,6 +1,6 @@
 # Agent 调用层与左侧功能栏重构计划
 
-- 状态：实施中；P0–P5 已完成，下一步 P6（进度见第 0 节）
+- 状态：实施中；P0–P6 已完成，下一步 P7（进度见第 0 节）
 - 基线：`main` @ `d5b8c4b` 之上的未提交 Learn 工作区（含 2026-10-26 Agent 启动前检查与错误详情折叠）
 - 触发：用户要求参考 Codex 应用的布局，把 Chat 作为默认主页，Learn、Research、Discuss 作为并列功能；调用本机各种 Agent 做成独立的模块和层，上层模块只管调用，UI 只是交互入口
 - 范围：
@@ -96,6 +96,29 @@
     - 规则 4 白名单 `settings→skills`：Skills 是设置的一个分区。
     - 共享组件的类名沿用 `chat-` 前缀，避免大面积改样式；新组件用 `activity-rail-*`、`app-shell-*`、`agent-model-input`。
     - 计划未列出的移动：`app-update` 放 `components/app-update/`，`inlineCardsSetting` 放 `hooks/`。
+- **P6 完成（2026-10-27）**：
+  - 范围按 §8-2 默认决策执行（未单独确认）：可选项目 + 单 Agent + 带引用报告 + 追问；数据只在应用数据目录 `research/<id>/`，不写入项目。需求文档新增“Research 范围”并注明来源；布局稿 `designs/research/README.md`。
+  - Rust `research/`：
+    - `store.rs`：`research.json`、每问 `turns/<n>.md`、`jobs/<job>/` 日志与 `job.json`；原子写；启动时把无存活作业的“运行中”问题标为已中断；每个研究同时只有一个作业；
+    - `prompt.rs` + `prompts/{report,followup}.md`：报告 / 追问提示词（`PROMPT_VERSION` 1），`<<<LOOM_REPORT` 标记提取，回放历史按 24k 字符预算保留最新问答；
+    - `jobs.rs`：经 `agent::prepare_invocation`（只读 explore）与 `agent::run` 运行，进程归属 `ProcessOwner::Feature{feature:"research"}`；20 分钟超时、取消、空报告即失败；追问优先原生续接（Codex `thread.started` / Claude session），命令变化或续接失败时回放历史并标注；运行前后比较项目 `git status` 与 HEAD，变化只写警告；引用复用 `source_files::page_refs` 校验；
+    - `commands.rs`：11 个 `research_*` 命令与 `loom://research-event`；只接受 Loom 已打开的项目；项目移出列表后报告仍可读、引用不再校验；
+    - `real_tests.rs`：opt-in Codex / Claude 真实用例。
+  - 共享层：Learn 的源码读取 `learn/source.rs` → `src-tauri/src/source_files.rs`，`SourceViewer` → `components/`（读取函数由调用方传入），`api/sourceFiles.ts` 共用类型；`SourceViewer` 高亮行改为只滚动代码窗格（原 `scrollIntoView` 会连带滚动外层隐藏溢出的容器）。
+  - 前端 `features/research/`：功能栏第 3 项（⌘3，`Telescope`），列表 / 新建表单（问题、Agent 与模型、可选项目、报告语言）/ 问答页（追问、停止、重试、源码浏览、作业日志、删除二次确认）、上下文标签“延续 Agent 会话 / 已回放此前问答”；DEV fixture `researchFixture=ready|empty|running|failed|error`。
+  - 文档：`docs/architecture/research-contracts.md`（新）、`architecture.md`、`learn-contracts.md`、`security-policy.md`、`testing.md`、`scripts/README.md`、功能栏布局稿。
+  - 验证：
+    - 单测：Rust Research 13 项（存储、提示词、引用、追问续接与回放、命令变化回放、项目写入警告、失败与取消）；前端 Research 4 项与功能栏测试更新；
+    - `pnpm smoke:visual` 通过：新增 `research-smoke.mjs`（截图在 `designs/exports/research/`，不入库），功能栏矩阵加 ⌘/Ctrl+3；
+    - `pnpm check` 通过（前端 140；Rust 311 通过 / 29 忽略）；
+    - 真实 Codex 0.164.0 通过：首问 165 s、25 条引用全部有效；追问原生续接 116 s、19 条全部有效；项目无变化，见 [Research 验收记录](../../dogfood/2026-10-27-research-acceptance.md)。
+    - 未做：Claude 真实用例（未运行；Learn 验收时本机 Claude 代理认证失败，本轮未重试）；桌面人工检查（功能栏进入、真实运行中停止、重启后中断显示）。
+  - 与计划的偏差：
+    - 需求范围按默认决策直接写入，而计划写“用户确认后写入”；
+    - 计划未列出的共享抽取：`source_files.rs`、`components/SourceViewer`、`api/sourceFiles.ts`（Research 引用与 Learn 共用，避免功能互相引用）；
+    - 新增 `ProcessOwner::Feature` / `ProcessKind::Feature`（P2 时推迟到此），未改信号逻辑；
+    - `check-layers.mjs` 的测试块剔除改为也识别 `#[cfg(all(test, …))]`（`real_tests` 使用）；
+    - 修复 Learn smoke 中 P5 后已失效的“返回 Chat”步骤（按钮已移除，原步骤空转通过），改为点击功能栏。
 
 ## 1. 目标
 

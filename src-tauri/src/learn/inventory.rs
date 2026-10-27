@@ -1,6 +1,8 @@
 //! Static repository inventory computed in Rust without any model call.
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, fs, io::Read, path::Path};
+use std::{collections::BTreeMap, fs, path::Path};
+
+pub use crate::source_files::{is_binary, language_of};
 
 const MAX_FILE_BYTES: u64 = 1024 * 1024;
 const README_CHARS: usize = 4_000;
@@ -71,53 +73,6 @@ pub struct Inventory {
     #[serde(default)]
     pub readme_excerpt: String,
     pub total_lines: u64,
-}
-
-pub fn language_of(path: &str) -> &'static str {
-    let name = path.rsplit('/').next().unwrap_or(path);
-    if name == "Dockerfile" {
-        return "Dockerfile";
-    }
-    if name == "Makefile" {
-        return "Makefile";
-    }
-    match name
-        .rsplit_once('.')
-        .map(|(_, ext)| ext.to_ascii_lowercase())
-        .as_deref()
-    {
-        Some("rs") => "Rust",
-        Some("go") => "Go",
-        Some("py") => "Python",
-        Some("ts" | "mts" | "cts") => "TypeScript",
-        Some("tsx") => "TSX",
-        Some("js" | "mjs" | "cjs") => "JavaScript",
-        Some("jsx") => "JSX",
-        Some("c" | "h") => "C",
-        Some("cc" | "cpp" | "cxx" | "hpp" | "hh") => "C++",
-        Some("java") => "Java",
-        Some("kt" | "kts") => "Kotlin",
-        Some("swift") => "Swift",
-        Some("m" | "mm") => "Objective-C",
-        Some("rb") => "Ruby",
-        Some("php") => "PHP",
-        Some("cs") => "C#",
-        Some("scala") => "Scala",
-        Some("ex" | "exs") => "Elixir",
-        Some("lua") => "Lua",
-        Some("dart") => "Dart",
-        Some("zig") => "Zig",
-        Some("vue") => "Vue",
-        Some("svelte") => "Svelte",
-        Some("sh" | "bash" | "zsh" | "fish") => "Shell",
-        Some("vim") => "Vim script",
-        Some("sql") => "SQL",
-        Some("html" | "htm") => "HTML",
-        Some("css" | "scss" | "less") => "CSS",
-        Some("md" | "markdown" | "rst" | "txt") => "Text",
-        Some("json" | "yaml" | "yml" | "toml" | "xml" | "ini") => "Config",
-        _ => "Other",
-    }
 }
 
 /// Code files count toward module coverage; docs and config do not.
@@ -222,14 +177,6 @@ pub fn build(checkout: &Path, ls_files: &str) -> Inventory {
 fn bytecount_lines(bytes: &[u8]) -> u32 {
     let newlines = bytes.iter().filter(|b| **b == b'\n').count();
     (newlines + usize::from(!bytes.is_empty() && !bytes.ends_with(b"\n"))) as u32
-}
-
-pub fn is_binary(path: &Path) -> bool {
-    let mut buffer = [0; 8192];
-    fs::File::open(path)
-        .and_then(|mut file| file.read(&mut buffer))
-        .map(|n| buffer[..n].contains(&0))
-        .unwrap_or(true)
 }
 
 /// Compact prompt text: languages, manifests, entries and a bounded file map.

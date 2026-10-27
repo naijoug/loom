@@ -1,5 +1,5 @@
 import { lazy, type ComponentType, type LazyExoticComponent } from "react";
-import { GraduationCap, MessageSquare, type LucideIcon } from "lucide-react";
+import { GraduationCap, MessageSquare, Telescope, type LucideIcon } from "lucide-react";
 import type { MessageKey } from "../i18n/en";
 
 export interface FeatureEntry {
@@ -19,6 +19,7 @@ export const FEATURES = [
   // Chat stays mounted so running turns, drafts and selection survive switching (and Chat loads agents and diagnostics at startup).
   { id: "chat", icon: MessageSquare, labelKey: "chat", load: lazy(() => import("../features/chat").then(module => ({ default: module.ChatPage }))), keepMounted: true },
   { id: "learn", icon: GraduationCap, labelKey: "learn", load: lazy(() => import("../features/learn").then(module => ({ default: module.LearnPage }))), keepMounted: false },
+  { id: "research", icon: Telescope, labelKey: "research", load: lazy(() => import("../features/research").then(module => ({ default: module.ResearchPage }))), keepMounted: false },
 ] as const satisfies readonly FeatureEntry[];
 
 export type FeatureId = (typeof FEATURES)[number]["id"];

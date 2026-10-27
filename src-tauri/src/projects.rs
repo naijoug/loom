@@ -285,6 +285,26 @@ fn git_info(project_path: &Path) -> GitInfo {
     }
 }
 
+/// `HEAD` plus `git status --porcelain` of a project, so read-only features can
+/// notice writes made while an agent ran. `None` outside a Git work tree.
+pub(crate) fn worktree_state(project_path: &Path) -> Option<String> {
+    let status = Command::new("git")
+        .arg("-C")
+        .arg(project_path)
+        .args(["-c", "core.fsmonitor=false", "status", "--porcelain=v1"])
+        // Do not refresh the index on disk: the check itself must not write.
+        .env("GIT_OPTIONAL_LOCKS", "0")
+        .output()
+        .ok()
+        .filter(|output| output.status.success())?;
+    let head =
+        run_git(project_path, ["rev-parse", "--verify", "--quiet", "HEAD"]).unwrap_or_default();
+    Some(format!(
+        "{head}\n{}",
+        String::from_utf8_lossy(&status.stdout)
+    ))
+}
+
 fn run_git<const N: usize>(project_path: &Path, args: [&str; N]) -> Result<String, String> {
     let output = Command::new("git")
         .arg("-C")

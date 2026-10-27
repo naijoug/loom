@@ -7,7 +7,7 @@ import "./Markdown.css";
 
 /** Replaces a fenced code block (e.g. Chat's `openui-lang` inline cards); `undefined` keeps the plain block. Pass a stable function. */
 export type MarkdownCodeRenderer = (language: string | undefined, text: string) => ReactNode | undefined;
-/** Learn wiki pages: `loom-src:` opens the source viewer, `loom-wiki:` another page. Absent elsewhere, so Chat drops both schemes. */
+/** Learn and Research: `loom-src:` opens the source viewer, `loom-wiki:` another Learn page. Absent elsewhere, so Chat drops both schemes. */
 export interface MarkdownLinks { onSource: (target: string) => void; onWiki: (target: string) => void; sourceStatus?: (target: string) => string | undefined }
 const keepLoomLinks = (url: string) => /^loom-(src|wiki):/.test(url) ? url : defaultUrlTransform(url);
 
@@ -38,9 +38,9 @@ function ExternalLink({ href, children }: { href?: string; children: ReactNode }
 function LoomLink({ href, links, children }: { href: string; links: MarkdownLinks; children: ReactNode }) {
   const [scheme, ...rest] = href.split(":");
   const target = rest.join(":");
-  if (scheme === "loom-wiki") return <a href="#" className="learn-wiki-link" onClick={event => { event.preventDefault(); links.onWiki(target); }}>{children}</a>;
+  if (scheme === "loom-wiki") return <a href="#" className="loom-wiki-link" onClick={event => { event.preventDefault(); links.onWiki(target); }}>{children}</a>;
   const status = links.sourceStatus?.(target) ?? "valid";
-  return <button type="button" className="learn-src-link" data-status={status} title={target} onClick={() => links.onSource(target)}>{children}</button>;
+  return <button type="button" className="loom-src-link" data-status={status} title={target} onClick={() => links.onSource(target)}>{children}</button>;
 }
 
 function components(renderCode?: MarkdownCodeRenderer, links?: MarkdownLinks): Components {

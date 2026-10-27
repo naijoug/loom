@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Layer rules for the agent invocation layer (docs/plans/2026-10-26/22:42-agent-layer-and-activity-rail.md).
 // 1. src-tauri/src/agent/ never imports feature modules.
-// 2. Learn and Chat never import each other.
+// 2. Learn, Research and Chat never import each other.
 // 3. Feature modules never spawn processes outside test code; agent CLIs start only through agent::run.
 // 4. Frontend: src/features/<x> never imports src/features/<y> (code or CSS); shared UI lives in src/components,
 //    and src/components, src/hooks and src/api never import features. Only src/shell and the entry wire features together.
@@ -12,9 +12,9 @@ import { fileURLToPath } from "node:url";
 const root = join(fileURLToPath(new URL(".", import.meta.url)), "..");
 const src = join(root, "src-tauri", "src");
 
-const FEATURE_MODULES = ["chat", "chat_context", "learn", "skills", "workbench"];
+const FEATURE_MODULES = ["chat", "chat_context", "learn", "research", "skills", "workbench"];
 const CHAT_MODULES = ["chat", "chat_context"];
-const SPAWNING_FEATURES = ["chat", "chat_context.rs", "learn"];
+const SPAWNING_FEATURES = ["chat", "chat_context.rs", "learn", "research"];
 // Non-agent processes a feature may start itself.
 const SPAWN_ALLOWLIST = new Map([["learn/fetch.rs", "git clone/fetch for study sources"]]);
 
@@ -27,10 +27,10 @@ function referencesModule(text, modules) {
   return modules.filter((name) => new RegExp(`\\bcrate::${name}\\b`).test(text));
 }
 
-// Drop `#[cfg(test)] mod … {` blocks and whole *_tests.rs files.
+// Drop `#[cfg(test)] mod … {` / `#[cfg(all(test, …))] mod … {` blocks and whole *_tests.rs files.
 function productionCode(file, text) {
   if (/(^|_)tests?\.rs$/.test(file)) return "";
-  const testModule = text.search(/#\[cfg\(test\)\]\s*(pub(\([a-z]+\))?\s+)?mod\s+\w+\s*\{/);
+  const testModule = text.search(/#\[cfg\((all\()?test\b[^\]]*\]\s*(pub(\([a-z]+\))?\s+)?mod\s+\w+\s*\{/);
   return testModule === -1 ? text : text.slice(0, testModule);
 }
 
@@ -43,13 +43,18 @@ for (const file of rustFiles(join(src, "agent"))) {
 }
 
 for (const file of rustFiles(join(src, "learn"))) {
-  const hits = referencesModule(readFileSync(file, "utf8"), CHAT_MODULES);
-  if (hits.length) report(file, `learn/ must not import Chat (${hits.join(", ")}); use crate::agent`);
+  const hits = referencesModule(readFileSync(file, "utf8"), [...CHAT_MODULES, "research"]);
+  if (hits.length) report(file, `learn/ must not import other features (${hits.join(", ")}); use crate::agent`);
+}
+
+for (const file of rustFiles(join(src, "research"))) {
+  const hits = referencesModule(readFileSync(file, "utf8"), [...CHAT_MODULES, "learn"]);
+  if (hits.length) report(file, `research/ must not import other features (${hits.join(", ")}); use crate::agent`);
 }
 
 for (const file of [...rustFiles(join(src, "chat")), join(src, "chat_context.rs")]) {
-  const hits = referencesModule(readFileSync(file, "utf8"), ["learn"]);
-  if (hits.length) report(file, "Chat must not import learn/");
+  const hits = referencesModule(readFileSync(file, "utf8"), ["learn", "research"]);
+  if (hits.length) report(file, `Chat must not import other features (${hits.join(", ")})`);
 }
 
 for (const entry of SPAWNING_FEATURES) {

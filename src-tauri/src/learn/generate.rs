@@ -1,6 +1,8 @@
 //! Pure generation helpers: prompts, output extraction, validation, references
 //! and Rust-rendered pages. No processes or Tauri state here.
-use super::{inventory::Inventory, models::*, source};
+use super::{inventory::Inventory, models::*};
+use crate::source_files as source;
+pub use crate::source_files::{page_refs, ref_stats};
 use std::{collections::HashSet, path::Path};
 
 pub const PROMPT_VERSION: u32 = 1;
@@ -352,66 +354,6 @@ pub fn coverage(architecture: &Architecture, inventory: &Inventory) -> Coverage 
     }
 }
 
-/// Finds every `](loom-src:TARGET)` link and validates it against the checkout.
-pub fn page_refs(markdown: &str, checkout: &Path) -> Vec<SourceRef> {
-    let mut refs = Vec::new();
-    let mut rest = markdown;
-    while let Some(start) = rest.find("](loom-src:") {
-        let body = &rest[start + "](loom-src:".len()..];
-        let Some(end) = body.find(')') else { break };
-        let target = body[..end].trim().to_string();
-        rest = &body[end..];
-        if refs.iter().any(|r: &SourceRef| r.target == target) {
-            continue;
-        }
-        refs.push(check_target(&target, checkout));
-    }
-    refs
-}
-
-pub fn parse_target(target: &str) -> (String, Option<(u32, u32)>) {
-    let (path, fragment) = target.split_once('#').unwrap_or((target, ""));
-    let range = fragment.strip_prefix('L').and_then(|lines| {
-        let (a, b) = lines
-            .split_once("-L")
-            .or_else(|| lines.split_once('-'))
-            .unwrap_or((lines, lines));
-        Some((a.parse().ok()?, b.parse().ok()?))
-    });
-    (path.to_string(), range)
-}
-
-fn check_target(target: &str, checkout: &Path) -> SourceRef {
-    let (path, range) = parse_target(target);
-    let (start, end) = range.unwrap_or((0, 0));
-    let status = match source::normalize(&path) {
-        Err(_) => "outside".to_string(),
-        Ok(normalized) if normalized.is_empty() => "missing".into(),
-        Ok(normalized) => match source::line_count(checkout, &normalized) {
-            Err(_) => "missing".into(),
-            Ok(total) if range.is_none() || (start >= 1 && start <= end && end <= total) => {
-                "valid".into()
-            }
-            Ok(_) => "range".into(),
-        },
-    };
-    SourceRef {
-        target: target.into(),
-        path: source::normalize(&path).unwrap_or(path),
-        start_line: start,
-        end_line: end,
-        status,
-    }
-}
-
-pub fn ref_stats(refs: &[SourceRef]) -> RefStats {
-    let valid = refs.iter().filter(|r| r.status == "valid").count();
-    RefStats {
-        valid,
-        invalid: refs.len() - valid,
-    }
-}
-
 /// Module pages need ≥ 3 valid references and < 20 % invalid ones.
 pub fn page_problems(markdown: &str, refs: &[SourceRef], min_valid: usize) -> Vec<String> {
     let stats = ref_stats(refs);
@@ -654,6 +596,7 @@ pub fn page_plan(architecture: &Architecture, language: &str) -> Vec<PageInfo> {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
+    use crate::source_files::parse_target;
     use std::fs;
 
     pub(crate) fn fixture_checkout() -> std::path::PathBuf {

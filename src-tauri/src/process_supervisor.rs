@@ -27,6 +27,8 @@ pub enum ProcessKind {
     Skills,
     /// Learn study generation jobs; read-only agent runs in a Loom-managed checkout.
     Learn,
+    /// Read-only agent runs of the newer features (Research, Discuss).
+    Feature,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -51,6 +53,12 @@ pub enum ProcessOwner {
     Learn {
         study_id: String,
         job_id: String,
+    },
+    /// `feature` names the module ("research", …); `scope_id` is its record id.
+    Feature {
+        feature: String,
+        scope_id: String,
+        run_id: String,
     },
 }
 

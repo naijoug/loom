@@ -62,14 +62,26 @@
     "learn_read_job_logs",
     "learn_list_tree",
     "learn_read_source",
-    "learn_delete_study"
+    "learn_delete_study",
+    "research_list",
+    "research_create",
+    "research_get",
+    "research_read_turn",
+    "research_ask",
+    "research_retry",
+    "research_cancel",
+    "research_read_job_logs",
+    "research_list_tree",
+    "research_read_source",
+    "research_delete"
   ],
   "events": [
     "loom-update-state",
     "loom://chat-event",
     "loom://chat-error",
     "loom://skills-operation",
-    "loom://learn-event"
+    "loom://learn-event",
+    "loom://research-event"
   ],
   "storeSchemaVersions": {
     "agents": 1,
@@ -726,6 +738,68 @@
       "studyId": "study-1-0",
       "jobId": "job-1-0",
       "stage": "architecture",
+      "status": "running"
+    },
+    "research": {
+      "schemaVersion": 1,
+      "researchId": "research-1-0",
+      "title": "How does Loom stop an agent?",
+      "agentId": "codex",
+      "agentName": "Codex",
+      "adapterType": "codex_cli",
+      "model": "gpt-5.5",
+      "projectPath": "/Users/me/loom",
+      "projectName": "loom",
+      "language": "en",
+      "promptVersion": 1,
+      "createdAtMs": 1,
+      "updatedAtMs": 2,
+      "turns": [
+        {
+          "index": 1,
+          "question": "How does Loom stop an agent?",
+          "status": "done",
+          "jobId": "job-1-0",
+          "startedAtMs": 1,
+          "finishedAtMs": 2,
+          "warnings": [
+            "1 source citation(s) could not be verified"
+          ],
+          "refs": {
+            "valid": 3,
+            "invalid": 1
+          }
+        },
+        {
+          "index": 2,
+          "question": "Which limits apply?",
+          "status": "running",
+          "jobId": "job-2-0",
+          "startedAtMs": 3,
+          "warnings": [],
+          "context": "native"
+        }
+      ],
+      "resumeCommand": "codex resume thread-1",
+      "resumeAgentCommand": "codex"
+    },
+    "researchTurnContent": {
+      "index": 1,
+      "markdown": "# Stop\n[run](loom-src:src/agent/runner.rs#L1-L20)",
+      "refs": [
+        {
+          "target": "src/agent/runner.rs#L1-L20",
+          "path": "src/agent/runner.rs",
+          "startLine": 1,
+          "endLine": 20,
+          "status": "valid"
+        }
+      ]
+    },
+    "researchEvent": {
+      "researchId": "research-1-0",
+      "jobId": "job-2-0",
+      "turn": 2,
       "status": "running"
     }
   }

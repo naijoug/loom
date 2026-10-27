@@ -4,13 +4,13 @@ use super::{
     fetch,
     jobs::{self, Emit, Job},
     models::*,
-    source,
     store::{self, Store},
     LEARN_EVENT,
 };
 use crate::{
     agent,
     models::{now_ms, AgentConfig},
+    source_files as source,
 };
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter, Manager, WebviewWindow};

@@ -1,6 +1,6 @@
 # Loom 安全策略
 
-当前运行产品是本机 CLI Chat，另有独立 Skills 模块与 Learn 学习研究模块。Rust 校验本地文件、项目路径与进程边界；React 的控件禁用和确认对话框不构成安全沙箱。
+当前运行产品是本机 CLI Chat，另有独立 Skills 模块、Learn 学习研究模块与 Research 调研模块。Rust 校验本地文件、项目路径与进程边界；React 的控件禁用和确认对话框不构成安全沙箱。
 
 ## Skills 写入边界（安装接线已实现，完整迁移实施中）
 
@@ -43,6 +43,14 @@
 - Agent 只以 `explore`（只读 / plan）权限、cwd = checkout 运行，不接受自定义 CLI；每次运行前后比对 checkout 指纹，变化即判作业失败。这是检测而非 OS 沙箱：实际只读保障取决于各 CLI 的策略实现。
 - 模型输出只按 schema 与引用校验后使用；无效引用以警告样式显示，不静默信任。Markdown 渲染沿用下文的安全规则，`loom-src:` / `loom-wiki:` 仅在 Learn 页面内转为应用内操作。
 - 作业日志沿用 CLI 执行的输出限额和脱敏；`learn_*` 命令仅接受主窗口调用。
+
+## Research
+
+- 研究数据只写 `<appData>/research/<researchId>/`；研究 ID 为受限单段标识。未选项目时 cwd 是该目录下的空 `workspace/`。
+- 只能选择已在 Loom 打开的项目（规范路径匹配项目列表）；开始、追问、重试、校验报告引用与读取源码前都重新确认，项目移出列表后不再读取它。
+- Agent 只以 `explore`（只读 / plan）权限运行，不接受自定义 CLI。选了项目时运行前后比对 `git status --porcelain` 与 HEAD，变化只记警告：用户可能同时在改项目，且这是检测而非 OS 沙箱，实际只读保障取决于各 CLI 的策略实现。Loom 不运行项目代码。
+- 报告引用经 `source_files.rs` 校验（拒绝逃逸与 symlink），无效引用以警告样式显示；外部链接只接受 `http(s)` 并在系统浏览器打开。
+- 作业日志沿用 CLI 执行的输出限额和脱敏；`research_*` 命令仅接受主窗口调用。
 
 ## 存储和输出
 

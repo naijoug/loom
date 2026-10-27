@@ -1,5 +1,6 @@
 import { skillsSmoke } from "./skills-smoke.mjs";
 import { learnSmoke } from "./learn-smoke.mjs";
+import { researchSmoke } from "./research-smoke.mjs";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -160,8 +161,8 @@ async function railMatrixSmoke(client, { screenshot }) {
       await client.send('Page.navigate', { url: baseUrl });
       await waitFor(client, `document.documentElement.lang === ${JSON.stringify(locale)} && document.documentElement.dataset.theme === ${JSON.stringify(theme)} && Boolean(document.querySelector('.activity-rail'))`, `${name} appearance`);
       const chat = await evaluate(client, railState);
-      const [chatLabel, learnLabel, settingsLabel] = chat.labels;
-      if (chat.width !== 52 || chat.labels.length !== 3 || chat.current !== chatLabel) throw Error(`Rail on Chat (${name}): ${JSON.stringify(chat)}`);
+      const [chatLabel, learnLabel, researchLabel, settingsLabel] = chat.labels;
+      if (chat.width !== 52 || chat.labels.length !== 4 || chat.current !== chatLabel) throw Error(`Rail on Chat (${name}): ${JSON.stringify(chat)}`);
       // Open a session, then leave and come back: the same session must still be open.
       await waitFor(client, 'Boolean(document.querySelector("[aria-label=\'Expand sidebar\'], [aria-label=\'展开侧栏\']"))', 'collapsed narrow sidebar');
       await screenshot(`chat-${name}`, railOutput);
@@ -169,13 +170,17 @@ async function railMatrixSmoke(client, { screenshot }) {
       await waitFor(client, 'Boolean(document.querySelector("[data-testid=learn-page]")) && !document.querySelector("[data-testid=learn-page]").closest("[hidden]")', `${name} Learn via shortcut`);
       if ((await evaluate(client, railState)).current !== learnLabel) throw Error(`Rail did not mark Learn (${name})`);
       await screenshot(`learn-${name}`, railOutput);
+      await pressShortcut('3');
+      await waitFor(client, 'Boolean(document.querySelector("[data-testid=research-page]")) && !document.querySelector("[data-testid=research-page]").closest("[hidden]")', `${name} Research via shortcut`);
+      if ((await evaluate(client, railState)).current !== researchLabel) throw Error(`Rail did not mark Research (${name})`);
+      await screenshot(`research-${name}`, railOutput);
       await pressShortcut(',');
       await waitFor(client, 'Boolean(document.querySelector(".chat-settings"))', `${name} Settings via shortcut`);
       if ((await evaluate(client, railState)).current !== settingsLabel) throw Error(`Rail did not mark Settings (${name})`);
       await screenshot(`settings-${name}`, railOutput);
       await evaluate(client, `document.querySelector('.activity-rail-item[data-view=chat]').click()`);
       await waitFor(client, '!document.querySelector(".chat-settings") && !document.querySelector("[data-testid=chat-page]").closest("[hidden]")', `${name} back to Chat`);
-      checks.push(`${name}: rail 52px, current item marked, Cmd/Ctrl+2 and Cmd/Ctrl+, switch, no horizontal overflow`);
+      checks.push(`${name}: rail 52px, current item marked, Cmd/Ctrl+2, Cmd/Ctrl+3 and Cmd/Ctrl+, switch, no horizontal overflow`);
     }
   }
   // S6: a session opened before switching is still open after Learn and Settings.
@@ -333,6 +338,7 @@ async function main() {
     await inlineCardsSmoke(client, { click, clickText, screenshot });
     await skillsSmoke(client, { evaluate, waitFor, click, clickText, screenshot });
     await learnSmoke(client, { evaluate, waitFor, click, clickText, screenshot });
+    await researchSmoke(client, { evaluate, waitFor, click, clickText, screenshot });
     console.log(`Simple Chat browser smoke passed: ${output}`);
   } finally { client?.close(); await killAndWait(child); await removeDirWithRetries(userDataDir); }
 }

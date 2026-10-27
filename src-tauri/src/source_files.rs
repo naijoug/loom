@@ -1,7 +1,10 @@
-//! Bounded, contained reads of a study checkout for the source viewer.
-use super::{inventory, models::*};
+//! Bounded, contained reads of a directory tree for source viewers, and
+//! `loom-src:` reference validation. Shared by features that cite source files
+//! (Learn studies a checkout, Research a registered project); no processes here.
+use serde::{Deserialize, Serialize};
 use std::{
     fs,
+    io::Read,
     path::{Component, Path, PathBuf},
 };
 
@@ -104,14 +107,14 @@ pub fn read_source(
     if meta.len() > MAX_READ_BYTES {
         return Err("File is too large to display".into());
     }
-    if inventory::is_binary(&path) {
+    if is_binary(&path) {
         return Err("Binary file cannot be displayed".into());
     }
     let bytes = fs::read(&path).map_err(|e| e.to_string())?;
     let text = String::from_utf8_lossy(&bytes);
     let lines: Vec<&str> = text.split_inclusive('\n').collect();
     let total = lines.len() as u32;
-    let language = inventory::language_of(&normalized).to_string();
+    let language = language_of(&normalized).to_string();
     if meta.len() <= FULL_READ_BYTES {
         return Ok(SourceText {
             path: normalized,
@@ -153,13 +156,179 @@ pub fn line_count(checkout: &Path, relative: &str) -> Result<u32, String> {
     Ok((newlines + usize::from(!bytes.is_empty() && !bytes.ends_with(b"\n"))) as u32)
 }
 
+pub fn is_binary(path: &Path) -> bool {
+    let mut buffer = [0; 8192];
+    fs::File::open(path)
+        .and_then(|mut file| file.read(&mut buffer))
+        .map(|n| buffer[..n].contains(&0))
+        .unwrap_or(true)
+}
+
+pub fn language_of(path: &str) -> &'static str {
+    let name = path.rsplit('/').next().unwrap_or(path);
+    if name == "Dockerfile" {
+        return "Dockerfile";
+    }
+    if name == "Makefile" {
+        return "Makefile";
+    }
+    match name
+        .rsplit_once('.')
+        .map(|(_, ext)| ext.to_ascii_lowercase())
+        .as_deref()
+    {
+        Some("rs") => "Rust",
+        Some("go") => "Go",
+        Some("py") => "Python",
+        Some("ts" | "mts" | "cts") => "TypeScript",
+        Some("tsx") => "TSX",
+        Some("js" | "mjs" | "cjs") => "JavaScript",
+        Some("jsx") => "JSX",
+        Some("c" | "h") => "C",
+        Some("cc" | "cpp" | "cxx" | "hpp" | "hh") => "C++",
+        Some("java") => "Java",
+        Some("kt" | "kts") => "Kotlin",
+        Some("swift") => "Swift",
+        Some("m" | "mm") => "Objective-C",
+        Some("rb") => "Ruby",
+        Some("php") => "PHP",
+        Some("cs") => "C#",
+        Some("scala") => "Scala",
+        Some("ex" | "exs") => "Elixir",
+        Some("lua") => "Lua",
+        Some("dart") => "Dart",
+        Some("zig") => "Zig",
+        Some("vue") => "Vue",
+        Some("svelte") => "Svelte",
+        Some("sh" | "bash" | "zsh" | "fish") => "Shell",
+        Some("vim") => "Vim script",
+        Some("sql") => "SQL",
+        Some("html" | "htm") => "HTML",
+        Some("css" | "scss" | "less") => "CSS",
+        Some("md" | "markdown" | "rst" | "txt") => "Text",
+        Some("json" | "yaml" | "yml" | "toml" | "xml" | "ini") => "Config",
+        _ => "Other",
+    }
+}
+
+/// Finds every `](loom-src:TARGET)` link and validates it against the checkout.
+pub fn page_refs(markdown: &str, checkout: &Path) -> Vec<SourceRef> {
+    let mut refs = Vec::new();
+    let mut rest = markdown;
+    while let Some(start) = rest.find("](loom-src:") {
+        let body = &rest[start + "](loom-src:".len()..];
+        let Some(end) = body.find(')') else { break };
+        let target = body[..end].trim().to_string();
+        rest = &body[end..];
+        if refs.iter().any(|r: &SourceRef| r.target == target) {
+            continue;
+        }
+        refs.push(check_target(&target, checkout));
+    }
+    refs
+}
+
+pub fn parse_target(target: &str) -> (String, Option<(u32, u32)>) {
+    let (path, fragment) = target.split_once('#').unwrap_or((target, ""));
+    let range = fragment.strip_prefix('L').and_then(|lines| {
+        let (a, b) = lines
+            .split_once("-L")
+            .or_else(|| lines.split_once('-'))
+            .unwrap_or((lines, lines));
+        Some((a.parse().ok()?, b.parse().ok()?))
+    });
+    (path.to_string(), range)
+}
+
+fn check_target(target: &str, checkout: &Path) -> SourceRef {
+    let (path, range) = parse_target(target);
+    let (start, end) = range.unwrap_or((0, 0));
+    let status = match normalize(&path) {
+        Err(_) => "outside".to_string(),
+        Ok(normalized) if normalized.is_empty() => "missing".into(),
+        Ok(normalized) => match line_count(checkout, &normalized) {
+            Err(_) => "missing".into(),
+            Ok(total) if range.is_none() || (start >= 1 && start <= end && end <= total) => {
+                "valid".into()
+            }
+            Ok(_) => "range".into(),
+        },
+    };
+    SourceRef {
+        target: target.into(),
+        path: normalize(&path).unwrap_or(path),
+        start_line: start,
+        end_line: end,
+        status,
+    }
+}
+
+pub fn ref_stats(refs: &[SourceRef]) -> RefStats {
+    let valid = refs.iter().filter(|r| r.status == "valid").count();
+    RefStats {
+        valid,
+        invalid: refs.len() - valid,
+    }
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct RefStats {
+    pub valid: usize,
+    pub invalid: usize,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct SourceRef {
+    /// Raw link target after `loom-src:`.
+    pub target: String,
+    pub path: String,
+    pub start_line: u32,
+    pub end_line: u32,
+    /// `valid`, `missing`, `range` or `outside`.
+    pub status: String,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SourceText {
+    pub path: String,
+    pub text: String,
+    pub first_line: u32,
+    pub total_lines: u32,
+    pub truncated: bool,
+    pub language: String,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TreeEntry {
+    pub name: String,
+    pub path: String,
+    /// `dir`, `file` or `symlink`.
+    pub kind: String,
+    pub size: u64,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    fn temp_root() -> PathBuf {
+        static SEQUENCE: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        let root = std::env::temp_dir().join(format!(
+            "loom-source-files-test-{}-{}",
+            std::process::id(),
+            SEQUENCE.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+        ));
+        fs::create_dir_all(&root).unwrap();
+        root
+    }
+
     #[test]
     fn paths_are_contained_and_symlinks_refused() {
-        let root = super::super::store::tests::temp_root();
+        let root = temp_root();
         fs::create_dir_all(root.join("src")).unwrap();
         fs::create_dir_all(root.join(".git")).unwrap();
         fs::write(root.join("src/a.rs"), "one\ntwo\nthree\n").unwrap();
@@ -197,7 +366,7 @@ mod tests {
 
     #[test]
     fn large_files_return_a_window_and_binary_is_refused() {
-        let root = super::super::store::tests::temp_root();
+        let root = temp_root();
         let line = "x".repeat(99) + "\n";
         fs::write(root.join("big.txt"), line.repeat(10_000)).unwrap();
         let window = read_source(&root, "big.txt", Some(5_000), Some(5_010)).unwrap();

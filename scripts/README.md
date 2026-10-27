@@ -24,7 +24,7 @@ Skills 原生验收可先用 `pnpm tauri build --debug --bundles app` 构建，�
 | `pnpm e2e:complete` | 完整工程门禁和浏览器检查；可选发布构建仍需独立分发验证 |
 | `node scripts/simple-chat-reachability.mjs` | 扫描 main.tsx / lib.rs 模块依赖，写入 `docs/reviews/simple-chat/reachability.json` |
 | `pnpm openui:prompt` | 从 `src/features/chat/openui/library.tsx` 生成内联卡片提示词 `src-tauri/resources/openui-inline-prompt.md`；改组件库后必须重新生成，`--check` 只校验不写入 |
-| `node scripts/check-layers.mjs` | 分层规则。Rust：`agent/` 不引用功能模块；Learn 与 Chat 互不引用；chat/learn 生产代码不直接起进程（白名单：`learn/fetch.rs` 的 git），Agent CLI 只经 `agent::run` 启动。前端：`src/features/<x>` 不引用其它功能的代码或 CSS（白名单 `settings→skills`），`src/components`、`src/hooks`、`src/api` 不引用 `features/` |
+| `node scripts/check-layers.mjs` | 分层规则。Rust：`agent/` 不引用功能模块；Chat、Learn、Research 互不引用；chat/learn/research 生产代码不直接起进程（`#[cfg(test)]` 模块除外）（白名单：`learn/fetch.rs` 的 git），Agent CLI 只经 `agent::run` 启动。前端：`src/features/<x>` 不引用其它功能的代码或 CSS（白名单 `settings→skills`），`src/components`、`src/hooks`、`src/api` 不引用 `features/` |
 | `pnpm check:core` | 显式选择冻结内核检查，不属于主门禁 |
 
 网页截图与机器结果位于 `designs/exports/simple-chat/`。Chrome 可用 `CHROME` 覆盖可执行文件；截图是合成界面证据，不能替代真实 CLI 或 Tauri 交互。
@@ -36,5 +36,7 @@ Skills 原生验收可先用 `pnpm tauri build --debug --bundles app` 构建，�
 Skills 视觉验收由 `pnpm smoke:visual` 同轮运行 `skills-smoke.mjs`。仅 DEV 的 `?fixture=simple-chat&skillsFixture=ready` 注入合成 API，可选 empty/loading/error/cancel；生产构建不包含该 fixture。截图和机器结果位于 `designs/exports/skills/`。
 
 Learn 视觉验收同样由 `pnpm smoke:visual` 同轮运行 `learn-smoke.mjs`。仅 DEV 的 `?fixture=simple-chat&learnFixture=ready` 注入合成 Learn API（不调用 IPC、git 或模型），可选 empty/running/failed/error；截图和机器结果位于 `designs/exports/learn/`。
+
+Research 视觉验收同样由 `pnpm smoke:visual` 同轮运行 `research-smoke.mjs`。仅 DEV 的 `?fixture=simple-chat&researchFixture=ready` 注入合成 Research API（不调用 IPC、git 或模型），可选 empty/running/failed/error；截图和机器结果位于 `designs/exports/research/`。
 
 原生源码隔离探针可给 `LOOM_PREVIEW_BINARY` 搭配绝对 `LOOM_PREVIEW_SANDBOX_PROFILE`，debug.sh 在 macOS 用 sandbox-exec 启动准确 binary。2026-10-22 当前主机上即使 allow-default profile 也无法由原生自动化识别窗口，普通启动正常；因此此探针暂不能作为 G1 桌面通过证据，详见 Skills 当日验收。

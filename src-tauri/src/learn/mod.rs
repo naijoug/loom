@@ -8,7 +8,6 @@ mod jobs;
 pub mod models;
 #[cfg(test)]
 mod real_tests;
-mod source;
 mod store;
 
 pub const LEARN_EVENT: &str = "loom://learn-event";

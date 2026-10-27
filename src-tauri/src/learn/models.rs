@@ -1,6 +1,8 @@
 //! Persisted Learn study shapes. All JSON is camelCase and versioned.
 use serde::{Deserialize, Serialize};
 
+pub use crate::source_files::{RefStats, SourceRef, SourceText, TreeEntry};
+
 pub const STUDY_SCHEMA_VERSION: u32 = 1;
 pub const ARCHITECTURE_SCHEMA_VERSION: u32 = 1;
 
@@ -61,13 +63,6 @@ pub struct PageInfo {
     pub ready: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub refs: Option<RefStats>,
-}
-
-#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct RefStats {
-    pub valid: usize,
-    pub invalid: usize,
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
@@ -258,45 +253,12 @@ pub struct LearningStep {
 
 // ---- pages, sources, jobs ----
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct SourceRef {
-    /// Raw link target after `loom-src:`.
-    pub target: String,
-    pub path: String,
-    pub start_line: u32,
-    pub end_line: u32,
-    /// `valid`, `missing`, `range` or `outside`.
-    pub status: String,
-}
-
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PageContent {
     pub page_id: String,
     pub markdown: String,
     pub refs: Vec<SourceRef>,
-}
-
-#[derive(Clone, Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SourceText {
-    pub path: String,
-    pub text: String,
-    pub first_line: u32,
-    pub total_lines: u32,
-    pub truncated: bool,
-    pub language: String,
-}
-
-#[derive(Clone, Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TreeEntry {
-    pub name: String,
-    pub path: String,
-    /// `dir`, `file` or `symlink`.
-    pub kind: String,
-    pub size: u64,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

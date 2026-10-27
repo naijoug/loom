@@ -1,6 +1,7 @@
 import type { SkillSource, SkillsHttpRequest, TranslationProviders, TranslationResult, TranslationSummary } from "./skills";
 import type { InstructionCheck, ResourcePreview } from "./skills";
 import type { LearnArchitecture, LearnEvent, LearnPageContent, LearnStudy } from "./learn";
+import type { Research, ResearchEvent, ResearchTurnContent } from "./research";
 import type { SkillsLibrary, SkillsOperation, InstallTarget, Installation, InstallPlan, InstallReceipt } from "./skills";
 import type { AgentConfig, AgentDiagnostic, AppSettings, ChatSession, ChatEvent, ChatSendInput, ChatSendReceipt, ChatResumeHandle, ChatTurn, ChatLogPage, ChatExportInput, ChatExportResult, ChatMessagePart } from "../domain";
 
@@ -67,6 +68,17 @@ export const TAURI_COMMANDS = {
   learnListTree: "learn_list_tree",
   learnReadSource: "learn_read_source",
   learnDeleteStudy: "learn_delete_study",
+  researchList: "research_list",
+  researchCreate: "research_create",
+  researchGet: "research_get",
+  researchReadTurn: "research_read_turn",
+  researchAsk: "research_ask",
+  researchRetry: "research_retry",
+  researchCancel: "research_cancel",
+  researchReadJobLogs: "research_read_job_logs",
+  researchListTree: "research_list_tree",
+  researchReadSource: "research_read_source",
+  researchDelete: "research_delete",
 } as const;
 export const TAURI_EVENTS = {
   updateState: "loom-update-state",
@@ -74,6 +86,7 @@ export const TAURI_EVENTS = {
   chatError: "loom://chat-error",
   skillsOperation: "loom://skills-operation",
   learnEvent: "loom://learn-event",
+  researchEvent: "loom://research-event",
 } as const;
 export const STORE_SCHEMA_VERSIONS = {"agents": 1, "settings": 1, "chat": 2} as const;
 export type TauriCommand = (typeof TAURI_COMMANDS)[keyof typeof TAURI_COMMANDS];
@@ -717,4 +730,66 @@ learnEvent: {
   "stage": "architecture",
   "status": "running"
 } satisfies LearnEvent,
+research: {
+  "schemaVersion": 1,
+  "researchId": "research-1-0",
+  "title": "How does Loom stop an agent?",
+  "agentId": "codex",
+  "agentName": "Codex",
+  "adapterType": "codex_cli",
+  "model": "gpt-5.5",
+  "projectPath": "/Users/me/loom",
+  "projectName": "loom",
+  "language": "en",
+  "promptVersion": 1,
+  "createdAtMs": 1,
+  "updatedAtMs": 2,
+  "turns": [
+    {
+      "index": 1,
+      "question": "How does Loom stop an agent?",
+      "status": "done",
+      "jobId": "job-1-0",
+      "startedAtMs": 1,
+      "finishedAtMs": 2,
+      "warnings": [
+        "1 source citation(s) could not be verified"
+      ],
+      "refs": {
+        "valid": 3,
+        "invalid": 1
+      }
+    },
+    {
+      "index": 2,
+      "question": "Which limits apply?",
+      "status": "running",
+      "jobId": "job-2-0",
+      "startedAtMs": 3,
+      "warnings": [],
+      "context": "native"
+    }
+  ],
+  "resumeCommand": "codex resume thread-1",
+  "resumeAgentCommand": "codex"
+} satisfies Research,
+researchTurnContent: {
+  "index": 1,
+  "markdown": "# Stop\n[run](loom-src:src/agent/runner.rs#L1-L20)",
+  "refs": [
+    {
+      "target": "src/agent/runner.rs#L1-L20",
+      "path": "src/agent/runner.rs",
+      "startLine": 1,
+      "endLine": 20,
+      "status": "valid"
+    }
+  ]
+} satisfies ResearchTurnContent,
+researchEvent: {
+  "researchId": "research-1-0",
+  "jobId": "job-2-0",
+  "turn": 2,
+  "status": "running"
+} satisfies ResearchEvent,
 } as const;

@@ -10,6 +10,7 @@
 │ rail │ 第二栏（功能自有）    │ 主区域（功能自有）                      │
 │ 52px │ Chat: 项目/会话树     │ Chat: 转录 + Composer                 │
 │      │ Learn: 研究列表       │ Learn: 新研究表单 / Wiki               │
+│      │ Research: 调研列表    │ Research: 新调研表单 / 问答报告          │
 │ 💬   │ Settings: 分区导航    │ Settings: 分区内容                     │
 │ 🎓   │                    │                                      │
 │      │                    │                                      │
@@ -18,7 +19,7 @@
 ```
 
 - 功能栏（`src/shell/ActivityRail.tsx`）只负责切换功能；第二栏和主区域完全由各功能渲染，功能之间不互相引用。
-- 顶部：注册表里的功能，按注册顺序（Chat、Learn；Research、Discuss 交付时再加入，不放占位）。底部：Settings。
+- 顶部：注册表里的功能，按注册顺序（Chat、Learn、Research（P6 加入，图标 `Telescope`，布局见 [Research 布局稿](../research/README.md)）；Discuss 交付时再加入，不放占位）。底部：Settings。
 - 启动总是打开 Chat，不记忆上次视图（计划 §8-5）。
 
 ## 功能栏

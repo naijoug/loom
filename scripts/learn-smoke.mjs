@@ -21,18 +21,18 @@ export async function learnSmoke(client, { evaluate, waitFor, click, clickText, 
   if(await evaluate(client,'Math.abs(document.querySelector(".learn-page").getBoundingClientRect().height-innerHeight)>1'))throw Error('Learn page does not fill the window');
   if(await evaluate(client,'document.querySelector(".activity-rail-item[aria-current=page]")?.dataset.view!=="learn"'))throw Error('Rail does not mark Learn as current');
   await screenshot('ready-en-light',output);
-  await click('.learn-article .learn-src-link');
-  await waitFor(client,'document.querySelectorAll(".learn-code-line[data-marked]").length===5','highlighted source range');
+  await click('.learn-article .loom-src-link');
+  await waitFor(client,'document.querySelectorAll(".source-code-line[data-marked]").length===5','highlighted source range');
   await screenshot('source-range',output);
-  await click('.learn-source header .chat-icon-button:last-child');await waitFor(client,'!document.querySelector(".learn-source")','source closed');
+  await click('.source-viewer header .chat-icon-button:last-child');await waitFor(client,'!document.querySelector(".source-viewer")','source closed');
   checks.push('overview fills window; source link opens highlighted range');
   await page('Architecture');await waitFor(client,'document.querySelectorAll(".learn-diagram-node").length===4','diagram nodes');
   await screenshot('architecture',output);
   await evaluate(client,'document.querySelectorAll(".learn-diagram-node")[1].dispatchEvent(new MouseEvent("click",{bubbles:true}))');
   await waitFor(client,'document.querySelector(".learn-article h1")?.textContent==="Printer"||Boolean(document.querySelector(".learn-article .chat-primary-button"))','diagram opens module');
   await page('Command line');
-  await waitFor(client,'Boolean(document.querySelector(\'.learn-src-link[data-status="missing"]\'))','stale reference marked');
-  await click('.learn-wiki-link');await waitFor(client,'Boolean(document.querySelector(".learn-article .chat-primary-button"))','wiki link opens ungenerated page');
+  await waitFor(client,'Boolean(document.querySelector(\'.loom-src-link[data-status="missing"]\'))','stale reference marked');
+  await click('.loom-wiki-link');await waitFor(client,'Boolean(document.querySelector(".learn-article .chat-primary-button"))','wiki link opens ungenerated page');
   await screenshot('page-not-generated',output);
   await page('Command line');await screenshot('module-page',output);
   checks.push('architecture diagram nodes navigate; module page marks stale refs; wiki link to ungenerated page');
@@ -66,8 +66,9 @@ export async function learnSmoke(client, { evaluate, waitFor, click, clickText, 
   await screenshot('created-ready',output);
   checks.push('URL validation; create runs fetch → architecture → level-1 pages');
 
-  await clickText('.learn-sidebar button','Back to Chat');await waitFor(client,'Boolean(document.querySelector(".chat-empty-session h1, textarea"))','Chat restored');
-  checks.push('Back to Chat');
+  // The rail replaced the old sidebar "Back to Chat" button.
+  await click('.activity-rail-item[data-view=chat]');await waitFor(client,'!document.querySelector("[data-testid=chat-page]").closest("[hidden]")&&Boolean(document.querySelector("[data-testid=learn-page]").closest("[hidden]"))','Chat restored from the rail');
+  checks.push('rail returns to Chat');
   writeFileSync(join(output,'result.json'),JSON.stringify({status:'passed',kind:'synthetic-web-only',checks},null,2));
   console.log(`Learn browser smoke passed: ${output}`);
 }
