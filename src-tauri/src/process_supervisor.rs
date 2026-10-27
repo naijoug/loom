@@ -478,16 +478,20 @@ fn signal_process_group(process_id: u32, force: bool) -> Result<(), String> {
         let signal = if force { 9 } else { SIGTERM };
         if kill(-(process_id as i32), signal) != 0 {
             let error = std::io::Error::last_os_error();
-            // A group can finish exiting between signalling and inspecting the
-            // failure. Only an ESRCH probe proves cleanup is already complete;
-            // a live or inaccessible group must still report the original error.
-            if !group_disappeared(&error, || {
-                if kill(-(process_id as i32), 0) == 0 {
+            let probe = |target: i32| {
+                if kill(target, 0) == 0 {
                     Ok(())
                 } else {
                     Err(std::io::Error::last_os_error())
                 }
-            }) {
+            };
+            // A group can finish exiting between signalling and inspecting the
+            // failure; a live or inaccessible group must still report the error.
+            if !group_disappeared(
+                &error,
+                || probe(-(process_id as i32)),
+                || group_members_exited(process_id),
+            ) {
                 return Err(format!(
                     "failed to terminate process group {process_id} with signal {signal}: {error}"
                 ));
@@ -511,13 +515,65 @@ fn signal_process_group(process_id: u32, force: bool) -> Result<(), String> {
 }
 
 #[cfg(unix)]
+const EPERM: i32 = 1;
+#[cfg(unix)]
+const ESRCH: i32 = 3;
+
+/// Decide whether a failed group signal only means there is nothing left to stop.
+/// A group that vanished (ESRCH) is done; a group denied twice is done only when
+/// `members_exited` proves every remaining member is a zombie, so a live or
+/// foreign group still reports the original error.
+#[cfg(unix)]
 fn group_disappeared(
     error: &std::io::Error,
-    probe: impl FnOnce() -> Result<(), std::io::Error>,
+    probe_group: impl FnOnce() -> Result<(), std::io::Error>,
+    members_exited: impl FnOnce() -> bool,
 ) -> bool {
-    error.raw_os_error() == Some(3)
-        || (error.raw_os_error() == Some(1)
-            && probe().is_err_and(|error| error.raw_os_error() == Some(3)))
+    match error.raw_os_error() {
+        Some(ESRCH) => true,
+        Some(EPERM) => match probe_group().err().and_then(|e| e.raw_os_error()) {
+            Some(ESRCH) => true,
+            Some(EPERM) => members_exited(),
+            _ => false,
+        },
+        _ => false,
+    }
+}
+
+#[cfg(target_os = "macos")]
+unsafe extern "C" {
+    fn proc_listpids(kind: u32, typeinfo: u32, buffer: *mut i32, buffer_size: i32) -> i32;
+}
+
+/// macOS answers EPERM, not ESRCH, for a group whose members have all exited
+/// but are not reaped yet: our own unwaited leader, or an orphaned descendant
+/// launchd has not collected. Listing includes zombies, and `kill(pid, 0)`
+/// succeeds on them. A live member we may signal would have accepted the group
+/// signal, so "every member answers signal 0" means every member is a zombie; a
+/// live foreign member answers EPERM. Only signal 0 is sent, never a real one.
+#[cfg(target_os = "macos")]
+fn group_members_exited(process_group: u32) -> bool {
+    const PROC_PGRP_ONLY: u32 = 2;
+    let mut members = [0i32; 256];
+    let size = std::mem::size_of_val(&members) as i32;
+    let bytes = unsafe { proc_listpids(PROC_PGRP_ONLY, process_group, members.as_mut_ptr(), size) };
+    if bytes < 0 || bytes >= size {
+        return false;
+    }
+    members[..bytes as usize / std::mem::size_of::<i32>()]
+        .iter()
+        .all(|&pid| {
+            pid > 1
+                && (unsafe { kill(pid, 0) } == 0
+                    || std::io::Error::last_os_error().raw_os_error() == Some(ESRCH))
+        })
+}
+
+/// Other kernels still accept signals for unreaped zombies, so a denied group
+/// there has a live member we may not signal.
+#[cfg(all(unix, not(target_os = "macos")))]
+fn group_members_exited(_process_group: u32) -> bool {
+    false
 }
 
 #[cfg(test)]
@@ -551,14 +607,74 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn disappearing_group_race_does_not_hide_live_permission_failures() {
-        let denied = std::io::Error::from_raw_os_error(1);
-        assert!(group_disappeared(&denied, || Err(
-            std::io::Error::from_raw_os_error(3)
-        )));
-        assert!(!group_disappeared(&denied, || Ok(())));
-        assert!(!group_disappeared(&denied, || Err(
-            std::io::Error::from_raw_os_error(1)
-        )));
+        let err = |code| Err(std::io::Error::from_raw_os_error(code));
+        let denied = std::io::Error::from_raw_os_error(EPERM);
+        let unused = || -> bool { panic!("members listed") };
+        assert!(group_disappeared(&denied, || err(ESRCH), unused));
+        assert!(!group_disappeared(&denied, || Ok(()), unused));
+        // Zombie-only group (macOS denies it) versus a live foreign member.
+        assert!(group_disappeared(&denied, || err(EPERM), || true));
+        assert!(!group_disappeared(&denied, || err(EPERM), || false));
+        let other = std::io::Error::from_raw_os_error(22);
+        assert!(!group_disappeared(&other, || err(ESRCH), unused));
+    }
+
+    /// Wait until every member of `group` has exited, without reaping any.
+    #[cfg(unix)]
+    fn wait_for_zombie_group(group: u32) {
+        let accepts_signals = || unsafe { kill(-(group as i32), 0) == 0 };
+        if cfg!(not(target_os = "macos")) {
+            // Other kernels keep accepting signals for zombies; just give it time.
+            std::thread::sleep(std::time::Duration::from_millis(200));
+            return;
+        }
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+        while accepts_signals() && std::time::Instant::now() < deadline {
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        assert!(
+            !accepts_signals(),
+            "the exited group should be denied by now"
+        );
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn exited_but_unreaped_group_counts_as_already_stopped() {
+        let mut command = TokioCommand::new("sh");
+        command.args(["-c", "exit 0"]);
+        configure_process_group(&mut command);
+        let mut child = command.spawn().unwrap();
+        let process_id = child.id().unwrap();
+        wait_for_zombie_group(process_id);
+        terminate_process_group(process_id).unwrap();
+        force_terminate_process_group(process_id).unwrap();
+        let status = child.wait().await.unwrap();
+        assert!(status.success(), "the zombie's exit status was preserved");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn reaped_leader_with_an_unreaped_member_counts_as_already_stopped() {
+        use std::os::unix::process::CommandExt;
+        let mut leader = std::process::Command::new("sleep")
+            .arg("30")
+            .process_group(0)
+            .spawn()
+            .unwrap();
+        let group = leader.id();
+        let mut member = std::process::Command::new("sh")
+            .args(["-c", "exit 0"])
+            .process_group(group as i32)
+            .spawn()
+            .unwrap();
+        // The unreaped member keeps the group (and its id) alive after the
+        // leader is gone, like an orphaned descendant launchd has not collected.
+        leader.kill().unwrap();
+        leader.wait().unwrap();
+        wait_for_zombie_group(group);
+        force_terminate_process_group(group).unwrap();
+        assert!(member.wait().unwrap().success());
     }
 
     #[test]

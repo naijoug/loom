@@ -155,6 +155,15 @@
   - 原生真实验收：Chat 运行中切四功能/Settings、草稿保持、停止后再发、重启历史与续聊通过；Learn 既有 Overview 与源码定位通过；Discuss 双 CLI 两轮、停止汇总/确认单次重试、重启后报告/旧尝试通过；Research 首问、追问运行中 Cmd+Q、重启 interrupted 且无自动调用、重试/停止及短追问回放完成。
   - 例外：一次重启有空白 WebView，未改数据/代码再次启动恢复，后续重启也成功；根因未定位，不能宣称已修复或无故障发布。P3 Learn / P6 项目引用 / P7 双 CLI 的历史证据带基线引用，不虚称全套重跑。未强杀、未触碰旧 Task 或已有 Learn 内容。
   - 汇总与 S1–S8 分层证据见 [P8 验收](../../dogfood/2026-10-28-p8-acceptance.md)。不自动提交/推送/发布；下一优先项为复现原生重启空白，其后才是独立的签名/安装/升级发布验收。
+- **P1/P4 记录的偶发 EPERM 已修复（2026-10-27，单独提交）**：
+  - 原因已复现：macOS 上进程组成员全部退出但尚未回收时（本进程未 wait 的组长，或组长已回收、孤儿后代还在等 launchd 回收），`kill(-pgid, sig)` 与 `kill(-pgid, 0)` 都返回 EPERM，回收后才变为 ESRCH；对单个僵尸 `kill(pid, 0)` 返回 0。旧逻辑只认 ESRCH 探测。两种形态都在压力测试中出现过。
+  - `process_supervisor::group_disappeared`：组信号与组探测都为 EPERM 时，macOS 上用 `proc_listpids(PROC_PGRP_ONLY)`（libSystem，无新依赖，列表含僵尸）列出成员；每个成员都接受信号 0 才视为已停止（能被我们发信号的活成员本会接受组信号，所以只剩僵尸），有外部活成员（EPERM）照常报原错误。只发信号 0，不向单个 PID 发真实信号；其他 Unix 不受影响。
+  - 新增两个真实进程测试 `exited_but_unreaped_group_counts_as_already_stopped`、`reaped_leader_with_an_unreaped_member_counts_as_already_stopped`（去掉修复时均以原报错失败），纯逻辑测试改为覆盖各探测组合。
+  - 验证：
+    - `pnpm check` 连续 3 次通过（前端 132，Rust 300 通过 / 27 忽略）。
+    - 压力对比（`cargo test --lib -- --test-threads=32`）：修复前 8 轮中 7 轮失败，共 8 次 EPERM（`skills::operations` ssh 5 次、`chat::shutdown` 2 次等）；修复后 10 轮 0 次 EPERM，`chat::shutdown` 与 skills ssh 用例每轮通过。
+    - 修复后仍见 3 次与进程组无关的 HTTP 取消时序偶发失败（`skills::translation::remote::tests::http_transport_timeout_and_inflight_cancellation_are_recorded_without_retry` 2 次、`skills::github_api::tests::cancellation_interrupts_an_inflight_http_request` 1 次），前者修复前也出现过，未在本次处理。
+    - worktree 位于主仓库目录下，cargo 会向上找到主仓库的 workspace 而拒绝构建，以上命令在 scratchpad 的同步副本中运行。
 
 ## 1. 目标
 
