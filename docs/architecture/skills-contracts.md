@@ -105,7 +105,9 @@ Git 显式 SSH transport 保留 GIT_SSH_COMMAND、GIT_SSH、GIT_SSH_VARIANT 和�
 
 ## 翻译配置（M3-01）
 
-Settings → Skills 的翻译设置通过 `skills_list_translation_providers` / `skills_save_translation_config` 访问 Rust `translation/config.rs`，两者只允许主窗口；Skills IPC 共 18 个。四个 provider 保留原 ID：openai、openrouter、codex、claude-code；Amp 未注册。此切片只完成配置，执行、取消与结果尚由 M3-02/03 接线，不声称四个翻译 provider 已验收。
+Settings → Skills 的翻译设置通过 `skills_list_translation_providers` / `skills_save_translation_config` 访问 Rust `translation/config.rs`，两者只允许主窗口；当前 Skills IPC 共 21 个。四个 provider 保留原 ID：openai、openrouter、codex、claude-code；Amp 未注册。
+
+翻译执行、取消、历史查询与结果读取已通过 `skills_translate`、`skills_cancel_operation`、`skills_translation_history`、`skills_translation_result` 接入，执行与持久化契约见下文 M3-02/03。四个 provider 的真实账号实测继续标为 blocked；实现接入和合成验证不代表真实调用验收通过。
 
 配置位于 Skills dataDir 的 `translation-config.json`，schemaVersion 1、单调 revision、按 provider 存储；文件私有 `0600`，读写拒绝 symlink/损坏/未来 schema。保存先取得 lifecycle lease → operation guard → writer，检查 pending write set；expectedRevision 不匹配返回 conflict，不覆盖其他客户端的新设置。API key 变化明确为 keep/set/clear，model null/空白恢复默认；本地 provider 不接受 key 修改。
 
@@ -113,7 +115,7 @@ Settings → Skills 的翻译设置通过 `skills_list_translation_providers` / 
 
 远程 key 的优先级保持旧行为：OPENAI_API_KEY/OPENROUTER_API_KEY 优先于保存值；清除保存值不清除环境变量，界面明确提示。模型优先级为 LOOM_SKILLS_OPENAI_MODEL/LOOM_SKILLS_OPENROUTER_MODEL → 保存值 → 默认 gpt-5/openai/gpt-5；不读取旧 Manager 的 SKILLS_MANAGER_* 环境变量。本地模型可独立设置，默认交给 CLI；命令可用性复用 Agent 的 resolve_executable，仅表示发现安装，不代表登录可用。
 
-后续请求实现以 [OpenAI 文本生成文档](https://developers.openai.com/api/docs/guides/text) 与 [Codex CLI 文档](https://learn.chatgpt.com/docs/developer-commands?surface=cli) 为协议参考；真实调用按 provider 单独验收。已有配置读取不触发外发、登录或付费请求，不提供旧配置导入。
+请求实现以 [OpenAI 文本生成文档](https://developers.openai.com/api/docs/guides/text) 与 [Codex CLI 文档](https://learn.chatgpt.com/docs/developer-commands?surface=cli) 为协议参考；真实调用按 provider 单独验收。已有配置读取不触发外发、登录或付费请求，不提供旧配置导入。
 
 ## 翻译执行与结果（M3-02/03）
 
