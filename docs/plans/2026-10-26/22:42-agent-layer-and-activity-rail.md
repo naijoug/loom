@@ -171,6 +171,7 @@
   - 验证：
     - 改测试后在镜像副本跑 12 轮 `cargo test --lib -- --test-threads=32`，全部通过（此前 10 轮中这两个测试共失败 3 次）。
     - 加 `[workspace]` 后直接在 worktree 中运行：`pnpm check` 连续 3 次通过（前端 132，Rust 300 通过 / 27 忽略），另跑 6 轮 32 线程 `cargo test --lib` 全部通过。
+  - 加压复查（2026-11-02）：在 6 个 CPU 占满进程与持续写盘 + `sync` 的背景负载下，`cargo test --lib -- --test-threads=64` 跑 10 轮、`pnpm test` 跑 10 轮，全部通过（Rust 300 / 27 忽略，前端 132），未再发现偶发失败。另查了测试中依赖固定时长的窗口（`chat/runtime` 测试的 80/50/400 ms 宽限、Learn 取消前的 300 ms 等待、本地翻译取消前的 80 ms 等待），代码路径上取消早于启动时结果相同或已在加压下通过，未改动。
 ## 1. 目标
 
 1. **Agent 层独立**：凡是调用本机 Agent CLI 的工作，都只通过 `src-tauri/src/agent/` 进行，包括：
