@@ -596,7 +596,10 @@ async fn cancellation_interrupts_an_inflight_http_request() {
         tokio::time::sleep(Duration::from_millis(80)).await;
         operations::cancel(&repo, &id).unwrap();
     };
-    tokio::time::timeout(Duration::from_secs(2), async {
+    // The transport never resolves, so finishing at all proves the cancel
+    // interrupted it. The bound only guards a hang: each step syncs operation
+    // metadata to disk, which takes several times longer under a loaded suite.
+    tokio::time::timeout(Duration::from_secs(30), async {
         tokio::join!(operation, cancel);
     })
     .await

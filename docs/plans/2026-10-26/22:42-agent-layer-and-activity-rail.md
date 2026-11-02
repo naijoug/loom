@@ -162,9 +162,15 @@
   - 验证：
     - `pnpm check` 连续 3 次通过（前端 132，Rust 300 通过 / 27 忽略）。
     - 压力对比（`cargo test --lib -- --test-threads=32`）：修复前 8 轮中 7 轮失败，共 8 次 EPERM（`skills::operations` ssh 5 次、`chat::shutdown` 2 次等）；修复后 10 轮 0 次 EPERM，`chat::shutdown` 与 skills ssh 用例每轮通过。
-    - 修复后仍见 3 次与进程组无关的 HTTP 取消时序偶发失败（`skills::translation::remote::tests::http_transport_timeout_and_inflight_cancellation_are_recorded_without_retry` 2 次、`skills::github_api::tests::cancellation_interrupts_an_inflight_http_request` 1 次），前者修复前也出现过，未在本次处理。
+    - 修复后仍见 3 次与进程组无关的 HTTP 取消时序偶发失败（`skills::translation::remote::tests::http_transport_timeout_and_inflight_cancellation_are_recorded_without_retry` 2 次、`skills::github_api::tests::cancellation_interrupts_an_inflight_http_request` 1 次），前者修复前也出现过；随后的遗留问题提交中修复，见下一条。
     - worktree 位于主仓库目录下，cargo 会向上找到主仓库的 workspace 而拒绝构建，以上命令在 scratchpad 的同步副本中运行。
-
+- **遗留的测试时序问题与 worktree 构建（2026-11-02，单独提交）**：
+  - 翻译 HTTP 测试：夹具服务器固定 250 ms 后回包，与"写取消标记（每次写入都 fsync）+ 40 ms 轮询"赛跑，负载下取消写入超过 250 ms 时回包先到，`delayed` 被解析成 `InvalidInput`。改为夹具服务器按住回包，直到客户端已超时或已看到取消、测试释放后才回；取消场景客户端超时放宽到 8 s。只改测试，产品代码未动。
+  - GitHub API 取消测试：传输永不返回，测试能结束本身就证明取消打断了请求；产品路径与断言在单线程运行时下是确定的，唯一受负载影响的是 2 s 防挂起上限。实测整段单跑约 130–170 ms，全量负载下 520–780 ms；上限改为 30 s，并注明只用于防挂起。
+  - `src-tauri/Cargo.toml` 增加空 `[workspace]`：src-tauri 本就有独立 `Cargo.lock` 且被根 workspace 排除，声明后 cargo 不再向上找到外层仓库的 workspace，`.claude/worktrees/` 下可直接构建；`Cargo.lock` 未变。
+  - 验证：
+    - 改测试后在镜像副本跑 12 轮 `cargo test --lib -- --test-threads=32`，全部通过（此前 10 轮中这两个测试共失败 3 次）。
+    - 加 `[workspace]` 后直接在 worktree 中运行：`pnpm check` 连续 3 次通过（前端 132，Rust 300 通过 / 27 忽略），另跑 6 轮 32 线程 `cargo test --lib` 全部通过。
 ## 1. 目标
 
 1. **Agent 层独立**：凡是调用本机 Agent CLI 的工作，都只通过 `src-tauri/src/agent/` 进行，包括：

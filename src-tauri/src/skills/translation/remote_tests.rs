@@ -7,14 +7,22 @@ use std::{
     thread,
 };
 
+/// Serve one request. The reply waits up to `hold`, or until the returned
+/// sender is dropped, so a test can keep it back until the client gave up.
 fn server(
     status: u16,
     body: String,
-    delay: Duration,
-) -> (String, mpsc::Receiver<String>, thread::JoinHandle<()>) {
+    hold: Duration,
+) -> (
+    String,
+    mpsc::Receiver<String>,
+    mpsc::Sender<()>,
+    thread::JoinHandle<()>,
+) {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let url = format!("http://{}/translation", listener.local_addr().unwrap());
     let (tx, rx) = mpsc::channel();
+    let (release, released) = mpsc::channel::<()>();
     let handle = thread::spawn(move || {
         let (mut socket, _) = listener.accept().unwrap();
         socket
@@ -44,11 +52,11 @@ fn server(
             }
         }
         let _ = tx.send(String::from_utf8(request).unwrap());
-        thread::sleep(delay);
+        let _ = released.recv_timeout(hold);
         let response = format!("HTTP/1.1 {status} Fixture\r\nContent-Type: application/json\r\nLocation: /must-not-follow\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len());
         let _ = socket.write_all(response.as_bytes());
     });
-    (url, rx, handle)
+    (url, rx, release, handle)
 }
 fn context(op: &Operation, id: ProviderId) -> Context {
     Context {
@@ -89,7 +97,7 @@ async fn http_transport_covers_success_auth_rate_limit_redirect_invalid_and_over
         (ProviderId::OpenAi, 200, "upstream-secret".into(), Some(ErrorCode::InvalidInput)),
         (ProviderId::OpenAi, 200, "x".repeat(MAX_RESULT * 2 + 1), Some(ErrorCode::InvalidInput)),
     ] {
-        let (url, received, handle) = server(status, response, Duration::ZERO);
+        let (url, received, _release, handle) = server(status, response, Duration::ZERO);
         let mut op = Operation::begin(&repo, "fixture", "translate").unwrap();
         let ctx = context(&op, id);
         let provider = ResolvedProvider { id, model: Some("fixture".into()), api_key: Some("credential-secret".into()) };
@@ -112,7 +120,10 @@ async fn http_transport_timeout_and_inflight_cancellation_are_recorded_without_r
     let f = Fixture::new();
     let repo = Repository::open(&f.0.join("data"), &f.0.join("coord")).unwrap();
     for cancel in [false, true] {
-        let (url, received, handle) = server(200, "delayed".into(), Duration::from_millis(250));
+        // The reply is held until the client has timed out or seen the
+        // cancellation, so a slow cancel write under load cannot lose the race.
+        let (url, received, release, handle) =
+            server(200, "delayed".into(), Duration::from_secs(10));
         let mut op = Operation::begin(&repo, "fixture", "translate").unwrap();
         let ctx = context(&op, ProviderId::OpenAi);
         let provider = ResolvedProvider {
@@ -124,7 +135,7 @@ async fn http_transport_timeout_and_inflight_cancellation_are_recorded_without_r
             let repo = repo.clone();
             let id = op.record.operation_id.clone();
             Some(thread::spawn(move || {
-                received.recv_timeout(Duration::from_secs(2)).unwrap();
+                received.recv_timeout(Duration::from_secs(10)).unwrap();
                 operations::cancel(&repo, &id).unwrap();
             }))
         } else {
@@ -136,7 +147,7 @@ async fn http_transport_timeout_and_inflight_cancellation_are_recorded_without_r
             &ctx,
             "text",
             &client(if cancel {
-                Duration::from_secs(3)
+                Duration::from_secs(8)
             } else {
                 Duration::from_millis(40)
             }),
@@ -144,6 +155,7 @@ async fn http_transport_timeout_and_inflight_cancellation_are_recorded_without_r
         )
         .await
         .unwrap_err();
+        drop(release);
         assert_eq!(
             error.code,
             if cancel {

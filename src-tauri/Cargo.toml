@@ -9,6 +9,11 @@ rust-version = "1.90"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+# The desktop app is its own workspace (own Cargo.lock; the root workspace
+# excludes it). Declaring it stops cargo from climbing into an enclosing
+# checkout's workspace, e.g. for worktrees under .claude/worktrees/.
+[workspace]
+
 [lib]
 # The `_lib` suffix may seem redundant but it is necessary
 # to make the lib name unique and wouldn't conflict with the bin name.
