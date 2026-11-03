@@ -7,16 +7,51 @@ const { createRoot } = require("react-dom/client");
 const { JSDOM } = require("jsdom");
 const { useChatBridge } = require("../../.tmp/test-build/src/features/chat/useChatBridge.js");
 global.IS_REACT_ACT_ENVIRONMENT = true;
-function deferred() { let resolve; const promise = new Promise((r) => { resolve = r; }); return { promise, resolve }; }
-function snapshot(projectPath = "/a", id = "s", seq = 2) {
-  return { id, projectPath, agentId: "grok", title: "chat", permissionMode: "explore", messages: [{ id: "m", role: "assistant", content: "", status: "streaming", createdAtMs: 1 }], createdAtMs: 1, updatedAtMs: 1, activeTurnId: "t", turnStatus: "streaming", schemaVersion: 2, lastSeq: seq, revision: seq };
+function deferred() {
+  let resolve;
+  const promise = new Promise((r) => {
+    resolve = r;
+  });
+  return { promise, resolve };
 }
-function stream(seq, delta, projectKey = "/a", sessionId = "s") { return { schemaVersion: 2, projectKey, sessionId, seq, timestampMs: seq, kind: "stream", payload: { sessionId, turnId: "t", messageId: "m", delta, done: false } }; }
+function snapshot(projectPath = "/a", id = "s", seq = 2) {
+  return {
+    id,
+    projectPath,
+    agentId: "grok",
+    title: "chat",
+    permissionMode: "explore",
+    messages: [{ id: "m", role: "assistant", content: "", status: "streaming", createdAtMs: 1 }],
+    createdAtMs: 1,
+    updatedAtMs: 1,
+    activeTurnId: "t",
+    turnStatus: "streaming",
+    schemaVersion: 2,
+    lastSeq: seq,
+    revision: seq,
+  };
+}
+function stream(seq, delta, projectKey = "/a", sessionId = "s") {
+  return {
+    schemaVersion: 2,
+    projectKey,
+    sessionId,
+    seq,
+    timestampMs: seq,
+    kind: "stream",
+    payload: { sessionId, turnId: "t", messageId: "m", delta, done: false },
+  };
+}
 async function fixture(t) {
   const dom = new JSDOM("<div id='root'></div>");
-  global.window = dom.window; global.document = dom.window.document; global.navigator = dom.window.navigator;
+  global.window = dom.window;
+  global.document = dom.window.document;
+  global.navigator = dom.window.navigator;
   const root = createRoot(document.getElementById("root"));
-  t.after(async () => { await act(async () => root.unmount()); dom.window.close(); });
+  t.after(async () => {
+    await act(async () => root.unmount());
+    dom.window.close();
+  });
   return { root, dom, render: async (element) => act(async () => root.render(element)) };
 }
 function fakeApi() {
@@ -24,21 +59,41 @@ function fakeApi() {
   const api = {
     get: async (project, id) => snapshot(project, id),
     readEvents: async (_, __, after) => ({ events: [], hasMore: false, lastSeq: after }),
-    listen: async (handler) => { eventHandler = handler; return () => {}; },
-    listenErrors: async (handler) => { errorHandler = handler; return () => {}; },
+    listen: async (handler) => {
+      eventHandler = handler;
+      return () => {};
+    },
+    listenErrors: async (handler) => {
+      errorHandler = handler;
+      return () => {};
+    },
   };
   return { api, emit: (event) => eventHandler(event), error: (event) => errorHandler(event) };
 }
 
 test("production bridge waits for listeners and buffers events before get resolves", async (t) => {
-  const f = await fixture(t); const wire = fakeApi(); const listener = deferred(); const get = deferred();
-  let latest, gets = 0;
+  const f = await fixture(t);
+  const wire = fakeApi();
+  const listener = deferred();
+  const get = deferred();
+  let latest,
+    gets = 0;
   const baseListen = wire.api.listen;
-  wire.api.listen = async (handler) => { await listener.promise; return baseListen(handler); };
-  wire.api.get = async () => { gets += 1; return get.promise; };
-  function Harness() { latest = useChatBridge("/a", "s", true, assert.fail, () => {}, wire.api); return null; }
+  wire.api.listen = async (handler) => {
+    await listener.promise;
+    return baseListen(handler);
+  };
+  wire.api.get = async () => {
+    gets += 1;
+    return get.promise;
+  };
+  function Harness() {
+    latest = useChatBridge("/a", "s", true, assert.fail, () => {}, wire.api);
+    return null;
+  }
   await f.render(React.createElement(Harness));
-  assert.equal(latest.listenReady, false); assert.equal(gets, 0);
+  assert.equal(latest.listenReady, false);
+  assert.equal(gets, 0);
   await act(async () => listener.resolve());
   assert.equal(latest.listenReady, true);
   await act(async () => wire.emit(stream(3, "early")));
@@ -50,14 +105,32 @@ test("production bridge waits for listeners and buffers events before get resolv
 });
 
 test("production bridge ignores late A loads/errors after selecting B and replays sequence gaps", async (t) => {
-  const f = await fixture(t); const wire = fakeApi(); const loadA = deferred(); const errors = [];
-  let latest, replays = 0;
-  wire.api.get = async (project, id) => id === "a" ? loadA.promise : snapshot(project, id);
+  const f = await fixture(t);
+  const wire = fakeApi();
+  const loadA = deferred();
+  const errors = [];
+  let latest,
+    replays = 0;
+  wire.api.get = async (project, id) => (id === "a" ? loadA.promise : snapshot(project, id));
   wire.api.readEvents = async (project, id, after) => {
     replays += 1;
-    return { events: after === 2 ? [stream(3, "B", project, id), stream(4, "4", project, id)] : [], hasMore: false, lastSeq: 4 };
+    return {
+      events: after === 2 ? [stream(3, "B", project, id), stream(4, "4", project, id)] : [],
+      hasMore: false,
+      lastSeq: 4,
+    };
   };
-  function Harness({ id }) { latest = useChatBridge("/a", id, true, (e) => errors.push(e), () => {}, wire.api); return null; }
+  function Harness({ id }) {
+    latest = useChatBridge(
+      "/a",
+      id,
+      true,
+      (e) => errors.push(e),
+      () => {},
+      wire.api,
+    );
+    return null;
+  }
   await f.render(React.createElement(Harness, { id: "a" }));
   await f.render(React.createElement(Harness, { id: "b" }));
   await act(async () => loadA.resolve(snapshot("/a", "a")));
@@ -66,13 +139,43 @@ test("production bridge ignores late A loads/errors after selecting B and replay
   await act(async () => wire.emit(stream(4, "4", "/a", "b")));
   assert.equal(latest.session.id, "b");
   assert.equal(latest.session.messages[0].content, "B4");
-  assert.ok(replays > 0); assert.deepEqual(errors, []);
+  assert.ok(replays > 0);
+  assert.deepEqual(errors, []);
 });
 
 test("production bridge catches a missed final event on focus and reports durable changes", async (t) => {
-  const f = await fixture(t); const wire = fakeApi(); let latest; let changed = 0;
-  wire.api.readEvents = async () => ({ events: [{ ...stream(3, ""), kind: "session_patch", payload: { fields: { turnStatus: "idle", activeTurnId: null }, changedMessages: [{ ...snapshot().messages[0], content: "done", status: "complete" }], appendedMessages: [] } }], hasMore: false, lastSeq: 3 });
-  function Harness() { latest = useChatBridge("/a", "s", true, assert.fail, () => { changed += 1; }, wire.api); return null; }
+  const f = await fixture(t);
+  const wire = fakeApi();
+  let latest;
+  let changed = 0;
+  wire.api.readEvents = async () => ({
+    events: [
+      {
+        ...stream(3, ""),
+        kind: "session_patch",
+        payload: {
+          fields: { turnStatus: "idle", activeTurnId: null },
+          changedMessages: [{ ...snapshot().messages[0], content: "done", status: "complete" }],
+          appendedMessages: [],
+        },
+      },
+    ],
+    hasMore: false,
+    lastSeq: 3,
+  });
+  function Harness() {
+    latest = useChatBridge(
+      "/a",
+      "s",
+      true,
+      assert.fail,
+      () => {
+        changed += 1;
+      },
+      wire.api,
+    );
+    return null;
+  }
   await f.render(React.createElement(Harness));
   await act(async () => window.dispatchEvent(new window.Event("focus")));
   assert.equal(latest.session.turnStatus, "idle");
@@ -81,10 +184,24 @@ test("production bridge catches a missed final event on focus and reports durabl
 });
 
 test("production bridge reports listener initialization failures without marking the listener ready", async (t) => {
-  const f = await fixture(t); const wire = fakeApi(); const errors = [];
+  const f = await fixture(t);
+  const wire = fakeApi();
+  const errors = [];
   let latest;
-  wire.api.listen = async () => { throw new Error("chat event listener failed"); };
-  function Harness() { latest = useChatBridge("/a", "s", true, (message) => errors.push(message), () => {}, wire.api); return null; }
+  wire.api.listen = async () => {
+    throw new Error("chat event listener failed");
+  };
+  function Harness() {
+    latest = useChatBridge(
+      "/a",
+      "s",
+      true,
+      (message) => errors.push(message),
+      () => {},
+      wire.api,
+    );
+    return null;
+  }
   await f.render(React.createElement(Harness));
   await act(async () => {});
   assert.equal(latest.listenReady, false);
@@ -93,24 +210,44 @@ test("production bridge reports listener initialization failures without marking
 });
 
 test("production bridge reports only errors for the active turn", async (t) => {
-  const f = await fixture(t); const wire = fakeApi(); const errors = [];
-  function Harness() { useChatBridge("/a", "s", true, (message) => errors.push(message), () => {}, wire.api); return null; }
+  const f = await fixture(t);
+  const wire = fakeApi();
+  const errors = [];
+  function Harness() {
+    useChatBridge(
+      "/a",
+      "s",
+      true,
+      (message) => errors.push(message),
+      () => {},
+      wire.api,
+    );
+    return null;
+  }
   await f.render(React.createElement(Harness));
-  await act(async () => wire.error({ projectKey: "/a", sessionId: "s", turnId: "old-turn", errorSummary: "stale failure" }));
+  await act(async () =>
+    wire.error({ projectKey: "/a", sessionId: "s", turnId: "old-turn", errorSummary: "stale failure" }),
+  );
   assert.deepEqual(errors, []);
   await act(async () => wire.error({ projectKey: "/a", sessionId: "s", turnId: "t", errorSummary: "active failure" }));
   assert.deepEqual(errors, ["active failure"]);
 });
 
 test("production bridge drains paged recovery using the updated cursor", async (t) => {
-  const f = await fixture(t); const wire = fakeApi(); let latest; const afters = [];
+  const f = await fixture(t);
+  const wire = fakeApi();
+  let latest;
+  const afters = [];
   wire.api.readEvents = async (_project, _id, after) => {
     afters.push(after);
     if (after === 2) return { events: [stream(3, "A")], hasMore: true, lastSeq: 3 };
     if (after === 3) return { events: [stream(4, "B")], hasMore: false, lastSeq: 4 };
     return { events: [], hasMore: false, lastSeq: after };
   };
-  function Harness() { latest = useChatBridge("/a", "s", true, assert.fail, () => {}, wire.api); return null; }
+  function Harness() {
+    latest = useChatBridge("/a", "s", true, assert.fail, () => {}, wire.api);
+    return null;
+  }
   await f.render(React.createElement(Harness));
   await act(async () => window.dispatchEvent(new window.Event("focus")));
   assert.deepEqual(afters, [2, 3]);
@@ -119,7 +256,11 @@ test("production bridge drains paged recovery using the updated cursor", async (
 });
 
 test("production bridge falls back to a fresh snapshot after the recovery page cap", async (t) => {
-  const f = await fixture(t); const wire = fakeApi(); let latest; let gets = 0; let reads = 0;
+  const f = await fixture(t);
+  const wire = fakeApi();
+  let latest;
+  let gets = 0;
+  let reads = 0;
   wire.api.get = async (project, id) => {
     gets += 1;
     return { ...snapshot(project, id), updatedAtMs: gets, revision: gets };
@@ -128,7 +269,10 @@ test("production bridge falls back to a fresh snapshot after the recovery page c
     reads += 1;
     return { events: [], hasMore: true, lastSeq: after };
   };
-  function Harness() { latest = useChatBridge("/a", "s", true, assert.fail, () => {}, wire.api); return null; }
+  function Harness() {
+    latest = useChatBridge("/a", "s", true, assert.fail, () => {}, wire.api);
+    return null;
+  }
   await f.render(React.createElement(Harness));
   assert.equal(gets, 1);
   await act(async () => window.dispatchEvent(new window.Event("focus")));
@@ -138,17 +282,37 @@ test("production bridge falls back to a fresh snapshot after the recovery page c
 });
 
 test("production bridge refreshes from snapshot when recovery marks projection stale", async (t) => {
-  const f = await fixture(t); const wire = fakeApi(); let latest; let gets = 0; let changed = 0;
+  const f = await fixture(t);
+  const wire = fakeApi();
+  let latest;
+  let gets = 0;
+  let changed = 0;
   wire.api.get = async (project, id) => {
     gets += 1;
-    return { ...snapshot(project, id), messages: [{ ...snapshot(project, id).messages[0], content: gets === 1 ? "" : "fresh" }], revision: gets };
+    return {
+      ...snapshot(project, id),
+      messages: [{ ...snapshot(project, id).messages[0], content: gets === 1 ? "" : "fresh" }],
+      revision: gets,
+    };
   };
   wire.api.readEvents = async () => ({
     events: [{ ...stream(3, "ignored"), schemaVersion: 1 }],
     hasMore: false,
     lastSeq: 3,
   });
-  function Harness() { latest = useChatBridge("/a", "s", true, assert.fail, () => { changed += 1; }, wire.api); return null; }
+  function Harness() {
+    latest = useChatBridge(
+      "/a",
+      "s",
+      true,
+      assert.fail,
+      () => {
+        changed += 1;
+      },
+      wire.api,
+    );
+    return null;
+  }
   await f.render(React.createElement(Harness));
   assert.equal(gets, 1);
   await act(async () => window.dispatchEvent(new window.Event("focus")));
@@ -159,14 +323,27 @@ test("production bridge refreshes from snapshot when recovery marks projection s
 });
 
 test("production bridge suppresses recovery failures after switching sessions", async (t) => {
-  const f = await fixture(t); const wire = fakeApi(); const recovery = deferred(); const errors = [];
+  const f = await fixture(t);
+  const wire = fakeApi();
+  const recovery = deferred();
+  const errors = [];
   let latest;
   wire.api.get = async (project, id) => snapshot(project, id);
   wire.api.readEvents = async (_project, id) => {
     if (id === "a") await recovery.promise;
     throw new Error(`${id} recovery failed`);
   };
-  function Harness({ id }) { latest = useChatBridge("/a", id, true, (message) => errors.push(message), () => {}, wire.api); return null; }
+  function Harness({ id }) {
+    latest = useChatBridge(
+      "/a",
+      id,
+      true,
+      (message) => errors.push(message),
+      () => {},
+      wire.api,
+    );
+    return null;
+  }
   await f.render(React.createElement(Harness, { id: "a" }));
   await act(async () => window.dispatchEvent(new window.Event("focus")));
   await f.render(React.createElement(Harness, { id: "b" }));
@@ -176,11 +353,25 @@ test("production bridge suppresses recovery failures after switching sessions", 
 });
 
 test("production bridge reports recovery failures for the current session", async (t) => {
-  const f = await fixture(t); const wire = fakeApi(); const errors = [];
+  const f = await fixture(t);
+  const wire = fakeApi();
+  const errors = [];
   let latest;
   wire.api.get = async (project, id) => snapshot(project, id);
-  wire.api.readEvents = async (_project, id) => { throw new Error(`${id} recovery failed`); };
-  function Harness() { latest = useChatBridge("/a", "s", true, (message) => errors.push(message), () => {}, wire.api); return null; }
+  wire.api.readEvents = async (_project, id) => {
+    throw new Error(`${id} recovery failed`);
+  };
+  function Harness() {
+    latest = useChatBridge(
+      "/a",
+      "s",
+      true,
+      (message) => errors.push(message),
+      () => {},
+      wire.api,
+    );
+    return null;
+  }
   await f.render(React.createElement(Harness));
   await act(async () => window.dispatchEvent(new window.Event("focus")));
   assert.equal(latest.session.id, "s");

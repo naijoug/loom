@@ -1,9 +1,4 @@
-import type {
-  ChatPermissionMode,
-  ChatEventPage,
-  ChatSession,
-  ChatSessionSummary,
-} from "../domain";
+import type { ChatPermissionMode, ChatEventPage, ChatSession, ChatSessionSummary } from "../domain";
 import { TAURI_COMMANDS } from "./contract";
 import { invokeCommand } from "./tauriClient";
 
@@ -83,23 +78,36 @@ export function chatGet(projectPath: string, sessionId: string): Promise<ChatSes
   });
 }
 
-export function chatReadEvents(projectPath: string, sessionId: string, afterSeq: number, limit = 200): Promise<ChatEventPage> {
+export function chatReadEvents(
+  projectPath: string,
+  sessionId: string,
+  afterSeq: number,
+  limit = 200,
+): Promise<ChatEventPage> {
   return invokeCommand<ChatEventPage>(TAURI_COMMANDS.chatReadEvents, { projectPath, sessionId, afterSeq, limit });
 }
 
-export function chatReadRunLogs(projectPath: string, sessionId: string, turnId: string, stream: "stdout" | "stderr", offset = 0, limit = 32_768): Promise<import("../domain/chat").ChatLogPage> {
+export function chatReadRunLogs(
+  projectPath: string,
+  sessionId: string,
+  turnId: string,
+  stream: "stdout" | "stderr",
+  offset = 0,
+  limit = 32_768,
+): Promise<import("../domain/chat").ChatLogPage> {
   return invokeCommand(TAURI_COMMANDS.chatReadRunLogs, { projectPath, sessionId, turnId, stream, offset, limit });
 }
 
-export function chatExport(args: import("../domain/chat").ChatExportInput): Promise<import("../domain/chat").ChatExportResult> {
-  return invokeCommand(TAURI_COMMANDS.chatExport, chatInputEnvelope({ projectPath: args.projectPath, sessionId: args.sessionId }));
+export function chatExport(
+  args: import("../domain/chat").ChatExportInput,
+): Promise<import("../domain/chat").ChatExportResult> {
+  return invokeCommand(
+    TAURI_COMMANDS.chatExport,
+    chatInputEnvelope({ projectPath: args.projectPath, sessionId: args.sessionId }),
+  );
 }
 
-export function chatSetAgent(
-  projectPath: string,
-  sessionId: string,
-  agentId: string,
-): Promise<ChatSession> {
+export function chatSetAgent(projectPath: string, sessionId: string, agentId: string): Promise<ChatSession> {
   return invokeCommand<ChatSession>(TAURI_COMMANDS.chatSetAgent, {
     projectPath,
     sessionId,
@@ -152,7 +160,6 @@ export function chatAbort(args: ChatAbortArgs): Promise<void> {
     }),
   );
 }
-
 
 export function chatListProjectGroups(projectPaths?: string[]): Promise<import("../domain/chat").ChatProjectGroup[]> {
   return invokeCommand(TAURI_COMMANDS.chatListProjectGroups, { projectPaths });

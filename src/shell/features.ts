@@ -17,16 +17,42 @@ export interface FeatureEntry {
  */
 export const FEATURES = [
   // Chat stays mounted so running turns, drafts and selection survive switching (and Chat loads agents and diagnostics at startup).
-  { id: "chat", icon: MessageSquare, labelKey: "chat", load: lazy(() => import("../features/chat").then(module => ({ default: module.ChatPage }))), keepMounted: true },
-  { id: "learn", icon: GraduationCap, labelKey: "learn", load: lazy(() => import("../features/learn").then(module => ({ default: module.LearnPage }))), keepMounted: false },
-  { id: "research", icon: Telescope, labelKey: "research", load: lazy(() => import("../features/research").then(module => ({ default: module.ResearchPage }))), keepMounted: false },
-  { id: "discuss", icon: MessagesSquare, labelKey: "discuss", load: lazy(() => import("../features/discuss").then(module => ({ default: module.DiscussPage }))), keepMounted: false },
+  {
+    id: "chat",
+    icon: MessageSquare,
+    labelKey: "chat",
+    load: lazy(() => import("../features/chat").then((module) => ({ default: module.ChatPage }))),
+    keepMounted: true,
+  },
+  {
+    id: "learn",
+    icon: GraduationCap,
+    labelKey: "learn",
+    load: lazy(() => import("../features/learn").then((module) => ({ default: module.LearnPage }))),
+    keepMounted: false,
+  },
+  {
+    id: "research",
+    icon: Telescope,
+    labelKey: "research",
+    load: lazy(() => import("../features/research").then((module) => ({ default: module.ResearchPage }))),
+    keepMounted: false,
+  },
+  {
+    id: "discuss",
+    icon: MessagesSquare,
+    labelKey: "discuss",
+    load: lazy(() => import("../features/discuss").then((module) => ({ default: module.DiscussPage }))),
+    keepMounted: false,
+  },
 ] as const satisfies readonly FeatureEntry[];
 
 export type FeatureId = (typeof FEATURES)[number]["id"];
 
-export const SettingsPage = lazy(() => import("../features/settings/SettingsPage").then(module => ({ default: module.SettingsPage })));
+export const SettingsPage = lazy(() =>
+  import("../features/settings/SettingsPage").then((module) => ({ default: module.SettingsPage })),
+);
 
 export function isFeatureId(view: string): view is FeatureId {
-  return FEATURES.some(feature => feature.id === view);
+  return FEATURES.some((feature) => feature.id === view);
 }

@@ -16,7 +16,18 @@ const src = join(root, "src-tauri", "src");
 
 const FEATURE_MODULES = ["chat", "chat_context", "learn", "research", "discuss", "experiments", "skills", "workbench"];
 const CHAT_MODULES = ["chat", "chat_context"];
-const SPAWNING_FEATURES = ["chat", "chat_context.rs", "learn", "research", "discuss", "experiments", "research_sources", "rea", "browser_host", "repository_sources"];
+const SPAWNING_FEATURES = [
+  "chat",
+  "chat_context.rs",
+  "learn",
+  "research",
+  "discuss",
+  "experiments",
+  "research_sources",
+  "rea",
+  "browser_host",
+  "repository_sources",
+];
 // Non-agent processes a feature may start itself.
 const SPAWN_ALLOWLIST = new Map([["learn/fetch.rs", "git clone/fetch for study sources"]]);
 
@@ -51,7 +62,12 @@ for (const file of rustFiles(join(src, "research"))) {
 }
 
 for (const file of rustFiles(join(src, "experiments"))) {
-  const hits = referencesModule(productionCode(file, readFileSync(file, "utf8")), [...CHAT_MODULES, "learn", "research", "discuss"]);
+  const hits = referencesModule(productionCode(file, readFileSync(file, "utf8")), [
+    ...CHAT_MODULES,
+    "learn",
+    "research",
+    "discuss",
+  ]);
   if (hits.length) report(file, `experiments/ must not import other features (${hits.join(", ")})`);
 }
 
@@ -71,8 +87,10 @@ for (const entry of SPAWNING_FEATURES) {
     const path = relative(src, file);
     if (SPAWN_ALLOWLIST.has(path)) continue;
     const code = rustCodeMask(productionCode(path, readFileSync(file, "utf8")));
-    if (/\bprocess_supervisor\b/.test(code)) report(file, "feature lifecycle must use the agent public API, not process_supervisor");
-    if (/\bagent::(?:registry|diagnostics|runner|invocation|lifecycle|stream|tools|event|capabilities)::/.test(code)) report(file, "feature modules must use agent re-exports, not private submodules");
+    if (/\bprocess_supervisor\b/.test(code))
+      report(file, "feature lifecycle must use the agent public API, not process_supervisor");
+    if (/\bagent::(?:registry|diagnostics|runner|invocation|lifecycle|stream|tools|event|capabilities)::/.test(code))
+      report(file, "feature modules must use agent re-exports, not private submodules");
     if (spawnsProcess(code)) {
       report(file, "feature modules must start agent CLIs through agent::run, not spawn processes");
     }
@@ -91,7 +109,9 @@ function webFiles(path) {
 // Relative specifiers from `import … from`, side-effect imports, dynamic import() and CSS @import.
 function importTargets(file) {
   const text = readFileSync(file, "utf8");
-  const specs = [...text.matchAll(/(?:\bfrom\s*|\bimport\s*\(?\s*|@import\s+(?:url\()?)["']([^"']+)["']/g)].map((match) => match[1]);
+  const specs = [...text.matchAll(/(?:\bfrom\s*|\bimport\s*\(?\s*|@import\s+(?:url\()?)["']([^"']+)["']/g)].map(
+    (match) => match[1],
+  );
   return specs.filter((spec) => spec.startsWith(".")).map((spec) => resolve(dirname(file), spec));
 }
 
@@ -105,7 +125,10 @@ for (const file of webFiles(join(web, "features"))) {
   for (const target of importTargets(file)) {
     const other = featureOf(target);
     if (other && other !== own && !FEATURE_IMPORT_ALLOWLIST.has(`${own}->${other}`)) {
-      report(file, `features/${own} must not import features/${other} (${relative(web, target)}); move shared code to src/components`);
+      report(
+        file,
+        `features/${own} must not import features/${other} (${relative(web, target)}); move shared code to src/components`,
+      );
     }
   }
 }

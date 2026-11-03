@@ -11,9 +11,7 @@ const {
 } = require("../../.tmp/test-build/src/api/contract.js");
 const { createTauriClient } = require("../../.tmp/test-build/src/api/tauriClient.js");
 
-const fixture = JSON.parse(
-  readFileSync(join(__dirname, "../../contracts/tauri-contract.json"), "utf8"),
-);
+const fixture = JSON.parse(readFileSync(join(__dirname, "../../contracts/tauri-contract.json"), "utf8"));
 
 test("frontend command event and schema contract matches the canonical fixture", () => {
   assert.deepEqual(Object.values(TAURI_COMMANDS), fixture.commands);
@@ -50,7 +48,9 @@ test("typed Tauri client forwards invoke payloads and unwraps event payloads", a
     },
     async (event, handler) => {
       listeners.push({ event, handler });
-      return () => { unlistened = true; };
+      return () => {
+        unlistened = true;
+      };
     },
   );
 

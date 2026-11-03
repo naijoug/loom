@@ -37,11 +37,7 @@ const requiredFiles = [
   "diagnostic-bundle-engineering-proof.md",
 ];
 
-const forbiddenLocalPathPatterns = [
-  /\/Users\//,
-  /file:\/\/\/Users\//,
-  /\/private\/var\/folders\//,
-];
+const forbiddenLocalPathPatterns = [/\/Users\//, /file:\/\/\/Users\//, /\/private\/var\/folders\//];
 
 const requiredChecklistRows = [
   {
@@ -125,10 +121,7 @@ const requiredRecordGatePhrases = [
   },
   {
     file: "signing-gate-decision.md",
-    phrases: [
-      "不要求试用者绕过 Gatekeeper",
-      "下一份候选产物必须先解决签名 gate",
-    ],
+    phrases: ["不要求试用者绕过 Gatekeeper", "下一份候选产物必须先解决签名 gate"],
   },
   {
     file: "artifact-integrity-check.md",
@@ -139,18 +132,13 @@ const requiredRecordGatePhrases = [
   },
   {
     file: "notarized-dmg-gate.md",
-    phrases: [
-      "不要扩大 Beta 分发",
-      "严格 `codesign`、Gatekeeper assessment 和 staple validate 都通过",
-    ],
+    phrases: ["不要扩大 Beta 分发", "严格 `codesign`、Gatekeeper assessment 和 staple validate 都通过"],
   },
   {
     file: "beta-first-run-smoke-record.md",
     passGate: "First-run beta smoke",
     passPattern: /^(?:- )?(?:\*\*)?Beta gate: pass(?:\*\*)?\s*$/im,
-    phrases: [
-      "不能替代本记录",
-    ],
+    phrases: ["不能替代本记录"],
   },
   {
     file: "diagnostic-bundle-smoke-record.md",
@@ -166,10 +154,7 @@ const requiredRecordGatePhrases = [
     file: "install-uninstall-smoke-record.md",
     passGate: "Install / uninstall smoke",
     passPattern: /^(?:- )?(?:\*\*)?Install \/ uninstall beta gate: Pass(?:\*\*)?\s*$/im,
-    phrases: [
-      "不要求试用者绕过 Gatekeeper",
-      "这份记录不能单独解锁邀请制 Beta 或公开分发",
-    ],
+    phrases: ["不要求试用者绕过 Gatekeeper", "这份记录不能单独解锁邀请制 Beta 或公开分发"],
   },
 ];
 
@@ -327,20 +312,31 @@ function checkRecordedPass(sourcePath, gate) {
     return;
   }
   const candidate = manifest?.candidate;
-  if (manifest?.schemaVersion !== 1
-      || !/^[a-f0-9]{7,40}$/i.test(candidate?.commit ?? "")
-      || !/^[a-f0-9]{64}$/i.test(candidate?.sha256 ?? "")
-      || !Number.isSafeInteger(candidate?.sizeBytes) || candidate.sizeBytes <= 0
-      || typeof candidate?.buildCommand !== "string" || !candidate.buildCommand.trim()
-      || typeof candidate?.artifact !== "string" || !candidate.artifact.trim()) {
+  if (
+    manifest?.schemaVersion !== 1 ||
+    !/^[a-f0-9]{7,40}$/i.test(candidate?.commit ?? "") ||
+    !/^[a-f0-9]{64}$/i.test(candidate?.sha256 ?? "") ||
+    !Number.isSafeInteger(candidate?.sizeBytes) ||
+    candidate.sizeBytes <= 0 ||
+    typeof candidate?.buildCommand !== "string" ||
+    !candidate.buildCommand.trim() ||
+    typeof candidate?.artifact !== "string" ||
+    !candidate.artifact.trim()
+  ) {
     fail(sourcePath, "release evidence needs schemaVersion 1 and candidate commit/SHA-256/size/build command/artifact");
     return;
   }
   const evidence = manifest.gates?.[gate];
-  if (evidence?.status !== "Pass" || evidence.candidateSha256 !== candidate.sha256
-      || typeof evidence.reviewer !== "string" || !evidence.reviewer.trim()
-      || typeof evidence.checkedAt !== "string" || !Number.isFinite(Date.parse(evidence.checkedAt))
-      || typeof evidence.record !== "string" || !evidence.record.endsWith(".md")) {
+  if (
+    evidence?.status !== "Pass" ||
+    evidence.candidateSha256 !== candidate.sha256 ||
+    typeof evidence.reviewer !== "string" ||
+    !evidence.reviewer.trim() ||
+    typeof evidence.checkedAt !== "string" ||
+    !Number.isFinite(Date.parse(evidence.checkedAt)) ||
+    typeof evidence.record !== "string" ||
+    !evidence.record.endsWith(".md")
+  ) {
     fail(sourcePath, `gate ${JSON.stringify(gate)} requires a reviewed Pass record for the same candidate`);
     return;
   }
@@ -350,8 +346,13 @@ function checkRecordedPass(sourcePath, gate) {
     const realRoot = fs.realpathSync(releaseDir);
     const realRecord = fs.realpathSync(recordPath);
     const relative = path.relative(realRoot, realRecord);
-    if (path.isAbsolute(evidence.record) || relative === ".." || relative.startsWith(`..${path.sep}`)
-        || path.isAbsolute(relative) || !fs.statSync(realRecord).isFile()) {
+    if (
+      path.isAbsolute(evidence.record) ||
+      relative === ".." ||
+      relative.startsWith(`..${path.sep}`) ||
+      path.isAbsolute(relative) ||
+      !fs.statSync(realRecord).isFile()
+    ) {
       throw new Error("record outside release directory");
     }
     record = fs.readFileSync(realRecord, "utf8");
@@ -361,7 +362,10 @@ function checkRecordedPass(sourcePath, gate) {
   }
   for (const expected of [gate, candidate.commit, candidate.sha256, "Result: Pass"]) {
     if (!record.includes(expected)) {
-      fail(sourcePath, `gate ${JSON.stringify(gate)} record missing candidate/result evidence ${JSON.stringify(expected)}`);
+      fail(
+        sourcePath,
+        `gate ${JSON.stringify(gate)} record missing candidate/result evidence ${JSON.stringify(expected)}`,
+      );
     }
   }
   // Apply link/path hygiene to nested records as well as top-level Markdown.
@@ -374,7 +378,10 @@ function checkRecordedPass(sourcePath, gate) {
 function checkDistributionDecision(checklistPath, checklist, rows) {
   const decisions = [...checklist.matchAll(/^\*\*Distribution decision: ([^*\n]+)\*\*\s*$/gm)];
   if (decisions.length !== 1 || !["Hold", "Invite-only"].includes(decisions[0][1])) {
-    fail(checklistPath, "expected one current Distribution decision: Hold or Invite-only; Public requires a separate release review");
+    fail(
+      checklistPath,
+      "expected one current Distribution decision: Hold or Invite-only; Public requires a separate release review",
+    );
     return;
   }
   if (decisions[0][1] === "Invite-only") {
@@ -396,7 +403,10 @@ function checkChecklistRow(checklistPath, checklistRows, requiredRow) {
     return;
   }
   if (!["Pass", "Wait", "Hold", "Fail", "Review"].includes(row.status)) {
-    fail(checklistPath, `review table gate ${JSON.stringify(requiredRow.gate)} has invalid status ${JSON.stringify(row.status)}`);
+    fail(
+      checklistPath,
+      `review table gate ${JSON.stringify(requiredRow.gate)} has invalid status ${JSON.stringify(row.status)}`,
+    );
   }
   if (row.status === "Pass" && requiredRow.requiresRecordedPass) {
     checkRecordedPass(checklistPath, requiredRow.gate);
@@ -405,9 +415,7 @@ function checkChecklistRow(checklistPath, checklistRows, requiredRow) {
     if (!row.evidence.includes(evidence)) {
       fail(
         checklistPath,
-        `review table gate ${JSON.stringify(requiredRow.gate)} missing evidence ${JSON.stringify(
-          evidence,
-        )}`,
+        `review table gate ${JSON.stringify(requiredRow.gate)} missing evidence ${JSON.stringify(evidence)}`,
       );
     }
   }

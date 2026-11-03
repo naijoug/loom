@@ -1,11 +1,38 @@
 import type { TargetRun, TargetEvent, Material } from "./researchTargets";
 import type { Discussion, DiscussReport, DiscussEvent, CreateDiscussionInput } from "./discuss";
-import type { SkillSource, SkillsHttpRequest, TranslationProviders, TranslationResult, TranslationSummary } from "./skills";
+import type {
+  SkillSource,
+  SkillsHttpRequest,
+  TranslationProviders,
+  TranslationResult,
+  TranslationSummary,
+} from "./skills";
 import type { InstructionCheck, ResourcePreview } from "./skills";
 import type { LearnArchitecture, LearnEvent, LearnPageContent, LearnStudy } from "./learn";
 import type { Research, ResearchEvent, ResearchTurnContent } from "./research";
-import type { SkillsLibrary, SkillsOperation, InstallTarget, Installation, InstallPlan, InstallReceipt } from "./skills";
-import type { AgentConfig, AgentDiagnostic, AppSettings, ChatSession, ChatEvent, ChatSendInput, ChatSendReceipt, ChatResumeHandle, ChatTurn, ChatLogPage, ChatExportInput, ChatExportResult, ChatMessagePart } from "../domain";
+import type {
+  SkillsLibrary,
+  SkillsOperation,
+  InstallTarget,
+  Installation,
+  InstallPlan,
+  InstallReceipt,
+} from "./skills";
+import type {
+  AgentConfig,
+  AgentDiagnostic,
+  AppSettings,
+  ChatSession,
+  ChatEvent,
+  ChatSendInput,
+  ChatSendReceipt,
+  ChatResumeHandle,
+  ChatTurn,
+  ChatLogPage,
+  ChatExportInput,
+  ChatExportResult,
+  ChatMessagePart,
+} from "../domain";
 
 export const TAURI_COMMANDS = {
   getUpdateState: "get_update_state",
@@ -98,7 +125,6 @@ export const TAURI_COMMANDS = {
   researchResumeRun: "research_resume_run",
   researchExport: "research_export",
 
-
   discussList: "discuss_list",
   discussCreate: "discuss_create",
   discussGet: "discuss_get",
@@ -119,933 +145,912 @@ export const TAURI_EVENTS = {
   researchEvent: "loom://research-event",
   discussEvent: "loom://discuss-event",
 } as const;
-export const STORE_SCHEMA_VERSIONS = {"agents": 1, "settings": 1, "chat": 2} as const;
+export const STORE_SCHEMA_VERSIONS = { agents: 1, settings: 1, chat: 2 } as const;
 export type TauriCommand = (typeof TAURI_COMMANDS)[keyof typeof TAURI_COMMANDS];
 export type TauriEvent = (typeof TAURI_EVENTS)[keyof typeof TAURI_EVENTS];
 export const MODEL_CONTRACT_SAMPLES = {
   appSettings: {
-  "themeMode": "system",
-  "confirmBeforeCommands": true,
-  "commandTimeoutSeconds": 600,
-  "experimentalInlineCards": false,
-  "locale": "en"
-} satisfies AppSettings,
+    themeMode: "system",
+    confirmBeforeCommands: true,
+    commandTimeoutSeconds: 600,
+    experimentalInlineCards: false,
+    locale: "en",
+  } satisfies AppSettings,
   agentConfig: {
-  "id": "agent-contract",
-  "name": "Contract Agent",
-  "command": "agent",
-  "args": [
-    "run"
-  ],
-  "workingDirectoryPolicy": "project_root",
-  "capabilities": [
-    "planning"
-  ],
-  "adapterType": "cli",
-  "canWriteFiles": false,
-  "canRunCommands": false,
-  "enabled": true,
-  "available": true
-} satisfies AgentConfig,
+    id: "agent-contract",
+    name: "Contract Agent",
+    command: "agent",
+    args: ["run"],
+    workingDirectoryPolicy: "project_root",
+    capabilities: ["planning"],
+    adapterType: "cli",
+    canWriteFiles: false,
+    canRunCommands: false,
+    enabled: true,
+    available: true,
+  } satisfies AgentConfig,
   chatSession: {
-  "id": "chat-contract",
-  "projectPath": "/project",
-  "agentId": "agent-contract",
-  "title": "Chat contract",
-  "permissionMode": "explore",
-  "messages": [
-    {
-      "id": "user-contract",
-      "role": "user",
-      "content": "hello",
-      "status": "complete",
-      "createdAtMs": 1
-    },
-    {
-      "id": "assistant-contract",
-      "role": "assistant",
-      "content": "world",
-      "status": "complete",
-      "createdAtMs": 1
-    }
-  ],
-  "createdAtMs": 1,
-  "updatedAtMs": 1,
-  "turnStatus": "idle",
-  "status": "active",
-  "flagged": false,
-  "schemaVersion": 2,
-  "lastSeq": 1,
-  "revision": 1,
-  "sendReceipts": [
-    {
-      "clientRequestId": "request-contract",
-      "turnId": "turn-contract",
-      "userMessageId": "user-contract",
-      "assistantMessageId": "assistant-contract",
-      "requestedPermissionMode": "explore"
-    }
-  ],
-  "resumeHandle": {
-    "version": 1,
-    "adapterType": "grok_cli",
-    "nativeSessionId": "native-contract",
-    "configFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-  },
-  "turns": [
-    {
-      "id": "turn-contract",
-      "clientRequestId": "request-contract",
-      "userMessageId": "user-contract",
-      "assistantMessageId": "assistant-contract",
-      "invocation": {
-        "agentId": "agent-contract",
-        "adapterType": "grok_cli",
-        "program": "grok",
-        "args": [
-          "-p",
-          "[PROMPT]"
-        ],
-        "cwd": "/project",
-        "permissionMode": "explore",
-        "stdinPrompt": false,
-        "outputMode": "streaming_json",
-        "configFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    id: "chat-contract",
+    projectPath: "/project",
+    agentId: "agent-contract",
+    title: "Chat contract",
+    permissionMode: "explore",
+    messages: [
+      {
+        id: "user-contract",
+        role: "user",
+        content: "hello",
+        status: "complete",
+        createdAtMs: 1,
       },
-      "status": "completed",
-      "acceptedAtMs": 1,
-      "startedAtMs": 2,
-      "finishedAtMs": 3,
-      "processId": 123,
-      "exitCode": 0,
-      "terminationReason": null,
-      "errorSummary": null,
-      "stdoutLogRef": "runs/turn-contract/stdout.log",
-      "stderrLogRef": "runs/turn-contract/stderr.log"
-    }
-  ]
-} satisfies ChatSession,
+      {
+        id: "assistant-contract",
+        role: "assistant",
+        content: "world",
+        status: "complete",
+        createdAtMs: 1,
+      },
+    ],
+    createdAtMs: 1,
+    updatedAtMs: 1,
+    turnStatus: "idle",
+    status: "active",
+    flagged: false,
+    schemaVersion: 2,
+    lastSeq: 1,
+    revision: 1,
+    sendReceipts: [
+      {
+        clientRequestId: "request-contract",
+        turnId: "turn-contract",
+        userMessageId: "user-contract",
+        assistantMessageId: "assistant-contract",
+        requestedPermissionMode: "explore",
+      },
+    ],
+    resumeHandle: {
+      version: 1,
+      adapterType: "grok_cli",
+      nativeSessionId: "native-contract",
+      configFingerprint: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    },
+    turns: [
+      {
+        id: "turn-contract",
+        clientRequestId: "request-contract",
+        userMessageId: "user-contract",
+        assistantMessageId: "assistant-contract",
+        invocation: {
+          agentId: "agent-contract",
+          adapterType: "grok_cli",
+          program: "grok",
+          args: ["-p", "[PROMPT]"],
+          cwd: "/project",
+          permissionMode: "explore",
+          stdinPrompt: false,
+          outputMode: "streaming_json",
+          configFingerprint: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        },
+        status: "completed",
+        acceptedAtMs: 1,
+        startedAtMs: 2,
+        finishedAtMs: 3,
+        processId: 123,
+        exitCode: 0,
+        terminationReason: null,
+        errorSummary: null,
+        stdoutLogRef: "runs/turn-contract/stdout.log",
+        stderrLogRef: "runs/turn-contract/stderr.log",
+      },
+    ],
+  } satisfies ChatSession,
   chatEvent: {
-  "schemaVersion": 2,
-  "projectKey": "/project",
-  "sessionId": "chat-contract",
-  "seq": 3,
-  "timestampMs": 1,
-  "kind": "stream",
-  "payload": {
-    "sessionId": "chat-contract",
-    "turnId": "turn-contract",
-    "messageId": "message-contract",
-    "delta": "hello",
-    "done": false
-  }
-} satisfies ChatEvent,
+    schemaVersion: 2,
+    projectKey: "/project",
+    sessionId: "chat-contract",
+    seq: 3,
+    timestampMs: 1,
+    kind: "stream",
+    payload: {
+      sessionId: "chat-contract",
+      turnId: "turn-contract",
+      messageId: "message-contract",
+      delta: "hello",
+      done: false,
+    },
+  } satisfies ChatEvent,
   chatSendInput: {
-  "projectPath": "/project",
-  "sessionId": "chat-contract",
-  "clientRequestId": "request-contract",
-  "text": "hello",
-  "permissionMode": "explore"
-} satisfies ChatSendInput,
+    projectPath: "/project",
+    sessionId: "chat-contract",
+    clientRequestId: "request-contract",
+    text: "hello",
+    permissionMode: "explore",
+  } satisfies ChatSendInput,
   chatSendReceipt: {
-  "clientRequestId": "request-contract",
-  "turnId": "turn-contract",
-  "userMessageId": "user-contract",
-  "assistantMessageId": "assistant-contract",
-  "requestedPermissionMode": "explore"
-} satisfies ChatSendReceipt,
+    clientRequestId: "request-contract",
+    turnId: "turn-contract",
+    userMessageId: "user-contract",
+    assistantMessageId: "assistant-contract",
+    requestedPermissionMode: "explore",
+  } satisfies ChatSendReceipt,
   chatResumeHandle: {
-  "version": 1,
-  "adapterType": "grok_cli",
-  "nativeSessionId": "native-contract",
-  "configFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-} satisfies ChatResumeHandle,
+    version: 1,
+    adapterType: "grok_cli",
+    nativeSessionId: "native-contract",
+    configFingerprint: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  } satisfies ChatResumeHandle,
   chatTurn: {
-  "id": "turn-contract",
-  "clientRequestId": "request-contract",
-  "userMessageId": "user-contract",
-  "assistantMessageId": "assistant-contract",
-  "invocation": {
-    "agentId": "agent-contract",
-    "adapterType": "grok_cli",
-    "program": "grok",
-    "args": [
-      "-p",
-      "[PROMPT]"
-    ],
-    "cwd": "/project",
-    "permissionMode": "explore",
-    "stdinPrompt": false,
-    "outputMode": "streaming_json",
-    "configFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-  },
-  "status": "completed",
-  "acceptedAtMs": 1,
-  "startedAtMs": 2,
-  "finishedAtMs": 3,
-  "processId": 123,
-  "exitCode": 0,
-  "terminationReason": null,
-  "errorSummary": null,
-  "stdoutLogRef": "runs/turn-contract/stdout.log",
-  "stderrLogRef": "runs/turn-contract/stderr.log"
-} satisfies ChatTurn,
+    id: "turn-contract",
+    clientRequestId: "request-contract",
+    userMessageId: "user-contract",
+    assistantMessageId: "assistant-contract",
+    invocation: {
+      agentId: "agent-contract",
+      adapterType: "grok_cli",
+      program: "grok",
+      args: ["-p", "[PROMPT]"],
+      cwd: "/project",
+      permissionMode: "explore",
+      stdinPrompt: false,
+      outputMode: "streaming_json",
+      configFingerprint: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    },
+    status: "completed",
+    acceptedAtMs: 1,
+    startedAtMs: 2,
+    finishedAtMs: 3,
+    processId: 123,
+    exitCode: 0,
+    terminationReason: null,
+    errorSummary: null,
+    stdoutLogRef: "runs/turn-contract/stdout.log",
+    stderrLogRef: "runs/turn-contract/stderr.log",
+  } satisfies ChatTurn,
   chatLogPage: {
-  "text": "hello\n",
-  "nextOffset": 6,
-  "hasMore": false
-} satisfies ChatLogPage,
+    text: "hello\n",
+    nextOffset: 6,
+    hasMore: false,
+  } satisfies ChatLogPage,
   chatExportInput: {
-  "projectPath": "/project",
-  "sessionId": "chat-contract"
-} satisfies ChatExportInput,
+    projectPath: "/project",
+    sessionId: "chat-contract",
+  } satisfies ChatExportInput,
   chatExportResult: {
-  "directory": "/project/.loom/chat/exports/export-contract",
-  "jsonPath": "/project/.loom/chat/exports/export-contract/session.json",
-  "markdownPath": "/project/.loom/chat/exports/export-contract/transcript.md",
-  "snapshotSeq": 3,
-  "inProgress": false,
-  "warnings": []
-} satisfies ChatExportResult,
+    directory: "/project/.loom/chat/exports/export-contract",
+    jsonPath: "/project/.loom/chat/exports/export-contract/session.json",
+    markdownPath: "/project/.loom/chat/exports/export-contract/transcript.md",
+    snapshotSeq: 3,
+    inProgress: false,
+    warnings: [],
+  } satisfies ChatExportResult,
   chatToolPart: {
-  "type": "tool",
-  "name": "Edit",
-  "callId": "call-contract",
-  "kind": "edit",
-  "target": "file.txt",
-  "exitCode": 0,
-  "diffStats": {
-    "added": 1,
-    "removed": 1
-  },
-  "diffPreview": "-old\n+new\n",
-  "inputSummary": "file.txt",
-  "outputSummary": "done",
-  "status": "done"
-} satisfies ChatMessagePart,
+    type: "tool",
+    name: "Edit",
+    callId: "call-contract",
+    kind: "edit",
+    target: "file.txt",
+    exitCode: 0,
+    diffStats: {
+      added: 1,
+      removed: 1,
+    },
+    diffPreview: "-old\n+new\n",
+    inputSummary: "file.txt",
+    outputSummary: "done",
+    status: "done",
+  } satisfies ChatMessagePart,
   agentDiagnostic: {
-  "agentId": "agent-contract",
-  "status": "ready",
-  "resolvedPath": "/usr/bin/agent",
-  "version": "1.0",
-  "authStatus": "unknown",
-  "detail": "Version probe succeeded.",
-  "checkedAtMs": 1,
-  "capabilities": {
-    "structuredStream": true,
-    "toolEvents": true,
-    "nativeResume": true,
-    "inlineCards": false,
-    "modelSelection": true,
-    "modes": [
-      {
-        "mode": "explore",
-        "policy": "read-only"
-      }
-    ]
-  }
-} satisfies AgentDiagnostic,
-  skillsLibrary: {
-  "sources": [
-    {
-      "id": "src-fixture",
-      "name": "Fixture skills",
-      "kind": "local",
-      "localPath": "/fixture/skills",
-      "git": null,
-      "revision": null,
-      "updatedAtMs": 1
-    }
-  ],
-  "skills": [
-    {
-      "id": "src-fixture::manual%2Fdemo%2FSKILL.md",
-      "sourceId": "src-fixture",
-      "relativePath": "manual/demo/SKILL.md",
-      "name": "demo",
-      "title": "Demo skill",
-      "description": "A synthetic contract fixture.",
-      "category": "manual",
-      "keywords": "fixture"
-    }
-  ],
-  "issues": []
-} satisfies SkillsLibrary,
-  skillsOperation: {
-  "operationId": "skills-fixture",
-  "sourceId": "src-fixture",
-  "action": "refresh",
-  "phase": "committed",
-  "stage": "complete",
-  "sequence": 2,
-  "startedAtMs": 1,
-  "updatedAtMs": 2,
-  "error": null,
-  "executions": []
-} satisfies SkillsOperation,
-  skillsInstallTarget: {
-  "id": "codex-project",
-  "toolId": "codex",
-  "label": "Codex / ChatGPT",
-  "scope": "project",
-  "skillsDir": "/fixture/project/.codex/skills",
-  "exists": false,
-  "blockedReason": null
-} satisfies InstallTarget,
-  skillsInstallation: {
-  "installationId": "installed-f29f41cc641f79c6ff7319ece84f20b9",
-  "skillId": "src-fixture::manual%2Fdemo%2FSKILL.md",
-  "sourceId": "src-fixture",
-  "relativePath": "manual/demo/SKILL.md",
-  "installName": "fixture-demo",
-  "sourceDir": "/fixture/source/manual/demo",
-  "mode": "copy",
-  "revision": null,
-  "sourceDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-  "installedState": {
-    "kind": "directory",
-    "digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-  },
-  "installedAtMs": 1,
-  "updatedAtMs": 2,
-  "managedResources": []
-} satisfies Installation,
-  skillsInstallPlan: {
-  "schemaVersion": 1,
-  "planId": "install-fixture",
-  "action": "install",
-  "projectPath": "/fixture/project",
-  "mode": "copy",
-  "createdAtMs": 1,
-  "source": {
-    "skillId": "src-fixture::manual%2Fdemo%2FSKILL.md",
-    "sourceId": "src-fixture",
-    "relativePath": "manual/demo/SKILL.md",
-    "name": "fixture-demo",
-    "directory": "/fixture/source/manual/demo",
-    "revision": null,
-    "digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-  },
-  "items": [
-    {
-      "target": {
-        "id": "codex-project",
-        "toolId": "codex",
-        "label": "Codex / ChatGPT",
-        "scope": "project",
-        "skillsDir": "/fixture/project/.codex/skills",
-        "exists": false,
-        "blockedReason": null
-      },
-      "installName": "fixture-demo",
-      "destination": "/fixture/project/.codex/skills/fixture-demo",
-      "before": {
-        "kind": "missing"
-      },
-      "manifestBefore": {
-        "kind": "missing"
-      },
-      "previous": null,
-      "decision": "install",
-      "message": null
-    }
-  ]
-} satisfies InstallPlan,
-  skillsInstallReceipt: {
-  "planId": "install-fixture",
-  "operationId": "skills-fixture",
-  "items": [
-    {
-      "targetId": "codex-project",
-      "destination": "/fixture/project/.codex/skills/fixture-demo",
-      "status": "installed",
-      "message": null
-    }
-  ]
-} satisfies InstallReceipt,
-skillsInstructionCheck: {
-  "path": "/fixture/project/AGENTS.md",
-  "state": "current",
-  "message": null
-} satisfies InstructionCheck,
-skillsResourcePreview: {
-  "path": "/fixture/project/AGENTS.md",
-  "before": {
-    "kind": "file",
-    "digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "mode": 420
-  }
-} satisfies ResourcePreview,
-skillsCoordinatedInstallPlan: {
-  "schemaVersion": 1,
-  "planId": "install-group-fixture",
-  "action": "install",
-  "projectPath": "/fixture/project",
-  "mode": "copy",
-  "createdAtMs": 1,
-  "source": {
-    "skillId": "src-fixture::manual%2Fdemo%2FSKILL.md",
-    "sourceId": "src-fixture",
-    "relativePath": "manual/demo/SKILL.md",
-    "name": "fixture-demo",
-    "directory": "/fixture/source/manual/demo",
-    "revision": null,
-    "digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-  },
-  "items": [
-    {
-      "target": {
-        "id": "codex-project",
-        "toolId": "codex",
-        "label": "Codex / ChatGPT",
-        "scope": "project",
-        "skillsDir": "/fixture/project/.codex/skills",
-        "exists": false,
-        "blockedReason": null
-      },
-      "installName": "fixture-demo",
-      "destination": "/fixture/project/.codex/skills/fixture-demo",
-      "before": {
-        "kind": "missing"
-      },
-      "manifestBefore": {
-        "kind": "missing"
-      },
-      "previous": null,
-      "decision": "install",
-      "message": null
-    },
-    {
-      "target": {
-        "id": "amp-project",
-        "toolId": "amp",
-        "label": "Amp / Codex",
-        "scope": "project",
-        "skillsDir": "/fixture/project/.agents/skills",
-        "exists": false,
-        "blockedReason": null
-      },
-      "installName": "fixture-demo",
-      "destination": "/fixture/project/.agents/skills/fixture-demo",
-      "before": {
-        "kind": "missing"
-      },
-      "manifestBefore": {
-        "kind": "missing"
-      },
-      "previous": null,
-      "decision": "install",
-      "message": null
-    }
-  ],
-  "coordinated": true
-} satisfies InstallPlan,
-skillsGithubApiSource: {
-  "id": "src-6394f5f031b445239b1374a0469f29d9",
-  "name": "fixture/skills",
-  "kind": "github_api",
-  "localPath": null,
-  "git": {
-    "sourceId": "src-f1da8c300522c1ed4540ca8381f35a9d",
-    "provider": "github",
-    "namespace": "fixture/skills",
-    "url": "https://github.com/fixture/skills",
-    "cloneUrl": "https://github.com/fixture/skills.git",
-    "legacyId": "github:fixture/skills"
-  },
-  "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-  "updatedAtMs": 1,
-  "defaultBranch": "trunk"
-} satisfies SkillSource,
-skillsTranslationResult: {
-  "context": {
-    "schemaVersion": 1,
-    "operationId": "skills-translation-fixture",
-    "skillId": "src-fixture::SKILL.md",
-    "sourceId": "src-fixture",
-    "sourceDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "inputDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-    "providerId": "openai",
-    "model": "gpt-5",
-    "targetLanguage": "zh-CN",
-    "sourceMode": "markdown",
-    "createdAtMs": 1
-  },
-  "markdown": "# 翻译"
-} satisfies TranslationResult,
-skillsTranslationSummary: {
-  "context": {
-    "schemaVersion": 1,
-    "operationId": "skills-translation-fixture",
-    "skillId": "src-fixture::SKILL.md",
-    "sourceId": "src-fixture",
-    "sourceDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "inputDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-    "providerId": "openai",
-    "model": "gpt-5",
-    "targetLanguage": "zh-CN",
-    "sourceMode": "markdown",
-    "createdAtMs": 1
-  },
-  "operation": {
-    "operationId": "skills-translation-fixture",
-    "sourceId": "src-fixture",
-    "action": "translate",
-    "phase": "committed",
-    "stage": "complete",
-    "sequence": 2,
-    "startedAtMs": 1,
-    "updatedAtMs": 2,
-    "error": null,
-    "executions": []
-  }
-} satisfies TranslationSummary,
-skillsTranslationProviders: {
-  revision: 0, providers: [{ id: "openai", label: "OpenAI", configured: false, supportsApiKey: true, storedKey: false, keySource: "none", model: "gpt-5", storedModel: null, modelFromEnvironment: false }],
-} satisfies TranslationProviders,
-skillsHttpRequest: {
-  "method": "GET",
-  "url": "https://api.github.com/repos/fixture/skills",
-  "startedAtMs": 1,
-  "finishedAtMs": 2,
-  "status": 200,
-  "error": null
-} satisfies SkillsHttpRequest,
-learnStudy: {
-  "schemaVersion": 1,
-  "studyId": "study-1-0",
-  "url": "https://github.com/sharkdp/hexyl",
-  "owner": "sharkdp",
-  "repo": "hexyl",
-  "commit": "0123456789abcdef0123456789abcdef01234567",
-  "agentId": "agent-claude",
-  "agentName": "Claude Code",
-  "adapterType": "claude_code_cli",
-  "model": "sonnet",
-  "language": "zh-CN",
-  "depth": "standard",
-  "promptVersion": 1,
-  "createdAtMs": 1,
-  "updatedAtMs": 2,
-  "stages": [
-    {
-      "stage": "fetch",
-      "status": "done",
-      "jobId": "job-1-0",
-      "startedAtMs": 1,
-      "finishedAtMs": 2,
-      "warnings": []
-    },
-    {
-      "stage": "architecture",
-      "status": "running",
-      "jobId": "job-1-0",
-      "startedAtMs": 2,
-      "warnings": []
-    },
-    {
-      "stage": "module:cli",
-      "status": "failed",
-      "jobId": "job-0-0",
-      "startedAtMs": 1,
-      "finishedAtMs": 2,
-      "error": "The agent timed out",
-      "warnings": [
-        "The agent read no files; references may be guessed"
-      ]
-    }
-  ],
-  "pages": [
-    {
-      "pageId": "overview",
-      "title": "概览",
-      "kind": "overview",
-      "ready": true,
-      "refs": {
-        "valid": 3,
-        "invalid": 0
-      }
-    },
-    {
-      "pageId": "module:cli",
-      "title": "CLI",
-      "kind": "module",
-      "moduleId": "cli",
-      "level": 1,
-      "ready": false
-    }
-  ],
-  "coverage": {
-    "sourceFiles": 10,
-    "covered": 9,
-    "uncovered": [
-      "src/extra.rs"
-    ]
-  },
-  "checkoutFingerprint": "abc"
-} satisfies LearnStudy,
-learnArchitecture: {
-  "schemaVersion": 1,
-  "project": {
-    "name": "hexyl",
-    "summary": "Hex viewer.",
-    "overview": "Reads bytes and prints them.",
-    "techStack": [
-      "Rust"
-    ],
-    "entryPoints": [
-      {
-        "path": "src/main.rs",
-        "line": 1,
-        "why": "CLI entry"
-      }
-    ]
-  },
-  "layers": [
-    {
-      "id": "entry",
-      "title": "Entry",
-      "moduleIds": [
-        "cli"
-      ]
-    }
-  ],
-  "modules": [
-    {
-      "id": "cli",
-      "title": "CLI",
-      "summary": "Parses arguments.",
-      "level": 1,
-      "order": 1,
-      "paths": [
-        "src/main.rs"
-      ],
-      "dependsOn": [],
-      "keyFiles": [
+    agentId: "agent-contract",
+    status: "ready",
+    resolvedPath: "/usr/bin/agent",
+    version: "1.0",
+    authStatus: "unknown",
+    detail: "Version probe succeeded.",
+    checkedAtMs: 1,
+    capabilities: {
+      structuredStream: true,
+      toolEvents: true,
+      nativeResume: true,
+      inlineCards: false,
+      modelSelection: true,
+      modes: [
         {
-          "path": "src/main.rs",
-          "startLine": 1,
-          "endLine": 40,
-          "why": "argument parsing"
-        }
-      ]
-    }
-  ],
-  "learningPath": [
-    {
-      "level": 1,
-      "title": "Start",
-      "goal": "Run it",
-      "moduleIds": [
-        "cli"
-      ]
-    }
-  ]
-} satisfies LearnArchitecture,
-learnPageContent: {
-  "pageId": "module:cli",
-  "markdown": "# CLI\n[main](loom-src:src/main.rs#L1-L40)",
-  "refs": [
-    {
-      "target": "src/main.rs#L1-L40",
-      "path": "src/main.rs",
-      "startLine": 1,
-      "endLine": 40,
-      "status": "valid"
-    }
-  ]
-} satisfies LearnPageContent,
-learnEvent: {
-  "studyId": "study-1-0",
-  "jobId": "job-1-0",
-  "stage": "architecture",
-  "status": "running"
-} satisfies LearnEvent,
-research: {
-  "schemaVersion": 1,
-  "researchId": "research-1-0",
-  "title": "How does Loom stop an agent?",
-  "agentId": "codex",
-  "agentName": "Codex",
-  "adapterType": "codex_cli",
-  "model": "gpt-5.5",
-  "projectPath": "/Users/me/loom",
-  "projectName": "loom",
-  "language": "en",
-  "promptVersion": 1,
-  "createdAtMs": 1,
-  "updatedAtMs": 2,
-  "turns": [
-    {
-      "index": 1,
-      "question": "How does Loom stop an agent?",
-      "status": "done",
-      "jobId": "job-1-0",
-      "startedAtMs": 1,
-      "finishedAtMs": 2,
-      "warnings": [
-        "1 source citation(s) could not be verified"
+          mode: "explore",
+          policy: "read-only",
+        },
       ],
-      "refs": {
-        "valid": 3,
-        "invalid": 1
-      }
     },
-    {
-      "index": 2,
-      "question": "Which limits apply?",
-      "status": "running",
-      "jobId": "job-2-0",
-      "startedAtMs": 3,
-      "warnings": [],
-      "context": "native"
-    }
-  ],
-  "resumeCommand": "codex resume thread-1",
-  "resumeAgentCommand": "codex"
-} satisfies Research,
-researchTurnContent: {
-  "index": 1,
-  "markdown": "# Stop\n[run](loom-src:src/agent/runner.rs#L1-L20)",
-  "refs": [
-    {
-      "target": "src/agent/runner.rs#L1-L20",
-      "path": "src/agent/runner.rs",
-      "startLine": 1,
-      "endLine": 20,
-      "status": "valid"
-    }
-  ]
-} satisfies ResearchTurnContent,
-researchEvent: {
-  "researchId": "research-1-0",
-  "jobId": "job-2-0",
-  "turn": 2,
-  "status": "running"
-} satisfies ResearchEvent,
-  discussion: {
-  "schemaVersion": 1,
-  "discussionId": "discussion-1",
-  "title": "Compare queues",
-  "topic": "Compare bounded and unbounded queues",
-  "language": "en",
-  "projectPath": "/project",
-  "projectName": "Project",
-  "participants": [
-    {
-      "id": "p1",
-      "agentId": "agent-codex",
-      "name": "Codex",
-      "adapterType": "codex_cli",
-      "model": null
-    },
-    {
-      "id": "p2",
-      "agentId": "agent-claude",
-      "name": "Claude Code",
-      "adapterType": "claude_code_cli",
-      "model": null
-    }
-  ],
-  "tasks": [
-    {
-      "id": "r1-p1",
-      "participantId": "p1",
-      "round": 1,
-      "status": "done",
-      "stale": false,
-      "attempts": [
-        "job-1-p1"
-      ],
-      "error": null,
-      "warnings": [],
-      "refs": {
-        "valid": 1,
-        "invalid": 0
-      }
-    },
-    {
-      "id": "r1-p2",
-      "participantId": "p2",
-      "round": 1,
-      "status": "done",
-      "stale": false,
-      "attempts": [
-        "job-1-p2"
-      ],
-      "error": null,
-      "warnings": [],
-      "refs": {
-        "valid": 1,
-        "invalid": 0
-      }
-    },
-    {
-      "id": "r2-p1",
-      "participantId": "p1",
-      "round": 2,
-      "status": "done",
-      "stale": false,
-      "attempts": [
-        "job-2-p1"
-      ],
-      "error": null,
-      "warnings": [],
-      "refs": {
-        "valid": 1,
-        "invalid": 0
-      }
-    },
-    {
-      "id": "r2-p2",
-      "participantId": "p2",
-      "round": 2,
-      "status": "done",
-      "stale": false,
-      "attempts": [
-        "job-2-p2"
-      ],
-      "error": null,
-      "warnings": [],
-      "refs": {
-        "valid": 1,
-        "invalid": 0
-      }
-    },
-    {
-      "id": "summary",
-      "participantId": "p1",
-      "round": 3,
-      "status": "done",
-      "stale": false,
-      "attempts": [
-        "job-summary"
-      ],
-      "error": null,
-      "warnings": [],
-      "refs": {
-        "valid": 1,
-        "invalid": 0
-      }
-    }
-  ],
-  "status": "ready",
-  "activeRunId": null,
-  "createdAtMs": 1,
-  "updatedAtMs": 2,
-  "promptVersion": 1
-} satisfies Discussion,
-  discussReport: {
-  "taskId": "r1-p1",
-  "markdown": "# Answer\n\nBound the queue.",
-  "refs": []
-} satisfies DiscussReport,
-  discussEvent: {
-  "discussionId": "discussion-1",
-  "taskId": "r1-p1",
-  "status": "running"
-} satisfies DiscussEvent,
-  createDiscussionInput: {
-  "topic": "Compare queues",
-  "participants": [
-    {
-      "agentId": "agent-codex",
-      "model": "model-a"
-    },
-    {
-      "agentId": "agent-claude",
-      "model": "model-b"
-    }
-  ],
-  "projectPath": "/project",
-  "language": "en",
-  "confirmedCalls": 5
-} satisfies CreateDiscussionInput,
-researchTargetRun: {
-  "spec": {
-    "schemaVersion": 2,
-    "researchId": "research-target",
-    "runId": "run-target",
-    "kind": "initial",
-    "input": {
-      "target": {
-        "kind": "app",
-        "path": "/fixture/Example.app"
+  } satisfies AgentDiagnostic,
+  skillsLibrary: {
+    sources: [
+      {
+        id: "src-fixture",
+        name: "Fixture skills",
+        kind: "local",
+        localPath: "/fixture/skills",
+        git: null,
+        revision: null,
+        updatedAtMs: 1,
       },
-      "question": "Explain",
-      "agentId": "agent-claude",
-      "model": null,
-      "language": "en",
-      "mode": "single",
-      "budget": null,
-      "tools": {
-        "node": "/tools/node",
-        "entry": "/tools/rea/scripts/rea.mjs"
-      }
+    ],
+    skills: [
+      {
+        id: "src-fixture::manual%2Fdemo%2FSKILL.md",
+        sourceId: "src-fixture",
+        relativePath: "manual/demo/SKILL.md",
+        name: "demo",
+        title: "Demo skill",
+        description: "A synthetic contract fixture.",
+        category: "manual",
+        keywords: "fixture",
+      },
+    ],
+    issues: [],
+  } satisfies SkillsLibrary,
+  skillsOperation: {
+    operationId: "skills-fixture",
+    sourceId: "src-fixture",
+    action: "refresh",
+    phase: "committed",
+    stage: "complete",
+    sequence: 2,
+    startedAtMs: 1,
+    updatedAtMs: 2,
+    error: null,
+    executions: [],
+  } satisfies SkillsOperation,
+  skillsInstallTarget: {
+    id: "codex-project",
+    toolId: "codex",
+    label: "Codex / ChatGPT",
+    scope: "project",
+    skillsDir: "/fixture/project/.codex/skills",
+    exists: false,
+    blockedReason: null,
+  } satisfies InstallTarget,
+  skillsInstallation: {
+    installationId: "installed-f29f41cc641f79c6ff7319ece84f20b9",
+    skillId: "src-fixture::manual%2Fdemo%2FSKILL.md",
+    sourceId: "src-fixture",
+    relativePath: "manual/demo/SKILL.md",
+    installName: "fixture-demo",
+    sourceDir: "/fixture/source/manual/demo",
+    mode: "copy",
+    revision: null,
+    sourceDigest: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    installedState: {
+      kind: "directory",
+      digest: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
     },
-    "budget": {
-      "maxRounds": 1,
-      "maxCalls": 12,
-      "maxCollections": 8,
-      "maxActiveMs": 1200000,
-      "maxDiskBytes": 536870912
+    installedAtMs: 1,
+    updatedAtMs: 2,
+    managedResources: [],
+  } satisfies Installation,
+  skillsInstallPlan: {
+    schemaVersion: 1,
+    planId: "install-fixture",
+    action: "install",
+    projectPath: "/fixture/project",
+    mode: "copy",
+    createdAtMs: 1,
+    source: {
+      skillId: "src-fixture::manual%2Fdemo%2FSKILL.md",
+      sourceId: "src-fixture",
+      relativePath: "manual/demo/SKILL.md",
+      name: "fixture-demo",
+      directory: "/fixture/source/manual/demo",
+      revision: null,
+      digest: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     },
-    "configDigest": "fixture-config",
-    "agentConfigDigest": "fixture-agent",
-    "targetIdentity": "fixture-target",
-    "parentReportId": null,
-    "sourceSnapshots": [],
-    "sourceEvidence": [],
-    "createdAtMs": 1
-  },
-  "state": {
-    "runId": "run-target",
-    "status": "queued",
-    "attempt": 1,
-    "sequence": 0,
-    "usage": {
-      "calls": 0,
-      "collections": 0,
-      "rounds": 0,
-      "activeMs": 0,
-      "diskBytes": 0,
-"diskReservedBytes": 0,
-      "reservationMs": 0
+    items: [
+      {
+        target: {
+          id: "codex-project",
+          toolId: "codex",
+          label: "Codex / ChatGPT",
+          scope: "project",
+          skillsDir: "/fixture/project/.codex/skills",
+          exists: false,
+          blockedReason: null,
+        },
+        installName: "fixture-demo",
+        destination: "/fixture/project/.codex/skills/fixture-demo",
+        before: {
+          kind: "missing",
+        },
+        manifestBefore: {
+          kind: "missing",
+        },
+        previous: null,
+        decision: "install",
+        message: null,
+      },
+    ],
+  } satisfies InstallPlan,
+  skillsInstallReceipt: {
+    planId: "install-fixture",
+    operationId: "skills-fixture",
+    items: [
+      {
+        targetId: "codex-project",
+        destination: "/fixture/project/.codex/skills/fixture-demo",
+        status: "installed",
+        message: null,
+      },
+    ],
+  } satisfies InstallReceipt,
+  skillsInstructionCheck: {
+    path: "/fixture/project/AGENTS.md",
+    state: "current",
+    message: null,
+  } satisfies InstructionCheck,
+  skillsResourcePreview: {
+    path: "/fixture/project/AGENTS.md",
+    before: {
+      kind: "file",
+      digest: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      mode: 420,
     },
-    "snapshotIds": [],
-    "evidenceIds": [],
-    "reportIds": [],
-    "stopReason": null,
-    "error": null,
-    "updatedAtMs": 1,
-    "exchange": {
-      "calls": 0,
-      "reads": 0,
-      "corrections": 0
-    }
-  }
-} satisfies TargetRun,
-researchTargetEvent: {
-  "researchId": "research-target",
-  "runId": "run-target",
-  "stepId": null,
-  "status": "analyzing",
-  "phase": "analyzing",
-  "progress": {
-    "calls": 0,
-    "collections": 0,
-    "rounds": 0,
-    "activeMs": 0,
-    "diskBytes": 0,
-"diskReservedBytes": 0,
-    "reservationMs": 0
-  },
-  "stopReason": null,
-  "error": null
-} satisfies TargetEvent,
-researchMaterial: {
-  "text": "[{\"evidenceId\":\"evidence-fixture\"}]",
-  "nextCursor": 8,
-  "truncated": true
-} satisfies Material,
+  } satisfies ResourcePreview,
+  skillsCoordinatedInstallPlan: {
+    schemaVersion: 1,
+    planId: "install-group-fixture",
+    action: "install",
+    projectPath: "/fixture/project",
+    mode: "copy",
+    createdAtMs: 1,
+    source: {
+      skillId: "src-fixture::manual%2Fdemo%2FSKILL.md",
+      sourceId: "src-fixture",
+      relativePath: "manual/demo/SKILL.md",
+      name: "fixture-demo",
+      directory: "/fixture/source/manual/demo",
+      revision: null,
+      digest: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    },
+    items: [
+      {
+        target: {
+          id: "codex-project",
+          toolId: "codex",
+          label: "Codex / ChatGPT",
+          scope: "project",
+          skillsDir: "/fixture/project/.codex/skills",
+          exists: false,
+          blockedReason: null,
+        },
+        installName: "fixture-demo",
+        destination: "/fixture/project/.codex/skills/fixture-demo",
+        before: {
+          kind: "missing",
+        },
+        manifestBefore: {
+          kind: "missing",
+        },
+        previous: null,
+        decision: "install",
+        message: null,
+      },
+      {
+        target: {
+          id: "amp-project",
+          toolId: "amp",
+          label: "Amp / Codex",
+          scope: "project",
+          skillsDir: "/fixture/project/.agents/skills",
+          exists: false,
+          blockedReason: null,
+        },
+        installName: "fixture-demo",
+        destination: "/fixture/project/.agents/skills/fixture-demo",
+        before: {
+          kind: "missing",
+        },
+        manifestBefore: {
+          kind: "missing",
+        },
+        previous: null,
+        decision: "install",
+        message: null,
+      },
+    ],
+    coordinated: true,
+  } satisfies InstallPlan,
+  skillsGithubApiSource: {
+    id: "src-6394f5f031b445239b1374a0469f29d9",
+    name: "fixture/skills",
+    kind: "github_api",
+    localPath: null,
+    git: {
+      sourceId: "src-f1da8c300522c1ed4540ca8381f35a9d",
+      provider: "github",
+      namespace: "fixture/skills",
+      url: "https://github.com/fixture/skills",
+      cloneUrl: "https://github.com/fixture/skills.git",
+      legacyId: "github:fixture/skills",
+    },
+    revision: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    updatedAtMs: 1,
+    defaultBranch: "trunk",
+  } satisfies SkillSource,
+  skillsTranslationResult: {
+    context: {
+      schemaVersion: 1,
+      operationId: "skills-translation-fixture",
+      skillId: "src-fixture::SKILL.md",
+      sourceId: "src-fixture",
+      sourceDigest: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      inputDigest: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      providerId: "openai",
+      model: "gpt-5",
+      targetLanguage: "zh-CN",
+      sourceMode: "markdown",
+      createdAtMs: 1,
+    },
+    markdown: "# 翻译",
+  } satisfies TranslationResult,
+  skillsTranslationSummary: {
+    context: {
+      schemaVersion: 1,
+      operationId: "skills-translation-fixture",
+      skillId: "src-fixture::SKILL.md",
+      sourceId: "src-fixture",
+      sourceDigest: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      inputDigest: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      providerId: "openai",
+      model: "gpt-5",
+      targetLanguage: "zh-CN",
+      sourceMode: "markdown",
+      createdAtMs: 1,
+    },
+    operation: {
+      operationId: "skills-translation-fixture",
+      sourceId: "src-fixture",
+      action: "translate",
+      phase: "committed",
+      stage: "complete",
+      sequence: 2,
+      startedAtMs: 1,
+      updatedAtMs: 2,
+      error: null,
+      executions: [],
+    },
+  } satisfies TranslationSummary,
+  skillsTranslationProviders: {
+    revision: 0,
+    providers: [
+      {
+        id: "openai",
+        label: "OpenAI",
+        configured: false,
+        supportsApiKey: true,
+        storedKey: false,
+        keySource: "none",
+        model: "gpt-5",
+        storedModel: null,
+        modelFromEnvironment: false,
+      },
+    ],
+  } satisfies TranslationProviders,
+  skillsHttpRequest: {
+    method: "GET",
+    url: "https://api.github.com/repos/fixture/skills",
+    startedAtMs: 1,
+    finishedAtMs: 2,
+    status: 200,
+    error: null,
+  } satisfies SkillsHttpRequest,
+  learnStudy: {
+    schemaVersion: 1,
+    studyId: "study-1-0",
+    url: "https://github.com/sharkdp/hexyl",
+    owner: "sharkdp",
+    repo: "hexyl",
+    commit: "0123456789abcdef0123456789abcdef01234567",
+    agentId: "agent-claude",
+    agentName: "Claude Code",
+    adapterType: "claude_code_cli",
+    model: "sonnet",
+    language: "zh-CN",
+    depth: "standard",
+    promptVersion: 1,
+    createdAtMs: 1,
+    updatedAtMs: 2,
+    stages: [
+      {
+        stage: "fetch",
+        status: "done",
+        jobId: "job-1-0",
+        startedAtMs: 1,
+        finishedAtMs: 2,
+        warnings: [],
+      },
+      {
+        stage: "architecture",
+        status: "running",
+        jobId: "job-1-0",
+        startedAtMs: 2,
+        warnings: [],
+      },
+      {
+        stage: "module:cli",
+        status: "failed",
+        jobId: "job-0-0",
+        startedAtMs: 1,
+        finishedAtMs: 2,
+        error: "The agent timed out",
+        warnings: ["The agent read no files; references may be guessed"],
+      },
+    ],
+    pages: [
+      {
+        pageId: "overview",
+        title: "概览",
+        kind: "overview",
+        ready: true,
+        refs: {
+          valid: 3,
+          invalid: 0,
+        },
+      },
+      {
+        pageId: "module:cli",
+        title: "CLI",
+        kind: "module",
+        moduleId: "cli",
+        level: 1,
+        ready: false,
+      },
+    ],
+    coverage: {
+      sourceFiles: 10,
+      covered: 9,
+      uncovered: ["src/extra.rs"],
+    },
+    checkoutFingerprint: "abc",
+  } satisfies LearnStudy,
+  learnArchitecture: {
+    schemaVersion: 1,
+    project: {
+      name: "hexyl",
+      summary: "Hex viewer.",
+      overview: "Reads bytes and prints them.",
+      techStack: ["Rust"],
+      entryPoints: [
+        {
+          path: "src/main.rs",
+          line: 1,
+          why: "CLI entry",
+        },
+      ],
+    },
+    layers: [
+      {
+        id: "entry",
+        title: "Entry",
+        moduleIds: ["cli"],
+      },
+    ],
+    modules: [
+      {
+        id: "cli",
+        title: "CLI",
+        summary: "Parses arguments.",
+        level: 1,
+        order: 1,
+        paths: ["src/main.rs"],
+        dependsOn: [],
+        keyFiles: [
+          {
+            path: "src/main.rs",
+            startLine: 1,
+            endLine: 40,
+            why: "argument parsing",
+          },
+        ],
+      },
+    ],
+    learningPath: [
+      {
+        level: 1,
+        title: "Start",
+        goal: "Run it",
+        moduleIds: ["cli"],
+      },
+    ],
+  } satisfies LearnArchitecture,
+  learnPageContent: {
+    pageId: "module:cli",
+    markdown: "# CLI\n[main](loom-src:src/main.rs#L1-L40)",
+    refs: [
+      {
+        target: "src/main.rs#L1-L40",
+        path: "src/main.rs",
+        startLine: 1,
+        endLine: 40,
+        status: "valid",
+      },
+    ],
+  } satisfies LearnPageContent,
+  learnEvent: {
+    studyId: "study-1-0",
+    jobId: "job-1-0",
+    stage: "architecture",
+    status: "running",
+  } satisfies LearnEvent,
+  research: {
+    schemaVersion: 1,
+    researchId: "research-1-0",
+    title: "How does Loom stop an agent?",
+    agentId: "codex",
+    agentName: "Codex",
+    adapterType: "codex_cli",
+    model: "gpt-5.5",
+    projectPath: "/Users/me/loom",
+    projectName: "loom",
+    language: "en",
+    promptVersion: 1,
+    createdAtMs: 1,
+    updatedAtMs: 2,
+    turns: [
+      {
+        index: 1,
+        question: "How does Loom stop an agent?",
+        status: "done",
+        jobId: "job-1-0",
+        startedAtMs: 1,
+        finishedAtMs: 2,
+        warnings: ["1 source citation(s) could not be verified"],
+        refs: {
+          valid: 3,
+          invalid: 1,
+        },
+      },
+      {
+        index: 2,
+        question: "Which limits apply?",
+        status: "running",
+        jobId: "job-2-0",
+        startedAtMs: 3,
+        warnings: [],
+        context: "native",
+      },
+    ],
+    resumeCommand: "codex resume thread-1",
+    resumeAgentCommand: "codex",
+  } satisfies Research,
+  researchTurnContent: {
+    index: 1,
+    markdown: "# Stop\n[run](loom-src:src/agent/runner.rs#L1-L20)",
+    refs: [
+      {
+        target: "src/agent/runner.rs#L1-L20",
+        path: "src/agent/runner.rs",
+        startLine: 1,
+        endLine: 20,
+        status: "valid",
+      },
+    ],
+  } satisfies ResearchTurnContent,
+  researchEvent: {
+    researchId: "research-1-0",
+    jobId: "job-2-0",
+    turn: 2,
+    status: "running",
+  } satisfies ResearchEvent,
+  discussion: {
+    schemaVersion: 1,
+    discussionId: "discussion-1",
+    title: "Compare queues",
+    topic: "Compare bounded and unbounded queues",
+    language: "en",
+    projectPath: "/project",
+    projectName: "Project",
+    participants: [
+      {
+        id: "p1",
+        agentId: "agent-codex",
+        name: "Codex",
+        adapterType: "codex_cli",
+        model: null,
+      },
+      {
+        id: "p2",
+        agentId: "agent-claude",
+        name: "Claude Code",
+        adapterType: "claude_code_cli",
+        model: null,
+      },
+    ],
+    tasks: [
+      {
+        id: "r1-p1",
+        participantId: "p1",
+        round: 1,
+        status: "done",
+        stale: false,
+        attempts: ["job-1-p1"],
+        error: null,
+        warnings: [],
+        refs: {
+          valid: 1,
+          invalid: 0,
+        },
+      },
+      {
+        id: "r1-p2",
+        participantId: "p2",
+        round: 1,
+        status: "done",
+        stale: false,
+        attempts: ["job-1-p2"],
+        error: null,
+        warnings: [],
+        refs: {
+          valid: 1,
+          invalid: 0,
+        },
+      },
+      {
+        id: "r2-p1",
+        participantId: "p1",
+        round: 2,
+        status: "done",
+        stale: false,
+        attempts: ["job-2-p1"],
+        error: null,
+        warnings: [],
+        refs: {
+          valid: 1,
+          invalid: 0,
+        },
+      },
+      {
+        id: "r2-p2",
+        participantId: "p2",
+        round: 2,
+        status: "done",
+        stale: false,
+        attempts: ["job-2-p2"],
+        error: null,
+        warnings: [],
+        refs: {
+          valid: 1,
+          invalid: 0,
+        },
+      },
+      {
+        id: "summary",
+        participantId: "p1",
+        round: 3,
+        status: "done",
+        stale: false,
+        attempts: ["job-summary"],
+        error: null,
+        warnings: [],
+        refs: {
+          valid: 1,
+          invalid: 0,
+        },
+      },
+    ],
+    status: "ready",
+    activeRunId: null,
+    createdAtMs: 1,
+    updatedAtMs: 2,
+    promptVersion: 1,
+  } satisfies Discussion,
+  discussReport: {
+    taskId: "r1-p1",
+    markdown: "# Answer\n\nBound the queue.",
+    refs: [],
+  } satisfies DiscussReport,
+  discussEvent: {
+    discussionId: "discussion-1",
+    taskId: "r1-p1",
+    status: "running",
+  } satisfies DiscussEvent,
+  createDiscussionInput: {
+    topic: "Compare queues",
+    participants: [
+      {
+        agentId: "agent-codex",
+        model: "model-a",
+      },
+      {
+        agentId: "agent-claude",
+        model: "model-b",
+      },
+    ],
+    projectPath: "/project",
+    language: "en",
+    confirmedCalls: 5,
+  } satisfies CreateDiscussionInput,
+  researchTargetRun: {
+    spec: {
+      schemaVersion: 2,
+      researchId: "research-target",
+      runId: "run-target",
+      kind: "initial",
+      input: {
+        target: {
+          kind: "app",
+          path: "/fixture/Example.app",
+        },
+        question: "Explain",
+        agentId: "agent-claude",
+        model: null,
+        language: "en",
+        mode: "single",
+        budget: null,
+        tools: {
+          node: "/tools/node",
+          entry: "/tools/rea/scripts/rea.mjs",
+        },
+      },
+      budget: {
+        maxRounds: 1,
+        maxCalls: 12,
+        maxCollections: 8,
+        maxActiveMs: 1200000,
+        maxDiskBytes: 536870912,
+      },
+      configDigest: "fixture-config",
+      agentConfigDigest: "fixture-agent",
+      targetIdentity: "fixture-target",
+      parentReportId: null,
+      sourceSnapshots: [],
+      sourceEvidence: [],
+      createdAtMs: 1,
+    },
+    state: {
+      runId: "run-target",
+      status: "queued",
+      attempt: 1,
+      sequence: 0,
+      usage: {
+        calls: 0,
+        collections: 0,
+        rounds: 0,
+        activeMs: 0,
+        diskBytes: 0,
+        diskReservedBytes: 0,
+        reservationMs: 0,
+      },
+      snapshotIds: [],
+      evidenceIds: [],
+      reportIds: [],
+      stopReason: null,
+      error: null,
+      updatedAtMs: 1,
+      exchange: {
+        calls: 0,
+        reads: 0,
+        corrections: 0,
+      },
+    },
+  } satisfies TargetRun,
+  researchTargetEvent: {
+    researchId: "research-target",
+    runId: "run-target",
+    stepId: null,
+    status: "analyzing",
+    phase: "analyzing",
+    progress: {
+      calls: 0,
+      collections: 0,
+      rounds: 0,
+      activeMs: 0,
+      diskBytes: 0,
+      diskReservedBytes: 0,
+      reservationMs: 0,
+    },
+    stopReason: null,
+    error: null,
+  } satisfies TargetEvent,
+  researchMaterial: {
+    text: '[{"evidenceId":"evidence-fixture"}]',
+    nextCursor: 8,
+    truncated: true,
+  } satisfies Material,
 } as const;

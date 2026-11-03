@@ -1,0 +1,11 @@
+# Frozen Workbench stays byte-for-byte until a plan re-enables it.
+src/workbench/
+src/api/workbenchClient.ts
+tests/frozen-workbench/
+
+# Docs keep hand-written tables; padding CJK cells adds churn without value.
+*.md
+
+# Fixtures and baselines are compared as data.
+tests/fixtures/
+tests/visual/baselines.json

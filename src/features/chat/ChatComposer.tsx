@@ -11,21 +11,46 @@ import { filterSlashCommands } from "./slashCommands";
 import { normalizePermissionMode } from "./permissionMode";
 
 export interface ChatComposerProps {
-  draft: string; sending: boolean; aborting?: boolean; canSend?: boolean;
+  draft: string;
+  sending: boolean;
+  aborting?: boolean;
+  canSend?: boolean;
   error: string | null;
-  agentId: string; agents: AgentConfig[]; permissionMode: ChatPermissionMode;
-  diagnostics: AgentDiagnostic[]; onDraftChange: (value: string) => void;
-  onSend: () => void; onAbort: () => void; onAgentChange: (id: string) => void;
+  agentId: string;
+  agents: AgentConfig[];
+  permissionMode: ChatPermissionMode;
+  diagnostics: AgentDiagnostic[];
+  onDraftChange: (value: string) => void;
+  onSend: () => void;
+  onAbort: () => void;
+  onAgentChange: (id: string) => void;
   onPermissionChange: (mode: ChatPermissionMode) => void;
-  onCommand?: (command: string) => void; sessionKey?: string;
+  onCommand?: (command: string) => void;
+  sessionKey?: string;
   /** Pending Auto-run or Agent switch confirmation owned by the page. */
   confirmation?: Confirmation | null;
   /** Optional control placed before the Agent picker, such as the new-chat project picker. */
   leading?: ReactNode;
 }
 export function ChatComposer(props: ChatComposerProps) {
-  const { draft, sending, aborting, canSend = true, agentId, agents, permissionMode, diagnostics,
-    onDraftChange, onSend, onAbort, onAgentChange, onPermissionChange, onCommand, sessionKey, confirmation } = props;
+  const {
+    draft,
+    sending,
+    aborting,
+    canSend = true,
+    agentId,
+    agents,
+    permissionMode,
+    diagnostics,
+    onDraftChange,
+    onSend,
+    onAbort,
+    onAgentChange,
+    onPermissionChange,
+    onCommand,
+    sessionKey,
+    confirmation,
+  } = props;
   const t = useT();
   const [askConfirm, setAskConfirm] = useState(false);
   const [selectedCommand, setSelectedCommand] = useState(0);
@@ -33,57 +58,115 @@ export function ChatComposer(props: ChatComposerProps) {
   const mode = normalizePermissionMode(permissionMode);
   const commands = menuClosed ? [] : filterSlashCommands(draft);
   const commandIndex = Math.min(selectedCommand, Math.max(0, commands.length - 1));
-  const selected = agents.find(agent => agent.id === agentId);
-  const diagnostic = diagnostics.find(item => item.agentId === agentId);
+  const selected = agents.find((agent) => agent.id === agentId);
+  const diagnostic = diagnostics.find((item) => item.agentId === agentId);
   const allowed = canSend && selected?.available && selected?.enabled && !isAgentUnusable(diagnostic?.status);
-  useEffect(() => { setAskConfirm(false); }, [sessionKey, permissionMode, sending]);
+  useEffect(() => {
+    setAskConfirm(false);
+  }, [sessionKey, permissionMode, sending]);
   function send() {
     if (sending || !draft.trim()) return;
-    if (draft.startsWith("/") && onCommand) { onCommand(draft); return; }
+    if (draft.startsWith("/") && onCommand) {
+      onCommand(draft);
+      return;
+    }
     if (!allowed) return;
-    if (permissionMode === "ask" && !askConfirm) { setAskConfirm(true); return; }
-    setAskConfirm(false); onSend();
+    if (permissionMode === "ask" && !askConfirm) {
+      setAskConfirm(true);
+      return;
+    }
+    setAskConfirm(false);
+    onSend();
   }
   function choose(command: string) {
     if (command === "/agent" || command === "/mode") {
-      onDraftChange(`${command} `); setMenuClosed(true);
-    } else { onCommand?.(command); setMenuClosed(true); }
+      onDraftChange(`${command} `);
+      setMenuClosed(true);
+    } else {
+      onCommand?.(command);
+      setMenuClosed(true);
+    }
   }
-  return <div className="chat-composer-shell">
-    {props.error && <ErrorText text={props.error} alert className="chat-error chat-composer-error" />}
-    <div className="chat-composer" data-mode={mode} data-auto={permissionMode === "auto"} onKeyDown={event => {
-      if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
-      if (event.key === "Escape") {
-        event.preventDefault();
-        if (commands.length) setMenuClosed(true);
-        else if (confirmation) confirmation.onCancel();
-        else if (askConfirm) setAskConfirm(false);
-        else if (sending && !aborting) onAbort();
-      }
-    }}>
-      {commands.length > 0 && <SlashMenu commands={commands} selected={commandIndex} onSelect={choose} />}
-      {confirmation && <ConfirmBanner {...confirmation} />}
-      {askConfirm && !confirmation && <ConfirmBanner className="chat-ask-confirm" title={t("confirmTurn")} body={t("confirmTurnHint")}
-        confirmLabel={t("confirmSend")} onConfirm={send} onCancel={() => setAskConfirm(false)} />}
-      <textarea value={draft} readOnly={sending} aria-label={t("messageInput")} placeholder={t(mode === "explore" ? "messageReadOnly" : "messageWritable")}
-        aria-controls={commands.length ? "chat-slash-menu" : undefined} aria-activedescendant={commands.length ? `chat-slash-${commandIndex}` : undefined}
-        onChange={event => { onDraftChange(event.target.value); setMenuClosed(false); setSelectedCommand(0); }}
-        onKeyDown={event => {
+  return (
+    <div className="chat-composer-shell">
+      {props.error && <ErrorText text={props.error} alert className="chat-error chat-composer-error" />}
+      <div
+        className="chat-composer"
+        data-mode={mode}
+        data-auto={permissionMode === "auto"}
+        onKeyDown={(event) => {
           if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
-          if (commands.length && ["ArrowDown", "ArrowUp"].includes(event.key)) {
-            event.preventDefault(); setSelectedCommand((commandIndex + (event.key === "ArrowDown" ? 1 : -1) + commands.length) % commands.length);
-          } else if (event.key === "Enter" && !event.shiftKey) {
-            event.preventDefault(); if (commands.length) choose(commands[commandIndex]); else send();
+          if (event.key === "Escape") {
+            event.preventDefault();
+            if (commands.length) setMenuClosed(true);
+            else if (confirmation) confirmation.onCancel();
+            else if (askConfirm) setAskConfirm(false);
+            else if (sending && !aborting) onAbort();
           }
-        }} />
-      <div className="chat-composer-actions">
-        {props.leading}
-        <AgentPicker agents={agents} diagnostics={diagnostics} value={agentId} onChange={onAgentChange} disabled={sending} note={t("agentMenuNote")} />
-        <ModePicker value={permissionMode} onChange={onPermissionChange} disabled={sending} />
-        <button type="button" className="chat-send" data-running={sending} aria-label={t(sending ? "stop" : "send")} title={sending ? `${t("stop")} (Esc)` : `${t("send")} (Enter)`}
-          disabled={sending ? aborting : !draft.trim() || (!allowed && !draft.startsWith("/"))}
-          onClick={sending ? onAbort : send}>{sending ? <Square size={11} fill="currentColor" /> : <ArrowUp size={16} strokeWidth={2.4} />}</button>
+        }}
+      >
+        {commands.length > 0 && <SlashMenu commands={commands} selected={commandIndex} onSelect={choose} />}
+        {confirmation && <ConfirmBanner {...confirmation} />}
+        {askConfirm && !confirmation && (
+          <ConfirmBanner
+            className="chat-ask-confirm"
+            title={t("confirmTurn")}
+            body={t("confirmTurnHint")}
+            confirmLabel={t("confirmSend")}
+            onConfirm={send}
+            onCancel={() => setAskConfirm(false)}
+          />
+        )}
+        <textarea
+          value={draft}
+          readOnly={sending}
+          aria-label={t("messageInput")}
+          placeholder={t(mode === "explore" ? "messageReadOnly" : "messageWritable")}
+          aria-controls={commands.length ? "chat-slash-menu" : undefined}
+          aria-activedescendant={commands.length ? `chat-slash-${commandIndex}` : undefined}
+          onChange={(event) => {
+            onDraftChange(event.target.value);
+            setMenuClosed(false);
+            setSelectedCommand(0);
+          }}
+          onKeyDown={(event) => {
+            if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
+            if (commands.length && ["ArrowDown", "ArrowUp"].includes(event.key)) {
+              event.preventDefault();
+              setSelectedCommand(
+                (commandIndex + (event.key === "ArrowDown" ? 1 : -1) + commands.length) % commands.length,
+              );
+            } else if (event.key === "Enter" && !event.shiftKey) {
+              event.preventDefault();
+              if (commands.length) choose(commands[commandIndex]);
+              else send();
+            }
+          }}
+        />
+        <div className="chat-composer-actions">
+          {props.leading}
+          <AgentPicker
+            agents={agents}
+            diagnostics={diagnostics}
+            value={agentId}
+            onChange={onAgentChange}
+            disabled={sending}
+            note={t("agentMenuNote")}
+          />
+          <ModePicker value={permissionMode} onChange={onPermissionChange} disabled={sending} />
+          <button
+            type="button"
+            className="chat-send"
+            data-running={sending}
+            aria-label={t(sending ? "stop" : "send")}
+            title={sending ? `${t("stop")} (Esc)` : `${t("send")} (Enter)`}
+            disabled={sending ? aborting : !draft.trim() || (!allowed && !draft.startsWith("/"))}
+            onClick={sending ? onAbort : send}
+          >
+            {sending ? <Square size={11} fill="currentColor" /> : <ArrowUp size={16} strokeWidth={2.4} />}
+          </button>
+        </div>
       </div>
     </div>
-  </div>;
+  );
 }

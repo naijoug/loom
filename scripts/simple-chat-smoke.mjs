@@ -6,7 +6,9 @@ import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
-const chrome = process.env.CHROME ?? (process.platform === "darwin" ? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" : "google-chrome");
+const chrome =
+  process.env.CHROME ??
+  (process.platform === "darwin" ? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" : "google-chrome");
 const baseUrl = "http://127.0.0.1:1420/?fixture=simple-chat";
 const port = 9331;
 const output = join(process.cwd(), "designs/exports/simple-chat");
@@ -117,7 +119,9 @@ async function evaluate(client, expression) {
     returnByValue: true,
   });
   if (result.exceptionDetails) {
-    throw new Error(`Evaluation failed: ${result.exceptionDetails.exception?.description ?? result.exceptionDetails.text}`);
+    throw new Error(
+      `Evaluation failed: ${result.exceptionDetails.exception?.description ?? result.exceptionDetails.text}`,
+    );
   }
   return result.result.value;
 }
@@ -136,16 +140,20 @@ async function waitFor(client, expression, label, attempts = 200) {
     }
     await delay(100);
   }
-  const debug = await evaluate(client, `({
+  const debug = await evaluate(
+    client,
+    `({
     href: window.location.href,
     viewport: innerWidth,
     narrow: matchMedia('(max-width: 759px)').matches,
     events: window.__narrowEvents ?? null,
     text: document.body?.innerText?.slice(0, 500) ?? '',
-  })`);
-  throw new Error(`Timed out waiting for ${label}: ${JSON.stringify(debug)}${lastError ? ` (last error: ${lastError.message})` : ''}`);
+  })`,
+  );
+  throw new Error(
+    `Timed out waiting for ${label}: ${JSON.stringify(debug)}${lastError ? ` (last error: ${lastError.message})` : ""}`,
+  );
 }
-
 
 // Activity rail matrix (designs/activity-rail/README.md): zh/en × dark/light at 700px. The rail stays 52px wide,
 // marks the current feature, Cmd/Ctrl+number switches features, and switching keeps the open Chat session.
@@ -153,60 +161,126 @@ async function railMatrixSmoke(client, { screenshot }) {
   mkdirSync(railOutput, { recursive: true });
   const checks = [];
   const railState = `({ width: Math.round(document.querySelector('.activity-rail')?.getBoundingClientRect().width ?? 0), current: document.querySelector('.activity-rail-item[aria-current=page]')?.getAttribute('aria-label') ?? '', labels: Array.from(document.querySelectorAll('.activity-rail-item')).map(item => item.getAttribute('aria-label')) })`;
-  const pressShortcut = key => evaluate(client, `(() => { const mac = /Mac/.test(navigator.userAgent); dispatchEvent(new KeyboardEvent('keydown', { key: ${JSON.stringify(key)}, metaKey: mac, ctrlKey: !mac, bubbles: true })); })()`);
-  await client.send('Emulation.setDeviceMetricsOverride', { width: 700, height: 820, deviceScaleFactor: 1, mobile: false });
-  for (const locale of ['en', 'zh-CN']) {
-    for (const theme of ['light', 'dark']) {
-      const name = `${locale === 'en' ? 'en' : 'zh'}-${theme}`;
-      await evaluate(client, `localStorage.setItem('loom-app-settings', JSON.stringify({ ...JSON.parse(localStorage.getItem('loom-app-settings') || '{}'), themeMode: ${JSON.stringify(theme)}, locale: ${JSON.stringify(locale)} }))`);
-      await client.send('Page.navigate', { url: baseUrl });
-      await waitFor(client, `document.documentElement.lang === ${JSON.stringify(locale)} && document.documentElement.dataset.theme === ${JSON.stringify(theme)} && Boolean(document.querySelector('.activity-rail'))`, `${name} appearance`);
+  const pressShortcut = (key) =>
+    evaluate(
+      client,
+      `(() => { const mac = /Mac/.test(navigator.userAgent); dispatchEvent(new KeyboardEvent('keydown', { key: ${JSON.stringify(key)}, metaKey: mac, ctrlKey: !mac, bubbles: true })); })()`,
+    );
+  await client.send("Emulation.setDeviceMetricsOverride", {
+    width: 700,
+    height: 820,
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
+  for (const locale of ["en", "zh-CN"]) {
+    for (const theme of ["light", "dark"]) {
+      const name = `${locale === "en" ? "en" : "zh"}-${theme}`;
+      await evaluate(
+        client,
+        `localStorage.setItem('loom-app-settings', JSON.stringify({ ...JSON.parse(localStorage.getItem('loom-app-settings') || '{}'), themeMode: ${JSON.stringify(theme)}, locale: ${JSON.stringify(locale)} }))`,
+      );
+      await client.send("Page.navigate", { url: baseUrl });
+      await waitFor(
+        client,
+        `document.documentElement.lang === ${JSON.stringify(locale)} && document.documentElement.dataset.theme === ${JSON.stringify(theme)} && Boolean(document.querySelector('.activity-rail'))`,
+        `${name} appearance`,
+      );
       const chat = await evaluate(client, railState);
       const [chatLabel, learnLabel, researchLabel, discussLabel, settingsLabel] = chat.labels;
-      if (chat.width !== 52 || chat.labels.length !== 5 || chat.current !== chatLabel) throw Error(`Rail on Chat (${name}): ${JSON.stringify(chat)}`);
+      if (chat.width !== 52 || chat.labels.length !== 5 || chat.current !== chatLabel)
+        throw Error(`Rail on Chat (${name}): ${JSON.stringify(chat)}`);
       // Open a session, then leave and come back: the same session must still be open.
-      await waitFor(client, 'Boolean(document.querySelector("[aria-label=\'Expand sidebar\'], [aria-label=\'展开侧栏\']"))', 'collapsed narrow sidebar');
+      await waitFor(
+        client,
+        "Boolean(document.querySelector(\"[aria-label='Expand sidebar'], [aria-label='展开侧栏']\"))",
+        "collapsed narrow sidebar",
+      );
       await screenshot(`chat-${name}`, railOutput);
-      await pressShortcut('2');
-      await waitFor(client, 'Boolean(document.querySelector("[data-testid=learn-page]")) && !document.querySelector("[data-testid=learn-page]").closest("[hidden]")', `${name} Learn via shortcut`);
+      await pressShortcut("2");
+      await waitFor(
+        client,
+        'Boolean(document.querySelector("[data-testid=learn-page]")) && !document.querySelector("[data-testid=learn-page]").closest("[hidden]")',
+        `${name} Learn via shortcut`,
+      );
       if ((await evaluate(client, railState)).current !== learnLabel) throw Error(`Rail did not mark Learn (${name})`);
       await screenshot(`learn-${name}`, railOutput);
-      await pressShortcut('3');
-      await waitFor(client, 'Boolean(document.querySelector("[data-testid=research-page]")) && !document.querySelector("[data-testid=research-page]").closest("[hidden]")', `${name} Research via shortcut`);
-      if ((await evaluate(client, railState)).current !== researchLabel) throw Error(`Rail did not mark Research (${name})`);
+      await pressShortcut("3");
+      await waitFor(
+        client,
+        'Boolean(document.querySelector("[data-testid=research-page]")) && !document.querySelector("[data-testid=research-page]").closest("[hidden]")',
+        `${name} Research via shortcut`,
+      );
+      if ((await evaluate(client, railState)).current !== researchLabel)
+        throw Error(`Rail did not mark Research (${name})`);
       await screenshot(`research-${name}`, railOutput);
-      await pressShortcut('4');
-      await waitFor(client, 'Boolean(document.querySelector("[data-testid=discuss-page]")) && !document.querySelector("[data-testid=discuss-page]").closest("[hidden]")', `${name} Discuss via shortcut`);
-      if ((await evaluate(client, railState)).current !== discussLabel) throw Error(`Rail did not mark Discuss (${name})`);
+      await pressShortcut("4");
+      await waitFor(
+        client,
+        'Boolean(document.querySelector("[data-testid=discuss-page]")) && !document.querySelector("[data-testid=discuss-page]").closest("[hidden]")',
+        `${name} Discuss via shortcut`,
+      );
+      if ((await evaluate(client, railState)).current !== discussLabel)
+        throw Error(`Rail did not mark Discuss (${name})`);
       await screenshot(`discuss-${name}`, railOutput);
-      await pressShortcut(',');
+      await pressShortcut(",");
       await waitFor(client, 'Boolean(document.querySelector(".chat-settings"))', `${name} Settings via shortcut`);
-      if ((await evaluate(client, railState)).current !== settingsLabel) throw Error(`Rail did not mark Settings (${name})`);
+      if ((await evaluate(client, railState)).current !== settingsLabel)
+        throw Error(`Rail did not mark Settings (${name})`);
       await screenshot(`settings-${name}`, railOutput);
       await evaluate(client, `document.querySelector('.activity-rail-item[data-view=chat]').click()`);
-      await waitFor(client, '!document.querySelector(".chat-settings") && !document.querySelector("[data-testid=chat-page]").closest("[hidden]")', `${name} back to Chat`);
-      checks.push(`${name}: rail 52px, current item marked, Cmd/Ctrl+2, Cmd/Ctrl+3, Cmd/Ctrl+4 and Cmd/Ctrl+, switch, no horizontal overflow`);
+      await waitFor(
+        client,
+        '!document.querySelector(".chat-settings") && !document.querySelector("[data-testid=chat-page]").closest("[hidden]")',
+        `${name} back to Chat`,
+      );
+      checks.push(
+        `${name}: rail 52px, current item marked, Cmd/Ctrl+2, Cmd/Ctrl+3, Cmd/Ctrl+4 and Cmd/Ctrl+, switch, no horizontal overflow`,
+      );
     }
   }
   // S6: a session opened before switching is still open after Learn and Settings.
   // The sidebar collapsed at 700px stays collapsed when the window widens, so reload at the wide size.
-  await client.send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 820, deviceScaleFactor: 1, mobile: false });
-  await client.send('Page.navigate', { url: baseUrl });
-  await waitFor(client, 'Boolean(document.querySelector(".chat-project-row"))', 'wide sidebar');
+  await client.send("Emulation.setDeviceMetricsOverride", {
+    width: 1280,
+    height: 820,
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
+  await client.send("Page.navigate", { url: baseUrl });
+  await waitFor(client, 'Boolean(document.querySelector(".chat-project-row"))', "wide sidebar");
   const refactorRow = `Array.from(document.querySelectorAll('.chat-tree-session')).find(e => e.textContent.includes('Refactor the chat entry'))`;
-  await evaluate(client, `${refactorRow} || Array.from(document.querySelectorAll('.chat-project-row > button[aria-expanded=false]')).find(e => e.textContent === 'loom')?.click()`);
-  await waitFor(client, `Boolean(${refactorRow})`, 'loom sessions');
+  await evaluate(
+    client,
+    `${refactorRow} || Array.from(document.querySelectorAll('.chat-project-row > button[aria-expanded=false]')).find(e => e.textContent === 'loom')?.click()`,
+  );
+  await waitFor(client, `Boolean(${refactorRow})`, "loom sessions");
   await evaluate(client, `${refactorRow}.click()`);
-  await waitFor(client, 'document.querySelector(".chat-session-header h1")?.textContent.includes("Refactor")', 'open session');
-  await evaluate(client, `(() => { const input = document.querySelector('textarea'); Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(input, 'Unsent rail draft'); input.dispatchEvent(new Event('input', { bubbles: true })); })()`);
-  await pressShortcut('2');
-  await waitFor(client, '!document.querySelector("[data-testid=learn-page]").closest("[hidden]")', 'Learn');
-  await pressShortcut('1');
-  await waitFor(client, '!document.querySelector("[data-testid=chat-page]").closest("[hidden]")', 'Chat');
-  if (!await evaluate(client, 'document.querySelector(".chat-session-header h1")?.textContent.includes("Refactor") && document.querySelector("textarea").value === "Unsent rail draft"')) throw Error('Switching features lost the open session or its draft');
-  await screenshot('chat-wide-after-switching', railOutput);
-  checks.push('S6: open session and unsent draft survive Learn and back');
-  writeFileSync(join(railOutput, 'result.json'), JSON.stringify({ status: 'passed', kind: 'synthetic-web-only', checks }, null, 2));
+  await waitFor(
+    client,
+    'document.querySelector(".chat-session-header h1")?.textContent.includes("Refactor")',
+    "open session",
+  );
+  await evaluate(
+    client,
+    `(() => { const input = document.querySelector('textarea'); Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(input, 'Unsent rail draft'); input.dispatchEvent(new Event('input', { bubbles: true })); })()`,
+  );
+  await pressShortcut("2");
+  await waitFor(client, '!document.querySelector("[data-testid=learn-page]").closest("[hidden]")', "Learn");
+  await pressShortcut("1");
+  await waitFor(client, '!document.querySelector("[data-testid=chat-page]").closest("[hidden]")', "Chat");
+  if (
+    !(await evaluate(
+      client,
+      'document.querySelector(".chat-session-header h1")?.textContent.includes("Refactor") && document.querySelector("textarea").value === "Unsent rail draft"',
+    ))
+  )
+    throw Error("Switching features lost the open session or its draft");
+  await screenshot("chat-wide-after-switching", railOutput);
+  checks.push("S6: open session and unsent draft survive Learn and back");
+  writeFileSync(
+    join(railOutput, "result.json"),
+    JSON.stringify({ status: "passed", kind: "synthetic-web-only", checks }, null, 2),
+  );
 }
 
 // OpenUI inline cards (experiment): opt in through Settings, check rendering, fallback and the
@@ -214,131 +288,289 @@ async function railMatrixSmoke(client, { screenshot }) {
 async function inlineCardsSmoke(client, { click, clickText, screenshot }) {
   mkdirSync(cardsOutput, { recursive: true });
   const external = [];
-  client.on('Network.requestWillBeSent', ({ request }) => {
+  client.on("Network.requestWillBeSent", ({ request }) => {
     const { protocol, hostname } = new URL(request.url);
-    if (!['data:', 'blob:'].includes(protocol) && !['127.0.0.1', 'localhost'].includes(hostname)) external.push(request.url);
+    if (!["data:", "blob:"].includes(protocol) && !["127.0.0.1", "localhost"].includes(hostname))
+      external.push(request.url);
   });
-  await client.send('Network.enable');
-  await client.send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 820, deviceScaleFactor: 1, mobile: false });
-  await evaluate(client, 'localStorage.clear()');
-  await client.send('Page.navigate', { url: `${baseUrl}&cards=1` });
-  await waitFor(client, 'document.querySelectorAll(".chat-tree-session").length === 3', 'card preview session');
+  await client.send("Network.enable");
+  await client.send("Emulation.setDeviceMetricsOverride", {
+    width: 1280,
+    height: 820,
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
+  await evaluate(client, "localStorage.clear()");
+  await client.send("Page.navigate", { url: `${baseUrl}&cards=1` });
+  await waitFor(client, 'document.querySelectorAll(".chat-tree-session").length === 3', "card preview session");
   const openCardSession = async () => {
     // After a reload the tree renders later than the lang/theme attributes; wait for the row itself.
     const row = `Array.from(document.querySelectorAll('.chat-tree-session')).find(e => e.textContent.includes('Inline card preview'))`;
-    await waitFor(client, `Boolean(${row})`, 'card preview session row');
+    await waitFor(client, `Boolean(${row})`, "card preview session row");
     await evaluate(client, `${row}.click()`);
-    await waitFor(client, 'document.querySelectorAll(".chat-transcript code[data-language=\\"openui-lang\\"], .chat-inline-card").length >= 2', 'card session transcript');
+    await waitFor(
+      client,
+      'document.querySelectorAll(".chat-transcript code[data-language=\\"openui-lang\\"], .chat-inline-card").length >= 2',
+      "card session transcript",
+    );
   };
   await openCardSession();
-  if (await evaluate(client, 'document.querySelectorAll(".chat-inline-card").length')) throw Error('Inline cards rendered while the experiment is off');
-  await click('.activity-rail-item[data-view=settings]');
-  await waitFor(client, 'Boolean(document.querySelector(".chat-settings"))', 'settings');
-  await clickText('.chat-settings nav button', 'Experiments');
-  await waitFor(client, 'Boolean(document.querySelector(".settings-toggle-row [role=switch]"))', 'experiments switch');
-  await screenshot('settings-experiments', cardsOutput);
-  await click('.settings-toggle-row [role=switch]');
-  await waitFor(client, 'document.querySelector(".settings-toggle-row [role=switch]").checked', 'experiment enabled');
-  await click('.activity-rail-item[data-view=chat]');
+  if (await evaluate(client, 'document.querySelectorAll(".chat-inline-card").length'))
+    throw Error("Inline cards rendered while the experiment is off");
+  await click(".activity-rail-item[data-view=settings]");
+  await waitFor(client, 'Boolean(document.querySelector(".chat-settings"))', "settings");
+  await clickText(".chat-settings nav button", "Experiments");
+  await waitFor(client, 'Boolean(document.querySelector(".settings-toggle-row [role=switch]"))', "experiments switch");
+  await screenshot("settings-experiments", cardsOutput);
+  await click(".settings-toggle-row [role=switch]");
+  await waitFor(client, 'document.querySelector(".settings-toggle-row [role=switch]").checked', "experiment enabled");
+  await click(".activity-rail-item[data-view=chat]");
   await openCardSession();
-  await waitFor(client, 'Boolean(document.querySelector(".chat-card-stack")) && Boolean(document.querySelector(".chat-inline-card-note"))', 'rendered and fallback cards', 300);
-  await screenshot('cards-light', cardsOutput);
-  await clickText('.chat-inline-card-actions button', 'Insert into input');
-  await waitFor(client, 'document.querySelector("textarea").value.includes("src/main.tsx — React entry")', 'card text inserted into the draft');
-  if (await evaluate(client, 'document.querySelectorAll(".chat-inline-card").length') !== 2) throw Error('Insert changed the transcript');
-  await clickText('.chat-inline-card-actions button', 'View source');
-  await waitFor(client, 'Boolean(document.querySelector(".chat-inline-card:not([data-fallback]) code[data-language=\\"openui-lang\\"]"))', 'card source view');
-  await screenshot('cards-source', cardsOutput);
-  await clickText('.chat-inline-card-actions button', 'View card');
-  await evaluate(client, `localStorage.setItem('loom-app-settings', JSON.stringify({ ...JSON.parse(localStorage.getItem('loom-app-settings')), themeMode: 'dark', locale: 'zh-CN' }))`);
-  await client.send('Page.reload');
-  await waitFor(client, 'document.documentElement.lang === "zh-CN" && document.documentElement.dataset.theme === "dark"', 'dark Chinese appearance');
+  await waitFor(
+    client,
+    'Boolean(document.querySelector(".chat-card-stack")) && Boolean(document.querySelector(".chat-inline-card-note"))',
+    "rendered and fallback cards",
+    300,
+  );
+  await screenshot("cards-light", cardsOutput);
+  await clickText(".chat-inline-card-actions button", "Insert into input");
+  await waitFor(
+    client,
+    'document.querySelector("textarea").value.includes("src/main.tsx — React entry")',
+    "card text inserted into the draft",
+  );
+  if ((await evaluate(client, 'document.querySelectorAll(".chat-inline-card").length')) !== 2)
+    throw Error("Insert changed the transcript");
+  await clickText(".chat-inline-card-actions button", "View source");
+  await waitFor(
+    client,
+    'Boolean(document.querySelector(".chat-inline-card:not([data-fallback]) code[data-language=\\"openui-lang\\"]"))',
+    "card source view",
+  );
+  await screenshot("cards-source", cardsOutput);
+  await clickText(".chat-inline-card-actions button", "View card");
+  await evaluate(
+    client,
+    `localStorage.setItem('loom-app-settings', JSON.stringify({ ...JSON.parse(localStorage.getItem('loom-app-settings')), themeMode: 'dark', locale: 'zh-CN' }))`,
+  );
+  await client.send("Page.reload");
+  await waitFor(
+    client,
+    'document.documentElement.lang === "zh-CN" && document.documentElement.dataset.theme === "dark"',
+    "dark Chinese appearance",
+  );
   await openCardSession();
-  await waitFor(client, 'Boolean(document.querySelector(".chat-card-stack")) && document.querySelector(".chat-inline-card-note")?.textContent.includes("源码")', 'Chinese card fallback');
-  await screenshot('cards-dark-zh', cardsOutput);
+  await waitFor(
+    client,
+    'Boolean(document.querySelector(".chat-card-stack")) && document.querySelector(".chat-inline-card-note")?.textContent.includes("源码")',
+    "Chinese card fallback",
+  );
+  await screenshot("cards-dark-zh", cardsOutput);
   // Count the events the sidebar relies on so a timeout shows whether the narrow change ever reached the page.
-  await evaluate(client, `(() => { window.__narrowEvents = { change: 0, resize: 0 }; matchMedia('(max-width: 759px)').addEventListener('change', () => window.__narrowEvents.change++); addEventListener('resize', () => window.__narrowEvents.resize++); })()`);
-  await client.send('Emulation.setDeviceMetricsOverride', { width: 700, height: 820, deviceScaleFactor: 1, mobile: false });
-  await waitFor(client, '!document.querySelector(".chat-project-tree")', 'collapsed narrow sidebar');
-  await screenshot('cards-narrow', cardsOutput);
-  if (external.length) throw Error(`External requests: ${external.join(', ')}`);
-  writeFileSync(join(cardsOutput, 'result.json'), JSON.stringify({ status: 'passed', kind: 'synthetic-web-only', externalRequests: 0, checks: ['off by default: openui-lang stays a code block', 'Settings > Experiments switch enables cards', 'valid card renders', 'invalid card falls back to source with notice', 'insert fills the draft without sending', 'source/card toggle', 'dark theme and zh-CN', '700px narrow window', 'no horizontal overflow', 'no external network requests'] }, null, 2));
+  await evaluate(
+    client,
+    `(() => { window.__narrowEvents = { change: 0, resize: 0 }; matchMedia('(max-width: 759px)').addEventListener('change', () => window.__narrowEvents.change++); addEventListener('resize', () => window.__narrowEvents.resize++); })()`,
+  );
+  await client.send("Emulation.setDeviceMetricsOverride", {
+    width: 700,
+    height: 820,
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
+  await waitFor(client, '!document.querySelector(".chat-project-tree")', "collapsed narrow sidebar");
+  await screenshot("cards-narrow", cardsOutput);
+  if (external.length) throw Error(`External requests: ${external.join(", ")}`);
+  writeFileSync(
+    join(cardsOutput, "result.json"),
+    JSON.stringify(
+      {
+        status: "passed",
+        kind: "synthetic-web-only",
+        externalRequests: 0,
+        checks: [
+          "off by default: openui-lang stays a code block",
+          "Settings > Experiments switch enables cards",
+          "valid card renders",
+          "invalid card falls back to source with notice",
+          "insert fills the draft without sending",
+          "source/card toggle",
+          "dark theme and zh-CN",
+          "700px narrow window",
+          "no horizontal overflow",
+          "no external network requests",
+        ],
+      },
+      null,
+      2,
+    ),
+  );
   console.log(`OpenUI inline cards smoke passed: ${cardsOutput}`);
 }
 
 async function main() {
   mkdirSync(output, { recursive: true });
-  const child = spawn(chrome, ['--headless=new', '--disable-gpu', '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding', '--no-first-run', '--no-default-browser-check', `--remote-debugging-port=${port}`, `--user-data-dir=${userDataDir}`, 'about:blank'], { stdio: 'ignore' });
+  const child = spawn(
+    chrome,
+    [
+      "--headless=new",
+      "--disable-gpu",
+      "--disable-background-timer-throttling",
+      "--disable-backgrounding-occluded-windows",
+      "--disable-renderer-backgrounding",
+      "--no-first-run",
+      "--no-default-browser-check",
+      `--remote-debugging-port=${port}`,
+      `--user-data-dir=${userDataDir}`,
+      "about:blank",
+    ],
+    { stdio: "ignore" },
+  );
   let client;
   try {
     const pages = await waitForJson(`http://127.0.0.1:${port}/json/list`);
-    client = createCdpClient(pages.find(page => page.type === 'page').webSocketDebuggerUrl);
-    await client.send('Page.enable'); await client.send('Runtime.enable');
-    await client.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'light' }] });
-    await client.send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 820, deviceScaleFactor: 1, mobile: false });
-    const click = async selector => evaluate(client, `document.querySelector(${JSON.stringify(selector)})?.click()`);
-    const clickText = async (selector, text) => evaluate(client, `Array.from(document.querySelectorAll(${JSON.stringify(selector)})).find(e => e.textContent.trim() === ${JSON.stringify(text)})?.click()`);
+    client = createCdpClient(pages.find((page) => page.type === "page").webSocketDebuggerUrl);
+    await client.send("Page.enable");
+    await client.send("Runtime.enable");
+    await client.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-color-scheme", value: "light" }] });
+    await client.send("Emulation.setDeviceMetricsOverride", {
+      width: 1280,
+      height: 820,
+      deviceScaleFactor: 1,
+      mobile: false,
+    });
+    const click = async (selector) => evaluate(client, `document.querySelector(${JSON.stringify(selector)})?.click()`);
+    const clickText = async (selector, text) =>
+      evaluate(
+        client,
+        `Array.from(document.querySelectorAll(${JSON.stringify(selector)})).find(e => e.textContent.trim() === ${JSON.stringify(text)})?.click()`,
+      );
     const screenshot = async (name, dir = output) => {
       await delay(150);
-      const { data } = await client.send('Page.captureScreenshot', { format: 'png' });
-      writeFileSync(join(dir, `${name}.png`), Buffer.from(data, 'base64'));
-      const size = await evaluate(client, '({ width: innerWidth, document: document.documentElement.scrollWidth })');
+      const { data } = await client.send("Page.captureScreenshot", { format: "png" });
+      writeFileSync(join(dir, `${name}.png`), Buffer.from(data, "base64"));
+      const size = await evaluate(client, "({ width: innerWidth, document: document.documentElement.scrollWidth })");
       if (size.document > size.width + 1) throw Error(`Horizontal overflow on ${name}: ${JSON.stringify(size)}`);
     };
-    await client.send('Page.navigate', { url: baseUrl });
-    await waitFor(client, 'Boolean(document.querySelector(".chat-empty-session h1"))', 'new chat');
-    await waitFor(client, 'document.querySelectorAll(".chat-tree-session").length === 2', 'project sessions');
-    if (await evaluate(client, 'document.querySelectorAll(".chat-empty-session button").length')) throw Error('New chat page should hold no controls');
-    if (!await evaluate(client, 'document.querySelector(".chat-composer-actions > .chat-project-picker > button")?.getAttribute("aria-label")?.startsWith("Project:")')) throw Error('New chat composer should offer the project picker');
-    await screenshot('new-chat-light');
-    await click('.chat-mode-picker > button');
+    await client.send("Page.navigate", { url: baseUrl });
+    await waitFor(client, 'Boolean(document.querySelector(".chat-empty-session h1"))', "new chat");
+    await waitFor(client, 'document.querySelectorAll(".chat-tree-session").length === 2', "project sessions");
+    if (await evaluate(client, 'document.querySelectorAll(".chat-empty-session button").length'))
+      throw Error("New chat page should hold no controls");
+    if (
+      !(await evaluate(
+        client,
+        'document.querySelector(".chat-composer-actions > .chat-project-picker > button")?.getAttribute("aria-label")?.startsWith("Project:")',
+      ))
+    )
+      throw Error("New chat composer should offer the project picker");
+    await screenshot("new-chat-light");
+    await click(".chat-mode-picker > button");
     await click('.chat-mode-menu [data-mode="ask"]');
     await click('[aria-label="Select Agent"]');
-    await evaluate(client, `Array.from(document.querySelectorAll('[role="menuitemradio"]')).find(e => e.textContent.includes('Codex')).click()`);
-    await evaluate(client, `(() => { const input = document.querySelector('textarea'); Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(input, 'Preview creation test'); input.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+    await evaluate(
+      client,
+      `Array.from(document.querySelectorAll('[role="menuitemradio"]')).find(e => e.textContent.includes('Codex')).click()`,
+    );
+    await evaluate(
+      client,
+      `(() => { const input = document.querySelector('textarea'); Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(input, 'Preview creation test'); input.dispatchEvent(new Event('input', { bubbles: true })); })()`,
+    );
     await waitFor(client, `!document.querySelector('[aria-label="Send message"]').disabled`, "enabled composer");
     await click('[aria-label="Send message"]');
-    await waitFor(client, 'Boolean(document.querySelector(".chat-ask-confirm"))', 'Code turn confirmation');
-    await clickText('.chat-ask-confirm button', 'Confirm and send');
-    await waitFor(client, 'document.querySelector(".chat-session-header h1")?.textContent === "Preview creation test"', 'new chat creation and first send');
-    if (!await evaluate(client, 'document.querySelector(".chat-agent-picker > button")?.textContent.includes("Codex")')) throw Error('New chat used the wrong Agent');
-    if (await evaluate(client, 'Boolean(document.querySelector(".chat-project-picker"))')) throw Error('Existing chats keep their project; no picker expected');
-    await evaluate(client, `Array.from(document.querySelectorAll('.chat-tree-session')).find(e => e.textContent.includes('Refactor the chat entry')).click()`);
-    await waitFor(client, 'document.querySelectorAll(".chat-tool-card").length === 3', 'tool cards');
+    await waitFor(client, 'Boolean(document.querySelector(".chat-ask-confirm"))', "Code turn confirmation");
+    await clickText(".chat-ask-confirm button", "Confirm and send");
+    await waitFor(
+      client,
+      'document.querySelector(".chat-session-header h1")?.textContent === "Preview creation test"',
+      "new chat creation and first send",
+    );
+    if (
+      !(await evaluate(client, 'document.querySelector(".chat-agent-picker > button")?.textContent.includes("Codex")'))
+    )
+      throw Error("New chat used the wrong Agent");
+    if (await evaluate(client, 'Boolean(document.querySelector(".chat-project-picker"))'))
+      throw Error("Existing chats keep their project; no picker expected");
+    await evaluate(
+      client,
+      `Array.from(document.querySelectorAll('.chat-tree-session')).find(e => e.textContent.includes('Refactor the chat entry')).click()`,
+    );
+    await waitFor(client, 'document.querySelectorAll(".chat-tool-card").length === 3', "tool cards");
     await click('.chat-tool-card[data-kind="edit"] > button');
-    await screenshot('chat-light');
-    await click('.activity-rail-item[data-view=settings]');
-    await waitFor(client, 'Boolean(document.querySelector(".chat-settings"))', 'settings');
-    await clickText('.chat-settings nav button', 'Appearance');
-    await clickText('.chat-settings [role="radio"]', 'Dark');
-    await waitFor(client, 'document.documentElement.dataset.theme === "dark"', 'dark theme');
-    await screenshot('settings-dark');
-    await clickText('.chat-settings [role="radio"]', '简体中文');
-    await waitFor(client, 'document.documentElement.lang === "zh-CN"', 'Chinese language');
-    await screenshot('settings-chinese');
-    await click('.activity-rail-item[data-view=chat]');
-    await waitFor(client, '!document.querySelector(".chat-settings")', 'back to active chat');
-    if (!await evaluate(client, 'document.querySelector(".chat-session-header h1")?.textContent.includes("Refactor")')) throw Error('Settings lost active chat');
-    await screenshot('chat-dark');
+    await screenshot("chat-light");
+    await click(".activity-rail-item[data-view=settings]");
+    await waitFor(client, 'Boolean(document.querySelector(".chat-settings"))', "settings");
+    await clickText(".chat-settings nav button", "Appearance");
+    await clickText('.chat-settings [role="radio"]', "Dark");
+    await waitFor(client, 'document.documentElement.dataset.theme === "dark"', "dark theme");
+    await screenshot("settings-dark");
+    await clickText('.chat-settings [role="radio"]', "简体中文");
+    await waitFor(client, 'document.documentElement.lang === "zh-CN"', "Chinese language");
+    await screenshot("settings-chinese");
+    await click(".activity-rail-item[data-view=chat]");
+    await waitFor(client, '!document.querySelector(".chat-settings")', "back to active chat");
+    if (
+      !(await evaluate(client, 'document.querySelector(".chat-session-header h1")?.textContent.includes("Refactor")'))
+    )
+      throw Error("Settings lost active chat");
+    await screenshot("chat-dark");
     // Reverse both projects' defaults so a reload cannot pass by simply resetting the tree.
     const projectExpansion = `Array.from(document.querySelectorAll('.chat-project-row > button[aria-expanded]')).map(button => ({ path: button.title, expanded: button.getAttribute('aria-expanded') }))`;
     const originalExpansion = await evaluate(client, projectExpansion);
-    if (originalExpansion.length !== 2 || new Set(originalExpansion.map(project => project.expanded)).size !== 2) throw Error('Expected one expanded and one collapsed project');
-    const expectedExpansion = originalExpansion.map(project => ({ ...project, expanded: project.expanded === 'true' ? 'false' : 'true' }));
+    if (originalExpansion.length !== 2 || new Set(originalExpansion.map((project) => project.expanded)).size !== 2)
+      throw Error("Expected one expanded and one collapsed project");
+    const expectedExpansion = originalExpansion.map((project) => ({
+      ...project,
+      expanded: project.expanded === "true" ? "false" : "true",
+    }));
     for (const project of expectedExpansion) {
       const button = `Array.from(document.querySelectorAll('.chat-project-row > button[aria-expanded]')).find(button => button.title === ${JSON.stringify(project.path)})`;
       await evaluate(client, `${button}.click()`);
-      await waitFor(client, `${button}?.getAttribute('aria-expanded') === ${JSON.stringify(project.expanded)}`, 'toggled project');
+      await waitFor(
+        client,
+        `${button}?.getAttribute('aria-expanded') === ${JSON.stringify(project.expanded)}`,
+        "toggled project",
+      );
     }
     const expansionMatches = `JSON.stringify(${projectExpansion}) === ${JSON.stringify(JSON.stringify(expectedExpansion))}`;
-    await waitFor(client, expansionMatches, 'toggled project groups');
-    await client.send('Page.reload');
-    await waitFor(client, 'document.documentElement.lang === "zh-CN" && document.documentElement.dataset.theme === "dark"', 'persisted appearance');
-    await waitFor(client, expansionMatches, 'project expansion persists after reload');
-    await client.send('Emulation.setDeviceMetricsOverride', { width: 700, height: 820, deviceScaleFactor: 1, mobile: false });
-    await waitFor(client, '!document.querySelector(".chat-project-tree")', 'collapsed narrow sidebar');
-    await screenshot('new-chat-narrow');
-    writeFileSync(join(output, 'result.json'), JSON.stringify({ status: 'passed', kind: 'synthetic-web-only', checks: ['new chat sends with selected Agent and mode', 'project groups', 'project expansion persists after reload', 'composer mode picker', 'tool cards and diff', 'light/dark', 'language persists after reload', 'Settings preserves selected chat', '700px sidebar collapse', 'no horizontal overflow'] }, null, 2));
+    await waitFor(client, expansionMatches, "toggled project groups");
+    await client.send("Page.reload");
+    await waitFor(
+      client,
+      'document.documentElement.lang === "zh-CN" && document.documentElement.dataset.theme === "dark"',
+      "persisted appearance",
+    );
+    await waitFor(client, expansionMatches, "project expansion persists after reload");
+    await client.send("Emulation.setDeviceMetricsOverride", {
+      width: 700,
+      height: 820,
+      deviceScaleFactor: 1,
+      mobile: false,
+    });
+    await waitFor(client, '!document.querySelector(".chat-project-tree")', "collapsed narrow sidebar");
+    await screenshot("new-chat-narrow");
+    writeFileSync(
+      join(output, "result.json"),
+      JSON.stringify(
+        {
+          status: "passed",
+          kind: "synthetic-web-only",
+          checks: [
+            "new chat sends with selected Agent and mode",
+            "project groups",
+            "project expansion persists after reload",
+            "composer mode picker",
+            "tool cards and diff",
+            "light/dark",
+            "language persists after reload",
+            "Settings preserves selected chat",
+            "700px sidebar collapse",
+            "no horizontal overflow",
+          ],
+        },
+        null,
+        2,
+      ),
+    );
     await railMatrixSmoke(client, { screenshot });
     await inlineCardsSmoke(client, { click, clickText, screenshot });
     await skillsSmoke(client, { evaluate, waitFor, click, clickText, screenshot });
@@ -346,6 +578,13 @@ async function main() {
     await researchSmoke(client, { evaluate, waitFor, click, clickText, screenshot });
     await discussSmoke(client, { evaluate, waitFor, click, clickText, screenshot });
     console.log(`Simple Chat browser smoke passed: ${output}`);
-  } finally { client?.close(); await killAndWait(child); await removeDirWithRetries(userDataDir); }
+  } finally {
+    client?.close();
+    await killAndWait(child);
+    await removeDirWithRetries(userDataDir);
+  }
 }
-main().catch(error => { console.error(error); process.exitCode = 1; });
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

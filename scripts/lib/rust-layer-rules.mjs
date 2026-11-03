@@ -1,15 +1,18 @@
-import { rustCodeMask } from './rust-production.mjs';
+import { rustCodeMask } from "./rust-production.mjs";
 
 // Match direct paths and grouped/aliased use trees, including `use crate as root`.
 export function moduleReferences(source, modules) {
   const code = rustCodeMask(source);
-  const roots = ['crate', 'loom_lib'];
+  const roots = ["crate", "loom_lib"];
   for (const match of code.matchAll(/\buse\s+(?:crate|loom_lib)\s+as\s+(\w+)\s*;/g)) roots.push(match[1]);
-  return modules.filter(name => roots.some(root => {
-    if (new RegExp(`\\b${root}\\s*::\\s*${name}\\b`).test(code)) return true;
-    return [...code.matchAll(new RegExp(`\\buse\\s+${root}\\s*::\\s*\\{([^;]+)\\}\\s*;`, 'g'))]
-      .some(match => new RegExp(`(?:^|[,{}])\\s*${name}\\b`).test(match[1]));
-  }));
+  return modules.filter((name) =>
+    roots.some((root) => {
+      if (new RegExp(`\\b${root}\\s*::\\s*${name}\\b`).test(code)) return true;
+      return [...code.matchAll(new RegExp(`\\buse\\s+${root}\\s*::\\s*\\{([^;]+)\\}\\s*;`, "g"))].some((match) =>
+        new RegExp(`(?:^|[,{}])\\s*${name}\\b`).test(match[1]),
+      );
+    }),
+  );
 }
 
 export function spawnsProcess(source) {

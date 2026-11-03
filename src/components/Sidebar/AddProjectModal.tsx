@@ -71,7 +71,7 @@ export function AddProjectModal({ onClose }: AddProjectModalProps) {
       <div className="project-modal" role="dialog" aria-modal="true" aria-labelledby="add-project-title">
         <div className="project-modal-header">
           <h2 id="add-project-title">{t("addProject")}</h2>
-          <button type="button" className="project-modal-close" aria-label={t("close")}  onClick={onClose}>
+          <button type="button" className="project-modal-close" aria-label={t("close")} onClick={onClose}>
             <X size={16} />
           </button>
         </div>
@@ -103,31 +103,36 @@ export function AddProjectModal({ onClose }: AddProjectModalProps) {
                   <span>{displayPath(project.path)}</span>
                 </button>
               ))}
-              {recentProjects.length === 0 && (
-                <div className="project-recent-empty">{t("noRecentProjects")}</div>
-              )}
+              {recentProjects.length === 0 && <div className="project-recent-empty">{t("noRecentProjects")}</div>}
             </div>
           </section>
 
           <section className="project-detected-card">
             <div className="project-detected-head">
               <span>{t("detected")}</span>
-              <span className="project-detected-status">{detectedProject ? t("savedRecord") : t("pendingDetection")}</span>
+              <span className="project-detected-status">
+                {detectedProject ? t("savedRecord") : t("pendingDetection")}
+              </span>
             </div>
-            {detectedProject ? <><div className="project-stack-row">
-              {detectedStacks.slice(0, 4).map((stack) => (
-                <span className="project-stack-chip" key={stack}>
-                  {stack}
-                </span>
-              ))}
-              {detectedStacks.length === 0 ? <span>{t("unknownStack")}</span> : null}
-            </div>
-            <div className="project-meta-line">
-              {detectedProject.gitBranch ? <span>{detectedProject.gitBranch}</span> : null}
-              <span>{detectedProject.isGitRepository ? t("gitRepository") : t("localFolder")}</span>
-              <span>{detectedProject.suggestedCommands[0] ?? t("noStartCommand")}</span>
-            </div>
-            </> : <p className="project-recent-empty">{t("detectProjectHint")}</p>}
+            {detectedProject ? (
+              <>
+                <div className="project-stack-row">
+                  {detectedStacks.slice(0, 4).map((stack) => (
+                    <span className="project-stack-chip" key={stack}>
+                      {stack}
+                    </span>
+                  ))}
+                  {detectedStacks.length === 0 ? <span>{t("unknownStack")}</span> : null}
+                </div>
+                <div className="project-meta-line">
+                  {detectedProject.gitBranch ? <span>{detectedProject.gitBranch}</span> : null}
+                  <span>{detectedProject.isGitRepository ? t("gitRepository") : t("localFolder")}</span>
+                  <span>{detectedProject.suggestedCommands[0] ?? t("noStartCommand")}</span>
+                </div>
+              </>
+            ) : (
+              <p className="project-recent-empty">{t("detectProjectHint")}</p>
+            )}
           </section>
 
           {state.app.projectError && <div className="project-modal-error">{state.app.projectError}</div>}

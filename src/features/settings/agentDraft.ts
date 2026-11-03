@@ -31,4 +31,3 @@ export function draftFromAgent(agent: AgentConfig): AgentConfigInput {
 export function isBuiltInAgent(agent: AgentConfig) {
   return ["agent-codex", "agent-claude", "agent-grok", "agent-opencode", "agent-dummy"].includes(agent.id);
 }
-

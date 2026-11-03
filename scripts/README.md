@@ -15,7 +15,7 @@ Skills 原生验收可先用 `pnpm tauri build --debug --bundles app` 构建，�
 
 | 命令 | 范围 |
 |---|---|
-| `pnpm check` | 分层检查（`scripts/check-layers.mjs`）、release 文档校验、OpenUI 提示词同步检查、前端测试/build、Rust fmt/clippy/test |
+| `pnpm check` | 分层检查（`scripts/check-layers.mjs`）、Prettier 格式检查（`pnpm format:check`，修复用 `pnpm format`）、release 文档校验、OpenUI 提示词同步检查、前端测试/build、Rust fmt/clippy/test |
 | `pnpm tauri build --no-bundle` | 编译桌面程序，不做发布或分发验收 |
 | `pnpm smoke:chat` | 生产 Chat 仓储/runtime 的真实本地 fixture 进程，无模型请求 |
 | `pnpm smoke:visual` | `simple-chat-smoke.sh`：按规定启动/停止预览，Chrome 检查新会话、分组、工具差异、主题、语言和窄窗口；功能栏矩阵（zh/en × 深浅 × 700px：52px 宽、当前项、⌘/Ctrl+2 与 ⌘/Ctrl+, 切换，以及切换后会话和草稿保持）截图在 `designs/exports/activity-rail/` |

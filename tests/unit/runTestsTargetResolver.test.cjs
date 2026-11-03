@@ -27,10 +27,7 @@ test("findTestsInDirectory recursively returns sorted .test.cjs files", async ()
   const { findTestsInDirectory } = await loadRunner();
   withFixture((root) => {
     const files = findTestsInDirectory(join(root, "tests", "unit")).map((file) => relative(root, file));
-    assert.deepEqual(files, [
-      "tests/unit/alpha.test.cjs",
-      "tests/unit/nested/beta.test.cjs",
-    ]);
+    assert.deepEqual(files, ["tests/unit/alpha.test.cjs", "tests/unit/nested/beta.test.cjs"]);
   });
 });
 
@@ -38,10 +35,7 @@ test("resolveRequestedTestFiles defaults to tests/unit", async () => {
   const { resolveRequestedTestFiles } = await loadRunner();
   withFixture((root) => {
     const files = resolveRequestedTestFiles([], root).map((file) => relative(root, file));
-    assert.deepEqual(files, [
-      "tests/unit/alpha.test.cjs",
-      "tests/unit/nested/beta.test.cjs",
-    ]);
+    assert.deepEqual(files, ["tests/unit/alpha.test.cjs", "tests/unit/nested/beta.test.cjs"]);
   });
 });
 
@@ -49,21 +43,13 @@ test("resolveRequestedTestFiles supports pnpm separator, files, directories, and
   const { resolveRequestedTestFiles } = await loadRunner();
   withFixture((root) => {
     const absoluteFile = join(root, "tests", "unit", "nested", "beta.test.cjs");
-    const files = resolveRequestedTestFiles([
-      "--",
-      "tests/unit/alpha.test.cjs",
-      absoluteFile,
-    ], root).map((file) => relative(root, file));
-    assert.deepEqual(files, [
-      "tests/unit/alpha.test.cjs",
-      "tests/unit/nested/beta.test.cjs",
-    ]);
+    const files = resolveRequestedTestFiles(["--", "tests/unit/alpha.test.cjs", absoluteFile], root).map((file) =>
+      relative(root, file),
+    );
+    assert.deepEqual(files, ["tests/unit/alpha.test.cjs", "tests/unit/nested/beta.test.cjs"]);
 
     const directoryFiles = resolveRequestedTestFiles(["tests/unit"], root).map((file) => relative(root, file));
-    assert.deepEqual(directoryFiles, [
-      "tests/unit/alpha.test.cjs",
-      "tests/unit/nested/beta.test.cjs",
-    ]);
+    assert.deepEqual(directoryFiles, ["tests/unit/alpha.test.cjs", "tests/unit/nested/beta.test.cjs"]);
   });
 });
 

@@ -25,7 +25,7 @@
 /* Primary Variant */
 .btn-primary {
   background-color: var(--accent-fill);
-  color: #FFFFFF;
+  color: #ffffff;
 }
 
 .btn-primary:hover:not(:disabled) {

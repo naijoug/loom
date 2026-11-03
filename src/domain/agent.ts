@@ -1,20 +1,7 @@
-export type AgentCapability =
-  | "planning"
-  | "implementation"
-  | "review"
-  | "debugging"
-  | "testing"
-  | "documentation";
+export type AgentCapability = "planning" | "implementation" | "review" | "debugging" | "testing" | "documentation";
 
 export type AgentAdapterType =
-  | "dummy"
-  | "cli"
-  | "codex_cli"
-  | "claude_code_cli"
-  | "grok_cli"
-  | "opencode_cli"
-  | "mcp"
-  | "http";
+  "dummy" | "cli" | "codex_cli" | "claude_code_cli" | "grok_cli" | "opencode_cli" | "mcp" | "http";
 
 export type WorkingDirectoryPolicy = "project_root" | "agent_configured" | "custom";
 
@@ -57,4 +44,3 @@ export interface AgentDiagnostic {
   detail: string;
   checkedAtMs: number;
 }
-

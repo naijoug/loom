@@ -61,9 +61,7 @@ export class MockChatStore {
       projectPath: input.projectPath,
       agentId: input.agentId,
       title: input.title?.trim() || "New chat",
-      permissionMode: normalizeChatPermissionMode(
-        input.permissionMode ?? DEFAULT_CHAT_PERMISSION_MODE,
-      ),
+      permissionMode: normalizeChatPermissionMode(input.permissionMode ?? DEFAULT_CHAT_PERMISSION_MODE),
       status: DEFAULT_CHAT_SESSION_STATUS,
       flagged: false,
       messages: [],
@@ -119,7 +117,6 @@ export class MockChatStore {
     return next;
   }
 
-
   setFlagged(sessionId: string, flagged: boolean): ChatSession | undefined {
     const session = this.sessions.get(sessionId);
     if (!session) return undefined;
@@ -163,16 +160,12 @@ export class MockChatStore {
     const assistant: ChatMessage = {
       id: id("msg"),
       role: "assistant",
-      content:
-        "Web preview reply. Use the desktop app to run a local Agent. You said:\n\n" +
-        trimmed,
+      content: "Web preview reply. Use the desktop app to run a local Agent. You said:\n\n" + trimmed,
       status: "complete",
       createdAtMs: t + 1,
     };
     const title =
-      session.messages.length === 0 && session.title === "New chat"
-        ? titleFromUserMessage(trimmed)
-        : session.title;
+      session.messages.length === 0 && session.title === "New chat" ? titleFromUserMessage(trimmed) : session.title;
     const next: ChatSession = {
       ...session,
       title,

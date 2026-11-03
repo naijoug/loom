@@ -7,10 +7,26 @@ import { useT } from "../../i18n";
 import { mockChatStore } from "./mockStore";
 import { normalizePermissionMode, PERMISSION_LABELS } from "./permissionMode";
 
-export function ProjectTree({ projects, agents, projectPath, sessionId, useBackend, revision, onSelect, onAdd, onCollapse }: {
-  projects: ProjectSummary[]; agents: AgentConfig[]; projectPath: string | null; sessionId: string | null;
-  useBackend: boolean; revision: number; onSelect: (project: ProjectSummary, session: string | null) => void;
-  onAdd: () => void; onCollapse: () => void;
+export function ProjectTree({
+  projects,
+  agents,
+  projectPath,
+  sessionId,
+  useBackend,
+  revision,
+  onSelect,
+  onAdd,
+  onCollapse,
+}: {
+  projects: ProjectSummary[];
+  agents: AgentConfig[];
+  projectPath: string | null;
+  sessionId: string | null;
+  useBackend: boolean;
+  revision: number;
+  onSelect: (project: ProjectSummary, session: string | null) => void;
+  onAdd: () => void;
+  onCollapse: () => void;
 }) {
   const t = useT();
   const [groups, setGroups] = useState<ChatProjectGroup[]>([]);
@@ -18,60 +34,173 @@ export function ProjectTree({ projects, agents, projectPath, sessionId, useBacke
   const [search, setSearch] = useState("");
   const [archived, setArchived] = useState(false);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
-    try { return JSON.parse(localStorage.getItem("loom-project-collapsed") ?? "{}"); } catch { return {}; }
+    try {
+      return JSON.parse(localStorage.getItem("loom-project-collapsed") ?? "{}");
+    } catch {
+      return {};
+    }
   });
-  const expanded = projects.filter(project => collapsed[project.path] === false || (collapsed[project.path] === undefined && project.path === projectPath)).map(project => project.path);
+  const expanded = projects
+    .filter(
+      (project) =>
+        collapsed[project.path] === false || (collapsed[project.path] === undefined && project.path === projectPath),
+    )
+    .map((project) => project.path);
   const expandedKey = JSON.stringify(expanded);
   useEffect(() => {
     let disposed = false;
-    const read = useBackend ? chatListProjectGroups(expanded) : Promise.resolve(projects.map(project => {
-      const sessions = mockChatStore.list(project.path);
-      return { project, sessionCount: sessions.length, sessions: expanded.includes(project.path) ? sessions : [] };
-    }));
-    void read.then(result => { if (!disposed) { setGroups(result); setError(""); } }).catch(error => { if (!disposed) setError(String(error)); });
-    return () => { disposed = true; };
-  // String key keeps project expansion stable across renders.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    const read = useBackend
+      ? chatListProjectGroups(expanded)
+      : Promise.resolve(
+          projects.map((project) => {
+            const sessions = mockChatStore.list(project.path);
+            return {
+              project,
+              sessionCount: sessions.length,
+              sessions: expanded.includes(project.path) ? sessions : [],
+            };
+          }),
+        );
+    void read
+      .then((result) => {
+        if (!disposed) {
+          setGroups(result);
+          setError("");
+        }
+      })
+      .catch((error) => {
+        if (!disposed) setError(String(error));
+      });
+    return () => {
+      disposed = true;
+    };
+    // String key keeps project expansion stable across renders.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projects, expandedKey, revision, useBackend]);
   function toggle(path: string) {
     const next = { ...collapsed, [path]: expanded.includes(path) };
-    setCollapsed(next); localStorage.setItem("loom-project-collapsed", JSON.stringify(next));
+    setCollapsed(next);
+    localStorage.setItem("loom-project-collapsed", JSON.stringify(next));
   }
-  return <aside className="chat-project-tree" aria-label={t("projects")}>
-    <header data-tauri-drag-region>
-      <button type="button" className="chat-icon-button" aria-label={t("collapseSidebar")} title={t("collapseSidebar")} onClick={onCollapse}><PanelLeftClose size={16} /></button></header>
-    <label className="chat-search"><Search size={14} aria-hidden="true" />
-      <input type="search" placeholder={t("searchChats")} aria-label={t("searchChats")} value={search} onChange={event => setSearch(event.target.value)} /></label>
-    <div className="chat-project-heading"><span>{t(archived ? "archived" : "projects")}</span>
-      <button type="button" className="chat-icon-button" aria-label={t("addProject")} title={t("addProject")} onClick={onAdd}><FolderPlus size={15} /></button></div>
-    {error && <p role="alert" className="chat-error">{error}</p>}
-    <nav>{projects.map(project => {
-      const group = groups.find(group => group.project.path === project.path);
-      const open = expanded.includes(project.path);
-      const sessions = group?.sessions.filter(session => (session.status === "archived") === archived && `${session.title} ${session.preview ?? ""}`.toLowerCase().includes(search.toLowerCase())) ?? [];
-      return <section key={project.path}>
-        <div className="chat-project-row" data-active={projectPath === project.path}>
-          <button type="button" title={project.path} aria-expanded={open} onClick={() => toggle(project.path)}><ChevronRight size={13} className={open ? "expanded" : ""} aria-hidden="true" /><strong>{project.name}</strong></button>
-          <button type="button" className="chat-icon-button" aria-label={`${t("newSession")} · ${project.name}`} title={t("newSession")} onClick={() => {
-            const next = { ...collapsed, [project.path]: false }; setCollapsed(next); localStorage.setItem("loom-project-collapsed", JSON.stringify(next)); onSelect(project, null);
-          }}><Plus size={14} /></button>
-        </div>
-        {group?.storageError && <p role="alert" className="chat-storage-error">{group.storageError}</p>}
-        {open && <ul>{sessions.map(session => {
-          const streaming = session.turnStatus === "streaming";
-          const mode = normalizePermissionMode(session.permissionMode);
-          return <li key={session.id}><button type="button" className="chat-tree-session" data-mode={mode} aria-current={projectPath === project.path && sessionId === session.id ? "page" : undefined}
-            title={session.storageError ?? session.title} onClick={() => onSelect(project, session.id)}>
-            <span className="chat-tree-mode" role="img" aria-label={t(PERMISSION_LABELS[mode])} />
-            <span className="chat-tree-title">{session.title}</span>
-            <small>{agents.find(agent => agent.id === session.agentId)?.name ?? session.agentId}</small>
-            {streaming && <LoaderCircle size={12} className="chat-spin" role="img" aria-label={t("running")} />}
-            {session.needsAttention && <span className="chat-attention" role="img" aria-label={t("error")} />}
-          </button></li>;
-        })}{group && !sessions.length && <li className="chat-tree-empty">{t("noChats")}</li>}</ul>}
-      </section>;
-    })}</nav>
-    {/* Learn and Settings live on the activity rail; the sidebar keeps only the project and session tree. */}
-    <footer><button type="button" aria-pressed={archived} onClick={() => setArchived(!archived)}><Archive size={15} aria-hidden="true" />{t("archived")}</button></footer>
-  </aside>;
+  return (
+    <aside className="chat-project-tree" aria-label={t("projects")}>
+      <header data-tauri-drag-region>
+        <button
+          type="button"
+          className="chat-icon-button"
+          aria-label={t("collapseSidebar")}
+          title={t("collapseSidebar")}
+          onClick={onCollapse}
+        >
+          <PanelLeftClose size={16} />
+        </button>
+      </header>
+      <label className="chat-search">
+        <Search size={14} aria-hidden="true" />
+        <input
+          type="search"
+          placeholder={t("searchChats")}
+          aria-label={t("searchChats")}
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+      </label>
+      <div className="chat-project-heading">
+        <span>{t(archived ? "archived" : "projects")}</span>
+        <button
+          type="button"
+          className="chat-icon-button"
+          aria-label={t("addProject")}
+          title={t("addProject")}
+          onClick={onAdd}
+        >
+          <FolderPlus size={15} />
+        </button>
+      </div>
+      {error && (
+        <p role="alert" className="chat-error">
+          {error}
+        </p>
+      )}
+      <nav>
+        {projects.map((project) => {
+          const group = groups.find((group) => group.project.path === project.path);
+          const open = expanded.includes(project.path);
+          const sessions =
+            group?.sessions.filter(
+              (session) =>
+                (session.status === "archived") === archived &&
+                `${session.title} ${session.preview ?? ""}`.toLowerCase().includes(search.toLowerCase()),
+            ) ?? [];
+          return (
+            <section key={project.path}>
+              <div className="chat-project-row" data-active={projectPath === project.path}>
+                <button type="button" title={project.path} aria-expanded={open} onClick={() => toggle(project.path)}>
+                  <ChevronRight size={13} className={open ? "expanded" : ""} aria-hidden="true" />
+                  <strong>{project.name}</strong>
+                </button>
+                <button
+                  type="button"
+                  className="chat-icon-button"
+                  aria-label={`${t("newSession")} · ${project.name}`}
+                  title={t("newSession")}
+                  onClick={() => {
+                    const next = { ...collapsed, [project.path]: false };
+                    setCollapsed(next);
+                    localStorage.setItem("loom-project-collapsed", JSON.stringify(next));
+                    onSelect(project, null);
+                  }}
+                >
+                  <Plus size={14} />
+                </button>
+              </div>
+              {group?.storageError && (
+                <p role="alert" className="chat-storage-error">
+                  {group.storageError}
+                </p>
+              )}
+              {open && (
+                <ul>
+                  {sessions.map((session) => {
+                    const streaming = session.turnStatus === "streaming";
+                    const mode = normalizePermissionMode(session.permissionMode);
+                    return (
+                      <li key={session.id}>
+                        <button
+                          type="button"
+                          className="chat-tree-session"
+                          data-mode={mode}
+                          aria-current={projectPath === project.path && sessionId === session.id ? "page" : undefined}
+                          title={session.storageError ?? session.title}
+                          onClick={() => onSelect(project, session.id)}
+                        >
+                          <span className="chat-tree-mode" role="img" aria-label={t(PERMISSION_LABELS[mode])} />
+                          <span className="chat-tree-title">{session.title}</span>
+                          <small>{agents.find((agent) => agent.id === session.agentId)?.name ?? session.agentId}</small>
+                          {streaming && (
+                            <LoaderCircle size={12} className="chat-spin" role="img" aria-label={t("running")} />
+                          )}
+                          {session.needsAttention && (
+                            <span className="chat-attention" role="img" aria-label={t("error")} />
+                          )}
+                        </button>
+                      </li>
+                    );
+                  })}
+                  {group && !sessions.length && <li className="chat-tree-empty">{t("noChats")}</li>}
+                </ul>
+              )}
+            </section>
+          );
+        })}
+      </nav>
+      {/* Learn and Settings live on the activity rail; the sidebar keeps only the project and session tree. */}
+      <footer>
+        <button type="button" aria-pressed={archived} onClick={() => setArchived(!archived)}>
+          <Archive size={15} aria-hidden="true" />
+          {t("archived")}
+        </button>
+      </footer>
+    </aside>
+  );
 }

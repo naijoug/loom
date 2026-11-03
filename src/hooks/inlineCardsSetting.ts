@@ -8,22 +8,34 @@ const listeners = new Set<() => void>();
 
 function publish(next: boolean) {
   enabled = next;
-  listeners.forEach(listener => listener());
+  listeners.forEach((listener) => listener());
 }
 
 function subscribe(listener: () => void) {
   listeners.add(listener);
-  loading ??= loadAppSettings().then(settings => publish(settings.experimentalInlineCards)).catch(() => {});
-  return () => { listeners.delete(listener); };
+  loading ??= loadAppSettings()
+    .then((settings) => publish(settings.experimentalInlineCards))
+    .catch(() => {});
+  return () => {
+    listeners.delete(listener);
+  };
 }
 
 export function useInlineCardsEnabled() {
-  return useSyncExternalStore(subscribe, () => enabled, () => enabled);
+  return useSyncExternalStore(
+    subscribe,
+    () => enabled,
+    () => enabled,
+  );
 }
 
 export async function setInlineCardsEnabled(next: boolean) {
   const previous = enabled;
   publish(next);
-  try { publish((await patchAppSettings({ experimentalInlineCards: next })).experimentalInlineCards); }
-  catch (error) { publish(previous); throw error; }
+  try {
+    publish((await patchAppSettings({ experimentalInlineCards: next })).experimentalInlineCards);
+  } catch (error) {
+    publish(previous);
+    throw error;
+  }
 }

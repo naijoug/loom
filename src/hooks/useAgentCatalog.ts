@@ -98,14 +98,17 @@ export function useAgentCatalog() {
     [dispatch],
   );
 
-  const diagnoseAgents = useCallback(async (agentId?: string) => {
-    if (!hasTauriRuntime()) {
-      return [] as AgentDiagnostic[];
-    }
-    const diagnostics = await agentsApi.diagnose(agentId);
-    dispatch({ type: "agents/diagnosed", diagnostics });
-    return diagnostics;
-  }, [dispatch]);
+  const diagnoseAgents = useCallback(
+    async (agentId?: string) => {
+      if (!hasTauriRuntime()) {
+        return [] as AgentDiagnostic[];
+      }
+      const diagnostics = await agentsApi.diagnose(agentId);
+      dispatch({ type: "agents/diagnosed", diagnostics });
+      return diagnostics;
+    },
+    [dispatch],
+  );
 
   return { loadAgents, createAgent, setAgentEnabled, updateAgent, deleteAgent, diagnoseAgents };
 }

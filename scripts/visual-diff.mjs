@@ -42,11 +42,14 @@ function readSamples(directory) {
       .sort()
       .map((file) => {
         const png = PNG.sync.read(readFileSync(join(directory, file)));
-        return [basename(file, ".png"), {
-          width: png.width,
-          height: png.height,
-          rgba: sampleImage(png),
-        }];
+        return [
+          basename(file, ".png"),
+          {
+            width: png.width,
+            height: png.height,
+            rgba: sampleImage(png),
+          },
+        ];
       }),
   );
 }
@@ -79,11 +82,12 @@ if (mode === "--emit-baseline") {
   const dimensions = [...new Set(Object.values(currentSamples).map((sample) => `${sample.width}x${sample.height}`))];
   if (dimensions.length !== 1) throw new Error(`screenshots have inconsistent dimensions: ${dimensions.join(", ")}`);
   const [width, height] = dimensions[0].split("x").map(Number);
-  const rgbaGzip = gzipSync(
-    Buffer.concat(labels.map((label) => currentSamples[label].rgba)),
-    { level: 9 },
-  ).toString("base64");
-  process.stdout.write(`${JSON.stringify({ version: 3, grid: [GRID_WIDTH, GRID_HEIGHT], dimensions: [width, height], labels, rgbaGzip }, null, 2)}\n`);
+  const rgbaGzip = gzipSync(Buffer.concat(labels.map((label) => currentSamples[label].rgba)), { level: 9 }).toString(
+    "base64",
+  );
+  process.stdout.write(
+    `${JSON.stringify({ version: 3, grid: [GRID_WIDTH, GRID_HEIGHT], dimensions: [width, height], labels, rgbaGzip }, null, 2)}\n`,
+  );
   process.exit(0);
 }
 
@@ -110,7 +114,9 @@ for (const [label, currentMeta] of Object.entries(currentSamples)) {
     continue;
   }
   if (baseline.dimensions?.[0] !== currentMeta.width || baseline.dimensions?.[1] !== currentMeta.height) {
-    failures.push(`${label}: dimensions changed ${baseline.dimensions?.join("x")} -> ${currentMeta.width}x${currentMeta.height}`);
+    failures.push(
+      `${label}: dimensions changed ${baseline.dimensions?.join("x")} -> ${currentMeta.width}x${currentMeta.height}`,
+    );
     continue;
   }
   const start = baselineIndex * sampleBytes;
@@ -123,11 +129,11 @@ for (const [label, currentMeta] of Object.entries(currentSamples)) {
   let total = 0;
   let changedCells = 0;
   for (let offset = 0; offset < current.length; offset += 4) {
-    const cellDiff = (
-      Math.abs(expected[offset] - current[offset]) +
-      Math.abs(expected[offset + 1] - current[offset + 1]) +
-      Math.abs(expected[offset + 2] - current[offset + 2])
-    ) / (3 * 255);
+    const cellDiff =
+      (Math.abs(expected[offset] - current[offset]) +
+        Math.abs(expected[offset + 1] - current[offset + 1]) +
+        Math.abs(expected[offset + 2] - current[offset + 2])) /
+      (3 * 255);
     total += cellDiff;
     if (cellDiff > 0.04) changedCells += 1;
   }
@@ -136,7 +142,9 @@ for (const [label, currentMeta] of Object.entries(currentSamples)) {
   const changedRatio = changedCells / cells;
   if (meanDiff > MEAN_DIFF_LIMIT || changedRatio > CHANGED_CELL_LIMIT) {
     const artifact = writeDiff(directory, label, expected, current);
-    failures.push(`${label}: mean=${meanDiff.toFixed(4)}, changed=${(changedRatio * 100).toFixed(1)}%, diff=${artifact}`);
+    failures.push(
+      `${label}: mean=${meanDiff.toFixed(4)}, changed=${(changedRatio * 100).toFixed(1)}%, diff=${artifact}`,
+    );
   } else {
     console.log(`DIFF ${label}: mean=${meanDiff.toFixed(4)}, changed=${(changedRatio * 100).toFixed(1)}%`);
   }

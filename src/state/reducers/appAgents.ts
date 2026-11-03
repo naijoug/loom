@@ -26,7 +26,10 @@ export function reduceAppAndAgents(state: AppState, action: AppAction): AppState
     case "agents/diagnosed": {
       // A single-agent diagnosis replaces only that agent's entry.
       const fresh = new Set(action.diagnostics.map((item) => item.agentId));
-      return { ...state, agentDiagnostics: [...state.agentDiagnostics.filter((item) => !fresh.has(item.agentId)), ...action.diagnostics] };
+      return {
+        ...state,
+        agentDiagnostics: [...state.agentDiagnostics.filter((item) => !fresh.has(item.agentId)), ...action.diagnostics],
+      };
     }
     default:
       return state;

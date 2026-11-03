@@ -21,7 +21,11 @@ const check = process.argv.includes("--check");
 // repository so bare imports resolve against the project's node_modules.
 const outDir = join(root, ".tmp", "openui-prompt");
 mkdirSync(outDir, { recursive: true });
-const { code } = await transformWithEsbuild(readFileSync(source, "utf8"), source, { loader: "tsx", jsx: "automatic", format: "esm" });
+const { code } = await transformWithEsbuild(readFileSync(source, "utf8"), source, {
+  loader: "tsx",
+  jsx: "automatic",
+  format: "esm",
+});
 const compiled = join(outDir, "library.mjs");
 writeFileSync(compiled, code);
 const { inlineCardPrompt } = await import(pathToFileURL(compiled).href);

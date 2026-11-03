@@ -45,17 +45,23 @@ export function effectiveThemeForMode(mode: ThemeMode, system: Theme): Theme {
 export function ThemeProvider({ children }: ThemeProviderProps) {
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const [system, setSystem] = useState<Theme>(systemTheme);
-  const [themeMode, setThemeModeState] = useState<ThemeMode>(() => resolveThemeMode(undefined, localStorage.getItem("loom-theme")));
+  const [themeMode, setThemeModeState] = useState<ThemeMode>(() =>
+    resolveThemeMode(undefined, localStorage.getItem("loom-theme")),
+  );
   const theme = effectiveThemeForMode(themeMode, system);
 
   useEffect(() => {
     let cancelled = false;
-    void loadAppSettings().then((loaded) => {
-      if (cancelled) {
-        return;
-      }
-      setThemeModeState(resolveThemeMode(loaded.themeMode, localStorage.getItem("loom-theme")));
-    }).catch(error => { if (!cancelled) setSettingsError(String(error)); });
+    void loadAppSettings()
+      .then((loaded) => {
+        if (cancelled) {
+          return;
+        }
+        setThemeModeState(resolveThemeMode(loaded.themeMode, localStorage.getItem("loom-theme")));
+      })
+      .catch((error) => {
+        if (!cancelled) setSettingsError(String(error));
+      });
 
     return () => {
       cancelled = true;
@@ -70,7 +76,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   // Listen for system theme changes if user hasn't explicitly set a preference
   useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    
+
     const handleChange = (e: MediaQueryListEvent) => setSystem(e.matches ? "dark" : "light");
 
     mediaQuery.addEventListener("change", handleChange);
@@ -80,15 +86,18 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   const setThemeMode = (mode: ThemeMode) => {
     setSettingsError(null);
     setThemeModeState(mode);
-    void patchAppSettings({ themeMode: mode }).then((saved) => {
-      setThemeModeState(saved.themeMode);
-    }).catch(error => { setThemeModeState(themeMode); setSettingsError(String(error)); });
+    void patchAppSettings({ themeMode: mode })
+      .then((saved) => {
+        setThemeModeState(saved.themeMode);
+      })
+      .catch((error) => {
+        setThemeModeState(themeMode);
+        setSettingsError(String(error));
+      });
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, themeMode, setThemeMode, settingsError }}>
-      {children}
-    </ThemeContext.Provider>
+    <ThemeContext.Provider value={{ theme, themeMode, setThemeMode, settingsError }}>{children}</ThemeContext.Provider>
   );
 }
 

@@ -78,7 +78,7 @@ test("chatClient wrappers are exported", () => {
     chatUpdateMeta,
     chatSend,
     chatAbort,
-      chatListSessions,
+    chatListSessions,
     chatGet,
     chatSetAgent,
     chatClearResume,
@@ -91,7 +91,14 @@ test("production Chat wrappers invoke the real transport with the correct envelo
   const { chatReadEvents, chatReadRunLogs, chatExport } = require("../../.tmp/test-build/src/api/chatClient.js");
   const previous = global.window;
   const calls = [];
-  global.window = { __TAURI_INTERNALS__: { invoke: async (command, args) => { calls.push([command, JSON.parse(JSON.stringify(args))]); return {}; } } };
+  global.window = {
+    __TAURI_INTERNALS__: {
+      invoke: async (command, args) => {
+        calls.push([command, JSON.parse(JSON.stringify(args))]);
+        return {};
+      },
+    },
+  };
   try {
     await chatCreate({ projectPath: "/a", agentId: "g" });
     await chatUpdateMeta({ projectPath: "/a", sessionId: "s", title: "new" });
@@ -108,8 +115,13 @@ test("production Chat wrappers invoke the real transport with the correct envelo
       ["chat_abort", { input: { projectPath: "/a", sessionId: "s", turnId: "t" } }],
       ["chat_get", { projectPath: "/a", sessionId: "s" }],
       ["chat_read_events", { projectPath: "/a", sessionId: "s", afterSeq: 17, limit: 50 }],
-      ["chat_read_run_logs", { projectPath: "/a", sessionId: "s", turnId: "t", stream: "stderr", offset: 21, limit: 4096 }],
+      [
+        "chat_read_run_logs",
+        { projectPath: "/a", sessionId: "s", turnId: "t", stream: "stderr", offset: 21, limit: 4096 },
+      ],
       ["chat_export", { input: { projectPath: "/a", sessionId: "s" } }],
     ]);
-  } finally { global.window = previous; }
+  } finally {
+    global.window = previous;
+  }
 });

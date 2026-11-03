@@ -14,7 +14,9 @@ export default defineConfig(async () => ({
   // remote script from jsdelivr; resolve it to a local no-op instead.
   resolve: {
     alias: {
-      "@openuidev/devtools": decodeURIComponent(new URL("./src/features/chat/openui/devtoolsStub.ts", import.meta.url).pathname),
+      "@openuidev/devtools": decodeURIComponent(
+        new URL("./src/features/chat/openui/devtoolsStub.ts", import.meta.url).pathname,
+      ),
     },
   },
 

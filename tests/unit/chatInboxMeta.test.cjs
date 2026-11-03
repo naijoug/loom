@@ -8,10 +8,7 @@ const {
 } = require("../../.tmp/test-build/src/domain/chat.js");
 
 test("titleFromUserMessage truncates on word boundary", () => {
-  const title = titleFromUserMessage(
-    "hello world this is a fairly long first line that should wrap",
-    24,
-  );
+  const title = titleFromUserMessage("hello world this is a fairly long first line that should wrap", 24);
   assert.ok(title.endsWith("…"), title);
   assert.equal(title.includes("wrap"), false);
   assert.ok(title.startsWith("hello"), title);

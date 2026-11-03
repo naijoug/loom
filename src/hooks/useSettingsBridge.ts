@@ -30,7 +30,7 @@ function normalizeSettings(value: Partial<AppSettings> | null | undefined): AppS
 function loadFallbackSettings(): AppSettings {
   try {
     const raw = localStorage.getItem(FALLBACK_SETTINGS_KEY);
-    const parsed = raw ? JSON.parse(raw) as Partial<AppSettings> : null;
+    const parsed = raw ? (JSON.parse(raw) as Partial<AppSettings>) : null;
     const legacyTheme = localStorage.getItem(LEGACY_THEME_KEY);
     return normalizeSettings({
       ...parsed,
@@ -66,9 +66,7 @@ export async function saveAppSettings(settings: AppSettings): Promise<AppSetting
     return normalized;
   }
 
-  return normalizeSettings(
-    await invokeCommand<AppSettings>(TAURI_COMMANDS.saveAppSettings, { settings: normalized }),
-  );
+  return normalizeSettings(await invokeCommand<AppSettings>(TAURI_COMMANDS.saveAppSettings, { settings: normalized }));
 }
 
 export function useSettingsBridge() {
@@ -81,8 +79,9 @@ export function useSettingsBridge() {
 // Serialize partial updates so changing language cannot overwrite a new theme.
 let settingsWrite: Promise<unknown> = Promise.resolve();
 export function patchAppSettings(patch: Partial<AppSettings>): Promise<AppSettings> {
-  const operation = settingsWrite.catch(() => {}).then(async () =>
-    saveAppSettings({ ...await loadAppSettings(), ...patch }));
+  const operation = settingsWrite
+    .catch(() => {})
+    .then(async () => saveAppSettings({ ...(await loadAppSettings()), ...patch }));
   settingsWrite = operation;
   return operation;
 }

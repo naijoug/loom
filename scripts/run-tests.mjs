@@ -66,7 +66,9 @@ export function resolveRequestedTestTarget(target, rootDirectory = root) {
     return [path];
   }
 
-  throw new Error(`Unsupported test target: ${target}. Pass a .test.cjs file or a directory containing .test.cjs files.`);
+  throw new Error(
+    `Unsupported test target: ${target}. Pass a .test.cjs file or a directory containing .test.cjs files.`,
+  );
 }
 
 export function resolveRequestedTestFiles(args, rootDirectory = root) {

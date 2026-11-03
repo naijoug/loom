@@ -128,9 +128,9 @@ const longTask = {
 const rssBefore = process.memoryUsage().rss;
 const timelineModel = measure(() => buildTaskTimelineRows(longTask, 5_000));
 if (timelineModel.value.length !== 5_000) throw new Error("timeline model dropped benchmark rows");
-const timelineRender = measure(() => renderToStaticMarkup(
-  React.createElement(TaskTimeline, { task: longTask, maxItems: 1_000 }),
-));
+const timelineRender = measure(() =>
+  renderToStaticMarkup(React.createElement(TaskTimeline, { task: longTask, maxItems: 1_000 })),
+);
 if (!timelineRender.value.includes("task-timeline")) throw new Error("timeline did not render");
 
 const metrics = {

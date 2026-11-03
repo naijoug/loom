@@ -1,8 +1,16 @@
 import type { ChatEvent, ChatSession, ChatMessagePart } from "../../../domain/chat";
 
 const MUTABLE_FIELDS = new Set([
-  "title", "agentId", "permissionMode", "updatedAtMs", "resumeCommand",
-  "activeTurnId", "turnStatus", "promotedTaskId", "status", "flagged",
+  "title",
+  "agentId",
+  "permissionMode",
+  "updatedAtMs",
+  "resumeCommand",
+  "activeTurnId",
+  "turnStatus",
+  "promotedTaskId",
+  "status",
+  "flagged",
   "sendReceipts",
   "resumeHandle",
   "turns",
@@ -14,10 +22,17 @@ export class ChatProjection {
   needsSnapshot = false;
   private pending = new Map<number, ChatEvent>();
 
-  constructor(readonly projectPath: string | null, readonly sessionId: string | null) {}
+  constructor(
+    readonly projectPath: string | null,
+    readonly sessionId: string | null,
+  ) {}
 
-  get lastSeq() { return this.session?.lastSeq ?? 0; }
-  get needsReplay() { return this.needsSnapshot || this.pending.size > 0; }
+  get lastSeq() {
+    return this.session?.lastSeq ?? 0;
+  }
+  get needsReplay() {
+    return this.needsSnapshot || this.pending.size > 0;
+  }
 
   acceptSnapshot(snapshot: ChatSession | null): boolean {
     if (!snapshot || snapshot.projectPath !== this.projectPath || snapshot.id !== this.sessionId) return false;
@@ -85,7 +100,9 @@ function applyEvent(session: ChatSession, event: ChatEvent): ChatSession {
   } else if (event.kind === "stream") {
     const stream = event.payload;
     if (stream.sessionId !== session.id || stream.turnId !== session.activeTurnId) throw new Error("Wrong chat turn");
-    const index = session.messages.findIndex((message) => message.id === stream.messageId && message.role === "assistant");
+    const index = session.messages.findIndex(
+      (message) => message.id === stream.messageId && message.role === "assistant",
+    );
     if (index < 0) throw new Error("Missing assistant message");
     const message = session.messages[index];
     const messages = [...session.messages];
@@ -103,13 +120,15 @@ function applyEvent(session: ChatSession, event: ChatEvent): ChatSession {
 
 export function mergeChatPart(parts: ChatMessagePart[], incoming: ChatMessagePart): ChatMessagePart[] {
   if (incoming.type !== "tool" || !incoming.callId) return [...parts, incoming];
-  const index = parts.findIndex(part => part.type === "tool" && part.callId === incoming.callId);
+  const index = parts.findIndex((part) => part.type === "tool" && part.callId === incoming.callId);
   if (index < 0) return [...parts, incoming];
   const previous = parts[index];
   if (previous.type !== "tool") return [...parts, incoming];
   const merged = { ...previous, ...incoming };
-  if (incoming.name === incoming.callId || incoming.name === "tool_result" || incoming.name === "tool") merged.name = previous.name;
+  if (incoming.name === incoming.callId || incoming.name === "tool_result" || incoming.name === "tool")
+    merged.name = previous.name;
   if (incoming.kind === "other") merged.kind = previous.kind;
-  if (incoming.status === "running" && (previous.status === "done" || previous.status === "error")) merged.status = previous.status;
-  return parts.map((part, offset) => offset === index ? merged : part);
+  if (incoming.status === "running" && (previous.status === "done" || previous.status === "error"))
+    merged.status = previous.status;
+  return parts.map((part, offset) => (offset === index ? merged : part));
 }

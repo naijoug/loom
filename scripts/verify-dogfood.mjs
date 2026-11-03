@@ -3,11 +3,7 @@ import { resolve } from "node:path";
 
 const DEFAULT_TASK = ".loom/tasks/task-loop-timeline-canary.json";
 const DEFAULT_REPORT = "docs/dogfood/2026-06-25-loop-timeline-canary.md";
-const REQUIRED_VALIDATION_COMMANDS = [
-  "pnpm test",
-  "pnpm build",
-  "cargo test --manifest-path src-tauri/Cargo.toml",
-];
+const REQUIRED_VALIDATION_COMMANDS = ["pnpm test", "pnpm build", "cargo test --manifest-path src-tauri/Cargo.toml"];
 
 function parseArgs(argv) {
   const options = {
@@ -85,20 +81,13 @@ function check(results, condition, message, { warn = false } = {}) {
 
 function commandRunFor(task, command) {
   return (task.commandRuns ?? []).find(
-    (run) =>
-      run.command === command &&
-      run.intent === "validation" &&
-      run.status === "succeeded" &&
-      run.exitCode === 0,
+    (run) => run.command === command && run.intent === "validation" && run.status === "succeeded" && run.exitCode === 0,
   );
 }
 
 function traceFor(task, runId) {
   return (task.loopTrace ?? []).find(
-    (entry) =>
-      entry.commandRunId === runId &&
-      entry.entryType === "command_finished" &&
-      entry.stage === "testing",
+    (entry) => entry.commandRunId === runId && entry.entryType === "command_finished" && entry.stage === "testing",
   );
 }
 
@@ -125,10 +114,7 @@ function hasRepairLoopEvidence(task) {
       (run) => run.intent === "agent_action" && typeof run.attempt === "number" && run.attempt > 0,
     ) ||
     (task.loopTrace ?? []).some(
-      (entry) =>
-        entry.stage === "implement" &&
-        typeof entry.attempt === "number" &&
-        entry.attempt > 0,
+      (entry) => entry.stage === "implement" && typeof entry.attempt === "number" && entry.attempt > 0,
     ) ||
     (task.events ?? []).some((event) =>
       `${event.inputSummary ?? ""} ${event.outputSummary ?? ""}`.toLowerCase().includes("repair"),
@@ -152,8 +138,16 @@ function verify(options) {
   const uiReplay = desktopReplayEvent(task);
 
   check(results, task.status === "completed", "task status is completed");
-  check(results, (task.planTodos ?? []).some((todo) => todo.status === "done"), "at least one implementation todo is done");
-  check(results, (task.events ?? []).some((event) => event.status === "completed"), "completion event is recorded");
+  check(
+    results,
+    (task.planTodos ?? []).some((todo) => todo.status === "done"),
+    "at least one implementation todo is done",
+  );
+  check(
+    results,
+    (task.events ?? []).some((event) => event.status === "completed"),
+    "completion event is recorded",
+  );
   check(results, Array.isArray(task.commandRuns) && task.commandRuns.length > 0, "command runs are persisted");
   check(results, Array.isArray(task.loopTrace) && task.loopTrace.length > 0, "loop trace is persisted");
 
@@ -193,9 +187,14 @@ function verify(options) {
       check(results, !report.includes("未验证项"), "strict report has no explicit unverified items");
     }
   } else {
-    check(results, report.includes("record/replay canary"), "report honestly labels the current artifact as record/replay canary", {
-      warn: true,
-    });
+    check(
+      results,
+      report.includes("record/replay canary"),
+      "report honestly labels the current artifact as record/replay canary",
+      {
+        warn: true,
+      },
+    );
   }
 
   return results;

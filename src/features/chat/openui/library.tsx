@@ -1,4 +1,10 @@
-import { createLibrary, createParser, defineComponent, type ParseResult, type PromptOptions } from "@openuidev/react-lang";
+import {
+  createLibrary,
+  createParser,
+  defineComponent,
+  type ParseResult,
+  type PromptOptions,
+} from "@openuidev/react-lang";
 import { z } from "zod";
 
 // Experimental inline cards (OpenUI Lang). Props are plain text, numbers and booleans only:
@@ -13,10 +19,19 @@ export const FileList = defineComponent({
     files: z.array(z.object({ path: z.string().describe("Project-relative path"), note: z.string().optional() })),
     title: z.string().optional(),
   }),
-  component: ({ props }) => <section className="chat-card" data-card="files">
-    {props.title && <h4>{props.title}</h4>}
-    <ul>{(props.files ?? []).map((file, index) => <li key={index}><code>{file.path}</code>{file.note && <span>{file.note}</span>}</li>)}</ul>
-  </section>,
+  component: ({ props }) => (
+    <section className="chat-card" data-card="files">
+      {props.title && <h4>{props.title}</h4>}
+      <ul>
+        {(props.files ?? []).map((file, index) => (
+          <li key={index}>
+            <code>{file.path}</code>
+            {file.note && <span>{file.note}</span>}
+          </li>
+        ))}
+      </ul>
+    </section>
+  ),
 });
 
 export const ChangeSummary = defineComponent({
@@ -27,13 +42,29 @@ export const ChangeSummary = defineComponent({
     files: z.array(z.object({ path: z.string(), added: z.number(), removed: z.number() })),
     points: z.array(z.string()).optional(),
   }),
-  component: ({ props }) => <section className="chat-card" data-card="changes">
-    <h4>{props.title}</h4>
-    <ul>{(props.files ?? []).map((file, index) => <li key={index}>
-      <code>{file.path}</code><span className="chat-diff-stats"><b>+{file.added}</b><i>−{file.removed}</i></span>
-    </li>)}</ul>
-    {props.points && props.points.length > 0 && <ul>{props.points.map((point, index) => <li key={index}>{point}</li>)}</ul>}
-  </section>,
+  component: ({ props }) => (
+    <section className="chat-card" data-card="changes">
+      <h4>{props.title}</h4>
+      <ul>
+        {(props.files ?? []).map((file, index) => (
+          <li key={index}>
+            <code>{file.path}</code>
+            <span className="chat-diff-stats">
+              <b>+{file.added}</b>
+              <i>−{file.removed}</i>
+            </span>
+          </li>
+        ))}
+      </ul>
+      {props.points && props.points.length > 0 && (
+        <ul>
+          {props.points.map((point, index) => (
+            <li key={index}>{point}</li>
+          ))}
+        </ul>
+      )}
+    </section>
+  ),
 });
 
 export const DataTable = defineComponent({
@@ -44,13 +75,29 @@ export const DataTable = defineComponent({
     rows: z.array(z.array(z.string())),
     title: z.string().optional(),
   }),
-  component: ({ props }) => <section className="chat-card" data-card="table">
-    {props.title && <h4>{props.title}</h4>}
-    <table>
-      <thead><tr>{(props.columns ?? []).map((column, index) => <th key={index}>{column}</th>)}</tr></thead>
-      <tbody>{(props.rows ?? []).map((row, index) => <tr key={index}>{row.map((cell, cellIndex) => <td key={cellIndex}>{cell}</td>)}</tr>)}</tbody>
-    </table>
-  </section>,
+  component: ({ props }) => (
+    <section className="chat-card" data-card="table">
+      {props.title && <h4>{props.title}</h4>}
+      <table>
+        <thead>
+          <tr>
+            {(props.columns ?? []).map((column, index) => (
+              <th key={index}>{column}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {(props.rows ?? []).map((row, index) => (
+            <tr key={index}>
+              {row.map((cell, cellIndex) => (
+                <td key={cellIndex}>{cell}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  ),
 });
 
 export const Checklist = defineComponent({
@@ -60,10 +107,18 @@ export const Checklist = defineComponent({
     items: z.array(z.object({ text: z.string(), done: z.boolean() })),
     title: z.string().optional(),
   }),
-  component: ({ props }) => <section className="chat-card" data-card="checklist">
-    {props.title && <h4>{props.title}</h4>}
-    <ul>{(props.items ?? []).map((item, index) => <li key={index} data-done={item.done}>{item.text}</li>)}</ul>
-  </section>,
+  component: ({ props }) => (
+    <section className="chat-card" data-card="checklist">
+      {props.title && <h4>{props.title}</h4>}
+      <ul>
+        {(props.items ?? []).map((item, index) => (
+          <li key={index} data-done={item.done}>
+            {item.text}
+          </li>
+        ))}
+      </ul>
+    </section>
+  ),
 });
 
 export const CardStack = defineComponent({
@@ -115,12 +170,12 @@ let parser: ReturnType<typeof createParser> | undefined;
 export function checkInlineCard(source: string): InlineCardCheck {
   parser ??= createParser(inlineCardLibrary.toJSONSchema(), "CardStack");
   const result: ParseResult = parser.parse(source);
-  const problems: string[] = result.meta.errors.map(error => error.code);
+  const problems: string[] = result.meta.errors.map((error) => error.code);
   if (!result.root || result.root.typeName !== "CardStack") problems.push("no-root");
   if (result.meta.incomplete) problems.push("incomplete");
   if (result.meta.unresolved.length) problems.push("unresolved");
   const cards = result.root?.props.cards;
-  const cardCount = Array.isArray(cards) ? cards.filter(card => card != null).length : 0;
+  const cardCount = Array.isArray(cards) ? cards.filter((card) => card != null).length : 0;
   if (result.root && !cardCount) problems.push("empty");
   return { ok: problems.length === 0, problems, cardCount };
 }
@@ -136,13 +191,16 @@ interface CardProps {
 
 function cardText(typeName: string, props: CardProps): string {
   const lines = props.title ? [props.title] : [];
-  if (typeName === "FileList") lines.push(...(props.files ?? []).map(file => file.note ? `${file.path} — ${file.note}` : file.path));
+  if (typeName === "FileList")
+    lines.push(...(props.files ?? []).map((file) => (file.note ? `${file.path} — ${file.note}` : file.path)));
   if (typeName === "ChangeSummary") {
-    lines.push(...(props.files ?? []).map(file => `${file.path} +${file.added ?? 0} −${file.removed ?? 0}`));
-    lines.push(...(props.points ?? []).map(point => `- ${point}`));
+    lines.push(...(props.files ?? []).map((file) => `${file.path} +${file.added ?? 0} −${file.removed ?? 0}`));
+    lines.push(...(props.points ?? []).map((point) => `- ${point}`));
   }
-  if (typeName === "DataTable") lines.push((props.columns ?? []).join(" | "), ...(props.rows ?? []).map(row => row.join(" | ")));
-  if (typeName === "Checklist") lines.push(...(props.items ?? []).map(item => `[${item.done ? "x" : " "}] ${item.text}`));
+  if (typeName === "DataTable")
+    lines.push((props.columns ?? []).join(" | "), ...(props.rows ?? []).map((row) => row.join(" | ")));
+  if (typeName === "Checklist")
+    lines.push(...(props.items ?? []).map((item) => `[${item.done ? "x" : " "}] ${item.text}`));
   return lines.join("\n");
 }
 
@@ -152,8 +210,10 @@ export function inlineCardText(source: string): string {
   const cards = parser.parse(source).root?.props.cards;
   if (!Array.isArray(cards)) return "";
   return cards
-    .filter((card): card is { typeName: string; props: CardProps } => card != null && typeof card === "object" && "typeName" in card)
-    .map(card => cardText(card.typeName, card.props))
+    .filter(
+      (card): card is { typeName: string; props: CardProps } =>
+        card != null && typeof card === "object" && "typeName" in card,
+    )
+    .map((card) => cardText(card.typeName, card.props))
     .join("\n\n");
 }
-

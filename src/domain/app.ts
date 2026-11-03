@@ -24,4 +24,3 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   commandTimeoutSeconds: 600,
   experimentalInlineCards: false,
 };
-

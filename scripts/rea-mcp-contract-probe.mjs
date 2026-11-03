@@ -24,7 +24,7 @@ const responses = new Map();
 let buffer = "";
 let stdoutText = "";
 
-child.stdout.on("data", chunk => {
+child.stdout.on("data", (chunk) => {
   const text = chunk.toString("utf8");
   stdoutText += text;
   buffer += text;
@@ -41,7 +41,7 @@ child.stdout.on("data", chunk => {
     }
   }
 });
-child.stderr.on("data", chunk => stderr.push(chunk));
+child.stderr.on("data", (chunk) => stderr.push(chunk));
 
 function request(id, method, params) {
   child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", id, method, params })}\n`);
@@ -50,7 +50,7 @@ function request(id, method, params) {
 async function wait(id) {
   const deadline = Date.now() + 30_000;
   while (!responses.has(String(id)) && Date.now() < deadline) {
-    await new Promise(resolve => setTimeout(resolve, 20));
+    await new Promise((resolve) => setTimeout(resolve, 20));
   }
   if (!responses.has(String(id))) {
     throw new Error(`Timed out waiting for MCP response ${id}; stdout so far: ${stdoutText.slice(0, 2000)}`);
@@ -72,12 +72,13 @@ function compactGroup(group) {
     reason: group.reason ?? null,
     remediation: group.remediation ?? null,
     defaultModeAvailable: group.default_mode_available ?? null,
-    modes: group.modes?.map(mode => ({
-      name: mode.name,
-      available: mode.available,
-      missingOperations: mode.missing_operations ?? [],
-      remediation: mode.remediation ?? null,
-    })) ?? null,
+    modes:
+      group.modes?.map((mode) => ({
+        name: mode.name,
+        available: mode.available,
+        missingOperations: mode.missing_operations ?? [],
+        remediation: mode.remediation ?? null,
+      })) ?? null,
   };
 }
 
@@ -101,11 +102,16 @@ try {
   if (sessionResponse.error) throw new Error(`binary_session failed: ${JSON.stringify(sessionResponse.error)}`);
   const session = sessionResponse.result.structuredContent.result;
 
-  const schemaDigests = Object.fromEntries(tools.map(tool => [tool.name, {
-    input: digest(JSON.stringify(tool.inputSchema)),
-    output: tool.outputSchema ? digest(JSON.stringify(tool.outputSchema)) : null,
-    annotations: tool.annotations ?? null,
-  }]));
+  const schemaDigests = Object.fromEntries(
+    tools.map((tool) => [
+      tool.name,
+      {
+        input: digest(JSON.stringify(tool.inputSchema)),
+        output: tool.outputSchema ? digest(JSON.stringify(tool.outputSchema)) : null,
+        annotations: tool.annotations ?? null,
+      },
+    ]),
+  );
   const fixture = {
     schemaVersion: 1,
     capturedAt: new Date().toISOString(),
@@ -121,13 +127,13 @@ try {
     },
     catalog: session.server_identity.catalog,
     toolsDigest: digest(JSON.stringify(schemaDigests)),
-    tools: tools.map(tool => tool.name).sort(),
+    tools: tools.map((tool) => tool.name).sort(),
     toolsListVersion: 1,
     binarySession: {
       clientFeatures: session.client_features,
       open: session.open,
       groups: session.tool_availability.groups.map(compactGroup),
-      providerCandidates: session.analysis_provider_candidates.map(candidate => ({
+      providerCandidates: session.analysis_provider_candidates.map((candidate) => ({
         id: candidate.provider.id,
         name: candidate.provider.name,
         version: candidate.provider.version ?? null,
@@ -142,7 +148,9 @@ try {
           code: candidate.target_support.code ?? null,
           reason: candidate.target_support.reason ?? null,
         },
-        operations: candidate.capabilities.flatMap(provider => provider.groups.map(group => group.operations)).flat(),
+        operations: candidate.capabilities
+          .flatMap((provider) => provider.groups.map((group) => group.operations))
+          .flat(),
       })),
     },
     schemaDigests,
@@ -150,15 +158,17 @@ try {
 
   mkdirSync(dirname(output), { recursive: true });
   writeFileSync(output, `${JSON.stringify(fixture, null, 2)}\n`);
-  process.stdout.write(`${JSON.stringify({
-    output,
-    packageVersion: fixture.package.version,
-    protocolVersion: fixture.initialize.protocolVersion,
-    toolCount: fixture.tools.length,
-    availabilityGroupCount: fixture.binarySession.groups.length,
-    catalogDigest: fixture.catalog.digests.combined_sha256,
-    stderrBytes: Buffer.concat(stderr).length,
-  })}\n`);
+  process.stdout.write(
+    `${JSON.stringify({
+      output,
+      packageVersion: fixture.package.version,
+      protocolVersion: fixture.initialize.protocolVersion,
+      toolCount: fixture.tools.length,
+      availabilityGroupCount: fixture.binarySession.groups.length,
+      catalogDigest: fixture.catalog.digests.combined_sha256,
+      stderrBytes: Buffer.concat(stderr).length,
+    })}\n`,
+  );
 } finally {
   child.stdin.end();
   child.kill("SIGTERM");

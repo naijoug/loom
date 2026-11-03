@@ -2,31 +2,204 @@
 import type { Discussion, DiscussApi, DiscussEvent, DiscussTask } from "../../api/discuss";
 const scenario = new URLSearchParams(location.search).get("discussFixture") ?? "ready";
 export function previewDiscussion(id = "discussion-preview"): Discussion {
-  const participants = [{ id: "p1", agentId: "agent-codex", name: "Codex", adapterType: "codex_cli", model: null }, { id: "p2", agentId: "agent-claude", name: "Claude Code", adapterType: "claude_code_cli", model: null }];
-  const task = (round: number, participantId: string): DiscussTask => ({ id: round === 3 ? "summary" : `r${round}-${participantId}`, participantId, round, status: "done", stale: false, attempts: [`job-${round}-${participantId}`], error: null, warnings: [], refs: { valid: 1, invalid: 0 } });
-  return { schemaVersion: 1, discussionId: id, title: "How should Loom bound concurrent Agent calls?", topic: "Compare bounded parallel calls with sequential execution. Identify failure handling and resource limits.", language: "en", projectPath: "/preview/loom", projectName: "loom", participants, tasks: [task(1, "p1"), task(1, "p2"), task(2, "p1"), task(2, "p2"), task(3, "p1")], status: "ready", activeRunId: null, createdAtMs: 1, updatedAtMs: 2, promptVersion: 1 };
+  const participants = [
+    { id: "p1", agentId: "agent-codex", name: "Codex", adapterType: "codex_cli", model: null },
+    { id: "p2", agentId: "agent-claude", name: "Claude Code", adapterType: "claude_code_cli", model: null },
+  ];
+  const task = (round: number, participantId: string): DiscussTask => ({
+    id: round === 3 ? "summary" : `r${round}-${participantId}`,
+    participantId,
+    round,
+    status: "done",
+    stale: false,
+    attempts: [`job-${round}-${participantId}`],
+    error: null,
+    warnings: [],
+    refs: { valid: 1, invalid: 0 },
+  });
+  return {
+    schemaVersion: 1,
+    discussionId: id,
+    title: "How should Loom bound concurrent Agent calls?",
+    topic: "Compare bounded parallel calls with sequential execution. Identify failure handling and resource limits.",
+    language: "en",
+    projectPath: "/preview/loom",
+    projectName: "loom",
+    participants,
+    tasks: [task(1, "p1"), task(1, "p2"), task(2, "p1"), task(2, "p2"), task(3, "p1")],
+    status: "ready",
+    activeRunId: null,
+    createdAtMs: 1,
+    updatedAtMs: 2,
+    promptVersion: 1,
+  };
 }
 const items = scenario === "empty" ? [] : [previewDiscussion()];
-if (scenario === "running") { items[0].status = "running"; items[0].tasks.forEach(t => { t.status = t.round === 1 ? "running" : "pending"; if (t.round > 1) t.attempts = []; }); }
-if (scenario === "partial") { items[0].status = "partial"; items[0].tasks.filter(t => t.participantId === "p2").forEach(t => { t.status = "failed"; t.error = "Provider authentication failed\n\nSign in to your CLI and retry this participant."; }); }
-if (scenario === "stale") { items[0].status = "partial"; items[0].tasks.filter(t => t.round > 1).forEach(t => { t.stale = true; }); }
+if (scenario === "running") {
+  items[0].status = "running";
+  items[0].tasks.forEach((t) => {
+    t.status = t.round === 1 ? "running" : "pending";
+    if (t.round > 1) t.attempts = [];
+  });
+}
+if (scenario === "partial") {
+  items[0].status = "partial";
+  items[0].tasks
+    .filter((t) => t.participantId === "p2")
+    .forEach((t) => {
+      t.status = "failed";
+      t.error = "Provider authentication failed\n\nSign in to your CLI and retry this participant.";
+    });
+}
+if (scenario === "stale") {
+  items[0].status = "partial";
+  items[0].tasks
+    .filter((t) => t.round > 1)
+    .forEach((t) => {
+      t.stale = true;
+    });
+}
 const listeners = new Set<(e: DiscussEvent) => void>();
-const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
-function find(id: string) { const d = items.find(item => item.discussionId === id); if (!d) throw Error("Discussion not found"); return d; }
-function emit(d: Discussion) { for (const listener of listeners) listener({ discussionId: d.discussionId, taskId: null, status: d.status }); }
-const report = (t: DiscussTask) => t.round === 3 ? "# Consensus\n\nBound parallel calls to the participant count.\n\n## Disagreements\n\n**p1** prefers early streaming; **p2** prioritizes simple orchestration. Missing participants are not counted as agreement.\n\n## Risks\n\n- Provider quotas can interrupt calls.\n\n## Recommendations\n\nKeep successful answers and retry failed items explicitly.\n\n[Runner](loom-src:src/runner.rs#L2-L4)" : `# ${t.round === 1 ? "Independent position" : "Revised position"}\n\n${t.participantId === "p1" ? "A bounded concurrent pipeline keeps response time low." : "Sequential execution is simpler, but a bounded pipeline can isolate failures."}\n\n- Respect a round barrier.\n- Preserve successful answers.\n\nSee [runner](loom-src:src/runner.rs#L2-L4).`;
+const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
+function find(id: string) {
+  const d = items.find((item) => item.discussionId === id);
+  if (!d) throw Error("Discussion not found");
+  return d;
+}
+function emit(d: Discussion) {
+  for (const listener of listeners) listener({ discussionId: d.discussionId, taskId: null, status: d.status });
+}
+const report = (t: DiscussTask) =>
+  t.round === 3
+    ? "# Consensus\n\nBound parallel calls to the participant count.\n\n## Disagreements\n\n**p1** prefers early streaming; **p2** prioritizes simple orchestration. Missing participants are not counted as agreement.\n\n## Risks\n\n- Provider quotas can interrupt calls.\n\n## Recommendations\n\nKeep successful answers and retry failed items explicitly.\n\n[Runner](loom-src:src/runner.rs#L2-L4)"
+    : `# ${t.round === 1 ? "Independent position" : "Revised position"}\n\n${t.participantId === "p1" ? "A bounded concurrent pipeline keeps response time low." : "Sequential execution is simpler, but a bounded pipeline can isolate failures."}\n\n- Respect a round barrier.\n- Preserve successful answers.\n\nSee [runner](loom-src:src/runner.rs#L2-L4).`;
 const files = "// Runner\nfn run() {\n    launch();\n    wait();\n}\n";
-function finish(d: Discussion, taskIds: string[]) { setTimeout(() => { if (d.status !== "running") return; d.tasks.filter(t => taskIds.includes(t.id)).forEach(t => { t.status = "done"; t.error = null; t.stale = false; }); d.status = d.tasks.every(t => t.status === "done" && !t.stale) ? "ready" : "partial"; emit(d); }, 1000); }
+function finish(d: Discussion, taskIds: string[]) {
+  setTimeout(() => {
+    if (d.status !== "running") return;
+    d.tasks
+      .filter((t) => taskIds.includes(t.id))
+      .forEach((t) => {
+        t.status = "done";
+        t.error = null;
+        t.stale = false;
+      });
+    d.status = d.tasks.every((t) => t.status === "done" && !t.stale) ? "ready" : "partial";
+    emit(d);
+  }, 1000);
+}
 export const previewDiscussApi: DiscussApi = {
-  list: async () => { if (scenario === "error") throw Error("Discussion store is unreadable"); return { items: items.map(d => ({ discussionId: d.discussionId, title: d.title, status: d.status, participants: d.participants.length, projectName: d.projectName, updatedAtMs: d.updatedAtMs })), storageErrors: [] }; },
-  get: async id => clone(find(id)),
-  create: async input => { if (input.confirmedCalls !== input.participants.length * 2 + 1) throw Error("Confirm calls"); const d = previewDiscussion(`discussion-${Date.now()}`); d.title = d.topic = input.topic; d.projectPath = input.projectPath ?? null; d.projectName = d.projectPath ? "loom" : null; d.participants = input.participants.map((p, i) => ({ id: `p${i + 1}`, agentId: p.agentId, name: p.agentId.includes("claude") ? "Claude Code" : "Codex", adapterType: p.agentId.includes("claude") ? "claude_code_cli" : "codex_cli", model: p.model ?? null })); d.tasks = [1, 2].flatMap(round => d.participants.map(p => ({ ...d.tasks[0], id: `r${round}-${p.id}`, participantId: p.id, round, status: "running" as const, attempts: [`job-${round}-${p.id}`] }))).concat([{ ...d.tasks[4], status: "running" }]); d.status = "running"; items.unshift(d); emit(d); finish(d, d.tasks.map(t => t.id)); return clone(d); },
-  readReport: async (id, taskId) => { const t = find(id).tasks.find(t => t.id === taskId)!; return { taskId, markdown: report(t), refs: [{ target: "src/runner.rs#L2-L4", path: "src/runner.rs", startLine: 2, endLine: 4, status: "valid" }] }; },
-  retry: async (id, taskId, count) => { if (count !== 1) throw Error("Confirm one call"); const d = find(id), task = d.tasks.find(t => t.id === taskId)!; d.tasks.filter(t => t.round > task.round).forEach(t => { t.stale = true; }); task.status = "running"; task.error = null; task.attempts.push(`job-retry-${Date.now()}`); d.status = "running"; emit(d); finish(d, [taskId]); return clone(d); },
-  cancel: async id => { const d = find(id); d.tasks.filter(t => ["running", "pending"].includes(t.status)).forEach(t => { t.status = "cancelled"; }); d.status = "cancelled"; emit(d); return true; },
-  readLogs: async (_id, jobId, stream) => ({ text: `${jobId} · ${stream}\nSynthetic execution record. No Agent was called.`, nextOffset: 100, hasMore: false }),
-  listTree: async (_id, dir) => dir === "src" ? [{ name: "runner.rs", path: "src/runner.rs", kind: "file", size: files.length }] : [{ name: "src", path: "src", kind: "dir", size: 0 }],
-  readSource: async (_id, path) => ({ path, text: files, firstLine: 1, totalLines: 5, truncated: false, language: "Rust" }),
-  remove: async id => { const i = items.findIndex(d => d.discussionId === id); if (i >= 0) items.splice(i, 1); listeners.forEach(l => l({ discussionId: id, taskId: null, status: "deleted" })); },
-  subscribe: async fn => { listeners.add(fn); return () => { listeners.delete(fn); }; },
+  list: async () => {
+    if (scenario === "error") throw Error("Discussion store is unreadable");
+    return {
+      items: items.map((d) => ({
+        discussionId: d.discussionId,
+        title: d.title,
+        status: d.status,
+        participants: d.participants.length,
+        projectName: d.projectName,
+        updatedAtMs: d.updatedAtMs,
+      })),
+      storageErrors: [],
+    };
+  },
+  get: async (id) => clone(find(id)),
+  create: async (input) => {
+    if (input.confirmedCalls !== input.participants.length * 2 + 1) throw Error("Confirm calls");
+    const d = previewDiscussion(`discussion-${Date.now()}`);
+    d.title = d.topic = input.topic;
+    d.projectPath = input.projectPath ?? null;
+    d.projectName = d.projectPath ? "loom" : null;
+    d.participants = input.participants.map((p, i) => ({
+      id: `p${i + 1}`,
+      agentId: p.agentId,
+      name: p.agentId.includes("claude") ? "Claude Code" : "Codex",
+      adapterType: p.agentId.includes("claude") ? "claude_code_cli" : "codex_cli",
+      model: p.model ?? null,
+    }));
+    d.tasks = [1, 2]
+      .flatMap((round) =>
+        d.participants.map((p) => ({
+          ...d.tasks[0],
+          id: `r${round}-${p.id}`,
+          participantId: p.id,
+          round,
+          status: "running" as const,
+          attempts: [`job-${round}-${p.id}`],
+        })),
+      )
+      .concat([{ ...d.tasks[4], status: "running" }]);
+    d.status = "running";
+    items.unshift(d);
+    emit(d);
+    finish(
+      d,
+      d.tasks.map((t) => t.id),
+    );
+    return clone(d);
+  },
+  readReport: async (id, taskId) => {
+    const t = find(id).tasks.find((t) => t.id === taskId)!;
+    return {
+      taskId,
+      markdown: report(t),
+      refs: [{ target: "src/runner.rs#L2-L4", path: "src/runner.rs", startLine: 2, endLine: 4, status: "valid" }],
+    };
+  },
+  retry: async (id, taskId, count) => {
+    if (count !== 1) throw Error("Confirm one call");
+    const d = find(id),
+      task = d.tasks.find((t) => t.id === taskId)!;
+    d.tasks
+      .filter((t) => t.round > task.round)
+      .forEach((t) => {
+        t.stale = true;
+      });
+    task.status = "running";
+    task.error = null;
+    task.attempts.push(`job-retry-${Date.now()}`);
+    d.status = "running";
+    emit(d);
+    finish(d, [taskId]);
+    return clone(d);
+  },
+  cancel: async (id) => {
+    const d = find(id);
+    d.tasks
+      .filter((t) => ["running", "pending"].includes(t.status))
+      .forEach((t) => {
+        t.status = "cancelled";
+      });
+    d.status = "cancelled";
+    emit(d);
+    return true;
+  },
+  readLogs: async (_id, jobId, stream) => ({
+    text: `${jobId} · ${stream}\nSynthetic execution record. No Agent was called.`,
+    nextOffset: 100,
+    hasMore: false,
+  }),
+  listTree: async (_id, dir) =>
+    dir === "src"
+      ? [{ name: "runner.rs", path: "src/runner.rs", kind: "file", size: files.length }]
+      : [{ name: "src", path: "src", kind: "dir", size: 0 }],
+  readSource: async (_id, path) => ({
+    path,
+    text: files,
+    firstLine: 1,
+    totalLines: 5,
+    truncated: false,
+    language: "Rust",
+  }),
+  remove: async (id) => {
+    const i = items.findIndex((d) => d.discussionId === id);
+    if (i >= 0) items.splice(i, 1);
+    listeners.forEach((l) => l({ discussionId: id, taskId: null, status: "deleted" }));
+  },
+  subscribe: async (fn) => {
+    listeners.add(fn);
+    return () => {
+      listeners.delete(fn);
+    };
+  },
 };

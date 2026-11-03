@@ -8,6 +8,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$PROJECT_ROOT"
 
 node scripts/check-layers.mjs
+pnpm format:check
 pnpm docs:release:check
 pnpm docs:release:test
 pnpm openui:prompt --check

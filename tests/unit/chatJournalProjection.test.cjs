@@ -3,10 +3,33 @@ const assert = require("node:assert/strict");
 const { ChatProjection } = require("../../.tmp/test-build/src/features/chat/state/ChatProjection.js");
 
 function snapshot(projectPath = "/a", id = "s", seq = 2) {
-  return { id, projectPath, agentId: "grok", title: "chat", permissionMode: "explore", messages: [{ id: "m", role: "assistant", content: "", status: "streaming", createdAtMs: 1 }], createdAtMs: 1, updatedAtMs: 1, activeTurnId: "t", turnStatus: "streaming", schemaVersion: 2, lastSeq: seq, revision: seq };
+  return {
+    id,
+    projectPath,
+    agentId: "grok",
+    title: "chat",
+    permissionMode: "explore",
+    messages: [{ id: "m", role: "assistant", content: "", status: "streaming", createdAtMs: 1 }],
+    createdAtMs: 1,
+    updatedAtMs: 1,
+    activeTurnId: "t",
+    turnStatus: "streaming",
+    schemaVersion: 2,
+    lastSeq: seq,
+    revision: seq,
+  };
 }
 function stream(seq, delta, overrides = {}) {
-  return { schemaVersion: 2, projectKey: "/a", sessionId: "s", seq, timestampMs: seq, kind: "stream", payload: { sessionId: "s", turnId: "t", messageId: "m", delta, done: false }, ...overrides };
+  return {
+    schemaVersion: 2,
+    projectKey: "/a",
+    sessionId: "s",
+    seq,
+    timestampMs: seq,
+    kind: "stream",
+    payload: { sessionId: "s", turnId: "t", messageId: "m", delta, done: false },
+    ...overrides,
+  };
 }
 
 test("out-of-order and duplicate durable events are applied exactly once", () => {
@@ -63,9 +86,7 @@ test("terminal stream events keep text idempotent while preserving structured pa
     },
   });
   assert.equal(p.session.messages[0].content, "hello");
-  assert.deepEqual(p.session.messages[0].parts, [
-    { type: "tool", name: "shell", status: "done", outputSummary: "ok" },
-  ]);
+  assert.deepEqual(p.session.messages[0].parts, [{ type: "tool", name: "shell", status: "done", outputSummary: "ok" }]);
   assert.equal(p.lastSeq, 4);
 });
 
@@ -84,14 +105,23 @@ test("other projects/sessions and stale turn payloads cannot contaminate a selec
 test("patches persist terminal text, clear optional handles and reject identity mutation", () => {
   const p = new ChatProjection("/a", "s");
   p.acceptSnapshot(snapshot());
-  p.receive({ ...stream(3, ""), kind: "session_patch", payload: {
-    fields: { title: "renamed", turnStatus: "idle", activeTurnId: null },
-    changedMessages: [{ ...snapshot().messages[0], content: "final", status: "complete" }], appendedMessages: [],
-  } });
+  p.receive({
+    ...stream(3, ""),
+    kind: "session_patch",
+    payload: {
+      fields: { title: "renamed", turnStatus: "idle", activeTurnId: null },
+      changedMessages: [{ ...snapshot().messages[0], content: "final", status: "complete" }],
+      appendedMessages: [],
+    },
+  });
   assert.equal(p.session.activeTurnId, undefined);
   assert.equal(p.session.turnStatus, "idle");
   assert.equal(p.session.messages[0].content, "final");
-  p.receive({ ...stream(4, ""), kind: "session_patch", payload: { fields: { projectPath: "/evil" }, changedMessages: [], appendedMessages: [] } });
+  p.receive({
+    ...stream(4, ""),
+    kind: "session_patch",
+    payload: { fields: { projectPath: "/evil" }, changedMessages: [], appendedMessages: [] },
+  });
   assert.equal(p.session.projectPath, "/a");
   assert.equal(p.needsSnapshot, true);
 });
@@ -102,11 +132,15 @@ test("failed patches keep the last safe session until a fresh snapshot arrives",
   p.receive(stream(3, "safe"));
   assert.equal(p.session.messages[0].content, "safe");
 
-  p.receive({ ...stream(4, ""), kind: "session_patch", payload: {
-    fields: { title: "unsafe" },
-    changedMessages: [{ ...snapshot().messages[0], id: "missing", content: "mutated" }],
-    appendedMessages: [],
-  } });
+  p.receive({
+    ...stream(4, ""),
+    kind: "session_patch",
+    payload: {
+      fields: { title: "unsafe" },
+      changedMessages: [{ ...snapshot().messages[0], id: "missing", content: "mutated" }],
+      appendedMessages: [],
+    },
+  });
   assert.equal(p.needsSnapshot, true);
   assert.equal(p.lastSeq, 3);
   assert.equal(p.session.title, "chat");

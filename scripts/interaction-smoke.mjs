@@ -120,22 +120,27 @@ async function waitFor(client, expression, label) {
     }
     await delay(100);
   }
-  const debug = await evaluate(client, `({
+  const debug = await evaluate(
+    client,
+    `({
     href: window.location.href,
     text: document.body?.innerText?.slice(0, 500) ?? '',
-  })`);
+  })`,
+  );
   throw new Error(`Timed out waiting for ${label}: ${JSON.stringify(debug)}`);
 }
 
 async function navigate(client, url) {
   await client.send("Page.navigate", { url });
-  await waitFor(client, "document.readyState === 'complete' && Boolean(document.querySelector('.app-layout, .settings-page'))", url);
+  await waitFor(
+    client,
+    "document.readyState === 'complete' && Boolean(document.querySelector('.app-layout, .settings-page'))",
+    url,
+  );
 }
 
 function textIncludes(...terms) {
-  const checks = terms
-    .map((term) => `text.includes(${JSON.stringify(term.toLowerCase())})`)
-    .join(" && ");
+  const checks = terms.map((term) => `text.includes(${JSON.stringify(term.toLowerCase())})`).join(" && ");
   return `(() => { const text = document.body.innerText.toLowerCase(); return ${checks}; })()`;
 }
 
@@ -171,17 +176,21 @@ async function main() {
   await removeDirWithRetries(userDataDir);
   mkdirSync(userDataDir, { recursive: true });
 
-  const child = spawn(chrome, [
-    "--headless=new",
-    "--disable-gpu",
-    "--no-first-run",
-    "--window-size=1440,1000",
-    `--user-data-dir=${userDataDir}`,
-    `--remote-debugging-port=${debuggingPort}`,
-    `${baseUrl}?screen=board`,
-  ], {
-    stdio: ["ignore", "ignore", "pipe"],
-  });
+  const child = spawn(
+    chrome,
+    [
+      "--headless=new",
+      "--disable-gpu",
+      "--no-first-run",
+      "--window-size=1440,1000",
+      `--user-data-dir=${userDataDir}`,
+      `--remote-debugging-port=${debuggingPort}`,
+      `${baseUrl}?screen=board`,
+    ],
+    {
+      stdio: ["ignore", "ignore", "pipe"],
+    },
+  );
 
   child.stderr.on("data", () => undefined);
 
@@ -203,22 +212,23 @@ async function main() {
         mobile: false,
       });
       await navigate(client, `${baseUrl}?screen=planning&step=review`);
-      await waitFor(
-        client,
-        textIncludes("规划讨论室", "并行起草", "确认计划并生成任务"),
-        "planning review screen",
-      );
+      await waitFor(client, textIncludes("规划讨论室", "并行起草", "确认计划并生成任务"), "planning review screen");
       await waitFor(client, textIncludes("2 个 Agent 将并行起草"), "planning participants ready");
-      const planningLayout = await evaluate(client, `({
+      const planningLayout = await evaluate(
+        client,
+        `({
         scrollTop: document.querySelector('.planning-timeline-scroll')?.scrollTop,
         documentWidth: document.documentElement.scrollWidth,
         viewport: document.documentElement.clientWidth,
-      })`);
+      })`,
+      );
       if (planningLayout.scrollTop !== 0 || planningLayout.documentWidth > planningLayout.viewport + 1) {
         throw new Error(`Planning layout did not open at the top: ${JSON.stringify(planningLayout)}`);
       }
 
-      const participantToggle = await evaluate(client, `
+      const participantToggle = await evaluate(
+        client,
+        `
         (() => {
           const chip = [...document.querySelectorAll('.planning-agent-chip')]
             .find((element) => element.textContent.includes('Codex'));
@@ -226,13 +236,16 @@ async function main() {
           chip.click();
           return { ok: true };
         })()
-      `);
+      `,
+      );
       if (!participantToggle.ok) {
         throw new Error("Planning Codex participant chip is missing");
       }
       await waitFor(client, textIncludes("1 个 Agent 将并行起草"), "planning participant toggle");
 
-      await evaluate(client, `
+      await evaluate(
+        client,
+        `
         (() => {
           const input = document.querySelector('.planning-composer-v2 textarea');
           const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
@@ -240,16 +253,22 @@ async function main() {
           input.dispatchEvent(new Event('input', { bubbles: true }));
           return true;
         })()
-      `);
+      `,
+      );
       await waitFor(client, textIncludes("未找到 @claud"), "unknown planning mention warning");
-      const invalidMention = await evaluate(client, `({
+      const invalidMention = await evaluate(
+        client,
+        `({
         sendDisabled: document.querySelector('.planning-composer-v2 button[type="submit"]')?.disabled,
-      })`);
+      })`,
+      );
       if (!invalidMention.sendDisabled) {
         throw new Error("Unknown planning mention did not disable send");
       }
 
-      await evaluate(client, `
+      await evaluate(
+        client,
+        `
         (() => {
           const input = document.querySelector('.planning-composer-v2 textarea');
           const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
@@ -257,13 +276,21 @@ async function main() {
           input.dispatchEvent(new Event('input', { bubbles: true }));
           return true;
         })()
-      `);
-      const validMention = await evaluate(client, `({
+      `,
+      );
+      const validMention = await evaluate(
+        client,
+        `({
         sendDisabled: document.querySelector('.planning-composer-v2 button[type="submit"]')?.disabled,
         selected: [...document.querySelectorAll('.planning-agent-chip[aria-pressed="true"]')]
           .map((element) => element.textContent.trim()),
-      })`);
-      if (validMention.sendDisabled || validMention.selected.length !== 1 || !validMention.selected[0].includes('Codex')) {
+      })`,
+      );
+      if (
+        validMention.sendDisabled ||
+        validMention.selected.length !== 1 ||
+        !validMention.selected[0].includes("Codex")
+      ) {
         throw new Error(`Valid planning mention selection failed: ${JSON.stringify(validMention)}`);
       }
 
@@ -275,7 +302,9 @@ async function main() {
       await clickRequired(client, ".project-modal-close", "add project close button");
       await waitFor(client, `(${textIncludes("打开本地目录")}) === false`, "add project modal close");
 
-      await evaluate(client, `
+      await evaluate(
+        client,
+        `
         (() => {
           const element = [...document.querySelectorAll('button')].find((button) => button.textContent.includes('新建任务'));
           if (!element || element.disabled) return false;
@@ -285,9 +314,12 @@ async function main() {
           }
           return true;
         })()
-      `);
+      `,
+      );
       await waitFor(client, textIncludes("邀请 Agent 参与讨论", "建议主 Agent"), "new task modal");
-      await evaluate(client, `
+      await evaluate(
+        client,
+        `
         const title = document.querySelector('.task-modal input');
         const desc = document.querySelector('.task-modal textarea');
         const setValue = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
@@ -297,11 +329,16 @@ async function main() {
         setTextArea.call(desc, 'Verify New Task modal inputs are usable.');
         desc.dispatchEvent(new Event('input', { bubbles: true }));
         true;
-      `);
-      await waitFor(client, `
+      `,
+      );
+      await waitFor(
+        client,
+        `
         const submit = [...document.querySelectorAll('button')].find((button) => button.textContent.includes('开始讨论'));
         submit && !submit.disabled;
-      `, "new task submit enabled");
+      `,
+        "new task submit enabled",
+      );
       await clickRequired(client, ".task-modal-close", "new task close button");
       await waitFor(client, `(${textIncludes("邀请 Agent 参与讨论")}) === false`, "new task modal close");
       await navigate(client, `${baseUrl}?screen=board`);
@@ -312,17 +349,26 @@ async function main() {
 
       await clickRequired(client, ".sidebar-settings-entry", "settings button");
       await waitFor(client, textIncludes("当前项目", "运行模式"), "settings general");
-      await evaluate(client, "[...document.querySelectorAll('.settings-nav-item')].find((item) => item.textContent.includes('Agent'))?.click(); true");
+      await evaluate(
+        client,
+        "[...document.querySelectorAll('.settings-nav-item')].find((item) => item.textContent.includes('Agent'))?.click(); true",
+      );
       await waitFor(client, textIncludes("已安装 Agent", "添加自定义 Agent"), "settings agents tab");
-      await evaluate(client, "[...document.querySelectorAll('.settings-nav-item')].find((item) => item.textContent.includes('关于'))?.click(); true");
+      await evaluate(
+        client,
+        "[...document.querySelectorAll('.settings-nav-item')].find((item) => item.textContent.includes('关于'))?.click(); true",
+      );
       await waitFor(client, textIncludes("诊断与支持", "脱敏诊断包", "日志范围"), "settings diagnostic support");
-      const settingsDiagnostics = await evaluate(client, `({
+      const settingsDiagnostics = await evaluate(
+        client,
+        `({
         exportButtonDisabled: [...document.querySelectorAll('button')]
           .find((button) => button.textContent.includes('导出诊断包'))?.disabled ?? null,
         hasLogToggle: Boolean([...document.querySelectorAll('.settings-field-row')]
           .find((field) => field.textContent.includes('日志范围'))
           ?.querySelector('button, input[type="checkbox"]')),
-      })`);
+      })`,
+      );
       if (settingsDiagnostics.exportButtonDisabled !== true || !settingsDiagnostics.hasLogToggle) {
         throw new Error(`Settings diagnostics controls changed unexpectedly: ${JSON.stringify(settingsDiagnostics)}`);
       }
@@ -331,12 +377,22 @@ async function main() {
       await waitFor(client, textIncludes("进入测试验收", "子任务"), "session screen");
       await navigate(client, `${baseUrl}?screen=testing`);
       await waitFor(client, textIncludes("调试验收", "验收门禁"), "testing screen");
-      await waitFor(client, `Boolean(
+      await waitFor(
+        client,
+        `Boolean(
         document.querySelector('textarea[placeholder="复现步骤（可选）"]') &&
         document.querySelector('textarea[placeholder="期望行为（可选）"]')
-      )`, "structured feedback fields");
-      await waitFor(client, `Boolean(document.querySelector('.testing-terminal-toolbar input[type="search"]'))`, "log search control");
-      await evaluate(client, `
+      )`,
+        "structured feedback fields",
+      );
+      await waitFor(
+        client,
+        `Boolean(document.querySelector('.testing-terminal-toolbar input[type="search"]'))`,
+        "log search control",
+      );
+      await evaluate(
+        client,
+        `
         (() => {
           const input = document.querySelector('.testing-terminal-toolbar input[type="search"]');
           const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
@@ -344,12 +400,23 @@ async function main() {
           input.dispatchEvent(new Event('input', { bubbles: true }));
           return true;
         })()
-      `);
+      `,
+      );
 
       await navigate(client, `${baseUrl}?screen=done`);
-      await waitFor(client, textIncludes("交付总结", "真实 Git", "+218 / -12", "导出 MD", "pre_existing"), "done summary screen");
-      await waitFor(client, textIncludes("问题诊断", "导出脱敏诊断包", "包含最近日志尾部"), "done diagnostics controls");
-      const doneDiagnostics = await evaluate(client, `(() => {
+      await waitFor(
+        client,
+        textIncludes("交付总结", "真实 Git", "+218 / -12", "导出 MD", "pre_existing"),
+        "done summary screen",
+      );
+      await waitFor(
+        client,
+        textIncludes("问题诊断", "导出脱敏诊断包", "包含最近日志尾部"),
+        "done diagnostics controls",
+      );
+      const doneDiagnostics = await evaluate(
+        client,
+        `(() => {
         const section = [...document.querySelectorAll('.dl-block')]
           .find((element) => element.textContent.includes('问题诊断'));
         const checkbox = section?.querySelector('input[type="checkbox"]');
@@ -363,8 +430,14 @@ async function main() {
           toggled: Boolean(checkbox?.checked) !== before,
           buttonDisabled: button?.disabled ?? null,
         };
-      })()`);
-      if (!doneDiagnostics.hasSection || !doneDiagnostics.hasCheckbox || !doneDiagnostics.toggled || doneDiagnostics.buttonDisabled !== false) {
+      })()`,
+      );
+      if (
+        !doneDiagnostics.hasSection ||
+        !doneDiagnostics.hasCheckbox ||
+        !doneDiagnostics.toggled ||
+        doneDiagnostics.buttonDisabled !== false
+      ) {
         throw new Error(`Done diagnostics controls changed unexpectedly: ${JSON.stringify(doneDiagnostics)}`);
       }
 
@@ -376,7 +449,9 @@ async function main() {
       });
       await navigate(client, `${baseUrl}?screen=testing`);
       await waitFor(client, textIncludes("调试验收", "验收门禁"), "960px testing screen");
-      const testingLayout = await evaluate(client, `({
+      const testingLayout = await evaluate(
+        client,
+        `({
         viewport: document.documentElement.clientWidth,
         documentWidth: document.documentElement.scrollWidth,
         headerOverflow: [...document.querySelectorAll('.testing-terminal-header')].some(
@@ -388,7 +463,8 @@ async function main() {
             return rect.width > 0 && rect.left >= 0 && rect.right <= window.innerWidth + 1;
           }
         ),
-      })`);
+      })`,
+      );
       if (
         testingLayout.documentWidth > testingLayout.viewport + 1 ||
         testingLayout.headerOverflow ||
@@ -399,10 +475,13 @@ async function main() {
 
       await navigate(client, `${baseUrl}?screen=done`);
       await waitFor(client, textIncludes("交付总结", "验证证据"), "960px done screen");
-      const doneLayout = await evaluate(client, `({
+      const doneLayout = await evaluate(
+        client,
+        `({
         viewport: document.documentElement.clientWidth,
         documentWidth: document.documentElement.scrollWidth,
-      })`);
+      })`,
+      );
       if (doneLayout.documentWidth > doneLayout.viewport + 1) {
         throw new Error(`960px done layout overflow: ${JSON.stringify(doneLayout)}`);
       }

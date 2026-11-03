@@ -1,9 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const {
-  normalizeChatPermissionMode,
-} = require("../../.tmp/test-build/src/domain/chat.js");
+const { normalizeChatPermissionMode } = require("../../.tmp/test-build/src/domain/chat.js");
 
 test("normalizeChatPermissionMode maps legacy aliases", () => {
   assert.equal(normalizeChatPermissionMode("read_only"), "explore");

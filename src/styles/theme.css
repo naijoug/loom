@@ -6,47 +6,47 @@
 :root[data-theme="dark"],
 [data-theme="dark"] {
   --bg: #181818;
-  --bg-2: #1F1F1F;
+  --bg-2: #1f1f1f;
   --surface: #222222;
-  --hover: #2E2E2E;
-  --border: #2F2F2F;
-  --border-strong: #3A3A3C;
+  --hover: #2e2e2e;
+  --border: #2f2f2f;
+  --border-strong: #3a3a3c;
 
-  --text: #ECECEC;
-  --text-2: #A3A4A5;
-  --text-3: #6E6F70;
+  --text: #ececec;
+  --text-2: #a3a4a5;
+  --text-3: #6e6f70;
 
-  --accent: #97C9F8;
-  --accent-fill: #2F6FB0;
+  --accent: #97c9f8;
+  --accent-fill: #2f6fb0;
 
-  --green: #4FB477;
-  --amber: #D6A23C;
-  --red: #E2645C;
+  --green: #4fb477;
+  --amber: #d6a23c;
+  --red: #e2645c;
 
   --shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
   color-scheme: dark;
 }
 
 [data-theme="light"] {
-  --bg: #FFFFFF;
-  --bg-2: #FAFAFA;
-  --surface: #FFFFFF;
-  --hover: #CFCFCF;
-  --border: #D4D4D5;
-  --border-strong: #C2C2C4;
+  --bg: #ffffff;
+  --bg-2: #fafafa;
+  --surface: #ffffff;
+  --hover: #cfcfcf;
+  --border: #d4d4d5;
+  --border-strong: #c2c2c4;
 
-  --text: #1A1A1A;
-  --text-2: #6B6B6D;
-  --text-3: #9A9A9C;
+  --text: #1a1a1a;
+  --text-2: #6b6b6d;
+  --text-3: #9a9a9c;
 
-  --accent: #3485D1;
-  --accent-fill: #3485D1;
+  --accent: #3485d1;
+  --accent-fill: #3485d1;
 
-  --green: #2E9E5B;
-  --amber: #B5821C;
-  --red: #CF463D;
+  --green: #2e9e5b;
+  --amber: #b5821c;
+  --red: #cf463d;
 
-  --shadow: 0 8px 24px rgba(0, 0, 0, 0.10);
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
   color-scheme: light;
 }
 
@@ -93,24 +93,60 @@ body {
 }
 
 :root {
-  --chat-bg: #fafaf8; --chat-sidebar: #f2f2ef; --chat-surface: #ffffff; --chat-raised: #f5f5f2;
-  --chat-input: #ffffff; --chat-border: #e3e4e0; --chat-border-strong: #d0d2cd; --chat-selected: #e8e9e5;
-  --chat-text: #202329; --chat-text-2: #3a3f47; --chat-muted: #535b65; --chat-dim: #686f7a;
-  --chat-accent: #365fae; --chat-ok: #267444; --chat-warn: #855b10; --chat-danger: #b03730;
-  --chat-read-only: #1b6a78; --chat-read-only-border: #b7d8de;
-  --chat-writable: #6a479f; --chat-writable-border: #d5c7ec;
-  --chat-send-bg: #202329; --chat-send-fg: #fafaf8;
-  --chat-banner-bg: #fbf4e8; --chat-banner-border: #e6cd9c; --chat-banner-title: #5f3f07; --chat-banner-text: #6f5323;
+  --chat-bg: #fafaf8;
+  --chat-sidebar: #f2f2ef;
+  --chat-surface: #ffffff;
+  --chat-raised: #f5f5f2;
+  --chat-input: #ffffff;
+  --chat-border: #e3e4e0;
+  --chat-border-strong: #d0d2cd;
+  --chat-selected: #e8e9e5;
+  --chat-text: #202329;
+  --chat-text-2: #3a3f47;
+  --chat-muted: #535b65;
+  --chat-dim: #686f7a;
+  --chat-accent: #365fae;
+  --chat-ok: #267444;
+  --chat-warn: #855b10;
+  --chat-danger: #b03730;
+  --chat-read-only: #1b6a78;
+  --chat-read-only-border: #b7d8de;
+  --chat-writable: #6a479f;
+  --chat-writable-border: #d5c7ec;
+  --chat-send-bg: #202329;
+  --chat-send-fg: #fafaf8;
+  --chat-banner-bg: #fbf4e8;
+  --chat-banner-border: #e6cd9c;
+  --chat-banner-title: #5f3f07;
+  --chat-banner-text: #6f5323;
   --chat-shadow: 0 1px 2px #1a1d2310, 0 12px 32px #1a1d2318;
 }
 [data-theme="dark"] {
-  --chat-bg: #111214; --chat-sidebar: #0c0d0f; --chat-surface: #17181b; --chat-raised: #15161a;
-  --chat-input: #0f1012; --chat-border: #23252a; --chat-border-strong: #2e3036; --chat-selected: #1e2026;
-  --chat-text: #e6e6e3; --chat-text-2: #c9cbcf; --chat-muted: #9a9da4; --chat-dim: #8b8e95;
-  --chat-accent: #7aa2f7; --chat-ok: #8fd6ae; --chat-warn: #e5b26b; --chat-danger: #f0948b;
-  --chat-read-only: #a9dde8; --chat-read-only-border: #29444b;
-  --chat-writable: #dcc4f7; --chat-writable-border: #3b3150;
-  --chat-send-bg: #e6e6e3; --chat-send-fg: #111214;
-  --chat-banner-bg: #1e1912; --chat-banner-border: #5a4630; --chat-banner-title: #f1d3a6; --chat-banner-text: #c9b79a;
+  --chat-bg: #111214;
+  --chat-sidebar: #0c0d0f;
+  --chat-surface: #17181b;
+  --chat-raised: #15161a;
+  --chat-input: #0f1012;
+  --chat-border: #23252a;
+  --chat-border-strong: #2e3036;
+  --chat-selected: #1e2026;
+  --chat-text: #e6e6e3;
+  --chat-text-2: #c9cbcf;
+  --chat-muted: #9a9da4;
+  --chat-dim: #8b8e95;
+  --chat-accent: #7aa2f7;
+  --chat-ok: #8fd6ae;
+  --chat-warn: #e5b26b;
+  --chat-danger: #f0948b;
+  --chat-read-only: #a9dde8;
+  --chat-read-only-border: #29444b;
+  --chat-writable: #dcc4f7;
+  --chat-writable-border: #3b3150;
+  --chat-send-bg: #e6e6e3;
+  --chat-send-fg: #111214;
+  --chat-banner-bg: #1e1912;
+  --chat-banner-border: #5a4630;
+  --chat-banner-title: #f1d3a6;
+  --chat-banner-text: #c9b79a;
   --chat-shadow: 0 1px 2px #0006, 0 16px 40px #0007;
 }

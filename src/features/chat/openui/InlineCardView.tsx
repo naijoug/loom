@@ -13,19 +13,40 @@ export default function InlineCardView({ source, streaming, onInsert }: InlineCa
   const t = useT();
   const [showSource, setShowSource] = useState(false);
   const [copied, setCopied] = useState(false);
-  const check = useMemo(() => streaming ? null : checkInlineCard(source), [source, streaming]);
-  const text = useMemo(() => check?.ok ? inlineCardText(source) : "", [check, source]);
+  const check = useMemo(() => (streaming ? null : checkInlineCard(source)), [source, streaming]);
+  const text = useMemo(() => (check?.ok ? inlineCardText(source) : ""), [check, source]);
   if (check && !check.ok) return <CardFallback source={source} />;
   async function copy() {
-    try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1500); }
-    catch (error) { console.warn("copy failed", error); }
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch (error) {
+      console.warn("copy failed", error);
+    }
   }
-  return <div className="chat-inline-card" data-streaming={streaming || undefined}>
-    {showSource ? <CardSource source={source} /> : <Renderer response={source} library={inlineCardLibrary} isStreaming={streaming} />}
-    {check?.ok && <div className="chat-inline-card-actions">
-      <button type="button" aria-pressed={showSource} onClick={() => setShowSource(value => !value)}>{t(showSource ? "cardShowCard" : "cardShowSource")}</button>
-      <button type="button" onClick={() => void copy()}>{t(copied ? "cardCopied" : "cardCopy")}</button>
-      {onInsert && <button type="button" onClick={() => onInsert(text)}>{t("cardInsert")}</button>}
-    </div>}
-  </div>;
+  return (
+    <div className="chat-inline-card" data-streaming={streaming || undefined}>
+      {showSource ? (
+        <CardSource source={source} />
+      ) : (
+        <Renderer response={source} library={inlineCardLibrary} isStreaming={streaming} />
+      )}
+      {check?.ok && (
+        <div className="chat-inline-card-actions">
+          <button type="button" aria-pressed={showSource} onClick={() => setShowSource((value) => !value)}>
+            {t(showSource ? "cardShowCard" : "cardShowSource")}
+          </button>
+          <button type="button" onClick={() => void copy()}>
+            {t(copied ? "cardCopied" : "cardCopy")}
+          </button>
+          {onInsert && (
+            <button type="button" onClick={() => onInsert(text)}>
+              {t("cardInsert")}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }

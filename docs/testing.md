@@ -7,13 +7,13 @@
 | 范围 | 默认检查 | 扩大条件 |
 |---|---|---|
 | 文档 | 相对链接、需求一致性；计划同轮更新索引 | 发布资料运行 release 文档检查 |
-| 前端局部逻辑/样式 | 相关 `pnpm test -- tests/unit/<file>.test.cjs`、`pnpm build`；视觉变化查看页面 | 共享状态扩大前端回归 |
+| 前端局部逻辑/样式 | `pnpm format`、相关 `pnpm test -- tests/unit/<file>.test.cjs`、`pnpm build`；视觉变化查看页面 | 共享状态扩大前端回归 |
 | Rust 局部逻辑 | fmt、相关 cargo test、适用 Clippy | 共享模块扩大 Rust 回归 |
 | IPC/权限/持久化/进程 | 两端契约、失败与恢复、进程 fixture | CLI/OS 保证必须补真实运行 |
 | 里程碑 | `pnpm check`、`pnpm tauri build --no-bundle` | 按目标补真实桌面验收 |
 | 冻结内核 | 手动选择 `pnpm check:core` | 不属于默认 Chat 门禁 |
 
-`pnpm check` 包含前端测试/build、Rust fmt/clippy/test 和 release 文档检查。通过后仅因新改动、失败或未解决风险扩大检查。真实模型测试可能消耗账户额度；未运行、登录失败或额度不足分别记录，不写成 passed。
+`pnpm check` 包含 Prettier 格式检查（`src`、`scripts`、`tests`，冻结 Workbench 与 fixture 见 `.prettierignore`）、前端测试/build、Rust fmt/clippy/test 和 release 文档检查。通过后仅因新改动、失败或未解决风险扩大检查。真实模型测试可能消耗账户额度；未运行、登录失败或额度不足分别记录，不写成 passed。
 
 ## 工程与浏览器检查
 

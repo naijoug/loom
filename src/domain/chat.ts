@@ -87,24 +87,53 @@ export interface ChatResumeHandle {
   configFingerprint: string;
 }
 
-export type ChatRunStatus = "starting" | "running" | "cancelling" | "completed" | "failed" | "cancelled" | "timed_out" | "interrupted";
+export type ChatRunStatus =
+  "starting" | "running" | "cancelling" | "completed" | "failed" | "cancelled" | "timed_out" | "interrupted";
 export interface ChatInvocationSnapshot {
-  agentId: string; adapterType: string; program: string; args: string[]; cwd: string;
-  permissionMode: ChatPermissionMode; stdinPrompt: boolean; outputMode: string; configFingerprint: string;
+  agentId: string;
+  adapterType: string;
+  program: string;
+  args: string[];
+  cwd: string;
+  permissionMode: ChatPermissionMode;
+  stdinPrompt: boolean;
+  outputMode: string;
+  configFingerprint: string;
 }
 export interface ChatTurn {
-  id: string; clientRequestId: string; userMessageId: string; assistantMessageId: string;
-  invocation: ChatInvocationSnapshot; status: ChatRunStatus; acceptedAtMs: number;
-  startedAtMs: number | null; finishedAtMs: number | null; processId: number | null;
-  exitCode: number | null; terminationReason: string | null; errorSummary: string | null;
-  stdoutLogRef: string; stderrLogRef: string;
+  id: string;
+  clientRequestId: string;
+  userMessageId: string;
+  assistantMessageId: string;
+  invocation: ChatInvocationSnapshot;
+  status: ChatRunStatus;
+  acceptedAtMs: number;
+  startedAtMs: number | null;
+  finishedAtMs: number | null;
+  processId: number | null;
+  exitCode: number | null;
+  terminationReason: string | null;
+  errorSummary: string | null;
+  stdoutLogRef: string;
+  stderrLogRef: string;
 }
-export interface ChatLogPage { text: string; nextOffset: number; hasMore: boolean }
+export interface ChatLogPage {
+  text: string;
+  nextOffset: number;
+  hasMore: boolean;
+}
 
-export interface ChatExportInput { projectPath: string; sessionId: string }
+export interface ChatExportInput {
+  projectPath: string;
+  sessionId: string;
+}
 export interface ChatExportResult {
-  directory: string; jsonPath: string; markdownPath: string; snapshotSeq: number;
-  inProgress: boolean; warnings: string[];
+  directory: string;
+  jsonPath: string;
+  markdownPath: string;
+  snapshotSeq: number;
+  inProgress: boolean;
+  warnings: string[];
 }
 
 export interface ChatStreamPayload {
@@ -189,9 +218,7 @@ export const DEFAULT_CHAT_SESSION_STATUS: ChatSessionStatus = "active";
  * - read_only → explore
  * - read_write → ask (safer: old "writable" sessions load as Ask = writable + per-turn confirm)
  */
-export function normalizeChatPermissionMode(
-  value: ChatPermissionModeInput | null | undefined,
-): ChatPermissionMode {
+export function normalizeChatPermissionMode(value: ChatPermissionModeInput | null | undefined): ChatPermissionMode {
   switch (value) {
     case "explore":
     case "ask":
