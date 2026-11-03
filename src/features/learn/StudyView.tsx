@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   CircleAlert,
   CircleCheck,
   CircleDashed,
+  Ellipsis,
   ExternalLink,
   FileText,
   FolderTree,
@@ -17,15 +18,18 @@ import {
   type LearnApi,
   type LearnLogStream,
   type LearnPageContent,
-  type LearnPageInfo,
   type LearnStageState,
+  type LearnStudy,
   type LearnStudyDetail,
 } from "../../api/learn";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { Markdown, type MarkdownLinks } from "../../components/Markdown";
 import { openExternalLink } from "../../components/externalLink";
-import { ArchitectureDiagram } from "./ArchitectureDiagram";
+import { ArchitectureDiagram, architectureNotes } from "./ArchitectureDiagram";
+import { LearnLayout } from "./LearnLayout";
+import { forgetReadPages, OverviewEntry, PagePending, Pager, useReadPages, WikiTree } from "./LearningPath";
+import { useMenuKeys, usePopover } from "./usePopover";
 import { ErrorText } from "../../components/common/ErrorText";
 import { SourceViewer } from "../../components/SourceViewer";
 import type { SourceReader, SourceTarget } from "../../api/sourceFiles";
@@ -37,17 +41,19 @@ const STAGE_LABEL: Record<string, MessageKey> = {
   architecture: "learnStageArchitecture",
   glossary: "learnStageGlossary",
 };
-const LEVEL_LABEL: Record<number, MessageKey> = { 1: "learnLevel1", 2: "learnLevel2", 3: "learnLevel3" };
 
 export function StudyView({
   api,
   studyId,
   revision,
+  side,
   onDeleted,
 }: {
   api: LearnApi;
   studyId: string;
   revision: number;
+  /** The study switcher; the page outline is added below it in the left column. */
+  side: ReactNode;
   onDeleted: () => void;
 }) {
   const t = useT();
@@ -61,6 +67,8 @@ export function StudyView({
   const [logsOpen, setLogsOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [actionError, setActionError] = useState("");
+  const { read, markRead } = useReadPages(studyId);
+  const article = useRef<HTMLElement>(null);
   useEffect(() => {
     setPageId("overview");
     setSource(null);
@@ -113,6 +121,13 @@ export function StudyView({
       disposed = true;
     };
   }, [api, studyId, pageId, ready, revision]);
+  // A page counts as read once its content has been shown.
+  useEffect(() => {
+    if (page?.pageId === pageId) markRead(pageId);
+  }, [page, pageId, markRead]);
+  useEffect(() => {
+    article.current?.scrollTo?.({ top: 0 });
+  }, [pageId]);
   const openSource = useCallback((target: SourceTarget) => {
     setSource(target);
     setSourceOpen(true);
@@ -135,17 +150,21 @@ export function StudyView({
   );
   if (error)
     return (
-      <div className="learn-main-empty">
-        <p className="learn-error" role="alert">
-          {error}
-        </p>
-      </div>
+      <LearnLayout side={side}>
+        <div className="learn-main-empty">
+          <p className="learn-error" role="alert">
+            {error}
+          </p>
+        </div>
+      </LearnLayout>
     );
   if (!study)
     return (
-      <div className="learn-main-empty" role="status">
-        {t("loading")}
-      </div>
+      <LearnLayout side={side}>
+        <div className="learn-main-empty" role="status">
+          {t("loading")}
+        </div>
+      </LearnLayout>
     );
   const running = study.stages.find((stage) => stage.status === "running");
   const architectureDone = study.stages.some((stage) => stage.stage === "architecture" && stage.status === "done");
@@ -170,178 +189,180 @@ export function StudyView({
   async function remove() {
     try {
       await api.remove(studyId);
+      forgetReadPages(studyId);
       onDeleted();
     } catch (reason) {
       setActionError(String(reason));
       setConfirmDelete(false);
     }
   }
+  const moduleOf = (id?: string) => detail.architecture?.modules.find((module) => module.id === id);
+  const pageOf = (moduleId: string) => study.pages.find((item) => item.moduleId === moduleId);
+  const self = moduleOf(info?.moduleId);
+  const related = {
+    dependsOn: (self?.dependsOn ?? []).map(pageOf).filter((item) => !!item),
+    usedBy: (detail.architecture?.modules ?? [])
+      .filter((module) => self && module.dependsOn.includes(self.id))
+      .map((module) => pageOf(module.id))
+      .filter((item) => !!item),
+  };
   const stageLabel = (stage: string) =>
     STAGE_LABEL[stage] ? t(STAGE_LABEL[stage]) : (study.pages.find((item) => item.pageId === stage)?.title ?? stage);
+  const outline = study.pages.length > 0 && (
+    <WikiTree pages={study.pages} read={read} running={running?.stage} current={pageId} onSelect={setPageId} />
+  );
   return (
-    <div className="learn-study" data-testid="learn-study">
-      <header className="learn-study-head">
-        <div className="learn-study-title">
-          <h1>
-            {study.owner}/{study.repo}
-          </h1>
-          <small>
-            {study.commit ? study.commit.slice(0, 10) : (study.gitRef ?? "HEAD")} · {study.agentName}
-            {study.model ? ` · ${study.model}` : ""}
-          </small>
-        </div>
-        <div className="learn-study-actions">
-          {running ? (
-            <button type="button" onClick={() => void api.cancel(studyId)}>
-              <Square size={13} aria-hidden="true" />
-              {t("cancel")}
-            </button>
-          ) : failedPipeline ? (
+    <LearnLayout
+      side={
+        <>
+          {side}
+          {outline}
+        </>
+      }
+    >
+      <div className="learn-study" data-testid="learn-study">
+        <header className="learn-study-head">
+          <div className="learn-study-title">
+            <h1>
+              {study.owner}/{study.repo}
+            </h1>
+            <small>
+              {study.commit ? study.commit.slice(0, 10) : (study.gitRef ?? "HEAD")} · {study.agentName}
+              {study.model ? ` · ${study.model}` : ""}
+            </small>
+          </div>
+          <div className="learn-study-actions">
+            <ProgressPill study={study} running={running} failed={failedPipeline} label={stageLabel} />
+            {running ? (
+              <button type="button" className="learn-secondary-button" onClick={() => void api.cancel(studyId)}>
+                <Square size={13} aria-hidden="true" />
+                {t("cancel")}
+              </button>
+            ) : failedPipeline ? (
+              <button
+                type="button"
+                className="chat-primary-button"
+                onClick={() => void generate(failedPipeline === "architecture" ? "architecture" : "fetch")}
+              >
+                <Play size={13} aria-hidden="true" />
+                {t("learnRetry")}
+              </button>
+            ) : (
+              architectureDone &&
+              missing > 0 && (
+                <button type="button" className="learn-secondary-button" onClick={() => void generate("all")}>
+                  <Play size={13} aria-hidden="true" />
+                  {t("learnGenerateAll", { count: missing })}
+                </button>
+              )
+            )}
             <button
               type="button"
-              className="chat-primary-button"
-              onClick={() => void generate(failedPipeline === "architecture" ? "architecture" : "fetch")}
+              className="chat-icon-button"
+              aria-pressed={sourceOpen}
+              aria-label={t("sourceBrowse")}
+              title={t("sourceBrowse")}
+              disabled={!study.commit}
+              onClick={() => setSourceOpen(!sourceOpen)}
             >
-              <Play size={13} aria-hidden="true" />
-              {t("learnRetry")}
+              <FolderTree size={15} />
             </button>
-          ) : (
-            architectureDone &&
-            missing > 0 && (
-              <button type="button" className="chat-primary-button" onClick={() => void generate("all")}>
-                <Play size={13} aria-hidden="true" />
-                {t("learnGenerateAll", { count: missing })}
-              </button>
-            )
+            <MoreMenu
+              logsOpen={logsOpen}
+              hasLogs={!!latestJob}
+              busy={!!running}
+              onGithub={() => openExternalLink(study.url)}
+              onLogs={() => setLogsOpen(!logsOpen)}
+              onDelete={() => setConfirmDelete(true)}
+            />
+          </div>
+        </header>
+        {confirmDelete && (
+          <div className="learn-banner" role="alertdialog" aria-label={t("learnDelete")}>
+            <span>{t("learnDeleteConfirm", { repo: `${study.owner}/${study.repo}` })}</span>
+            <button type="button" onClick={() => setConfirmDelete(false)}>
+              {t("cancel")}
+            </button>
+            <button type="button" className="learn-danger" onClick={() => void remove()}>
+              {t("learnDelete")}
+            </button>
+          </div>
+        )}
+        {actionError && <ErrorText text={actionError} alert className="learn-error" />}
+        <StageProblems study={study.stages} label={stageLabel} />
+        {logsOpen && latestJob && <JobLogs api={api} studyId={studyId} jobId={latestJob} revision={revision} />}
+        <div className="learn-body">
+          <article className="learn-article" aria-live="polite" ref={article}>
+            {!study.pages.length ? (
+              <Pipeline study={detail} label={stageLabel} />
+            ) : (
+              <>
+                {pageId === "overview" && (
+                  <OverviewEntry
+                    pages={study.pages}
+                    architecture={detail.architecture}
+                    read={read}
+                    running={running?.stage}
+                    current={pageId}
+                    onSelect={setPageId}
+                  />
+                )}
+                {pageError && (
+                  <p className="learn-error" role="alert">
+                    {pageError}
+                  </p>
+                )}
+                {info && !info.ready ? (
+                  <PagePending
+                    info={info}
+                    state={study.stages.find((item) => item.stage === info.pageId)}
+                    busy={!!running}
+                    agentName={study.agentName}
+                    remaining={architectureDone ? missing : 0}
+                    dependsOn={related.dependsOn}
+                    usedBy={related.usedBy}
+                    read={read}
+                    running={running?.stage}
+                    onGenerate={() => void generate(info.pageId)}
+                    onGenerateAll={() => void generate("all")}
+                    onSelect={setPageId}
+                  />
+                ) : (
+                  page && (
+                    <>
+                      {info?.refs && info.refs.invalid > 0 && (
+                        <p className="learn-note">{t("learnInvalidRefs", { count: info.refs.invalid })}</p>
+                      )}
+                      {pageId === "architecture" && detail.architecture ? (
+                        <>
+                          <div className="chat-markdown">
+                            <h1>{architectureNotes(page.markdown).title}</h1>
+                          </div>
+                          <ArchitectureDiagram
+                            architecture={detail.architecture}
+                            pages={study.pages}
+                            read={read}
+                            running={running?.stage}
+                            onOpen={setPageId}
+                          />
+                          <Markdown text={architectureNotes(page.markdown).body} links={links} />
+                        </>
+                      ) : (
+                        <Markdown text={page.markdown} links={links} />
+                      )}
+                    </>
+                  )
+                )}
+                <Pager pages={study.pages} current={pageId} onSelect={setPageId} />
+              </>
+            )}
+          </article>
+          {sourceOpen && (
+            <SourceViewer reader={reader} target={source} onOpen={openSource} onClose={() => setSourceOpen(false)} />
           )}
-          <button
-            type="button"
-            className="chat-icon-button"
-            aria-pressed={sourceOpen}
-            aria-label={t("sourceBrowse")}
-            title={t("sourceBrowse")}
-            disabled={!study.commit}
-            onClick={() => setSourceOpen(!sourceOpen)}
-          >
-            <FolderTree size={15} />
-          </button>
-          <button
-            type="button"
-            className="chat-icon-button"
-            aria-pressed={logsOpen}
-            aria-label={t("learnLogs")}
-            title={t("learnLogs")}
-            disabled={!latestJob}
-            onClick={() => setLogsOpen(!logsOpen)}
-          >
-            <ScrollText size={15} />
-          </button>
-          <button
-            type="button"
-            className="chat-icon-button"
-            aria-label={t("learnOpenGithub")}
-            title={t("learnOpenGithub")}
-            onClick={() => openExternalLink(study.url)}
-          >
-            <ExternalLink size={15} />
-          </button>
-          <button
-            type="button"
-            className="chat-icon-button"
-            aria-label={t("learnDelete")}
-            title={t("learnDelete")}
-            disabled={!!running}
-            onClick={() => setConfirmDelete(true)}
-          >
-            <Trash2 size={15} />
-          </button>
         </div>
-      </header>
-      {confirmDelete && (
-        <div className="learn-banner" role="alertdialog" aria-label={t("learnDelete")}>
-          <span>{t("learnDeleteConfirm", { repo: `${study.owner}/${study.repo}` })}</span>
-          <button type="button" onClick={() => setConfirmDelete(false)}>
-            {t("cancel")}
-          </button>
-          <button type="button" className="learn-danger" onClick={() => void remove()}>
-            {t("learnDelete")}
-          </button>
-        </div>
-      )}
-      <ol className="learn-stages" aria-label={t("learnProgress")}>
-        {PIPELINE.map((stage) => (
-          <StageChip key={stage} label={stageLabel(stage)} state={study.stages.find((item) => item.stage === stage)} />
-        ))}
-        {study.pages.length > 0 && (
-          <li className="learn-stage" data-status={running && running.stage.includes(":") ? "running" : "done"}>
-            <FileText size={13} aria-hidden="true" />
-            {t("learnPagesReady", {
-              ready: study.pages.filter((item) => item.ready).length,
-              total: study.pages.length,
-            })}
-          </li>
-        )}
-        {running && running.stage.includes(":") && (
-          <li className="learn-stage" data-status="running">
-            <LoaderCircle size={13} className="chat-spin" aria-hidden="true" />
-            {stageLabel(running.stage)}
-          </li>
-        )}
-        {study.coverage && study.coverage.sourceFiles > 0 && (
-          <li className="learn-stage" title={study.coverage.uncovered.join("\n")}>
-            {t("learnCoverage", { covered: study.coverage.covered, total: study.coverage.sourceFiles })}
-          </li>
-        )}
-      </ol>
-      {actionError && <ErrorText text={actionError} alert className="learn-error" />}
-      <StageProblems study={study.stages} label={stageLabel} />
-      {logsOpen && latestJob && <JobLogs api={api} studyId={studyId} jobId={latestJob} revision={revision} />}
-      <div className="learn-body">
-        {study.pages.length > 0 && (
-          <WikiTree pages={study.pages} current={pageId} running={running?.stage} onSelect={setPageId} />
-        )}
-        <article className="learn-article" aria-live="polite">
-          {!study.pages.length ? (
-            <Pipeline study={detail} label={stageLabel} />
-          ) : (
-            <>
-              {pageId === "architecture" && detail.architecture && (
-                <ArchitectureDiagram
-                  architecture={detail.architecture}
-                  readyPages={new Set(study.pages.filter((item) => item.ready).map((item) => item.pageId))}
-                  onOpen={setPageId}
-                />
-              )}
-              {pageError && (
-                <p className="learn-error" role="alert">
-                  {pageError}
-                </p>
-              )}
-              {info && !info.ready ? (
-                <PagePending
-                  info={info}
-                  state={study.stages.find((item) => item.stage === info.pageId)}
-                  busy={!!running}
-                  onGenerate={() => void generate(info.pageId)}
-                />
-              ) : (
-                page && (
-                  <>
-                    {info?.refs && info.refs.invalid > 0 && (
-                      <p className="learn-note">{t("learnInvalidRefs", { count: info.refs.invalid })}</p>
-                    )}
-                    <Markdown text={page.markdown} links={links} />
-                  </>
-                )
-              )}
-            </>
-          )}
-        </article>
-        {sourceOpen && (
-          <SourceViewer reader={reader} target={source} onOpen={openSource} onClose={() => setSourceOpen(false)} />
-        )}
       </div>
-    </div>
+    </LearnLayout>
   );
 }
 
@@ -353,33 +374,190 @@ function StageIcon({ status }: { status?: string }) {
   return <CircleDashed size={13} aria-hidden="true" />;
 }
 
-function StageChip({ label, state }: { label: string; state?: LearnStageState }) {
-  const t = useT();
+function ProgressRing({ ready, total }: { ready: number; total: number }) {
+  const length = 2 * Math.PI * 6;
   return (
-    <li className="learn-stage" data-status={state?.status ?? "pending"}>
-      <StageIcon status={state?.status} />
-      {label}
-      <span className="learn-sr">{t(`learnStatus_${state?.status ?? "pending"}` as MessageKey)}</span>
-    </li>
+    <svg className="learn-ring" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+      <circle cx="8" cy="8" r="6" />
+      <circle
+        cx="8"
+        cy="8"
+        r="6"
+        strokeDasharray={`${total ? (length * ready) / total : 0} ${length}`}
+        transform="rotate(-90 8 8)"
+      />
+    </svg>
   );
 }
 
+/** Header pill: pages ready (or the pipeline stage) at a glance; stage details, coverage and warnings in its popover. */
+function ProgressPill({
+  study,
+  running,
+  failed,
+  label,
+}: {
+  study: LearnStudy;
+  running?: LearnStageState;
+  failed?: string;
+  label: (stage: string) => string;
+}) {
+  const t = useT();
+  const pop = usePopover();
+  const ready = study.pages.filter((item) => item.ready).length;
+  const total = study.pages.length;
+  const pageRunning = running?.stage.includes(":") ? running : undefined;
+  const pageWarnings = study.stages.filter(
+    (stage) => !(PIPELINE as readonly string[]).includes(stage.stage) && stage.warnings.length,
+  );
+  const coverage = study.coverage && study.coverage.sourceFiles > 0 ? study.coverage : undefined;
+  return (
+    <span className="learn-progress" ref={pop.ref}>
+      <button
+        type="button"
+        className="learn-progress-pill"
+        aria-haspopup="dialog"
+        aria-expanded={pop.open}
+        title={t("learnProgress")}
+        onClick={() => pop.setOpen(!pop.open)}
+      >
+        {running ? (
+          <LoaderCircle size={14} className="chat-spin" aria-hidden="true" />
+        ) : failed ? (
+          <CircleAlert size={14} className="learn-progress-alert" aria-hidden="true" />
+        ) : (
+          <ProgressRing ready={ready} total={total} />
+        )}
+        <span>{total ? t("learnPagesReady", { ready, total }) : label(running?.stage ?? failed ?? "fetch")}</span>
+        {study.stages.some((stage) => stage.warnings.length) && (
+          <span className="learn-warn-dot" role="img" aria-label={t("learnHasWarnings")} />
+        )}
+      </button>
+      {pop.open && (
+        <div className="learn-progress-pop" role="dialog" aria-label={t("learnProgress")}>
+          <h4>{t("learnProgress")}</h4>
+          <ol className="learn-stages">
+            {PIPELINE.map((stage) => {
+              const state = study.stages.find((item) => item.stage === stage);
+              return (
+                <li key={stage} className="learn-stage" data-status={state?.status ?? "pending"}>
+                  <StageIcon status={state?.status} />
+                  <span>
+                    {label(stage)}
+                    <small title={stage === "inventory" ? coverage?.uncovered.join("\n") : undefined}>
+                      {t(`learnStatus_${state?.status ?? "pending"}` as MessageKey)}
+                      {stage === "inventory" && coverage
+                        ? ` · ${t("learnCoverage", { covered: coverage.covered, total: coverage.sourceFiles })}`
+                        : ""}
+                    </small>
+                    {state?.warnings.map((warning) => (
+                      <small key={warning} className="learn-stage-warning">
+                        {warning}
+                      </small>
+                    ))}
+                  </span>
+                </li>
+              );
+            })}
+            {total > 0 && (
+              <li className="learn-stage" data-status={pageRunning ? "running" : ready === total ? "done" : "pending"}>
+                {pageRunning ? (
+                  <LoaderCircle size={13} className="chat-spin" aria-hidden="true" />
+                ) : (
+                  <FileText size={13} aria-hidden="true" />
+                )}
+                <span>
+                  {t("learnPagesReady", { ready, total })}
+                  {pageRunning && <small>{label(pageRunning.stage)}</small>}
+                  {pageWarnings.map((stage) => (
+                    <small key={stage.stage} className="learn-stage-warning">
+                      {label(stage.stage)}: {stage.warnings.join("; ")}
+                    </small>
+                  ))}
+                </span>
+              </li>
+            )}
+          </ol>
+        </div>
+      )}
+    </span>
+  );
+}
+
+/** Less frequent study actions; Delete only opens the confirmation banner. */
+function MoreMenu({
+  logsOpen,
+  hasLogs,
+  busy,
+  onGithub,
+  onLogs,
+  onDelete,
+}: {
+  logsOpen: boolean;
+  hasLogs: boolean;
+  busy: boolean;
+  onGithub: () => void;
+  onLogs: () => void;
+  onDelete: () => void;
+}) {
+  const t = useT();
+  const menu = usePopover();
+  const keys = useMenuKeys(menu.open);
+  const act = (run: () => void) => () => {
+    menu.setOpen(false);
+    run();
+  };
+  return (
+    <span className="learn-more" ref={menu.ref}>
+      <button
+        type="button"
+        className="chat-icon-button"
+        aria-label={t("learnMore")}
+        title={t("learnMore")}
+        aria-haspopup="menu"
+        aria-expanded={menu.open}
+        onClick={() => menu.setOpen(!menu.open)}
+      >
+        <Ellipsis size={16} />
+      </button>
+      {menu.open && (
+        <div className="learn-menu" role="menu" aria-label={t("learnMore")} ref={keys.list} onKeyDown={keys.onKeyDown}>
+          <button type="button" role="menuitem" onClick={act(onGithub)}>
+            <ExternalLink size={14} aria-hidden="true" />
+            {t("learnOpenGithub")}
+          </button>
+          <button
+            type="button"
+            role="menuitemcheckbox"
+            aria-checked={logsOpen}
+            disabled={!hasLogs}
+            onClick={act(onLogs)}
+          >
+            <ScrollText size={14} aria-hidden="true" />
+            {t("learnLogs")}
+          </button>
+          <div role="separator" />
+          <button type="button" role="menuitem" className="learn-menu-danger" disabled={busy} onClick={act(onDelete)}>
+            <Trash2 size={14} aria-hidden="true" />
+            {t("learnDeleteMenu")}
+          </button>
+        </div>
+      )}
+    </span>
+  );
+}
+
+/** Errors and cancellations stay in view; warnings live in the progress popover. */
 function StageProblems({ study, label }: { study: LearnStageState[]; label: (stage: string) => string }) {
   const t = useT();
-  const problems = study.filter((stage) => stage.error || stage.warnings.length || stage.status === "cancelled");
+  const problems = study.filter((stage) => stage.error || stage.status === "cancelled");
   if (!problems.length) return null;
   return (
     <ul className="learn-problems">
       {problems.map((stage) => (
         <li key={stage.stage} data-status={stage.status}>
           <strong>{label(stage.stage)}</strong>{" "}
-          {stage.error ? (
-            <ErrorText text={stage.error} className="learn-problem-text" />
-          ) : stage.status === "cancelled" ? (
-            t("learnStatus_cancelled")
-          ) : (
-            stage.warnings.join("; ")
-          )}
+          {stage.error ? <ErrorText text={stage.error} className="learn-problem-text" /> : t("learnStatus_cancelled")}
         </li>
       ))}
     </ul>
@@ -404,89 +582,6 @@ function Pipeline({ study, label }: { study: LearnStudyDetail; label: (stage: st
           );
         })}
       </ol>
-    </div>
-  );
-}
-
-function WikiTree({
-  pages,
-  current,
-  running,
-  onSelect,
-}: {
-  pages: LearnPageInfo[];
-  current: string;
-  running?: string;
-  onSelect: (pageId: string) => void;
-}) {
-  const t = useT();
-  const item = (page: LearnPageInfo) => (
-    <li key={page.pageId}>
-      <button
-        type="button"
-        aria-current={page.pageId === current ? "page" : undefined}
-        data-ready={page.ready || undefined}
-        onClick={() => onSelect(page.pageId)}
-      >
-        <span className="learn-tree-title">{page.title}</span>
-        {running === page.pageId ? (
-          <LoaderCircle size={12} className="chat-spin" role="img" aria-label={t("running")} />
-        ) : (
-          !page.ready && <span className="learn-tree-todo" role="img" aria-label={t("learnNotGenerated")} />
-        )}
-      </button>
-    </li>
-  );
-  const top = pages.filter((page) => page.kind === "overview" || page.kind === "architecture");
-  const glossary = pages.filter((page) => page.kind === "glossary");
-  return (
-    <nav className="learn-wiki-tree" aria-label={t("learnWiki")}>
-      <ul>{top.map(item)}</ul>
-      {[1, 2, 3].map((level) => {
-        const modules = pages.filter((page) => page.kind === "module" && page.level === level);
-        return (
-          modules.length > 0 && (
-            <section key={level}>
-              <h3>{t(LEVEL_LABEL[level])}</h3>
-              <ul>{modules.map(item)}</ul>
-            </section>
-          )
-        );
-      })}
-      <ul>{glossary.map(item)}</ul>
-    </nav>
-  );
-}
-
-function PagePending({
-  info,
-  state,
-  busy,
-  onGenerate,
-}: {
-  info: LearnPageInfo;
-  state?: LearnStageState;
-  busy: boolean;
-  onGenerate: () => void;
-}) {
-  const t = useT();
-  return (
-    <div className="learn-main-empty">
-      <h2>{info.title}</h2>
-      {state?.status === "running" ? (
-        <p role="status">
-          <LoaderCircle size={14} className="chat-spin" aria-hidden="true" /> {t("learnGenerating")}
-        </p>
-      ) : (
-        <>
-          {state?.error && <ErrorText text={state.error} className="learn-error" />}
-          <p className="learn-note">{t("learnNotGeneratedDesc")}</p>
-          <button type="button" className="chat-primary-button" disabled={busy} onClick={onGenerate}>
-            <Play size={13} aria-hidden="true" />
-            {t("learnGeneratePage")}
-          </button>
-        </>
-      )}
     </div>
   );
 }

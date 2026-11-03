@@ -1,9 +1,10 @@
 import { useContext, useEffect, useState } from "react";
-import { GraduationCap, LoaderCircle, Plus } from "lucide-react";
+import { GraduationCap } from "lucide-react";
 import { tauriLearnApi, type LearnStudySummary } from "../../api/learn";
 import { hasTauriRuntime } from "../../hooks/runtime";
 import { useT } from "../../i18n";
 import { useAppState } from "../../state/AppStateContext";
+import { LearnLayout, StudySwitcher } from "./LearnLayout";
 import { NewStudyForm } from "./NewStudyForm";
 import { LearnPreviewContext } from "./previewContext";
 import { StudyView } from "./StudyView";
@@ -76,89 +77,48 @@ export function LearnPage() {
     setNewStudy(id === null);
     setSelected(id ?? selected);
   };
+  const switcher = (
+    <StudySwitcher
+      studies={studies}
+      current={studies.find((item) => item.studyId === selected)}
+      creating={creating}
+      listError={listError}
+      onSelect={select}
+    />
+  );
+  if (available && !creating)
+    return (
+      <StudyView
+        api={api}
+        studyId={selected!}
+        revision={revision}
+        side={switcher}
+        onDeleted={() => {
+          setSelected(null);
+          setRevision((value) => value + 1);
+        }}
+      />
+    );
   return (
-    <div className="chat-page learn-page" data-testid="learn-page">
-      <aside className="chat-project-tree learn-sidebar">
-        <header data-tauri-drag-region />
-        <div className="chat-project-heading">
-          <span>{t("learnStudies")}</span>
-          <button
-            type="button"
-            className="chat-icon-button"
-            aria-label={t("learnNewStudy")}
-            title={t("learnNewStudy")}
-            aria-pressed={creating}
-            onClick={() => select(null)}
-          >
-            <Plus size={15} />
-          </button>
+    <LearnLayout side={switcher}>
+      {!available ? (
+        <div className="learn-main-empty">
+          <span className="chat-empty-mark">
+            <GraduationCap size={24} />
+          </span>
+          <p>{t("learnDesktopOnly")}</p>
         </div>
-        <nav aria-label={t("learnStudies")}>
-          <ul className="learn-study-list">
-            {studies.map((study) => (
-              <li key={study.studyId}>
-                <button
-                  type="button"
-                  className="chat-tree-session"
-                  aria-current={!creating && study.studyId === selected ? "page" : undefined}
-                  onClick={() => select(study.studyId)}
-                >
-                  <span className="learn-study-status" data-status={study.status} aria-hidden="true" />
-                  <span className="chat-tree-title">
-                    {study.owner}/{study.repo}
-                  </span>
-                  {study.status === "running" ? (
-                    <LoaderCircle size={12} className="chat-spin" role="img" aria-label={t("running")} />
-                  ) : (
-                    <small>
-                      {study.pagesTotal
-                        ? `${study.pagesReady}/${study.pagesTotal}`
-                        : t(study.status === "failed" ? "error" : "learnStatus_pending")}
-                    </small>
-                  )}
-                </button>
-              </li>
-            ))}
-            {!studies.length && <li className="chat-tree-empty">{t("learnNoStudies")}</li>}
-          </ul>
-        </nav>
-        {listError && (
-          <p className="learn-error" role="alert">
-            {listError}
-          </p>
-        )}
-      </aside>
-      <main className="chat-main learn-main">
-        <div className="chat-window-bar" data-tauri-drag-region />
-        {!available ? (
-          <div className="learn-main-empty">
-            <span className="chat-empty-mark">
-              <GraduationCap size={24} />
-            </span>
-            <p>{t("learnDesktopOnly")}</p>
-          </div>
-        ) : creating ? (
-          <NewStudyForm
-            api={api}
-            agents={state.agents}
-            diagnostics={state.agentDiagnostics}
-            onCreated={(id) => {
-              select(id);
-              setRevision((value) => value + 1);
-            }}
-          />
-        ) : (
-          <StudyView
-            api={api}
-            studyId={selected!}
-            revision={revision}
-            onDeleted={() => {
-              setSelected(null);
-              setRevision((value) => value + 1);
-            }}
-          />
-        )}
-      </main>
-    </div>
+      ) : (
+        <NewStudyForm
+          api={api}
+          agents={state.agents}
+          diagnostics={state.agentDiagnostics}
+          onCreated={(id) => {
+            select(id);
+            setRevision((value) => value + 1);
+          }}
+        />
+      )}
+    </LearnLayout>
   );
 }

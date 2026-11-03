@@ -92,6 +92,99 @@ test("Chat markdown drops loom links while Learn pages turn them into source and
   dom.window.close();
 });
 
+test("architecture diagram shows full titles, draws edges only for the focused module, and drops the duplicate list", () => {
+  const {
+    ArchitectureDiagram,
+    architectureNotes,
+  } = require("../../.tmp/test-build/src/features/learn/ArchitectureDiagram.js");
+  const dom = new JSDOM('<div id="root"></div>', { url: "http://localhost" });
+  global.window = dom.window;
+  global.document = dom.window.document;
+  global.navigator = dom.window.navigator;
+  global.ResizeObserver = class {
+    observe() {}
+    disconnect() {}
+  };
+  const mod = (id, title, dependsOn) => ({
+    id,
+    title,
+    summary: "",
+    level: 1,
+    order: 0,
+    paths: [],
+    dependsOn,
+    keyFiles: [],
+  });
+  const architecture = {
+    ...samples.learnArchitecture,
+    layers: [
+      { id: "entry", title: "Command entry points and run scripts", moduleIds: ["cli"] },
+      { id: "core", title: "Agent loop", moduleIds: ["agent", "tui"] },
+      { id: "env", title: "Environments", moduleIds: ["env"] },
+    ],
+    modules: [
+      mod("cli", "Command line runners (mini, mini-extra)", ["agent"]),
+      mod("agent", "Default agent step loop", ["env"]),
+      mod("tui", "Textual terminal UI agent", ["agent"]),
+      mod("env", "Local and Docker execution environments", []),
+    ],
+  };
+  const pages = architecture.modules.map((m) => ({
+    pageId: `module:${m.id}`,
+    title: m.title,
+    kind: "module",
+    level: 1,
+    ready: m.id === "cli",
+  }));
+  const opened = [];
+  const root = createRoot(document.getElementById("root"));
+  act(() =>
+    root.render(
+      React.createElement(ArchitectureDiagram, {
+        architecture,
+        pages,
+        read: new Set(["module:cli"]),
+        onOpen: (id) => opened.push(id),
+      }),
+    ),
+  );
+  const nodes = [...document.querySelectorAll(".learn-diagram-node")];
+  assert.deepEqual(
+    nodes.map((n) => n.querySelector("strong").textContent),
+    ["cli", "agent", "tui", "env"].map((id) => architecture.modules.find((m) => m.id === id).title),
+  );
+  assert.deepEqual(
+    [...document.querySelectorAll(".learn-diagram-layer h4")].map((h) => h.textContent),
+    ["Command entry points and run scripts", "Agent loop", "Environments"],
+  );
+  assert.equal(nodes[0].querySelector("[role=img]").getAttribute("aria-label"), "Read");
+  assert.equal(document.querySelectorAll(".learn-diagram-edge").length, 0, "no edges by default");
+  const agent = nodes.find((n) => n.dataset.module === "agent");
+  act(() => agent.focus());
+  assert.ok(document.querySelector(".learn-diagram[data-focus]"));
+  assert.deepEqual(Object.fromEntries(nodes.map((n) => [n.dataset.module, n.dataset.role])), {
+    cli: "user",
+    agent: "self",
+    tui: "user",
+    env: "dep",
+  });
+  assert.equal(document.querySelectorAll(".learn-diagram-edge-dep").length, 1);
+  assert.equal(document.querySelectorAll(".learn-diagram-edge-user").length, 2);
+  act(() => agent.blur());
+  assert.equal(document.querySelectorAll(".learn-diagram-edge").length, 0);
+  assert.equal(nodes[0].dataset.role, undefined);
+  act(() => agent.dispatchEvent(new window.MouseEvent("click", { bubbles: true })));
+  assert.deepEqual(opened, ["module:agent"]);
+  act(() => root.unmount());
+  dom.window.close();
+
+  const notes = architectureNotes(
+    "# hexyl — Architecture\n\n## Layers and modules\n\n### Entry\n\n#### [CLI](loom-wiki:module/cli)\n\nParses flags.\n\n- Depends on: none\n",
+  );
+  assert.equal(notes.title, "hexyl — Architecture");
+  assert.equal(notes.body, "### [CLI](loom-wiki:module/cli)\n\nParses flags.\n\n- Depends on: none");
+});
+
 test("Learn view keeps Chat mounted, opens wiki pages and jumps to cited source lines", async (t) => {
   const dom = new JSDOM('<div id="root"></div>', { url: "http://localhost" });
   global.window = dom.window;
@@ -245,6 +338,11 @@ test("Learn view keeps Chat mounted, opens wiki pages and jumps to cited source 
     [...document.querySelectorAll(".learn-wiki-tree button")].map((b) => b.textContent.replace(/Not generated/, "")),
     ["Overview", "Architecture", "CLI", "Glossary"],
   );
+  // Opening the overview marks it read on this device; the entry card points at the next page in learning order.
+  assert.equal(document.querySelector('.learn-wiki-tree [aria-current="page"] svg').getAttribute("aria-label"), "Read");
+  assert.deepEqual(JSON.parse(localStorage.getItem(`loom-learn-read:${study.studyId}`)), ["overview"]);
+  assert.match(document.querySelector(".learn-continue").textContent, /Architecture/);
+  assert.match(document.querySelector(".learn-continue").textContent, /1 of 4 pages read · 3 generated/);
   const src = document.querySelector(".loom-src-link");
   assert.equal(src.dataset.status, "valid");
   await act(async () => src.dispatchEvent(new window.MouseEvent("click", { bubbles: true })));
@@ -271,11 +369,44 @@ test("Learn view keeps Chat mounted, opens wiki pages and jumps to cited source 
     await new Promise((r) => setTimeout(r, 10));
   });
   assert.equal(document.querySelectorAll(".learn-diagram-node").length, samples.learnArchitecture.modules.length);
+  assert.deepEqual(
+    [...document.querySelectorAll(".learn-pager strong")].map((el) => el.textContent),
+    ["Overview", "CLI"],
+  );
   const glossary = [...document.querySelectorAll(".learn-wiki-tree button")].find((b) =>
     b.textContent.startsWith("Glossary"),
   );
   await act(async () => glossary.dispatchEvent(new window.MouseEvent("click", { bubbles: true })));
-  assert.ok([...document.querySelectorAll("button")].some((b) => b.textContent === "Generate page"));
+  assert.ok([...document.querySelectorAll("button")].some((b) => b.textContent === "Generate this page"));
+  // Header: the progress pill opens stage details; GitHub, logs and delete sit in the More menu.
+  const click = (el) => act(async () => el.dispatchEvent(new window.MouseEvent("click", { bubbles: true })));
+  const pill = document.querySelector(".learn-progress-pill");
+  assert.match(pill.textContent, /\/4 pages/);
+  await click(pill);
+  assert.deepEqual(
+    [...document.querySelectorAll(".learn-progress-pop .learn-stage")]
+      .slice(0, 3)
+      .map((li) => li.firstChild.nextSibling.firstChild.textContent),
+    ["Download", "Inventory", "Architecture"],
+  );
+  await act(async () => document.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Escape" })));
+  assert.equal(document.querySelector(".learn-progress-pop"), null);
+  await click(document.querySelector('button[aria-label="More"]'));
+  const menuItems = [...document.querySelectorAll('.learn-menu [role^="menuitem"]')];
+  assert.deepEqual(
+    menuItems.map((b) => b.textContent),
+    ["Open on GitHub", "Run logs", "Delete study…"],
+  );
+  await click(menuItems[2]);
+  assert.equal(document.querySelector(".learn-menu"), null);
+  const banner = document.querySelector('.learn-banner[role="alertdialog"]');
+  assert.ok(banner);
+  await click(banner.querySelector("button"));
+  assert.equal(document.querySelector(".learn-banner"), null);
+  assert.equal(
+    calls.some((c) => c.command === "learn_delete_study"),
+    false,
+  );
   // New study: the create command uses the `input` envelope with the selected agent and trimmed model.
   await act(async () =>
     document

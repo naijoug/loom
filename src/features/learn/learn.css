@@ -1,4 +1,85 @@
 /* Learn. Builds on the shared workspace frame (styles/workspace.css: buttons, list sidebar, main column). */
+.learn-page {
+  position: relative;
+  overflow: hidden;
+}
+.learn-page .learn-sidebar {
+  width: 272px;
+  flex-basis: 272px;
+  padding: 8px 8px 10px;
+}
+.learn-drawer-toggle,
+.learn-scrim {
+  display: none !important;
+}
+
+/* Study switcher (left column top) */
+.learn-switcher {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  padding: 0 2px 4px;
+}
+.learn-switcher-button {
+  flex: 1;
+  min-width: 0;
+  display: flex !important;
+  align-items: center;
+  gap: 9px;
+  text-align: left;
+  border: 1px solid var(--chat-border) !important;
+  background: var(--chat-surface) !important;
+  border-radius: 9px !important;
+  padding: 6px 10px !important;
+  color: var(--chat-muted);
+}
+.learn-switcher-button:hover {
+  border-color: var(--chat-border-strong) !important;
+}
+.learn-switcher-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.learn-switcher-text strong {
+  color: var(--chat-text);
+  font-size: 13.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.learn-switcher-text small {
+  color: var(--chat-dim);
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.learn-switcher > .chat-icon-button {
+  align-self: center;
+}
+.learn-switcher-menu {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 2px;
+  right: 2px;
+  z-index: 20;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid var(--chat-border);
+  border-radius: 10px;
+  background: var(--chat-surface);
+  box-shadow: var(--chat-shadow);
+}
+.learn-switcher-menu .chat-tree-session[aria-checked="true"] {
+  background: var(--chat-selected) !important;
+  color: var(--chat-text);
+}
 .learn-study-list {
   margin: 0 !important;
   padding: 2px 0 !important;
@@ -139,10 +220,11 @@
   min-height: 0;
 }
 .learn-study-head {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 4px 18px 10px;
+  padding: 4px 18px 12px;
   border-bottom: 1px solid var(--chat-border);
 }
 .learn-study-title {
@@ -165,13 +247,107 @@
 .learn-study-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  flex-shrink: 0;
 }
 .learn-study-actions > button:not(.chat-icon-button) {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   font-size: 12.5px;
+  white-space: nowrap;
+}
+.learn-secondary-button {
+  border: 1px solid var(--chat-border-strong) !important;
+  background: var(--chat-surface) !important;
+  font-weight: 500;
+}
+.learn-secondary-button:hover:not(:disabled) {
+  background: var(--chat-selected) !important;
+}
+
+/* Progress pill + popover, More menu. Popups anchor to the header. */
+.learn-progress-pill {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--chat-border) !important;
+  background: var(--chat-surface) !important;
+  border-radius: 999px !important;
+  padding: 4px 11px 4px 8px !important;
+  font-size: 12.5px;
+  color: var(--chat-text-2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.learn-progress-pill:hover {
+  border-color: var(--chat-border-strong) !important;
+}
+.learn-progress-pill .chat-spin {
+  color: var(--chat-accent);
+}
+.learn-progress-alert {
+  color: var(--chat-danger);
+}
+.learn-ring circle {
+  fill: none;
+  stroke: var(--chat-border-strong);
+  stroke-width: 2.2;
+}
+.learn-ring circle + circle {
+  stroke: var(--chat-ok);
+  stroke-linecap: round;
+}
+.learn-warn-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--chat-warn);
+}
+.learn-progress-pop,
+.learn-menu {
+  position: absolute;
+  top: calc(100% - 4px);
+  right: 18px;
+  z-index: 20;
+  max-width: calc(100% - 36px);
+  background: var(--chat-surface);
+  border: 1px solid var(--chat-border);
+  border-radius: 12px;
+  box-shadow: var(--chat-shadow);
+}
+.learn-progress-pop {
+  width: 340px;
+  padding: 12px 14px 14px;
+}
+.learn-progress-pop h4 {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--chat-dim);
+}
+.learn-menu {
+  width: 220px;
+  padding: 5px;
+}
+.learn-menu [role^="menuitem"] {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  text-align: left;
+  padding: 7px 10px;
+  font-size: 13px;
+}
+.learn-menu [role="menuitemcheckbox"][aria-checked="true"] {
+  background: var(--chat-selected);
+}
+.learn-menu [role="separator"] {
+  border-top: 1px solid var(--chat-border);
+  margin: 5px 4px;
+}
+.learn-menu .learn-menu-danger {
+  color: var(--chat-danger);
 }
 .learn-banner {
   display: flex;
@@ -193,43 +369,54 @@
   border-color: var(--chat-danger) !important;
 }
 .learn-stages {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
   list-style: none;
   margin: 0;
-  padding: 10px 18px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 .learn-stage {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 9px;
-  border-radius: 999px;
-  border: 1px solid var(--chat-border);
-  font-size: 12px;
-  color: var(--chat-text-2);
-}
-.learn-stage[data-status="done"] svg {
-  color: var(--chat-ok);
-}
-.learn-stage[data-status="running"] {
-  border-color: var(--chat-accent);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
   color: var(--chat-text);
 }
-.learn-stage[data-status="running"] svg {
+.learn-stage > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--chat-dim);
+}
+.learn-stage > span {
+  flex: 1;
+  min-width: 0;
+}
+.learn-stage small {
+  display: block;
+  color: var(--chat-dim);
+  font-size: 12px;
+}
+.learn-stage small.learn-stage-warning {
+  color: var(--chat-warn);
+  overflow-wrap: anywhere;
+}
+.learn-stage[data-status="done"] > svg {
+  color: var(--chat-ok);
+}
+.learn-stage[data-status="running"] > svg {
   color: var(--chat-accent);
 }
-.learn-stage:is([data-status="failed"], [data-status="interrupted"]) {
-  border-color: var(--chat-danger);
+.learn-stage:is([data-status="failed"], [data-status="interrupted"]) > svg,
+.learn-stage:is([data-status="failed"], [data-status="interrupted"]) small {
   color: var(--chat-danger);
 }
-.learn-stage[data-status="cancelled"] {
+.learn-stage[data-status="cancelled"] small {
   color: var(--chat-warn);
 }
 .learn-problems {
   list-style: none;
-  margin: 0 18px 8px;
+  margin: 10px 18px 0;
   padding: 0;
   display: flex;
   flex-direction: column;
@@ -248,63 +435,99 @@
   display: inline;
 }
 .learn-study > .learn-error {
-  margin: 0 18px 8px;
+  margin: 10px 18px 0;
 }
 
 .learn-body {
   display: flex;
   flex: 1;
   min-height: 0;
+  position: relative;
+}
+
+/* Page outline (left column, below the switcher) */
+.learn-sidebar .learn-wiki-tree {
+  padding: 2px 0 12px;
   border-top: 1px solid var(--chat-border);
+  margin-top: 4px;
 }
-.learn-wiki-tree {
-  width: 220px;
-  flex: 0 0 220px;
-  overflow-y: auto;
-  padding: 10px 8px;
-  border-right: 1px solid var(--chat-border);
-}
-.learn-wiki-tree ul {
+.learn-sidebar .learn-wiki-tree ul {
   list-style: none;
-  margin: 0 0 8px;
-  padding: 0;
+  margin: 0;
+  padding: 2px 0;
 }
 .learn-wiki-tree h3 {
-  margin: 10px 8px 4px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 12px 8px 4px;
   font-size: 11.5px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--chat-dim);
 }
-.learn-wiki-tree button {
+.learn-wiki-tree h3 span:last-child {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.learn-page-link {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  align-items: flex-start;
+  gap: 8px;
   width: 100%;
   text-align: left;
-  padding: 5px 8px;
+  padding: 6px 8px;
   font-size: 13px;
-  color: var(--chat-muted);
+  line-height: 1.35;
+  color: var(--chat-dim);
 }
-.learn-wiki-tree button[data-ready] {
+.learn-page-link svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.learn-page-link[data-ready] {
   color: var(--chat-text-2);
 }
-.learn-wiki-tree button[aria-current="page"] {
+.learn-page-link[aria-current="page"] {
   background: var(--chat-selected);
   color: var(--chat-text);
+  font-weight: 600;
+}
+.learn-icon-read {
+  color: var(--chat-ok);
+}
+.learn-icon-ready,
+.learn-icon-running {
+  color: var(--chat-accent);
+}
+.learn-tree-todo {
+  color: var(--chat-dim);
+}
+.learn-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 8px 8px 0;
+  border-top: 1px solid var(--chat-border);
+  font-size: 11px;
+  color: var(--chat-dim);
+}
+.learn-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.learn-legend svg {
+  width: 12px;
+  height: 12px;
 }
 .learn-tree-title {
   flex: 1;
   min-width: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.learn-tree-todo {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  border: 1px solid var(--chat-dim);
-  flex-shrink: 0;
+  overflow-wrap: anywhere;
 }
 .learn-article {
   flex: 1;
@@ -314,6 +537,240 @@
 }
 .learn-article > .chat-markdown {
   max-width: 820px;
+}
+.learn-article > :is(.learn-entry, .learn-pager, .learn-pending) {
+  max-width: 820px;
+}
+.learn-kicker {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--chat-dim);
+  margin-bottom: 4px;
+}
+
+/* Overview entry: continue reading, level cards, glossary */
+.learn-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.learn-continue {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 18px;
+  border: 1px solid var(--chat-border);
+  border-radius: 12px;
+  background: var(--chat-surface);
+}
+.learn-continue-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.learn-continue-text small {
+  color: var(--chat-dim);
+  font-size: 12px;
+}
+.learn-continue-text strong {
+  font-size: 14.5px;
+  font-weight: 600;
+}
+.learn-bar {
+  display: flex;
+  height: 6px;
+  margin: 10px 0 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--chat-selected);
+}
+.learn-bar i {
+  display: block;
+  height: 100%;
+}
+.learn-bar-read {
+  background: var(--chat-ok);
+}
+.learn-bar-ready {
+  background: var(--chat-accent);
+  opacity: 0.45;
+}
+.learn-levels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+.learn-level {
+  padding: 12px 12px 6px;
+  border: 1px solid var(--chat-border);
+  border-radius: 12px;
+  background: var(--chat-surface);
+}
+.learn-level header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+.learn-level header strong {
+  font-size: 13.5px;
+}
+.learn-level header span {
+  color: var(--chat-dim);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.learn-level p {
+  margin: 2px 0 6px;
+  color: var(--chat-dim);
+  font-size: 12px;
+}
+.learn-level ul {
+  list-style: none;
+  margin: 0 -6px;
+  padding: 0;
+}
+.learn-glossary-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px !important;
+  border: 1px dashed var(--chat-border-strong) !important;
+  border-radius: 12px !important;
+  text-align: left;
+  color: var(--chat-text-2);
+}
+.learn-glossary-row > span {
+  flex: 1;
+}
+.learn-glossary-row small {
+  color: var(--chat-dim);
+  font-size: 12px;
+}
+
+/* Previous / next */
+.learn-pager {
+  display: flex;
+  gap: 12px;
+  margin-top: 36px;
+  padding-top: 18px;
+  border-top: 1px solid var(--chat-border);
+}
+.learn-pager > * {
+  flex: 1;
+  min-width: 0;
+}
+.learn-pager button {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  padding: 10px 14px !important;
+  border: 1px solid var(--chat-border) !important;
+  border-radius: 10px !important;
+  background: var(--chat-surface) !important;
+}
+.learn-pager button:hover {
+  border-color: var(--chat-border-strong) !important;
+}
+.learn-pager .learn-pager-next {
+  align-items: flex-end;
+  text-align: right;
+}
+.learn-pager small {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--chat-dim);
+  font-size: 11.5px;
+}
+.learn-pager strong {
+  font-weight: 600;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Not generated page */
+.learn-pending h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+}
+.learn-pending-card {
+  margin-top: 18px;
+  padding: 26px 24px;
+  border: 1px dashed var(--chat-border-strong);
+  border-radius: 14px;
+  background: var(--chat-surface);
+  text-align: center;
+  color: var(--chat-text-2);
+}
+.learn-pending-card p {
+  max-width: 480px;
+  margin: 0 auto 16px;
+  line-height: 1.55;
+}
+.learn-pending-card strong {
+  color: var(--chat-text);
+}
+.learn-pending-card > small {
+  display: block;
+  margin-top: 12px;
+  color: var(--chat-dim);
+  font-size: 12px;
+}
+.learn-pending-card .learn-error {
+  margin-bottom: 12px;
+}
+.learn-pending-mark {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 12px;
+  border-radius: 12px;
+  background: var(--chat-selected);
+  color: var(--chat-muted);
+}
+.learn-pending-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.learn-related {
+  margin-top: 20px;
+}
+.learn-related h4 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--chat-dim);
+}
+.learn-related > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.learn-chip {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px !important;
+  border: 1px solid var(--chat-border) !important;
+  border-radius: 999px !important;
+  background: var(--chat-surface) !important;
+  font-size: 12.5px;
+}
+.learn-chip:hover {
+  border-color: var(--chat-border-strong) !important;
 }
 .learn-article > .learn-note,
 .learn-article > .learn-error {
@@ -365,7 +822,7 @@
 
 /* Logs */
 .learn-logs {
-  margin: 0 18px 10px;
+  margin: 10px 18px 0;
   border: 1px solid var(--chat-border);
   border-radius: 8px;
   overflow: hidden;
@@ -405,100 +862,191 @@
   padding: 4px 10px 8px;
 }
 
-/* Architecture diagram */
+/* Architecture diagram: HTML module boxes in layer rows, SVG edges drawn over them only for the focused module */
 .learn-diagram {
-  margin: 0 0 20px;
-  max-width: 820px;
+  margin: 4px 0 20px;
+  max-width: 1000px;
 }
-.learn-diagram svg {
+.learn-diagram-board {
+  position: relative;
+  border: 1px solid var(--chat-border);
+  border-radius: 14px;
+  background: var(--chat-surface);
+  padding: 4px 14px 16px;
+}
+.learn-diagram-edges {
+  position: absolute;
+  inset: 0;
   width: 100%;
-  height: auto;
-  display: block;
-}
-.learn-diagram figcaption {
-  margin-top: 6px;
-  font-size: 12px;
-  color: var(--chat-muted);
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+  z-index: 2;
 }
 .learn-diagram-layer {
-  fill: var(--chat-raised);
-  stroke: var(--chat-border);
+  padding-top: 10px;
 }
-.learn-diagram-layer-title {
-  fill: var(--chat-muted);
-  font-size: 12px;
+.learn-diagram-layer + .learn-diagram-layer {
+  border-top: 1px dashed var(--chat-border);
+  margin-top: 14px;
+}
+.learn-diagram-layer h4 {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--chat-dim);
+}
+.learn-diagram-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.chat-page .learn-diagram-node {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 0;
+  min-width: 150px;
+  max-width: 290px;
+  display: block;
+  padding: 9px 11px;
+  border: 1px solid var(--chat-border-strong);
+  border-radius: 10px;
+  background: var(--chat-raised);
+  color: var(--chat-text);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    opacity 0.15s,
+    border-color 0.15s;
+}
+.learn-diagram-node strong {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.learn-diagram-node[data-state="pending"] strong {
+  color: var(--chat-muted);
   font-weight: 500;
+}
+.learn-diagram-node small {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--chat-dim);
+}
+.learn-diagram-level {
+  font-family: "Geist Mono", ui-monospace, monospace;
+}
+.chat-page .learn-diagram-node:hover {
+  background: var(--chat-selected);
+}
+.learn-diagram-node:focus-visible {
+  outline: 2px solid var(--chat-accent);
+  outline-offset: 2px;
+}
+.learn-diagram[data-focus] .learn-diagram-node[data-role="dim"] {
+  opacity: 0.35;
+}
+.chat-page .learn-diagram-node[data-role="self"] {
+  border-color: var(--chat-text);
+  box-shadow: 0 0 0 1px var(--chat-text);
+}
+.chat-page .learn-diagram-node[data-role="dep"] {
+  border-color: var(--chat-accent);
+}
+.chat-page .learn-diagram-node[data-role="user"] {
+  border-color: var(--chat-warn);
 }
 .learn-diagram-edge {
   fill: none;
-  stroke: var(--chat-dim);
-  stroke-width: 1.3;
+  stroke-width: 1.6;
 }
-.learn-diagram-arrow {
-  fill: var(--chat-dim);
-}
-.learn-diagram-node {
-  cursor: pointer;
-}
-.learn-diagram-node rect {
-  fill: var(--chat-surface);
-  stroke: var(--chat-border-strong);
-  stroke-width: 1.2;
-}
-.learn-diagram-node[data-ready] rect {
+.learn-diagram-edge-dep {
   stroke: var(--chat-accent);
 }
-.learn-diagram-node:hover rect,
-.learn-diagram-node:focus-visible rect {
-  fill: var(--chat-selected);
+.learn-diagram-edge-user {
+  stroke: var(--chat-warn);
+  stroke-dasharray: 4 3;
 }
-.learn-diagram-node:focus-visible {
-  outline: none;
+.learn-diagram-arrow-dep {
+  fill: var(--chat-accent);
 }
-.learn-diagram-node:focus-visible rect {
-  stroke-width: 2.4;
+.learn-diagram-arrow-user {
+  fill: var(--chat-warn);
 }
-.learn-diagram-node-title {
-  fill: var(--chat-text);
-  font-size: 12.5px;
-  font-weight: 500;
+.learn-diagram figcaption {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 8px 2px 0;
+  font-size: 12px;
+  color: var(--chat-dim);
 }
-.learn-diagram-node-level {
-  fill: var(--chat-muted);
-  font-size: 10.5px;
-  font-family: "Geist Mono", ui-monospace, monospace;
+.learn-diagram figcaption span {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+.learn-swatch {
+  width: 18px;
+  border-top: 2px solid var(--chat-accent);
+}
+.learn-swatch-user {
+  border-top: 2px dashed var(--chat-warn);
 }
 
-@media (max-width: 900px) {
-  .learn-wiki-tree {
-    width: 170px;
-    flex-basis: 170px;
+/* Chat turns its sidebar into an overlay below 760px; Learn slides it in as a drawer from the window bar. */
+@media (max-width: 759px) {
+  .learn-page .learn-sidebar {
+    transform: translateX(calc(-100% - 12px));
+    visibility: hidden;
+    transition:
+      transform 0.18s ease,
+      visibility 0s linear 0.18s;
   }
-  .learn-body {
-    position: relative;
+  .learn-page[data-drawer] .learn-sidebar {
+    transform: none;
+    visibility: visible;
+    transition-delay: 0s;
+  }
+  .learn-drawer-toggle {
+    display: inline-grid !important;
+  }
+  .learn-page[data-drawer] .learn-scrim {
+    display: block !important;
+    position: absolute;
+    inset: 0;
+    z-index: 25;
+    background: rgb(0 0 0 / 0.25);
+  }
+  .learn-study-head {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 2px 14px 10px;
+  }
+  .learn-study-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  .learn-progress-pop,
+  .learn-menu {
+    right: 14px;
+    max-width: calc(100% - 28px);
+  }
+  .learn-article {
+    padding: 16px 16px 40px;
+  }
+  .learn-continue {
+    flex-wrap: wrap;
   }
 }
-/* Chat turns its sidebar into an overlay below 760px; Learn has no collapse control, so stack it instead. */
-@media (max-width: 759px) {
-  .learn-page {
-    flex-direction: column;
-  }
+@media (prefers-reduced-motion: reduce) {
   .learn-page .learn-sidebar {
-    position: static;
-    inset: auto;
-    z-index: auto;
-    box-shadow: none;
-    width: auto;
-    flex: 0 0 auto;
-    max-height: 32vh;
-    border-right: 0;
-    border-bottom: 1px solid var(--chat-border);
-  }
-  .learn-page .learn-sidebar header {
-    min-height: 26px;
-  }
-  .learn-wiki-tree {
-    width: 150px;
-    flex-basis: 150px;
+    transition: none;
   }
 }

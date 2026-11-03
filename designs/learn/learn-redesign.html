@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Learn redesign mockup</title>
+<!--
+  U0 mockup for docs/plans/2026-11-02/21:36-learn-ui-redesign.md.
+  Static, self-contained; data is illustrative (mini-swe-agent shaped), not real study output.
+  Query params: view=overview|architecture|pending  theme=dark  popover=1  menu=1  hover=<moduleId>  drawer=1  lang=zh
+-->
+<style>
+:root {
+  --font: -apple-system, "SF Pro Text", "Segoe UI", Inter, system-ui, sans-serif;
+  --mono: "SF Mono", ui-monospace, Menlo, monospace;
+  --chat-bg: #fafaf8; --chat-sidebar: #f2f2ef; --chat-surface: #ffffff; --chat-raised: #f5f5f2;
+  --chat-border: #e3e4e0; --chat-border-strong: #d0d2cd; --chat-selected: #e8e9e5;
+  --chat-text: #202329; --chat-text-2: #3a3f47; --chat-muted: #535b65; --chat-dim: #686f7a;
+  --chat-accent: #365fae; --chat-ok: #267444; --chat-warn: #855b10; --chat-danger: #b03730;
+  --chat-send-bg: #202329; --chat-send-fg: #fafaf8;
+  --chat-shadow: 0 1px 2px #1a1d2310, 0 12px 32px #1a1d2318;
+  --used-by: #8a5a00;
+}
+[data-theme="dark"] {
+  --chat-bg: #111214; --chat-sidebar: #0c0d0f; --chat-surface: #17181b; --chat-raised: #15161a;
+  --chat-border: #23252a; --chat-border-strong: #2e3036; --chat-selected: #1e2026;
+  --chat-text: #e6e6e3; --chat-text-2: #c9cbcf; --chat-muted: #9a9da4; --chat-dim: #8b8e95;
+  --chat-accent: #7aa2f7; --chat-ok: #8fd6ae; --chat-warn: #e5b26b; --chat-danger: #f0948b;
+  --chat-send-bg: #e6e6e3; --chat-send-fg: #111214;
+  --chat-shadow: 0 1px 2px #0006, 0 16px 40px #0007;
+  --used-by: #e5b26b;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { font: 13px/1.5 var(--font); color: var(--chat-text); background: var(--chat-bg); -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; }
+svg.i { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+.app { display: flex; height: 100vh; overflow: hidden; }
+.rail { flex: 0 0 52px; background: var(--chat-sidebar); border-right: 1px solid var(--chat-border); display: flex; flex-direction: column; align-items: center; padding-top: 38px; gap: 6px; }
+.rail button { width: 36px; height: 36px; border: 0; border-radius: 9px; background: none; color: var(--chat-muted); display: grid; place-items: center; position: relative; }
+.rail button svg.i { width: 18px; height: 18px; }
+.rail button[aria-current] { background: var(--chat-selected); color: var(--chat-accent); }
+.rail button[aria-current]::before { content: ""; position: absolute; left: -8px; top: 9px; width: 3px; height: 18px; border-radius: 2px; background: var(--chat-accent); }
+.rail .spacer { flex: 1; }
+.rail .settings { margin-bottom: 14px; }
+
+/* Left column: study switcher + outline */
+.side { flex: 0 0 272px; background: var(--chat-sidebar); border-right: 1px solid var(--chat-border); display: flex; flex-direction: column; min-width: 0; }
+.side-top { padding: 38px 12px 10px; display: flex; gap: 6px; align-items: stretch; }
+.switcher { flex: 1; min-width: 0; text-align: left; border: 1px solid var(--chat-border); background: var(--chat-surface); border-radius: 9px; padding: 7px 10px; display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.switcher .txt { flex: 1; min-width: 0; }
+.switcher strong { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.switcher small { color: var(--chat-dim); font-family: var(--mono); font-size: 11px; }
+.icon-btn { width: 32px; border: 1px solid transparent; background: none; border-radius: 8px; color: var(--chat-muted); display: grid; place-items: center; cursor: pointer; }
+.icon-btn:hover, .icon-btn[aria-pressed="true"] { background: var(--chat-selected); color: var(--chat-text); }
+.outline { overflow: auto; padding: 4px 8px 16px; flex: 1; }
+.outline h3 { margin: 14px 8px 4px; font-size: 11px; font-weight: 600; letter-spacing: .02em; color: var(--chat-dim); display: flex; justify-content: space-between; }
+.outline h3 span:last-child { font-weight: 500; font-variant-numeric: tabular-nums; }
+.page-link { width: 100%; border: 0; background: none; text-align: left; border-radius: 7px; padding: 6px 8px; display: flex; gap: 8px; align-items: flex-start; color: var(--chat-text-2); cursor: pointer; line-height: 1.35; }
+.page-link:hover { background: var(--chat-selected); }
+.page-link[aria-current] { background: var(--chat-selected); color: var(--chat-text); font-weight: 600; }
+.page-link .t { flex: 1; min-width: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.page-link[data-state="pending"] .t { color: var(--chat-dim); }
+.st { margin-top: 1px; color: var(--chat-dim); }
+.st.read { color: var(--chat-ok); }
+.st.ready { color: var(--chat-accent); }
+.st.running { color: var(--chat-accent); animation: spin 1.2s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.legend { border-top: 1px solid var(--chat-border); padding: 8px 16px 12px; display: flex; gap: 12px; color: var(--chat-dim); font-size: 11px; flex-wrap: wrap; }
+.legend span { display: inline-flex; gap: 4px; align-items: center; }
+.legend svg.i { width: 12px; height: 12px; }
+
+/* Main */
+.main { flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--chat-bg); }
+.head { padding: 30px 28px 14px; display: flex; gap: 16px; align-items: center; border-bottom: 1px solid var(--chat-border); position: relative; }
+.head .title { flex: 1; min-width: 0; }
+.head h1 { margin: 0; font-size: 18px; font-weight: 650; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.head small { color: var(--chat-dim); font-size: 12px; }
+.head small code { font-family: var(--mono); font-size: 11.5px; }
+.head .actions { display: flex; gap: 6px; align-items: center; flex: none; }
+.head .icon-btn { height: 32px; }
+.drawer-btn { display: none; }
+.pill { border: 1px solid var(--chat-border); background: var(--chat-surface); border-radius: 999px; padding: 5px 10px 5px 8px; display: inline-flex; align-items: center; gap: 7px; cursor: pointer; font-variant-numeric: tabular-nums; }
+.pill .ring { width: 16px; height: 16px; }
+.pill .warn-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--chat-warn); }
+.primary { border: 0; border-radius: 8px; padding: 7px 12px; background: var(--chat-send-bg); color: var(--chat-send-fg); display: inline-flex; gap: 6px; align-items: center; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.secondary { border: 1px solid var(--chat-border-strong); border-radius: 8px; padding: 7px 12px; background: var(--chat-surface); display: inline-flex; gap: 6px; align-items: center; font-weight: 600; cursor: pointer; }
+
+.pop { position: absolute; top: 72px; background: var(--chat-surface); border: 1px solid var(--chat-border); border-radius: 12px; box-shadow: var(--chat-shadow); z-index: 10; }
+.progress-pop { right: 200px; width: 320px; padding: 14px 16px; }
+.progress-pop h4 { margin: 0 0 8px; font-size: 12px; color: var(--chat-dim); font-weight: 600; }
+.progress-pop ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.progress-pop li { display: flex; gap: 8px; align-items: flex-start; }
+.progress-pop li .grow { flex: 1; }
+.progress-pop li small { display: block; color: var(--chat-dim); }
+.progress-pop .ok { color: var(--chat-ok); }
+.progress-pop .warn { color: var(--chat-warn); }
+.progress-pop a { color: var(--chat-accent); text-decoration: none; }
+.menu-pop { right: 28px; width: 210px; padding: 5px; }
+.menu-pop button { width: 100%; border: 0; background: none; text-align: left; padding: 7px 10px; border-radius: 7px; display: flex; gap: 9px; align-items: center; cursor: pointer; }
+.menu-pop button:hover { background: var(--chat-selected); }
+.menu-pop hr { border: 0; border-top: 1px solid var(--chat-border); margin: 5px 4px; }
+.menu-pop .danger { color: var(--chat-danger); }
+
+.scroll { flex: 1; overflow: auto; }
+.content { max-width: 780px; margin: 0 auto; padding: 28px 32px 48px; }
+.content.wide { max-width: 1000px; }
+.content h2 { font-size: 22px; margin: 0 0 6px; letter-spacing: -.015em; }
+.lede { color: var(--chat-text-2); font-size: 14px; margin: 0 0 20px; max-width: 680px; }
+.kicker { font-size: 11px; font-weight: 600; color: var(--chat-dim); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+
+.continue { display: flex; gap: 16px; align-items: center; padding: 16px 18px; border: 1px solid var(--chat-border); background: var(--chat-surface); border-radius: 12px; margin-bottom: 26px; }
+.continue .grow { flex: 1; min-width: 0; }
+.continue strong { display: block; font-size: 14px; }
+.continue small { color: var(--chat-dim); }
+.bar { height: 6px; border-radius: 3px; background: var(--chat-selected); overflow: hidden; margin-top: 10px; display: flex; }
+.bar i { display: block; height: 100%; }
+.bar .r { background: var(--chat-ok); }
+.bar .g { background: var(--chat-accent); opacity: .45; }
+
+.levels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.level { border: 1px solid var(--chat-border); border-radius: 12px; background: var(--chat-surface); padding: 14px 14px 8px; }
+.level header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px; }
+.level header strong { font-size: 13.5px; }
+.level header span { color: var(--chat-dim); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.level p { margin: 0 0 8px; color: var(--chat-dim); font-size: 12px; }
+.level .page-link { padding: 5px 6px; margin-left: -6px; width: calc(100% + 12px); }
+.glossary-row { margin-top: 12px; border: 1px dashed var(--chat-border-strong); border-radius: 12px; padding: 12px 14px; display: flex; gap: 10px; align-items: center; color: var(--chat-text-2); }
+.glossary-row .grow { flex: 1; }
+
+.pager { display: flex; gap: 12px; margin-top: 36px; padding-top: 18px; border-top: 1px solid var(--chat-border); }
+.pager a { flex: 1; border: 1px solid var(--chat-border); border-radius: 10px; padding: 10px 14px; text-decoration: none; color: inherit; background: var(--chat-surface); }
+.pager a.next { text-align: right; }
+.pager a small { display: block; color: var(--chat-dim); font-size: 11.5px; }
+.pager a strong { font-weight: 600; }
+.pager .empty { flex: 1; }
+
+/* Architecture diagram: HTML boxes (wrapping titles) + SVG overlay edges */
+.diagram { position: relative; border: 1px solid var(--chat-border); border-radius: 14px; background: var(--chat-surface); padding: 6px 14px 14px; margin: 4px 0 8px; }
+.diagram svg.edges { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.layer { padding-top: 10px; }
+.layer + .layer { border-top: 1px dashed var(--chat-border); margin-top: 12px; }
+.layer h5 { margin: 0 0 8px; font-size: 11px; font-weight: 600; color: var(--chat-dim); letter-spacing: .02em; }
+.row { display: flex; gap: 12px; flex-wrap: wrap; }
+.mod { position: relative; z-index: 1; flex: 1 1 0; min-width: 150px; max-width: 290px; border: 1px solid var(--chat-border-strong); border-radius: 10px; background: var(--chat-raised); padding: 9px 11px; text-align: left; cursor: pointer; transition: opacity .15s, border-color .15s; }
+.mod strong { display: block; font-weight: 600; font-size: 12.5px; line-height: 1.35; }
+.mod small { color: var(--chat-dim); font-size: 11px; display: flex; gap: 6px; align-items: center; margin-top: 3px; }
+.mod small .lv { font-family: var(--mono); }
+.mod[data-state="pending"] strong { color: var(--chat-muted); font-weight: 500; }
+.diagram.focus .mod { opacity: .35; }
+.diagram.focus .mod.self { opacity: 1; border-color: var(--chat-text); box-shadow: 0 0 0 1px var(--chat-text); }
+.diagram.focus .mod.dep { opacity: 1; border-color: var(--chat-accent); }
+.diagram.focus .mod.user { opacity: 1; border-color: var(--used-by); }
+.edge { fill: none; stroke-width: 1.6; }
+.edge.dep { stroke: var(--chat-accent); }
+.edge.user { stroke: var(--used-by); stroke-dasharray: 4 3; }
+.diagram-foot { display: flex; gap: 16px; color: var(--chat-dim); font-size: 12px; margin: 8px 2px 22px; flex-wrap: wrap; }
+.diagram-foot span { display: inline-flex; gap: 6px; align-items: center; }
+.swatch { width: 18px; height: 0; border-top: 2px solid var(--chat-accent); }
+.swatch.u { border-top: 2px dashed var(--used-by); }
+.prose h3 { font-size: 15px; margin: 22px 0 6px; }
+.prose p { margin: 0 0 10px; color: var(--chat-text-2); font-size: 13.5px; line-height: 1.65; }
+.prose a { color: var(--chat-accent); }
+.prose code { font-family: var(--mono); font-size: 12px; background: var(--chat-raised); border: 1px solid var(--chat-border); border-radius: 4px; padding: 0 4px; }
+
+/* Not generated page */
+.pending-card { margin-top: 18px; border: 1px dashed var(--chat-border-strong); border-radius: 14px; padding: 28px; text-align: center; background: var(--chat-surface); }
+.pending-card .mark { width: 44px; height: 44px; border-radius: 12px; background: var(--chat-selected); display: grid; place-items: center; margin: 0 auto 12px; color: var(--chat-muted); }
+.pending-card .mark svg.i { width: 20px; height: 20px; }
+.pending-card p { color: var(--chat-text-2); margin: 0 auto 16px; max-width: 460px; }
+.pending-card .btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.pending-card small { display: block; margin-top: 12px; color: var(--chat-dim); }
+.related { margin-top: 22px; }
+.related h4 { font-size: 12px; color: var(--chat-dim); margin: 0 0 6px; font-weight: 600; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--chat-border); border-radius: 999px; padding: 3px 10px; background: var(--chat-surface); font-size: 12px; display: inline-flex; gap: 6px; align-items: center; }
+
+/* Narrow (<= 760px): outline becomes a drawer opened from the header */
+@media (max-width: 760px) {
+  .side { position: fixed; left: 52px; top: 0; bottom: 0; z-index: 20; box-shadow: var(--chat-shadow); transform: translateX(calc(-100% - 60px)); transition: transform .2s; }
+  body.drawer .side { transform: none; }
+  body.drawer .scrim { display: block; }
+  .scrim { display: none; position: fixed; inset: 0 0 0 52px; background: #0004; z-index: 15; }
+  .drawer-btn { display: grid; }
+  .head { padding: 30px 16px 12px; gap: 10px; flex-wrap: wrap; }
+  .head .title { flex-basis: calc(100% - 44px); }
+  .head .actions { width: 100%; }
+  .head .actions #gen-all { margin-left: auto; }
+  .content { padding: 20px 16px 40px; }
+  .levels { grid-template-columns: 1fr; }
+  .continue { flex-wrap: wrap; }
+  .progress-pop { right: 16px; left: 16px; width: auto; top: 112px; }
+  .menu-pop { right: 16px; top: 112px; }
+  .mod { min-width: 130px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="rail" aria-label="Features">
+    <button title="Chat"><svg class="i" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
+    <button title="Learn" aria-current="page"><svg class="i" viewBox="0 0 24 24"><path d="M22 10 12 5 2 10l10 5 10-5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></button>
+    <button title="Research"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></button>
+    <button title="Discuss"><svg class="i" viewBox="0 0 24 24"><path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2z"/><path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1"/></svg></button>
+    <div class="spacer"></div>
+    <button class="settings" title="Settings"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+  </nav>
+  <div class="scrim"></div>
+  <aside class="side" aria-label="Study outline">
+    <div class="side-top">
+      <button class="switcher" title="Switch study">
+        <span class="txt"><strong>mini-swe-agent</strong><small>SWE-agent · 04d809ceab</small></span>
+        <svg class="i" viewBox="0 0 24 24"><path d="m7 15 5 5 5-5M7 9l5-5 5 5"/></svg>
+      </button>
+      <button class="icon-btn" data-i18n-title="newStudy" title="New study"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+    </div>
+    <div class="outline" id="outline"></div>
+    <div class="legend" id="legend"></div>
+  </aside>
+  <main class="main">
+    <header class="head">
+      <button class="icon-btn drawer-btn" style="height:32px" title="Outline"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button>
+      <div class="title">
+        <h1 id="page-title"></h1>
+        <small id="page-meta"></small>
+      </div>
+      <div class="actions">
+        <button class="pill" id="progress-pill"></button>
+        <button class="secondary" id="gen-all"></button>
+        <button class="icon-btn" title="Source files"><svg class="i" viewBox="0 0 24 24"><path d="M20 10a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2.5a1 1 0 0 1-.8-.4l-.9-1.2A1 1 0 0 0 15 3h-2a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1Z"/><path d="M20 21a1 1 0 0 0 1-1v-3a1 1 0 0 0-1-1h-2.9a1 1 0 0 1-.9-.6l-.4-.8a1 1 0 0 0-.9-.6H13a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1Z"/><path d="M3 5a2 2 0 0 0 2 2h3"/><path d="M3 3v13a2 2 0 0 0 2 2h3"/></svg></button>
+        <button class="icon-btn" id="more-btn" title="More"><svg class="i" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+      </div>
+      <div class="pop progress-pop" id="progress-pop" hidden></div>
+      <div class="pop menu-pop" id="menu-pop" hidden></div>
+    </header>
+    <div class="scroll"><div class="content" id="content"></div></div>
+  </main>
+</div>
+<script>
+const q = new URLSearchParams(location.search);
+const zh = q.get("lang") === "zh";
+if (q.get("theme") === "dark") document.documentElement.dataset.theme = "dark";
+if (q.get("drawer") === "1") document.body.classList.add("drawer");
+const view = q.get("view") || "overview";
+
+const T = zh ? {
+  overview: "概览", architecture: "架构", glossary: "术语表", basics: "基础", core: "核心", deep: "深入",
+  level: n => `第 ${n} 级`, pagesReady: (r, t) => `${r}/${t} 页`, genAll: n => `生成剩余（${n}）`,
+  read: "已读", ready: "可阅读", pending: "未生成", running: "生成中",
+  start: "继续阅读", startHint: "按学习顺序，下一篇未读页面", progress: (r, g, t) => `已读 ${r} / ${t} 页 · 已生成 ${g} 页`,
+  prev: "上一页", next: "下一页", genThis: "生成此页", genThisHint: "使用本次学习的 Agent（Codex），只读访问固定 commit 的源码。",
+  notGen: "这一页还没有生成。", notGenBody: "生成后会说明这个模块的职责、关键文件和与其它模块的关系，引用可在应用内定位到源码。",
+  dependsOn: "依赖", usedBy: "被依赖", hoverHint: "悬停或用 Tab 聚焦模块查看依赖；点击打开模块页。",
+  stages: "进度", download: "下载", inventory: "清单", coverage: "覆盖 115/115 个源码文件", excluded: "排除了 2 个二进制、vendored 或超大文件", view: "查看",
+  github: "在 GitHub 打开", logs: "作业日志", del: "删除学习", lede: "一个极简的软件工程 Agent：一个交互循环、一个模型适配层和一个命令执行后端。",
+  whatIs: "这页讲什么", basicsDesc: "先读：入口与接口约定", coreDesc: "主循环、配置、模型与执行", deepDesc: "解析、批量评测与工具",
+} : {
+  overview: "Overview", architecture: "Architecture", glossary: "Glossary", basics: "Basics", core: "Core", deep: "Deep dive",
+  level: n => `Level ${n}`, pagesReady: (r, t) => `${r}/${t} pages`, genAll: n => `Generate remaining (${n})`,
+  read: "Read", ready: "Ready", pending: "Not generated", running: "Generating",
+  start: "Continue reading", startHint: "Next unread page in learning order", progress: (r, g, t) => `${r} of ${t} pages read · ${g} generated`,
+  prev: "Previous", next: "Next", genThis: "Generate this page", genThisHint: "Uses this study's agent (Codex) with read-only access to the pinned commit.",
+  notGen: "This page hasn't been generated yet.", notGenBody: "Once generated, it explains what this module is responsible for, its key files and how it relates to other modules, with citations you can open in the source viewer.",
+  dependsOn: "Depends on", usedBy: "Used by", hoverHint: "Hover or Tab to a module to see its dependencies; click to open its page.",
+  stages: "Progress", download: "Download", inventory: "Inventory", coverage: "Covers 115/115 source files", excluded: "2 binary, vendored or oversized files excluded", view: "View",
+  github: "Open on GitHub", logs: "Job logs", del: "Delete study", lede: "A minimal software-engineering agent: one interaction loop, a model adapter layer and a command execution backend.",
+  whatIs: "On this page", basicsDesc: "Start here: entry points and contracts", coreDesc: "Loop, configuration, models and execution", deepDesc: "Parsing, benchmarks and tools",
+};
+
+// Illustrative study: 13 pages, 5 generated, 1 generating, 3 read.
+const modules = [
+  { id: "app", title: "Application composition and command dispatch", level: 1, layer: 0, state: "read" },
+  { id: "bench", title: "Benchmark orchestration and batch runs", level: 3, layer: 0, state: "pending" },
+  { id: "traj", title: "Trajectory browsing interface", level: 3, layer: 0, state: "pending" },
+  { id: "contracts", title: "Component contracts and protocols", level: 1, layer: 1, state: "ready" },
+  { id: "config", title: "Configuration resolution and defaults", level: 2, layer: 1, state: "ready" },
+  { id: "loop", title: "Agent lifecycle and interaction loop", level: 2, layer: 1, state: "running" },
+  { id: "models", title: "Language model adapters and cost tracking", level: 2, layer: 2, state: "pending" },
+  { id: "envs", title: "Command execution backends", level: 2, layer: 2, state: "pending" },
+  { id: "parse", title: "Action parsing and message formatting", level: 3, layer: 2, state: "pending" },
+  { id: "tests", title: "Tests, documentation and examples", level: 3, layer: 3, state: "pending" },
+];
+const layers = ["Command entry points and applications", "Contracts, configuration and the agent loop", "Model and execution backends", "Verification and documentation"];
+const deps = { app: ["config", "loop", "models", "envs"], bench: ["config", "loop", "envs"], traj: ["contracts"], config: ["contracts"], loop: ["contracts", "parse", "models", "envs"], models: ["contracts"], envs: ["contracts"], parse: ["contracts"], tests: ["app", "loop", "models", "envs"] };
+const byId = Object.fromEntries(modules.map(m => [m.id, m]));
+const order = ["overview", "architecture", ...[1, 2, 3].flatMap(l => modules.filter(m => m.level === l).map(m => m.id)), "glossary"];
+const pageState = id => id === "overview" || id === "architecture" ? "read" : id === "glossary" ? "pending" : byId[id].state;
+const pageTitle = id => id === "overview" ? T.overview : id === "architecture" ? T.architecture : id === "glossary" ? T.glossary : byId[id].title;
+const current = view === "pending" ? "envs" : view;
+const counts = { read: order.filter(p => pageState(p) === "read").length, gen: order.filter(p => ["read", "ready"].includes(pageState(p))).length, total: order.length };
+const missing = order.filter(p => pageState(p) === "pending").length;
+
+const ICON = {
+  read: '<svg class="i st read" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>',
+  ready: '<svg class="i st ready" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/></svg>',
+  pending: '<svg class="i st" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke-dasharray="3 3"/></svg>',
+  running: '<svg class="i st running" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-6.2-8.6"/></svg>',
+  play: '<svg class="i" viewBox="0 0 24 24"><path d="m7 4 13 8-13 8z"/></svg>',
+  chevR: '<svg class="i" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>',
+  ok: '<svg class="i ok" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>',
+  warn: '<svg class="i warn" viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4M12 17h.01"/></svg>',
+  doc: '<svg class="i" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>',
+  book: '<svg class="i" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg>',
+  ext: '<svg class="i" viewBox="0 0 24 24"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>',
+  logs: '<svg class="i" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>',
+  trash: '<svg class="i" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>',
+};
+const link = (id, extra = "") => `<button class="page-link" data-state="${pageState(id)}" ${id === current ? 'aria-current="page"' : ""} ${extra}>${ICON[pageState(id)]}<span class="t">${pageTitle(id)}</span></button>`;
+
+// Outline
+const lvName = { 1: T.basics, 2: T.core, 3: T.deep };
+let out = link("overview") + link("architecture");
+for (const l of [1, 2, 3]) {
+  const ms = modules.filter(m => m.level === l);
+  out += `<h3><span>${T.level(l)} · ${lvName[l]}</span><span>${ms.filter(m => m.state === "read").length}/${ms.length}</span></h3>` + ms.map(m => link(m.id)).join("");
+}
+out += `<h3><span>&nbsp;</span></h3>` + link("glossary");
+document.getElementById("outline").innerHTML = out;
+document.getElementById("legend").innerHTML = ["read", "ready", "running", "pending"].map(s => `<span>${ICON[s]}${T[s]}</span>`).join("");
+
+// Header
+document.getElementById("page-title").textContent = view === "overview" ? "SWE-agent/mini-swe-agent" : pageTitle(current);
+document.getElementById("page-meta").innerHTML = view === "overview"
+  ? `<code>04d809ceab</code> · Codex · gpt-5`
+  : view === "architecture" ? `SWE-agent/mini-swe-agent · ${T.architecture}` : `SWE-agent/mini-swe-agent · ${T.level(byId[current].level)} · ${lvName[byId[current].level]}`;
+const pct = counts.gen / counts.total;
+document.getElementById("progress-pill").innerHTML =
+  `<svg class="ring" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="none" stroke="var(--chat-selected)" stroke-width="3"/><circle cx="10" cy="10" r="8" fill="none" stroke="var(--chat-accent)" stroke-width="3" stroke-dasharray="${(pct * 50.3).toFixed(1)} 60" transform="rotate(-90 10 10)"/></svg>${T.pagesReady(counts.gen, counts.total)}<span class="warn-dot" title="${T.excluded}"></span>`;
+document.getElementById("gen-all").innerHTML = ICON.play + T.genAll(missing);
+
+if (q.get("popover") === "1") {
+  const pop = document.getElementById("progress-pop");
+  pop.hidden = false;
+  pop.innerHTML = `<h4>${T.stages}</h4><ol>
+    <li>${ICON.ok}<span class="grow">${T.download}<small><code>04d809ceab</code> · main</small></span></li>
+    <li>${ICON.warn}<span class="grow">${T.inventory}<small>${T.coverage}</small><small>${T.excluded} · <a href="#">${T.view}</a></small></span></li>
+    <li>${ICON.ok}<span class="grow">${T.architecture}<small>4 layers · 10 modules</small></span></li>
+    <li>${ICON.running.replace("st running", "st running")}<span class="grow">${T.pagesReady(counts.gen, counts.total)}<small>${T.running}: ${byId.loop.title}</small></span></li>
+  </ol>`;
+}
+if (q.get("menu") === "1") {
+  const menu = document.getElementById("menu-pop");
+  menu.hidden = false;
+  menu.innerHTML = `<button>${ICON.ext}${T.github}</button><button>${ICON.logs}${T.logs}</button><hr><button class="danger">${ICON.trash}${T.del}…</button>`;
+}
+
+// Pager
+function pager(id) {
+  const i = order.indexOf(id), p = order[i - 1], n = order[i + 1];
+  return `<nav class="pager">${p ? `<a href="#"><small>← ${T.prev}</small><strong>${pageTitle(p)}</strong></a>` : '<span class="empty"></span>'}${n ? `<a class="next" href="#"><small>${T.next} →</small><strong>${pageTitle(n)}</strong></a>` : '<span class="empty"></span>'}</nav>`;
+}
+
+const content = document.getElementById("content");
+if (view === "overview") {
+  const nextUnread = order.find(p => pageState(p) === "ready");
+  const levelCard = l => {
+    const ms = modules.filter(m => m.level === l);
+    const desc = { 1: T.basicsDesc, 2: T.coreDesc, 3: T.deepDesc }[l];
+    return `<section class="level"><header><strong>${T.level(l)} · ${lvName[l]}</strong><span>${ms.filter(m => m.state === "read").length}/${ms.length} ${T.read.toLowerCase()}</span></header><p>${desc}</p>${ms.map(m => link(m.id)).join("")}</section>`;
+  };
+  content.innerHTML = `
+    <div class="kicker">${T.overview}</div>
+    <h2>mini-swe-agent</h2>
+    <p class="lede">${T.lede}</p>
+    <div class="continue">
+      <div class="grow">
+        <small>${T.startHint}</small>
+        <strong>${pageTitle(nextUnread)}</strong>
+        <div class="bar"><i class="r" style="width:${counts.read / counts.total * 100}%"></i><i class="g" style="width:${(counts.gen - counts.read) / counts.total * 100}%"></i></div>
+        <small style="display:block;margin-top:6px">${T.progress(counts.read, counts.gen, counts.total)}</small>
+      </div>
+      <button class="primary">${T.start}${ICON.chevR}</button>
+    </div>
+    <div class="levels">${[1, 2, 3].map(levelCard).join("")}</div>
+    <div class="glossary-row">${ICON.book}<span class="grow">${T.glossary} · ${zh ? "24 个术语" : "24 terms"}</span>${ICON.pending}<span style="color:var(--chat-dim)">${T.pending}</span></div>
+    ${pager("overview")}`;
+} else if (view === "architecture") {
+  content.classList.add("wide");
+  const focus = q.get("hover");
+  const users = focus ? modules.filter(m => (deps[m.id] || []).includes(focus)).map(m => m.id) : [];
+  const fdeps = focus ? deps[focus] || [] : [];
+  const cls = id => !focus ? "" : id === focus ? "self" : fdeps.includes(id) ? "dep" : users.includes(id) ? "user" : "";
+  content.innerHTML = `
+    <div class="kicker">${T.architecture}</div>
+    <h2>${zh ? "分层与模块" : "Layers and modules"}</h2>
+    <p class="lede">${zh ? "上层模块依赖下层的接口约定；模型与命令执行后端可以独立替换。" : "Upper layers build on the contracts below; model adapters and execution backends can be swapped independently."}</p>
+    <div class="diagram ${focus ? "focus" : ""}" id="diagram">
+      <svg class="edges" id="edges"></svg>
+      ${layers.map((name, i) => `<div class="layer"><h5>${name}</h5><div class="row">${modules.filter(m => m.layer === i).map(m => `<button class="mod ${cls(m.id)}" data-id="${m.id}" data-state="${m.state}"><strong>${m.title}</strong><small><span class="lv">L${m.level}</span>${ICON[m.state]}${T[m.state]}</small></button>`).join("")}</div></div>`).join("")}
+    </div>
+    <div class="diagram-foot"><span><i class="swatch"></i>${T.dependsOn}</span><span><i class="swatch u"></i>${T.usedBy}</span><span>${T.hoverHint}</span></div>
+    <div class="prose">
+      <h3>${zh ? "一次运行的主路径" : "The main path of one run"}</h3>
+      <p>${zh ? "入口脚本解析配置，构造模型与执行后端，然后调用" : "An entry script resolves configuration, builds a model and an execution backend, then calls"} <code>agent.run()</code>${zh ? "。主循环反复向模型请求下一步动作，解析出命令交给后端执行，并把输出作为下一条消息。" : ". The loop repeatedly asks the model for the next action, parses out a command, hands it to the backend and feeds the output back as the next message."} <a href="#">${byId.loop.title}</a></p>
+      <h3>${zh ? "替换点" : "Extension points"}</h3>
+      <p>${zh ? "模型适配层和命令执行后端都只依赖" : "Both the model adapters and execution backends depend only on"} <a href="#">${byId.contracts.title}</a>${zh ? "，因此新增后端不需要修改主循环。" : ", so adding a backend never touches the loop."}</p>
+    </div>
+    ${pager("architecture")}`;
+  if (focus) requestAnimationFrame(() => drawEdges(focus, fdeps, users));
+} else {
+  const m = byId[current];
+  const ds = deps[m.id] || [], us = modules.filter(x => (deps[x.id] || []).includes(m.id));
+  content.innerHTML = `
+    <div class="kicker">${T.level(m.level)} · ${lvName[m.level]}</div>
+    <h2>${m.title}</h2>
+    <div class="pending-card">
+      <div class="mark">${ICON.doc}</div>
+      <p><strong>${T.notGen}</strong><br>${T.notGenBody}</p>
+      <div class="btns"><button class="primary">${ICON.play}${T.genThis}</button><button class="secondary">${T.genAll(missing)}</button></div>
+      <small>${T.genThisHint}</small>
+    </div>
+    <div class="related"><h4>${T.dependsOn}</h4><div class="chips">${ds.map(d => `<span class="chip">${ICON[byId[d].state]}${byId[d].title}</span>`).join("")}</div></div>
+    <div class="related"><h4>${T.usedBy}</h4><div class="chips">${us.map(d => `<span class="chip">${ICON[d.state]}${d.title}</span>`).join("")}</div></div>
+    ${pager(m.id)}`;
+}
+
+function drawEdges(focus, fdeps, users) {
+  const box = document.getElementById("diagram").getBoundingClientRect();
+  const r = id => document.querySelector(`.mod[data-id="${id}"]`).getBoundingClientRect();
+  const path = (a, b, kind) => {
+    const A = r(a), B = r(b);
+    if (Math.abs(B.top - A.top) < 4) {
+      // Same row: dip into the gap below the row instead of crossing the boxes in between.
+      const sx = A.left + A.width / 2 - box.left, tx = B.left + B.width / 2 - box.left, y = A.bottom - box.top, dip = y + 26;
+      return `<path class="edge ${kind}" d="M${sx},${y} C${sx},${dip} ${tx},${dip} ${tx},${B.bottom - box.top + 1}" marker-end="url(#arrow-${kind})"/>`;
+    }
+    const down = B.top > A.top + 4;
+    const x1 = A.left + A.width / 2 - box.left, x2 = B.left + B.width / 2 - box.left;
+    const y1 = (down ? A.bottom : A.top) - box.top, y2 = (down ? B.top : B.bottom) - box.top;
+    const bend = (y2 - y1) / 2;
+    return `<path class="edge ${kind}" d="M${x1},${y1} C${x1},${y1 + bend} ${x2},${y2 - bend} ${x2},${y2}" marker-end="url(#arrow-${kind})"/>`;
+  };
+  document.getElementById("edges").innerHTML =
+    `<defs>${["dep", "user"].map(k => `<marker id="arrow-${k}" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8 z" fill="${k === "dep" ? "var(--chat-accent)" : "var(--used-by)"}"/></marker>`).join("")}</defs>` +
+    fdeps.map(d => path(focus, d, "dep")).join("") + users.map(u => path(u, focus, "user")).join("");
+}
+</script>
+</body>
+</html>

@@ -41,7 +41,7 @@ const files: Record<string, string> = {
     ).join("\n") + "\n",
   "src/colors.rs": 'pub const COLOR_NULL: &str = "\\x1b[38;5;242m";\npub const COLOR_ASCII: &str = "\\x1b[36m";\n',
 };
-const architecture: LearnArchitecture = {
+const hexylArchitecture: LearnArchitecture = {
   schemaVersion: 1,
   project: {
     name: "hexyl",
@@ -104,6 +104,41 @@ const architecture: LearnArchitecture = {
     { level: 3, title: "Details", goal: "Colour rules", moduleIds: ["colors"] },
   ],
 };
+// mini-swe-agent scale (10 modules / 4 layers, long names) for the architecture diagram acceptance check.
+const mod = (id: string, title: string, level: number, dependsOn: string[]) => ({
+  id,
+  title,
+  summary: `${title}: synthetic module summary.`,
+  level,
+  order: 0,
+  paths: [`src/${id}.py`],
+  dependsOn,
+  keyFiles: [],
+});
+const largeArchitecture: LearnArchitecture = {
+  schemaVersion: 1,
+  project: { ...hexylArchitecture.project, name: "mini-swe-agent", techStack: ["Python"] },
+  layers: [
+    { id: "entry", title: "Command entry points and run scripts", moduleIds: ["run_cli", "batch"] },
+    { id: "loop", title: "Agent loop and control flow", moduleIds: ["agent", "interactive", "textual"] },
+    { id: "models", title: "Model adapters", moduleIds: ["litellm", "anthropic", "registry"] },
+    { id: "env", title: "Execution environments and shared contracts", moduleIds: ["environments", "config"] },
+  ],
+  modules: [
+    mod("run_cli", "Command line runners (mini, mini-extra)", 1, ["interactive", "textual", "config", "registry"]),
+    mod("batch", "Batch runner for SWE-bench instances", 2, ["agent", "environments", "registry", "config"]),
+    mod("agent", "Default agent step loop", 1, ["environments", "registry", "config"]),
+    mod("interactive", "Interactive agent with human confirmation", 2, ["agent"]),
+    mod("textual", "Textual terminal UI agent", 3, ["agent"]),
+    mod("litellm", "LiteLLM model adapter", 2, []),
+    mod("anthropic", "Anthropic model with prompt caching", 3, ["litellm"]),
+    mod("registry", "Model registry and cost tracking", 3, ["litellm", "anthropic"]),
+    mod("environments", "Local, Docker and Singularity execution environments", 2, []),
+    mod("config", "Configuration files and prompt templates", 2, []),
+  ],
+  learningPath: [1, 2, 3].map((level) => ({ level, title: `Level ${level}`, goal: "Synthetic goal", moduleIds: [] })),
+};
+const architecture = scenario === "large" ? largeArchitecture : hexylArchitecture;
 const pages: Record<string, string> = {
   overview:
     "# hexyl\n\nA colourful command-line hex viewer.\n\n## Tech stack\n\n- Rust\n- clap\n\n## Entry points\n\n- [src/main.rs:10](loom-src:src/main.rs#L10-L14) — Parses options and drives the printer\n\n## Learning path\n\n### 1. Run it\n\n1. [Command line](loom-wiki:module/cli)\n2. [Printer](loom-wiki:module/printer)\n",
@@ -112,6 +147,16 @@ const pages: Record<string, string> = {
   "module:cli":
     "# Command line\n\n## What it does\n\n`main` parses options with clap ([main.rs:10-11](loom-src:src/main.rs#L10-L11)) and hands the reader to the [Printer](loom-wiki:module/printer).\n\n## Walkthrough\n\n1. `Opt::parse()` reads argv.\n2. The printer is built for stdout ([main.rs:12](loom-src:src/main.rs#L12-L12)).\n3. `print_all` streams the input ([lib.rs:40-45](loom-src:src/lib.rs#L40-L45)).\n\n| Step | Source |\n|---|---|\n| Parse | [main.rs](loom-src:src/main.rs#L11-L11) |\n| A stale reference | [gone.rs](loom-src:src/gone.rs#L1-L2) |\n",
 };
+if (scenario === "large")
+  pages.architecture = `# mini-swe-agent — Architecture\n\n## Layers and modules\n\n${architecture.layers
+    .map(
+      (layer) =>
+        `### ${layer.title}\n\n${layer.moduleIds
+          .map((id) => architecture.modules.find((module) => module.id === id)!)
+          .map((module) => `#### [${module.title}](loom-wiki:module/${module.id})\n\n${module.summary}\n`)
+          .join("\n")}`,
+    )
+    .join("\n")}`;
 let sequence = 0;
 const now = () => Date.now();
 const done = (stage: string): LearnStageState => ({
@@ -165,6 +210,12 @@ const study = (id: string, extra: Partial<LearnStudy> = {}): LearnStudy => ({
   ...extra,
 });
 const studies: LearnStudy[] = scenario === "empty" ? [] : [study("study-preview")];
+if (scenario === "large")
+  studies[0] = study("study-preview", {
+    url: "https://github.com/SWE-agent/mini-swe-agent",
+    owner: "SWE-agent",
+    repo: "mini-swe-agent",
+  });
 if (scenario === "running")
   studies[0] = study("study-preview", {
     stages: [
