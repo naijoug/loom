@@ -1,0 +1,21 @@
+Loom local dev stopped
+Starting Loom desktop app at http://127.0.0.1:1420...
+Stop: press Ctrl+C, or run scripts/debug.sh stop from another terminal.
+[loom-startup] {"at":1793182627841,"automaticReloads":0,"event":"native_ready","generation":0,"phase":"Loading","pid":46571}
+[loom-startup] {"at":1793182628111,"automaticReloads":0,"event":"navigation_started","generation":1,"phase":"Loading","pid":46571}
+[loom-startup] {"at":1793182628118,"automaticReloads":0,"event":"navigation_finished","generation":1,"phase":"Loading","pid":46571}
+[loom-startup] {"at":1793182643114,"automaticReloads":1,"event":"ready_timeout","generation":2,"phase":"Reloading","pid":46571}
+[loom-startup] {"at":1793182643115,"automaticReloads":1,"event":"automatic_reload","generation":2,"phase":"Reloading","pid":46571}
+[loom-startup] {"at":1793182643120,"automaticReloads":1,"event":"navigation_started","generation":3,"phase":"Loading","pid":46571}
+[loom-startup] {"at":1793182643122,"automaticReloads":1,"event":"navigation_finished","generation":3,"phase":"Loading","pid":46571}
+[loom-startup] {"at":1793182643161,"automaticReloads":1,"event":"interface_ready","generation":3,"phase":"Ready","pid":46571}
+[loom-startup] {"at":1793182703318,"automaticReloads":1,"event":"manual_reload_requested","generation":3,"phase":"Ready","pid":46571}
+[loom-startup] {"at":1793182705930,"automaticReloads":1,"event":"manual_reload","generation":4,"phase":"Reloading","pid":46571}
+[loom-startup] {"at":1793182706214,"automaticReloads":1,"event":"navigation_started","generation":5,"phase":"Loading","pid":46571}
+[loom-startup] {"at":1793182706217,"automaticReloads":1,"event":"navigation_finished","generation":5,"phase":"Loading","pid":46571}
+[loom-startup] {"at":1793182706233,"automaticReloads":1,"event":"interface_ready","generation":5,"phase":"Ready","pid":46571}
+[loom-startup] {"at":1793182843427,"automaticReloads":1,"event":"manual_reload_requested","generation":5,"phase":"Ready","pid":46571}
+[loom-startup] {"at":1793182850924,"automaticReloads":1,"event":"manual_reload","generation":6,"phase":"Reloading","pid":46571}
+[loom-startup] {"at":1793182851201,"automaticReloads":1,"event":"navigation_started","generation":7,"phase":"Loading","pid":46571}
+[loom-startup] {"at":1793182851204,"automaticReloads":1,"event":"navigation_finished","generation":7,"phase":"Loading","pid":46571}
+[loom-startup] {"at":1793182851245,"automaticReloads":1,"event":"interface_ready","generation":7,"phase":"Ready","pid":46571}

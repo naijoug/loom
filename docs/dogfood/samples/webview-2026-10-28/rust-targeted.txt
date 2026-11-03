@@ -1,0 +1,26 @@
+   Compiling loom v0.1.0 (/Users/guojian/Workspace/naijoug/loom/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 18.88s
+     Running unittests src/lib.rs (src-tauri/target/debug/deps/loom_lib-d29bd1656c194ecb)
+
+running 6 tests
+test webview_startup::tests::reload_that_never_starts_navigation_is_bounded ... ok
+test webview_startup::tests::completed_navigation_is_not_interface_readiness ... ok
+test webview_startup::tests::missing_ui_gets_one_retry_then_native_failure_without_looping ... ok
+test webview_startup::tests::explicit_retry_can_recover_without_restoring_automatic_budget ... ok
+test webview_startup::tests::stale_ack_and_timer_cannot_complete_or_reload_new_document ... ok
+test webview_startup::tests::healthy_interface_never_auto_reloads_even_after_later_navigation ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 352 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (src-tauri/target/debug/deps/loom-6e70af2b9f42cf46)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/bin/loom-skills.rs (src-tauri/target/debug/deps/loom_skills-b9b2bb0344a1eecd)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

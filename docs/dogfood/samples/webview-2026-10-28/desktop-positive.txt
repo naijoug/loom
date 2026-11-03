@@ -1,0 +1,9 @@
+
+> loom@0.1.0 smoke:desktop /Users/guojian/Workspace/naijoug/loom
+> ./scripts/desktop-smoke.sh
+
+Loom local dev stopped
+OK   desktop cycle 1: interface_ready
+OK   desktop cycle 2: interface_ready
+Desktop launch/restart readiness smoke passed (native GUI appearance still requires observation)
+Logs: /var/folders/wh/8gkvgk297s392p974p39b0s40000gp/T//loom-desktop-smoke.ChSkad

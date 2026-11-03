@@ -20,6 +20,7 @@ mod settings;
 pub mod skills;
 mod source_files;
 mod storage;
+mod webview_startup;
 
 use serde::Serialize;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -60,6 +61,8 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(app_update::AppUpdate::default())
         .manage(models::IdGenerator::default())
+        .manage(webview_startup::Startup::default())
+        .on_page_load(|webview, payload| webview_startup::page_load(webview, payload.event()))
         .invoke_handler(tauri::generate_handler![
             app_update::get_update_state,
             app_update::check_for_updates,
@@ -68,6 +71,8 @@ pub fn run() {
             app_update::load_update_drafts,
             app_update::save_update_drafts,
             health_check,
+            webview_startup::webview_startup_context,
+            webview_startup::report_webview_startup,
             agent::registry::create_agent,
             agent::registry::delete_agent,
             agent::diagnostics::diagnose_agents,
@@ -147,10 +152,13 @@ pub fn run() {
         ]);
     #[cfg(target_os = "macos")]
     let builder = builder
+        .on_web_content_process_terminate(webview_startup::content_terminated)
         .menu(desktop_menu::build)
         .on_menu_event(|app, event| {
             if event.id().as_ref() == desktop_menu::QUIT_ID {
                 app.exit(0);
+            } else if event.id().as_ref() == desktop_menu::RELOAD_ID {
+                webview_startup::request_reload(app);
             }
         });
     let app = builder
@@ -159,6 +167,9 @@ pub fn run() {
     chat::shutdown::install_signal_handlers(app.handle());
     app_update::setup(app.handle());
     app.run(|app, event| {
+        if matches!(&event, tauri::RunEvent::Ready) {
+            webview_startup::started(app);
+        }
         if !app_update::handle_event(app, &event) {
             chat::shutdown::handle_event(app, event);
         }

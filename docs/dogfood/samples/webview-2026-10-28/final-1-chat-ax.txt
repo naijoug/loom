@@ -1,0 +1,61 @@
+The following is a diff from the previous accessibility tree for Window: "Loom" with ~ and + representing changed and added elements, respectively. Removed elements are summarized by ID range.
+Removed element IDs: 26-34
++				45 heading P8 native acceptance: explain bounded queues in…, Value: 1
++					46 text P8 native acceptance: explain bounded queues in…
++				47 button Export chat
++				48 summary More actions, Value: off
++				49 text P8 native acceptance: explain bounded queues in twelve short numbered points. Do not use tools, read files, or change anything. End with P8-CHAT-DONE.
++				50 content list
++					51 container A bounded queue holds a fixed maximum number of items.
++						52 list marker 1
++						53 text A bounded queue holds a fixed maximum number of items.
++					54 container Producers add items; consumers remove them.
++						55 list marker 2
++						56 text Producers add items; consumers remove them.
++					57 container Its capacity limits how many items can wait.
++						58 list marker 3
++						59 text Its capacity limits how many items can wait.
++					60 container When full, it cannot accept items normally.
++						61 list marker 4
++						62 text When full, it cannot accept items normally.
++					63 container Producers may block until space becomes available.
++						64 list marker 5
++						65 text Producers may block until space becomes available.
++					66 container Alternatively, additions may fail or time out.
++						67 list marker 6
++						68 text Alternatively, additions may fail or time out.
++					69 container Some queues drop items according to a defined policy.
++						70 list marker 7
++						71 text Some queues drop items according to a defined policy.
++					72 container These limits help prevent uncontrolled memory growth.
++						73 list marker 8
++						74 text These limits help prevent uncontrolled memory growth.
++					75 container Blocking creates backpressure, slowing producers.
++						76 list marker 9
++						77 text Blocking creates backpressure, slowing producers.
++					78 container Larger queues absorb bursts but can increase waiting time.
++						79 list marker 10
++						80 text Larger queues absorb bursts but can increase waiting time.
++					81 container Thread-safe queues coordinate concurrent producers and consumers.
++						82 list marker 11
++						83 text Thread-safe queues coordinate concurrent producers and consumers.
++					84 container Monitor queue depth, wait times, and dropped items.
++						85 list marker 12
++						86 text Monitor queue depth, wait times, and dropped items.
++				87 text P8-CHAT-DONE
++				88 button (collapsed) Completed · Execution logs · 32.9s, Secondary Actions: Expand
++				89 text P8 native stop test: write a detailed 100-point explanation of bounded queues. Do not use tools.
++				90 text （已停止）
++				91 button (collapsed) Stopped · Execution logs · 16.2s, Secondary Actions: Expand
++				92 text Reply only P8-STOP-RECOVERED. Do not use tools.
++				93 text P8-STOP-RECOVERED
++				94 button (collapsed) Completed · Execution logs · 27.4s, Secondary Actions: Expand
++				95 text After restarting Loom, reply only P8-RESTART-OK. Do not use tools.
++				96 text P8-RESTART-OK
++				97 button (collapsed) Completed · Execution logs · 29.7s, Secondary Actions: Expand
++				98 text entry area (settable) Message, Value: [text entry area: Message], Placeholder: Ask about this project…
++					99 text Ask about this project…
++				100 pop up button Select Agent
++				101 pop up button Permissions: Read-only, Help: Reads and explores without changing files
++				102 button (disabled) Send message, Help: Send message (Enter)
+The focused UI element is 2 HTML content Description: Loom, URL: tauri://localhost

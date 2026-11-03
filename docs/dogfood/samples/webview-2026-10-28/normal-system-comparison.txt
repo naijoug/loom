@@ -1,0 +1,5 @@
+Timestamp               Ty Process[PID:TID]
+2026-10-28 02:47:27.731 Df loom[31501:6c329d] [com.apple.AppKit:StateRestoration] -[NSApplication(NSWindowRestoration) restoreWindowWithIdentifier:state:completionHandler:] identifier=(null) className=(null)
+2026-10-28 02:47:27.731 E  loom[31501:6c329d] [com.apple.AppKit:StateRestoration] -[NSApplication(NSWindowRestoration) restoreWindowWithIdentifier:state:completionHandler:] Unable to find className=(null)
+2026-10-28 02:47:27.900 Df loom[31501:6c3335] [com.apple.SkyLight:default] WebContent[31522] Failed to look up the port for "com.apple.windowserver.active" (1)
+2026-10-28 02:47:28.116 Df loom[31501:6c329d] [com.apple.WebKit:Loading] 0x93758c018 - [pageProxyID=7, webPageID=8, PID=31522] WebPageProxy::didGeneratePageLoadTiming: url=<private> firstVisualLayout=0.008 firstMeaningfulPaint=0.116 domContentLoaded=0.078 loadEvent=0.005 subresourcesFinished=0.005

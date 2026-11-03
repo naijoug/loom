@@ -1,0 +1,17 @@
+Window: "Unknown", App: Loom.
+0 sheet Description: alert, Secondary Actions: Raise
+	1 image Loom critical alert
+	2 text Loom Loom could not open its interface. Saved chats and project data have not been removed. Retry loading, or close Loom.
+
+Loom 未能打开界面。已保存的会话与项目数据未被删除。可以重试加载，或关闭 Loom。
+	3 button Close / 关闭, ID: action-button-2
+	4 button Retry / 重试, ID: action-button-1
+5 menu bar
+	6 Loom
+	7 File
+	8 Edit
+	9 View
+	10 Window
+	11 Help
+
+The focused UI element is 0 sheet Description: alert, Secondary Actions: Raise

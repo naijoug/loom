@@ -1,0 +1,7 @@
+Loom local dev stopped
+Starting Loom desktop app at http://127.0.0.1:1420...
+Stop: press Ctrl+C, or run scripts/debug.sh stop from another terminal.
+[loom-startup] {"at":1793183524268,"automaticReloads":0,"event":"native_ready","generation":0,"phase":"Loading","pid":53391}
+[loom-startup] {"at":1793183524760,"automaticReloads":0,"event":"navigation_started","generation":1,"phase":"Loading","pid":53391}
+[loom-startup] {"at":1793183524772,"automaticReloads":0,"event":"navigation_finished","generation":1,"phase":"Loading","pid":53391}
+[loom-startup] {"at":1793183524852,"automaticReloads":0,"event":"interface_ready","generation":1,"phase":"Ready","pid":53391}

@@ -1,0 +1,873 @@
+Timestamp               Ty Process[PID:TID]
+2026-10-28 00:00:10.055 Df loom[86638:649ac1] [com.apple.runningboard:process] Removing all cached process handles
+2026-10-28 00:00:10.069 A  loom[86638:649ac7] (AppIntents) appintents:register process
+2026-10-28 00:00:10.069 Df loom[86638:649ac7] [com.apple.appintents:Connection] Created a new Process Instance Registry XPC connection (inactive)
+2026-10-28 00:00:10.071 Df loom[86638:649ac3] [com.apple.appintents:Connection] Process Instance Registry XPC connection has been interrupted
+2026-10-28 00:00:10.071 Df loom[86638:649ad9] [com.apple.appintents:Connection] Created a new Process Instance Registry XPC connection (inactive)
+2026-10-28 00:00:10.071 A  loom[86638:649ad9] (AppIntents) appintents:register process
+2026-10-28 00:00:10.071 Df loom[86638:649ad9] [com.apple.appintents:Connection] Created a new Process Instance Registry XPC connection (inactive)
+2026-10-28 00:00:10.071 Df loom[86638:649ac7] [com.apple.appintents:Connection] Process Instance Registry XPC connection has been interrupted
+2026-10-28 00:00:10.071 E  loom[86638:649ad9] [com.apple.appintents:Connection] Unable to re-register with Process Instance Registry, error: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.linkd.autoShortcut" UserInfo={NSDebugDescription=connection to service named com.apple.linkd.autoShortcut}
+2026-10-28 00:00:10.072 Df loom[86638:649ac3] [com.apple.appintents:Connection] Created a new Process Instance Registry XPC connection (inactive)
+2026-10-28 00:00:10.072 A  loom[86638:649ac3] (AppIntents) appintents:register process
+2026-10-28 00:00:10.072 Df loom[86638:649ac3] [com.apple.appintents:Connection] Created a new Process Instance Registry XPC connection (inactive)
+2026-10-28 00:00:10.072 Df loom[86638:649ad9] [com.apple.appintents:Connection] Process Instance Registry XPC connection has been interrupted
+2026-10-28 00:00:10.072 E  loom[86638:649ac3] [com.apple.appintents:Connection] Unable to re-register with Process Instance Registry, error: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.linkd.autoShortcut" UserInfo={NSDebugDescription=connection to service named com.apple.linkd.autoShortcut}
+2026-10-28 00:00:10.072 Df loom[86638:649ac7] [com.apple.appintents:Connection] Created a new Process Instance Registry XPC connection (inactive)
+2026-10-28 00:00:10.072 A  loom[86638:649ac7] (AppIntents) appintents:register process
+2026-10-28 00:00:10.072 Df loom[86638:649ac7] [com.apple.appintents:Connection] Created a new Process Instance Registry XPC connection (inactive)
+2026-10-28 00:00:10.072 Df loom[86638:649ac3] [com.apple.appintents:Connection] Process Instance Registry XPC connection has been interrupted
+2026-10-28 00:00:10.072 E  loom[86638:649ac7] [com.apple.appintents:Connection] Unable to re-register with Process Instance Registry, error: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.linkd.autoShortcut" UserInfo={NSDebugDescription=connection to service named com.apple.linkd.autoShortcut}
+2026-10-28 00:00:10.463 Df loom[86638:649ac1] (WebKit) 0x71b2fc508 - WebsiteDataStore::WebsiteDataStore sessionID=1 identifier=null
+2026-10-28 00:00:10.483 Df loom[86638:649ac1] (WebKit) 0x1230980e0 - [PID=0] WebProcessCache::updateCapacity: Cache is disabled because process swap on navigation is disabled
+2026-10-28 00:00:10.492 Df loom[86638:649ac7] [com.apple.xpc:connection] [0x71b08f0c0] activating connection: mach=true listener=false peer=false name=com.apple.webprivacyd
+2026-10-28 00:00:10.492 Df loom[86638:649ac1] [com.apple.WebKit:Process] 0x71b2fd688 - PageConfiguration::delaysWebProcessLaunchUntilFirstLoad() -> true because of associated processPool value
+2026-10-28 00:00:10.492 Df loom[86638:649ac1] [com.apple.WebKit:Process] 0x103a1c8f8 - WebProcessPool::createWebPage: delaying WebProcess launch until first load
+2026-10-28 00:00:10.492 Df loom[86638:649ac1] [com.apple.WebKit:Process] 0x1230b40c0 - [PID=0] WebProcessProxy::constructor:
+2026-10-28 00:00:10.492 Df loom[86638:649ac1] [com.apple.WebKit:Loading] 0x71b674018 - [pageProxyID=7, webPageID=8, PID=0] WebPageProxy::constructor, site isolation enabled 0
+2026-10-28 00:00:10.493 Df loom[86638:649ac1] [com.apple.WebKit:Process] 0x1230b40c0 - [PID=0] WebProcessProxy::addExistingWebPage: webPage=0x71b674018, pageProxyID=7, webPageID=8
+2026-10-28 00:00:10.493 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSwapping] 0x1230980e0 - [PID=0] WebProcessCache::updateCapacity: Cache is disabled by client
+2026-10-28 00:00:10.493 Df loom[86638:649ac1] [com.apple.xpc:connection] [0x71b08f200] activating connection: mach=false listener=false peer=false name=com.apple.WebKit.GPU
+2026-10-28 00:00:10.493 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c40f0 - [PID=0, throttler=0x1230d0280] ProcessThrottler::Activity::Activity: Starting foreground activity / 'Process initialization'
+2026-10-28 00:00:10.519 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4150 - [PID=0, throttler=0x1230d8220] ProcessThrottler::Activity::Activity: Starting background activity / 'Prevent suspension'
+2026-10-28 00:00:10.519 Df loom[86638:649ac1] [com.apple.WebKit:Process] 0x1230d8190 - NetworkProcessProxy::NetworkProcessProxy
+2026-10-28 00:00:10.520 Df loom[86638:649ac1] [com.apple.xpc:connection] [0x71b08f5c0] activating connection: mach=false listener=false peer=false name=com.apple.WebKit.Networking
+2026-10-28 00:00:10.521 Df loom[86638:649ac1] [com.apple.CFNetwork:Default] Creating default cookie storage with process/bundle identifier
+2026-10-28 00:00:10.529 Df loom[86638:649ac1] [com.apple.CFNetwork:Default] OOM symptoms: checking process 0
+2026-10-28 00:00:10.529 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4180 - [PID=0, throttler=0x1230d8220] ProcessThrottler::Activity::Activity: Starting foreground activity / 'Process initialization'
+2026-10-28 00:00:10.530 Df loom[86638:649ac1] [com.apple.WebKit:Loading] 0x71b674018 - [pageProxyID=7, webPageID=8, PID=0] WebPageProxy::loadRequest:
+2026-10-28 00:00:10.530 Df loom[86638:649ac1] [com.apple.WebKit:Loading] 0x71b674018 - [pageProxyID=7, webPageID=8, PID=0] WebPageProxy::launchProcess:
+2026-10-28 00:00:10.530 Df loom[86638:649ac1] [com.apple.WebKit:Process] 0x1230b40c0 - [PID=0] WebProcessProxy::removeWebPage: webPage=0x71b674018, pageProxyID=7, webPageID=8
+2026-10-28 00:00:10.530 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSwapping] 0x1230980e0 - [PID=0] WebProcessCache::takeProcess: did not find <private>
+2026-10-28 00:00:10.530 Df loom[86638:649ac1] [com.apple.WebKit:Process] 0x1230b4680 - [PID=0] WebProcessProxy::constructor:
+2026-10-28 00:00:10.530 Df loom[86638:649ac1] [com.apple.xpc:connection] [0x71b08f700] activating connection: mach=false listener=false peer=false name=com.apple.WebKit.WebContent
+2026-10-28 00:00:10.538 Df loom[86638:649ad9] [com.apple.launchservices:appinstallation] registering for distributed notification com.apple.LaunchServices.pluginsregistered in this process
+2026-10-28 00:00:10.538 Df loom[86638:649ad9] [com.apple.launchservices:appinstallation] registering for distributed notification com.apple.LaunchServices.pluginsunregistered in this process
+2026-10-28 00:00:10.539 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c41e0 - [PID=0, throttler=0x1230b4710] ProcessThrottler::Activity::Activity: Starting foreground activity / 'Process initialization'
+2026-10-28 00:00:10.539 Df loom[86638:649ac1] [com.apple.WebKit:Process] 0x1230b40c0 - [PID=0] WebProcessProxy::destructor:
+2026-10-28 00:00:10.539 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4150 - [PID=0] ProcessThrottler::didDisconnectFromProcess:
+2026-10-28 00:00:10.539 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4150 - [PID=0] ProcessThrottler::invalidateAllActivities: BEGIN (foregroundActivityCount: 0, backgroundActivityCount: 0)
+2026-10-28 00:00:10.539 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4150 - [PID=0] ProcessThrottler::invalidateAllActivities: END
+2026-10-28 00:00:10.539 Df loom[86638:649ac1] [com.apple.WebKit:Process] 0x1230b4680 - [PID=0] WebProcessProxy::addExistingWebPage: webPage=0x71b674018, pageProxyID=7, webPageID=8
+2026-10-28 00:00:10.539 Df loom[86638:649ac1] [com.apple.WebKit:Storage] WebsiteDataStore::propagateSettingUpdates (0x71b2fc508) sessionID=1, OptInCookiePartitioning enabled, setting ThirdPartyCookieBlockingMode::AllExceptPartitioned
+2026-10-28 00:00:10.540 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::registerUserInstalledFonts: start registering fonts
+2026-10-28 00:00:10.599 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::registerUserInstalledFonts: done registering fonts
+2026-10-28 00:00:10.603 Df loom[86638:649ac1] [com.apple.WebKit:Process] 0x71b674018 - [pageProxyID=7, webPageID=8, PID=0] WebPageProxy::WebPageProxy::shouldForceForegroundPriorityForClientNavigation() returns 1 based on PageClient::canTakeForegroundAssertions()
+2026-10-28 00:00:10.603 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4330 - [PID=0, throttler=0x1230b4710] ProcessThrottler::Activity::Activity: Starting foreground activity / 'Client navigation'
+2026-10-28 00:00:10.603 Df loom[86638:649ac1] [com.apple.WebKit:Loading] 0x71b674018 - [pageProxyID=7, webPageID=8, PID=0] WebPageProxy::loadRequestWithNavigationShared:
+2026-10-28 00:00:10.604 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230981c0 - NavigationState is taking a process network assertion because a page load started
+2026-10-28 00:00:10.604 Df loom[86638:649ac1] [com.apple.WebKit:Process] Taking network activity on WebProcess with PID 0
+2026-10-28 00:00:10.604 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4360 - [PID=0, throttler=0x1230b4710] ProcessThrottler::Activity::Activity: Starting background activity / 'Page Load'
+2026-10-28 00:00:10.605 Df loom[86638:649ac1] [com.apple.WebKit:ViewState] 0x71b674018 - [pageProxyID=7, webPageID=8, PID=0] WebPageProxy::viewIsBecomingInvisible:
+2026-10-28 00:00:10.624 Df loom[86638:649ac1] (WebKit) WebContent[86666] Installed launch log hook
+2026-10-28 00:00:10.624 Df loom[86638:649ac1] [com.apple.xpc:connection] WebContent[86666] [0x1048a9fd0] activating connection: mach=false listener=true peer=false name=(anonymous)
+2026-10-28 00:00:10.624 Df loom[86638:649ac1] [com.apple.xpc:connection] WebContent[86666] [0x1048a9fd0] Connection returned listener port: 0x2703
+2026-10-28 00:00:10.624 Df loom[86638:649ac1] [com.apple.xpc:connection] WebContent[86666] [0x1048aa180] activating connection: mach=false listener=false peer=false name=(anonymous)
+2026-10-28 00:00:10.624 Df loom[86638:649ac1] [com.apple.xpc:connection] WebContent[86666] [0x1048aa460] activating connection: mach=false listener=false peer=true name=com.apple.xpc.anonymous.0x1048a9fd0.peer[86666].0x1048aa460
+2026-10-28 00:00:10.624 Df loom[86638:649ac1] [com.apple.WebKit:Process] 0x1230d8190 - NetworkProcessProxy::sendXPCEndpointToProcess(0x1230b4680) state = 0 has connection = 0 XPC endpoint message = 0x71b328900
+2026-10-28 00:00:10.624 Df loom[86638:649ac1] [com.apple.WebKit:Process] 0x1230d8190 - NetworkProcessProxy::sendXPCEndpointToProcess(0x1230d01f0) state = 0 has connection = 0 XPC endpoint message = 0x71b328900
+2026-10-28 00:00:10.626 Df loom[86638:649ac1] [com.apple.WebKit:ResourceLoadStatistics] StorageAccessPromptQuirkController::didUpdateCachedListData: Loaded 1 storage access prompt(s) quirks from WebPrivacy.
+2026-10-28 00:00:10.627 Df loom[86638:649ac1] [com.apple.WebKit:Process] 0x1230d01f0 - GPUProcessProxy::didFinishLaunching:
+2026-10-28 00:00:10.627 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4450 - [PID=86663, throttler=0x1230d0280] ProcessThrottler::Activity::Activity: Starting foreground activity / 'Lifetime Activity'
+2026-10-28 00:00:10.627 Df loom[86638:649ac1] [com.apple.WebKit:Process] 0x1230d01f0 - GPUProcessProxy::connectionWillOpen:
+2026-10-28 00:00:10.627 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230d0280 - [PID=86663] ProcessThrottler::didConnectToProcess
+2026-10-28 00:00:10.627 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230d0280 - [PID=86663] ProcessThrottler::setThrottleState: Updating process assertion type to 3 (foregroundActivities=2, backgroundActivities=2)
+2026-10-28 00:00:10.627 Df loom[86638:649ac1] [com.apple.WebKit:Process] 0x1230d8190 - NetworkProcessProxy::sendXPCEndpointToProcess(0x1230d01f0) state = 1 has connection = 1 XPC endpoint message = 0x71b328900
+2026-10-28 00:00:10.627 Df loom[86638:649ad9] [com.apple.WebKit:ProcessSuspension] 0x1230740e0 - ProcessAssertion::acquireSync Trying to take RBS assertion 'Jetsam Boost' for process with PID=86663
+2026-10-28 00:00:10.627 Df loom[86638:649ac1] [com.apple.WebKit:Process] 0x1230d8190 - NetworkProcessProxy::didFinishLaunching
+2026-10-28 00:00:10.627 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4480 - [PID=86665, throttler=0x1230d8220] ProcessThrottler::Activity::Activity: Starting foreground activity / 'Lifetime Activity'
+2026-10-28 00:00:10.627 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230d8220 - [PID=86665] ProcessThrottler::didConnectToProcess
+2026-10-28 00:00:10.627 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230d8220 - [PID=86665] ProcessThrottler::setThrottleState: Updating process assertion type to 3 (foregroundActivities=2, backgroundActivities=4)
+2026-10-28 00:00:10.629 Df loom[86638:649ac1] [com.apple.WebKit:Process] 0x1230b4680 - [PID=86666] WebProcessProxy::didFinishLaunching:
+2026-10-28 00:00:10.629 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c44b0 - [PID=86666, throttler=0x1230b4710] ProcessThrottler::Activity::Activity: Starting foreground activity / 'Lifetime Activity'
+2026-10-28 00:00:10.629 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4710 - [PID=86666] ProcessThrottler::didConnectToProcess
+2026-10-28 00:00:10.629 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4710 - [PID=86666] ProcessThrottler::setThrottleState: Updating process assertion type to 3 (foregroundActivities=3, backgroundActivities=6)
+2026-10-28 00:00:10.629 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4680 - [PID=86666] WebProcessProxy::didChangeThrottleState: type=2
+2026-10-28 00:00:10.629 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4680 - [PID=86666] WebProcessProxy::didChangeThrottleState(Foreground) Taking foreground assertion for network process
+2026-10-28 00:00:10.629 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c44e0 - [PID=86665, throttler=0x1230d8220] ProcessThrottler::Activity::Activity: Starting foreground activity / 'Networking for foreground view(s)'
+2026-10-28 00:00:10.629 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4510 - [PID=86663, throttler=0x1230d0280] ProcessThrottler::Activity::Activity: Starting foreground activity / 'GPU for foreground view(s)'
+2026-10-28 00:00:10.629 Df loom[86638:649ac1] [com.apple.WebKit:Process] 0x1230d8190 - NetworkProcessProxy::sendXPCEndpointToProcess(0x1230b4680) state = 1 has connection = 1 XPC endpoint message = 0x71b328900
+2026-10-28 00:00:10.629 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c44b0 - [PID=86666, throttler=0x1230b4710] ProcessThrottler::Activity::invalidate: Ending foreground activity / 'Lifetime Activity'
+2026-10-28 00:00:10.630 Df loom[86638:649ac1] [com.apple.xpc:connection] WebContent[86666] [0x9fee64000] activating connection: mach=false listener=false peer=false name=(anonymous)
+2026-10-28 00:00:10.630 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebContent[86666] getNetworkProcessConnection: Request connection for core identifier 5
+2026-10-28 00:00:10.630 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c41e0 - [PID=86666, throttler=0x1230b4710] ProcessThrottler::Activity::invalidate: Ending foreground activity / 'Process initialization'
+2026-10-28 00:00:10.630 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230d8190 - NetworkProcessProxy::getNetworkProcessConnection: Taking a background assertion because web process pid 86666 (core identifier 5) is requesting a connection
+2026-10-28 00:00:10.630 Df loom[86638:649ad9] [com.apple.WebKit:ProcessSuspension] 0x1230740e0 - ProcessAssertion::acquireSync Successfully took RBS assertion 'Jetsam Boost' for process with PID=86663
+2026-10-28 00:00:10.630 Df loom[86638:649ad9] [com.apple.WebKit:ProcessSuspension] 0x1231440c0 - ProcessAssertion::acquireSync Trying to take RBS assertion 'GPUProcess Foreground Assertion' for process with PID=86663
+2026-10-28 00:00:10.631 Df loom[86638:649ad9] [com.apple.WebKit:ProcessSuspension] 0x1231440c0 - ProcessAssertion::acquireSync Successfully took RBS assertion 'GPUProcess Foreground Assertion' for process with PID=86663
+2026-10-28 00:00:10.631 Df loom[86638:649ad9] [com.apple.WebKit:ProcessSuspension] 0x123074130 - ProcessAssertion::acquireSync Trying to take RBS assertion 'Jetsam Boost' for process with PID=86665
+2026-10-28 00:00:10.632 Df loom[86638:649ad9] [com.apple.WebKit:ProcessSuspension] 0x123074130 - ProcessAssertion::acquireSync Successfully took RBS assertion 'Jetsam Boost' for process with PID=86665
+2026-10-28 00:00:10.632 Df loom[86638:649ad9] [com.apple.WebKit:ProcessSuspension] 0x123144120 - ProcessAssertion::acquireSync Trying to take RBS assertion 'NetworkProcess Foreground Assertion' for process with PID=86665
+2026-10-28 00:00:10.632 Df loom[86638:649ad9] [com.apple.WebKit:ProcessSuspension] 0x123144120 - ProcessAssertion::acquireSync Successfully took RBS assertion 'NetworkProcess Foreground Assertion' for process with PID=86665
+2026-10-28 00:00:10.632 Df loom[86638:649ad9] [com.apple.WebKit:ProcessSuspension] 0x123074180 - ProcessAssertion::acquireSync Trying to take RBS assertion 'Jetsam Boost' for process with PID=86666
+2026-10-28 00:00:10.634 Df loom[86638:649ad9] [com.apple.WebKit:ProcessSuspension] 0x123074180 - ProcessAssertion::acquireSync Successfully took RBS assertion 'Jetsam Boost' for process with PID=86666
+2026-10-28 00:00:10.634 Df loom[86638:649ad9] [com.apple.WebKit:ProcessSuspension] 0x123144180 - ProcessAssertion::acquireSync Trying to take RBS assertion 'WebProcess Foreground Assertion' for process with PID=86666
+2026-10-28 00:00:10.634 Df loom[86638:649ad9] [com.apple.WebKit:ProcessSuspension] 0x123144180 - ProcessAssertion::acquireSync Successfully took RBS assertion 'WebProcess Foreground Assertion' for process with PID=86666
+2026-10-28 00:00:10.638 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4180 - [PID=86665, throttler=0x1230d8220] ProcessThrottler::Activity::invalidate: Ending foreground activity / 'Process initialization'
+2026-10-28 00:00:10.639 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c40f0 - [PID=86663, throttler=0x1230d0280] ProcessThrottler::Activity::invalidate: Ending foreground activity / 'Process initialization'
+2026-10-28 00:00:10.646 Df loom[86638:649ac1] [com.apple.WebKit:Loading] WebContent[86666] Received Launch Services database
+2026-10-28 00:00:10.646 Df loom[86638:649bea] [com.apple.launchservices:appinstallation] registering for distributed notification com.apple.LaunchServices.pluginswillberemoved in this process
+2026-10-28 00:00:10.647 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebContent[86666] 0x10e058100 - [sessionID=1] WebProcess::initializeLogForwarding: Debug logging enabled: 0
+2026-10-28 00:00:10.648 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebContent[86666] WebProcess::platformInitializeWebProcess
+2026-10-28 00:00:10.648 Df loom[86638:649ac1] [com.apple.xpc:connection] WebContent[86666] [0x9fee64140] activating connection: mach=true listener=false peer=false name=com.apple.pasteboard.1
+2026-10-28 00:00:10.648 Df loom[86638:649ac1] [com.apple.xpc:connection] WebContent[86666] [0x9fee64140] failed to do a bootstrap look-up: xpc_error=[159: Unknown error: 159]
+2026-10-28 00:00:10.648 Df loom[86638:649ac1] [com.apple.xpc:connection] WebContent[86666] [0x9fee64140] invalidated after a failed init
+2026-10-28 00:00:10.648 E  loom[86638:649ac1] [com.apple.CFPasteboard:general] WebContent[86666] Connection to 'pboard' server had an error: <dictionary: 0x1f88795f0> { count = 1, transaction: 0, voucher = 0x0, contents =
+	"XPCErrorDescription" => <string: 0x1f8879730> { string cache = 0x0, length = 18, contents = "Connection invalid" }
+}
+Invalidation reason: Connection init failed at lookup with error 159 - Sandbox restriction
+2026-10-28 00:00:10.648 E  loom[86638:649ac1] [com.apple.CFPasteboard:general] WebContent[86666] Failed to set up CFPasteboardRef 'Apple CFPasteboard general'. Error: <dictionary: 0x1f88795f0> { count = 1, transaction: 0, voucher = 0x0, contents =
+	"XPCErrorDescription" => <string: 0x1f8879730> { string cache = 0x0, length = 18, contents = "Connection invalid" }
+}
+Invalidation reason: Connection init failed at lookup with error 159 - Sandbox restriction
+2026-10-28 00:00:10.648 E  loom[86638:649ac1] [com.apple.CFPasteboard:general] WebContent[86666] Failed to set up CFPasteboardRef 'Apple CFPasteboard general'. Error: <dictionary: 0x1f88795f0> { count = 1, transaction: 0, voucher = 0x0, contents =
+	"XPCErrorDescription" => <string: 0x1f8879730> { string cache = 0x0, length = 18, contents = "Connection invalid" }
+}
+Invalidation reason: Connection init failed at lookup with error 159 - Sandbox restriction
+2026-10-28 00:00:10.649 Df loom[86638:649ac1] [com.apple.xpc:connection] WebContent[86666] [0x9fee64280] activating connection: mach=true listener=false peer=false name=com.apple.distributed_notifications@Uv3
+2026-10-28 00:00:10.649 Df loom[86638:649ac1] [com.apple.xpc:connection] WebContent[86666] [0x9fee64280] failed to do a bootstrap look-up: xpc_error=[159: Unknown error: 159]
+2026-10-28 00:00:10.649 Df loom[86638:649ac1] [com.apple.xpc:connection] WebContent[86666] [0x9fee64280] invalidated after a failed init
+2026-10-28 00:00:10.655 Df loom[86638:649ac1] [com.apple.AppKit:AutomaticTermination] WebContent[86666] void _NSDisableAutomaticTerminationAndLog(NSString *) No windows open yet
+2026-10-28 00:00:10.656 Df loom[86638:649ac1] [com.apple.xpc:connection] WebContent[86666] [0x9fee643c0] activating connection: mach=true listener=false peer=false name=com.apple.tccd.system
+2026-10-28 00:00:10.656 Df loom[86638:649ac1] [com.apple.xpc:connection] WebContent[86666] [0x9fee643c0] failed to do a bootstrap look-up: xpc_error=[159: Unknown error: 159]
+2026-10-28 00:00:10.656 Df loom[86638:649ac1] [com.apple.xpc:connection] WebContent[86666] [0x9fee643c0] invalidated after a failed init
+2026-10-28 00:00:10.656 Df loom[86638:649ac1] [com.apple.TCC:access] WebContent[86666] send_message_with_reply_sync(): user tccd unavailable, sending 0x9ff0f4480 to system tccd
+2026-10-28 00:00:10.656 Df loom[86638:649ac1] [com.apple.xpc:connection] WebContent[86666] [0x9fee64500] activating connection: mach=true listener=false peer=false name=com.apple.tccd.system
+2026-10-28 00:00:10.656 Df loom[86638:649ac1] [com.apple.xpc:connection] WebContent[86666] [0x9fee64500] failed to do a bootstrap look-up: xpc_error=[159: Unknown error: 159]
+2026-10-28 00:00:10.656 Df loom[86638:649ac1] [com.apple.xpc:connection] WebContent[86666] [0x9fee64500] invalidated after a failed init
+2026-10-28 00:00:10.656 E  loom[86638:649ac1] [com.apple.TCC:access] WebContent[86666] send_message_with_reply_sync(): XPC_ERROR_CONNECTION_INVALID for message 0x9ff0f4480
+2026-10-28 00:00:10.656 E  loom[86638:649ac1] [com.apple.TCC:access] WebContent[86666] TCCAccessRequest_block_invoke: Connection invalid
+2026-10-28 00:00:10.656 Df loom[86638:649ac1] [com.apple.SkyLight:default] WebContent[86666] Set a breakpoint at SLSLogBreak to catch errors/faults as they are logged.
+2026-10-28 00:00:10.656 E  loom[86638:649ac1] [com.apple.SkyLight:default] WebContent[86666] Conn 0x0 is not a valid connection ID.
+2026-10-28 00:00:10.656 E  loom[86638:649ac1] [com.apple.SkyLight:default] WebContent[86666] Conn 0x0 is not a valid connection ID.
+2026-10-28 00:00:10.656 E  loom[86638:649ac1] [com.apple.SkyLight:default] WebContent[86666] Conn 0x0 is not a valid connection ID.
+2026-10-28 00:00:10.657 E  loom[86638:649ac1] [com.apple.launchservices:cas] WebContent[86666] CONNECT: Attempt to connect to launchservicesd prohibited because kLSServerConnectionStatusProcessIsDaemonMask is set.
+2026-10-28 00:00:10.657 E  loom[86638:649ac1] [com.apple.launchservices:cas] WebContent[86666] CRASHSTRING: rdar://problem/28724618 Couldn't connect to launchservicesd.
+2026-10-28 00:00:10.658 Df loom[86638:649ac1] [com.apple.AppKit:Appearance] WebContent[86666] Current system appearance, (HLTB: 1), (SLS: 0)
+2026-10-28 00:00:10.660 E  loom[86638:649ac1] (WebKit) WebContent[86666] invalid product id '(null)'
+2026-10-28 00:00:10.660 Df loom[86638:649ac1] (WebKit) WebContent[86666] No persisted cache on this platform.
+2026-10-28 00:00:10.661 Df loom[86638:649ac1] [com.apple.AppKit:Appearance] WebContent[86666] Current system appearance, (HLTB: 1), (SLS: 0)
+2026-10-28 00:00:10.662 Df loom[86638:649ac1] [com.apple.AppKit:Appearance] WebContent[86666] Post-registration system appearance: (HLTB: 1)
+2026-10-28 00:00:10.662 E  loom[86638:649ac1] [com.apple.CarbonCore:sharedcache] WebContent[86666] checkinWithServer Failed bootstrap_lookup2 for name of coreservicesd, kern_return_t=#1100/0x44c Permission denied name=com.apple.CoreServices.coreservicesd
+2026-10-28 00:00:10.664 Df loom[86638:649ac1] [com.apple.FrontBoard:Common] WebContent[86666] FBSWorkspace: endpoint monitoring is disabled.
+2026-10-28 00:00:10.664 Df loom[86638:649ac1] [com.apple.FrontBoard:Common] WebContent[86666] FBSWorkspace: default shell endpoint is disabled.
+2026-10-28 00:00:10.664 Df loom[86638:649ac1] [com.apple.runningboard:connection] WebContent[86666] Initializing connection
+2026-10-28 00:00:10.665 Df loom[86638:649ac1] [com.apple.runningboard:process] WebContent[86666] Removing all cached process handles
+2026-10-28 00:00:10.665 Df loom[86638:649ac1] [com.apple.runningboard:connection] WebContent[86666] Sending handshake request attempt #1 to server
+2026-10-28 00:00:10.665 E  loom[86638:649ac1] [com.apple.runningboard:connection] WebContent[86666] The sandbox in this process does not allow access to RunningBoard.
+2026-10-28 00:00:10.665 E  loom[86638:649ac1] [com.apple.runningboard:connection] WebContent[86666] Handshake aborted as the connection has been invalidated
+2026-10-28 00:00:10.665 E  loom[86638:649ac1] [com.apple.SkyLight:default] WebContent[86666] Conn 0x0 is not a valid connection ID.
+2026-10-28 00:00:10.665 E  loom[86638:649ac1] [com.apple.SkyLight:default] WebContent[86666] Conn 0x0 is not a valid connection ID.
+2026-10-28 00:00:10.665 Df loom[86638:649ac1] [com.apple.SkyLight:default] WebContent[86666] Invalid Connection ID 0
+2026-10-28 00:00:10.665 E  loom[86638:649ac1] [com.apple.SkyLight:default] WebContent[86666] Conn 0x0 is not a valid connection ID.
+2026-10-28 00:00:10.665 E  loom[86638:649ac1] [com.apple.SkyLight:default] WebContent[86666] Conn 0x0 is not a valid connection ID.
+2026-10-28 00:00:10.665 E  loom[86638:649ac1] [com.apple.SkyLight:default] WebContent[86666] Conn 0x0 is not a valid connection ID.
+2026-10-28 00:00:10.665 E  loom[86638:649ac1] [com.apple.SkyLight:default] WebContent[86666] Conn 0x0 is not a valid connection ID.
+2026-10-28 00:00:10.667 E  loom[86638:649ac1] [com.apple.appintents:Connection] WebContent[86666] Missing com.apple.linkd.application-service / com.apple.linkd.autoShortcut mach-lookup entitlement, will NOT register the process
+2026-10-28 00:00:10.667 E  loom[86638:649ac1] [com.apple.AppKit:Application] WebContent[86666] Error registering app with intents framework: Error Domain=LNProcessInstanceRegistryClientErrorDomain Code=1
+2026-10-28 00:00:10.670 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebContent[86666] 0x10e058100 - [sessionID=1] WebProcess::initializeWebProcess: Presenting processPID=86638
+2026-10-28 00:00:10.670 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebContent[86666] WebProcess::registerFontMap
+2026-10-28 00:00:10.670 Df loom[86638:649ac1] [com.apple.WebKit:Loading] WebContent[86666] 0x1048ba718 - [webPageID=8] WebPage::constructor:
+2026-10-28 00:00:10.671 Df loom[86638:649ac1] [com.apple.WebKit:ResourceLoading] WebContent[86666] [pageID=8 frameID=4294967297 isMainFrame=1] FrameLoader::setPolicyDocumentLoader: Setting policy document loader to 4546859008 (was 0)
+2026-10-28 00:00:10.671 Df loom[86638:649ac1] [com.apple.WebKit:Network] WebContent[86666] [pageID=8, frameID=4294967297, isMainFrame=1] DocumentLoader::attachToFrame
+2026-10-28 00:00:10.671 Df loom[86638:649ac1] [com.apple.WebKit:ResourceLoading] WebContent[86666] [pageID=8 frameID=4294967297 isMainFrame=1] FrameLoader::setProvisionalDocumentLoader: Setting provisional document loader to 4546859008 (was 0)
+2026-10-28 00:00:10.671 Df loom[86638:649ac1] [com.apple.WebKit:ResourceLoading] WebContent[86666] [pageID=8 frameID=4294967297 isMainFrame=1] FrameLoader::setDocumentLoader: Setting document loader to 4546859008 (was 0)
+2026-10-28 00:00:10.671 Df loom[86638:649ac1] [com.apple.WebKit:ResourceLoading] WebContent[86666] [pageID=8 frameID=4294967297 isMainFrame=1] FrameLoader::transitionToCommitted: Clearing provisional document loader (m_provisionalDocumentLoader=4546859008)
+2026-10-28 00:00:10.671 Df loom[86638:649ac1] [com.apple.WebKit:ResourceLoading] WebContent[86666] [pageID=8 frameID=4294967297 isMainFrame=1] FrameLoader::setProvisionalDocumentLoader: Setting provisional document loader to 0 (was 4546859008)
+2026-10-28 00:00:10.671 Df loom[86638:649ac1] [com.apple.AppKit:Appearance] WebContent[86666] NSApp cache appearance:
+-NSRequiresAquaSystemAppearance: 0
+-appearance: (null)
+-effectiveAppearance: <NSCompositeAppearance: 0x9fed68780
+ (
+    "<NSAquaAppearance: 0x9fed68820>",
+    "<NSSystemAppearance: 0x9fed68640>"
+)>
+2026-10-28 00:00:10.672 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] WebContent[86666] [webPageID=8] WebPage::unfreezeLayerTree: Removing a reason to freeze layer tree (reason=128, new=0, old=0)
+2026-10-28 00:00:10.674 Df loom[86638:649ac1] [com.apple.WebKit:Network] WebContent[86666] [pageID=8, frameID=4294967297, isMainFrame=1] DocumentLoader::startLoadingMainResource: Returning empty document
+2026-10-28 00:00:10.674 Df loom[86638:649ac1] [com.apple.WebKit:ResourceLoading] WebContent[86666] [pageID=8 frameID=4294967297 isMainFrame=1] FrameLoader::setPolicyDocumentLoader: Setting policy document loader to 0 (was 4546859008)
+2026-10-28 00:00:10.674 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] WebContent[86666] [webPageID=8] WebPage::unfreezeLayerTree: Removing a reason to freeze layer tree (reason=1, new=0, old=0)
+2026-10-28 00:00:10.674 Df loom[86638:649ac1] [com.apple.WebKit:Layout] WebContent[86666] [webFrameID=4294967297, webPageID=8] WebLocalFrameLoaderClient::completePageTransitionIfNeeded: dispatching didCompletePageTransition
+2026-10-28 00:00:10.674 Df loom[86638:649ac1] [com.apple.WebKit:ResourceLoading] WebContent[86666] [pageID=8 frameID=4294967297 isMainFrame=1] FrameLoader::setState: main frame load completed
+2026-10-28 00:00:10.674 Df loom[86638:649ac1] [com.apple.WebKit:PerformanceLogging] WebContent[86666] Memory usage info dump at MainFrameLoadCompleted:
+2026-10-28 00:00:10.674 Df loom[86638:649ac1] [com.apple.WebKit:PerformanceLogging] WebContent[86666]   page_count: 1
+2026-10-28 00:00:10.674 Df loom[86638:649ac1] [com.apple.WebKit:PerformanceLogging] WebContent[86666]   backforward_cache_page_count: 0
+2026-10-28 00:00:10.674 Df loom[86638:649ac1] [com.apple.WebKit:PerformanceLogging] WebContent[86666]   document_count: 1
+2026-10-28 00:00:10.674 Df loom[86638:649ac1] [com.apple.WebKit:PerformanceLogging] WebContent[86666]   javascript_gc_heap_capacity_mb: 0
+2026-10-28 00:00:10.674 Df loom[86638:649ac1] [com.apple.WebKit:PerformanceLogging] WebContent[86666]   javascript_gc_heap_extra_memory_size_mb: 0
+2026-10-28 00:00:10.674 Df loom[86638:649ac1] [com.apple.WebKit:PerformanceLogging] WebContent[86666]   internal_mb: 9
+2026-10-28 00:00:10.674 Df loom[86638:649ac1] [com.apple.WebKit:PerformanceLogging] WebContent[86666]   compressed_mb: 0
+2026-10-28 00:00:10.674 Df loom[86638:649ac1] [com.apple.WebKit:PerformanceLogging] WebContent[86666]   phys_footprint_mb: 10
+2026-10-28 00:00:10.674 Df loom[86638:649ac1] [com.apple.WebKit:PerformanceLogging] WebContent[86666]   resident_size_mb: 26
+2026-10-28 00:00:10.674 Df loom[86638:649ac1] [com.apple.WebKit:PerformanceLogging] WebContent[86666]   virtual_size_mb: 495476
+2026-10-28 00:00:10.674 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebContent[86666] WebPage::platformInitializeAccessibility shouldInitializeNSAccessibility = 0
+2026-10-28 00:00:10.674 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebContent[86666] WebPage::platformInitializeAccessibility deferring token transfer for pageID=8
+2026-10-28 00:00:10.676 Df loom[86638:649ac1] [com.apple.WebKit:PerformanceLogging] WebContent[86666] PerformanceMonitor::measureCPUUsageInActivityState: Process is using 87.7% CPU in state: VisibleNonActive
+2026-10-28 00:00:10.676 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebContent[86666] 0x1048ba718 - [webPageID=8] WebPage::registerURLSchemeHandler: Registered handler 1 for the '<private>' scheme
+2026-10-28 00:00:10.676 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebContent[86666] 0x1048ba718 - [webPageID=8] WebPage::registerURLSchemeHandler: Registered handler 2 for the '<private>' scheme
+2026-10-28 00:00:10.676 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebContent[86666] 0x1048ba718 - [webPageID=8] WebPage::registerURLSchemeHandler: Registered handler 9 for the '<private>' scheme
+2026-10-28 00:00:10.676 Df loom[86638:649ac1] [com.apple.WebKit:Loading] WebContent[86666] [webPageID=8] WebPage::loadRequest: navigationID=26, shouldTreatAsContinuingLoad=0, lastNavigationWasAppInitiated=1, existingNetworkResourceLoadIdentifierToResume=0
+2026-10-28 00:00:10.676 Df loom[86638:649ac1] [com.apple.WebKit:ResourceLoading] WebContent[86666] [pageID=8 frameID=4294967297 isMainFrame=1] FrameLoader::load (FrameLoadRequest): frame load started
+2026-10-28 00:00:10.676 Df loom[86638:649ac1] [com.apple.WebKit:ResourceLoading] WebContent[86666] [pageID=8 frameID=4294967297 isMainFrame=1] FrameLoader::load (DocumentLoader): frame load started
+2026-10-28 00:00:10.676 Df loom[86638:649ac1] [com.apple.WebKit:ResourceLoading] WebContent[86666] [pageID=8 frameID=4294967297 isMainFrame=1] FrameLoader::loadWithDocumentLoader: frame load started
+2026-10-28 00:00:10.676 Df loom[86638:649ac1] [com.apple.WebKit:ResourceLoading] WebContent[86666] [pageID=8 frameID=4294967297 isMainFrame=1] FrameLoader::loadWithDocumentLoader: main frame load started
+2026-10-28 00:00:10.676 Df loom[86638:649ac1] [com.apple.WebKit:PerformanceLogging] WebContent[86666] Memory usage info dump at MainFrameLoadStarted:
+2026-10-28 00:00:10.676 Df loom[86638:649ac1] [com.apple.WebKit:PerformanceLogging] WebContent[86666]   page_count: 1
+2026-10-28 00:00:10.676 Df loom[86638:649ac1] [com.apple.WebKit:PerformanceLogging] WebContent[86666]   backforward_cache_page_count: 0
+2026-10-28 00:00:10.676 Df loom[86638:649ac1] [com.apple.WebKit:PerformanceLogging] WebContent[86666]   document_count: 1
+2026-10-28 00:00:10.676 Df loom[86638:649ac1] [com.apple.WebKit:PerformanceLogging] WebContent[86666]   javascript_gc_heap_capacity_mb: 0
+2026-10-28 00:00:10.676 Df loom[86638:649ac1] [com.apple.WebKit:PerformanceLogging] WebContent[86666]   javascript_gc_heap_extra_memory_size_mb: 0
+2026-10-28 00:00:10.676 Df loom[86638:649ac1] [com.apple.WebKit:PerformanceLogging] WebContent[86666]   internal_mb: 9
+2026-10-28 00:00:10.676 Df loom[86638:649ac1] [com.apple.WebKit:PerformanceLogging] WebContent[86666]   compressed_mb: 0
+2026-10-28 00:00:10.676 Df loom[86638:649ac1] [com.apple.WebKit:PerformanceLogging] WebContent[86666]   phys_footprint_mb: 10
+2026-10-28 00:00:10.676 Df loom[86638:649ac1] [com.apple.WebKit:PerformanceLogging] WebContent[86666]   resident_size_mb: 26
+2026-10-28 00:00:10.676 Df loom[86638:649ac1] [com.apple.WebKit:PerformanceLogging] WebContent[86666]   virtual_size_mb: 495476
+2026-10-28 00:00:10.676 Df loom[86638:649ac1] [com.apple.WebKit:ResourceLoading] WebContent[86666] [pageID=8 frameID=4294967297 isMainFrame=1] FrameLoader::setPolicyDocumentLoader: Setting policy document loader to 4546883584 (was 0)
+2026-10-28 00:00:10.676 Df loom[86638:649ac1] [com.apple.WebKit:Network] WebContent[86666] [pageID=8, frameID=4294967297, isMainFrame=1] DocumentLoader::attachToFrame
+2026-10-28 00:00:10.679 E  loom[86638:649ac1] (WebKit) WebContent[86666] networkd_settings_read_from_file_locked Sandbox is preventing this process from reading networkd settings file at "/Library/Preferences/com.apple.networkd.plist", please add an exception.
+2026-10-28 00:00:10.679 E  loom[86638:649ac1] (WebKit) WebContent[86666] networkd_settings_read_from_file_locked Sandbox is preventing this process from reading networkd settings file at "/Library/Preferences/com.apple.networkd.plist", please add an exception.
+2026-10-28 00:00:10.681 Df loom[86638:649ac1] [com.apple.WebKit:Loading] 0x71b674018 - [pageProxyID=7, webPageID=8, PID=86666] WebPageProxy::decidePolicyForNavigationAction: frameID=4294967297, isMainFrame=1, navigationID=26
+2026-10-28 00:00:10.683 Df loom[86638:649bfc] [com.apple.SkyLight:default] WebContent[86666] Failed to look up the port for "com.apple.windowserver.active" (1)
+2026-10-28 00:00:10.683 Df loom[86638:649bfc] [com.apple.WebKit:RemoteLayerBuffers] WebContent[86666]: [renderingBackend=11] Created rendering backend for pageProxyID=7, webPageID=8
+2026-10-28 00:00:10.683 Df loom[86638:649bfc] [com.apple.WebKit:Process] WebContent[86666] GPUProcessConnection::create - 0x10e04eca0
+2026-10-28 00:00:10.690 Df loom[86638:649ac1] [com.apple.WebKit:Layout] WebContent[86666] [webFrameID=4294967297, webPageID=8] WebLocalFrameLoaderClient::dispatchDidReachLayoutMilestone: dispatching DidFirstLayoutForFrame
+2026-10-28 00:00:10.690 Df loom[86638:649ac1] [com.apple.WebKit:Layout] WebContent[86666] [webFrameID=4294967297, webPageID=8] WebLocalFrameLoaderClient::dispatchDidReachLayoutMilestone: dispatching DidReachLayoutMilestone (milestones=DidFirstLayout)
+2026-10-28 00:00:10.690 Df loom[86638:649ac1] [com.apple.WebKit:ActivityState] WebContent[86666] 0x10e18d2e0 - UserActivity::Impl::beginActivity: description=App nap disabled for page due to user activity
+2026-10-28 00:00:10.690 Df loom[86638:649ac1] [com.apple.xpc:connection] WebContent[86666] [0x9fee64500] activating connection: mach=true listener=false peer=false name=com.apple.audio.AudioComponentRegistrar
+2026-10-28 00:00:10.690 Df loom[86638:649ac1] [com.apple.xpc:connection] WebContent[86666] [0x9fee64500] failed to do a bootstrap look-up: xpc_error=[1: Operation not permitted]
+2026-10-28 00:00:10.690 Df loom[86638:649ac1] [com.apple.xpc:connection] WebContent[86666] [0x9fee64500] invalidated after a failed init
+2026-10-28 00:00:10.690 Df loom[86638:649ac1] [com.apple.coreaudio:audiocomp] WebContent[86666] AudioComponentPluginMgr.mm:326   registration server connection invalidated
+2026-10-28 00:00:10.690 E  loom[86638:649ac1] [com.apple.coreaudio:audiocomp] WebContent[86666] AudioComponentPluginMgr.mm:590   reg server remote proxy error Error Domain=NSCocoaErrorDomain Code=4099 "The connection to service named com.apple.audio.AudioComponentRegistrar was invalidated: Connection init failed at lookup with error 1 - Operation not permitted." UserInfo={NSDebugDescription=The connection to service named com.apple.audio.AudioComponentRegistrar was invalidated: Connection init failed at lookup with error 1 - Operation not permitted.}
+2026-10-28 00:00:10.690 Df loom[86638:649ac1] [com.apple.xpc:connection] WebContent[86666] [0x9fee64640] activating connection: mach=false listener=false peer=false name=com.apple.audio.SandboxHelper
+2026-10-28 00:00:10.690 Df loom[86638:649ac1] [com.apple.xpc:connection] WebContent[86666] [0x9fee64640] failed to do a bootstrap look-up: xpc_error=[1: Operation not permitted]
+2026-10-28 00:00:10.690 Df loom[86638:649ac1] [com.apple.xpc:connection] WebContent[86666] [0x9fee64640] invalidated after a failed init
+2026-10-28 00:00:10.690 Df loom[86638:649ac1] (WebKit) WebContent[86666]   SandboxHelperClient.cpp:120    IsComponentSandboxSafeInThisProcess: the XPC service was invalid
+2026-10-28 00:00:10.690 Df loom[86638:649ac1] (WebKit) WebContent[86666]   SandboxHelperClient.cpp:120    IsComponentSandboxSafeInThisProcess: the XPC service was invalid
+2026-10-28 00:00:10.690 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebContent[86666] Disabling launch log hook
+2026-10-28 00:00:10.690 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230d01f0 - GPUProcessProxy is taking a background assertion because a web process is requesting a connection
+2026-10-28 00:00:10.692 Df loom[86638:649ad9] [com.apple.authkit:nto] URL shouldn't be processed
+2026-10-28 00:00:10.692 Df loom[86638:649ac1] [com.apple.WebKit:Loading] 0x71b674018 - [pageProxyID=7, webPageID=8, PID=86666] WebPageProxy::decidePolicyForNavigationAction: listener called: frameID=4294967297, isMainFrame=1, navigationID=26, policyAction=Use, isAppBoundDomain=0, wasNavigationIntercepted=0
+2026-10-28 00:00:10.692 Df loom[86638:649ac1] [com.apple.WebKit:Loading] 0x71b674018 - [pageProxyID=7, webPageID=8, PID=86666] WebPageProxy::receivedNavigationActionPolicyDecision: frameID=4294967297, isMainFrame=1, navigationID=26, policyAction=Use
+2026-10-28 00:00:10.692 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSwapping] 0x71b674018 - [pageProxyID=7, webPageID=8, PID=86666] WebPageProxy::decidePolicyForNavigationAction: keep using process 86666 for navigation, reason=Process has not yet committed any provisional loads
+2026-10-28 00:00:10.692 Df loom[86638:649ac1] [com.apple.WebKit:Process] 0x1230b4680 - [PID=86666] WebProcessProxy::canTerminateAuxiliaryProcess: returns false (pageCount=1, remotePageCount=0, provisionalPageCount=0, suspendedPageCount=0, m_isInProcessCache=0, m_shutdownPreventingScopeCounter=0)
+2026-10-28 00:00:10.693 Df loom[86638:649ac1] [com.apple.WebKit:Loading] beginSafeBrowsingCheck: no threat, completing navigationID=26
+2026-10-28 00:00:10.748 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666]: [webFrameID=4294967297, webPageID=8] WebFrameLoaderClient::dispatchDecidePolicyForNavigationAction: Got policyAction Use from async IPC
+2026-10-28 00:00:10.748 Df loom[86638:649bfc] [com.apple.WebKit:Loading] WebContent[86666] 0x10e210180 - [pageID=8, frameID=4294967297] PolicyChecker::checkNavigationPolicy: continuing because this policyAction from dispatchDecidePolicyForNavigationAction is Use
+2026-10-28 00:00:10.748 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8 frameID=4294967297 isMainFrame=1] FrameLoader::stopAllLoaders: m_provisionalDocumentLoader=0, m_documentLoader=4546859008
+2026-10-28 00:00:10.748 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666]: [pageID=8, frameID=4294967297, isMainFrame=1] DocumentLoader::stopLoading
+2026-10-28 00:00:10.748 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8 frameID=4294967297 isMainFrame=1] FrameLoader::setProvisionalDocumentLoader: Setting provisional document loader to 4546883584 (was 0)
+2026-10-28 00:00:10.748 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8 frameID=4294967297 isMainFrame=1] FrameLoader::continueLoadAfterNavigationPolicy: Setting provisional document loader (m_provisionalDocumentLoader=4546883584)
+2026-10-28 00:00:10.748 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666]: [webPageID=8] WebPage::freezeLayerTree: Adding a reason to freeze layer tree (reason=1, new=1, old=0)
+2026-10-28 00:00:10.748 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8 frameID=4294967297 isMainFrame=1] FrameLoader::setPolicyDocumentLoader: Setting policy document loader to 0 (was 4546883584)
+2026-10-28 00:00:10.748 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8 frameID=4294967297 isMainFrame=1] FrameLoader::prepareForLoadStart: Starting frame load
+2026-10-28 00:00:10.748 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666]: ProgressTracker::progressStarted: frameID 4294967297, value 0.100000, tracked frames 1, originating frameID 4294967297, isMainLoad 1
+2026-10-28 00:00:10.748 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666]: [pageID=8, frameID=4294967297, isMainFrame=1] DocumentLoader::startLoadingMainResource: Starting load
+2026-10-28 00:00:10.748 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=29] ResourceLoader::willSendRequestInternal: calling completion handler
+2026-10-28 00:00:10.748 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=29 SubResourceLoader::willSendRequestInternal: resource load finished; calling completion handler
+2026-10-28 00:00:10.748 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] 0x10e0680e0 - [resourceLoader=0x10f229600, frameLoader=0x10e119ce0, frame=0x10e2140c0, webPageID=8, frameID=4294967297, resourceID=29] WebLoaderStrategy::tryLoadingUsingURLSchemeHandler: URL will be handled by a UIProcess URL scheme handler
+2026-10-28 00:00:10.748 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=1, webPageID=8, frameID=4294967297, taskID=29] WebURLSchemeTaskProxy::startLoading
+2026-10-28 00:00:10.748 Df loom[86638:649ac1] [com.apple.WebKit:Loading] 0x71b674018 - [pageProxyID=7, webPageID=8, PID=86666] WebPageProxy::didStartProvisionalLoadForFrame: frameID=4294967297, isMainFrame=1
+2026-10-28 00:00:10.748 Df loom[86638:649ac1] [com.apple.WebKit:Loading] 0x1230b4680 - [PID=86666] WebProcessProxy::didStartProvisionalLoadForMainFrame:
+2026-10-28 00:00:10.748 Df loom[86638:649bfc] [com.apple.WebKit:Process] WebContent[86666] 0x10e04eca0 - GPUProcessConnection::didInitialize
+2026-10-28 00:00:10.750 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=1, webPageID=8, frameID=4294967297, taskID=29] WebURLSchemeTaskProxy::didReceiveData: Received data during response processing, queuing it.
+2026-10-28 00:00:10.750 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=1, webPageID=8, frameID=4294967297, taskID=29] WebURLSchemeTaskProxy::didComplete
+2026-10-28 00:00:10.750 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8 frameID=4294967297 isMainFrame=1] FrameLoader::setDocumentLoader: Setting document loader to 4546883584 (was 4546859008)
+2026-10-28 00:00:10.750 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666]: [pageID=8, frameID=4294967297, isMainFrame=1] DocumentLoader::detachFromFrame
+2026-10-28 00:00:10.750 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666]: [pageID=8, frameID=4294967297, isMainFrame=1] DocumentLoader::stopLoading
+2026-10-28 00:00:10.750 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8 frameID=4294967297 isMainFrame=1] FrameLoader::transitionToCommitted: Clearing provisional document loader (m_provisionalDocumentLoader=4546883584)
+2026-10-28 00:00:10.750 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8 frameID=4294967297 isMainFrame=1] FrameLoader::setProvisionalDocumentLoader: Setting provisional document loader to 0 (was 4546883584)
+2026-10-28 00:00:10.750 Df loom[86638:649ac1] [com.apple.WebKit:Loading] 0x71b674018 - [pageProxyID=7, webPageID=8, PID=86666] WebPageProxy::didNavigateWithNavigationDataShared:
+2026-10-28 00:00:10.750 E  loom[86638:649bfc] [com.apple.WebKit:ResourceLoadStatistics] WebContent[86666] Unable to hide query parameters from script (missing data)
+2026-10-28 00:00:10.750 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666]: [webPageID=8] WebPage::unfreezeLayerTree: Removing a reason to freeze layer tree (reason=128, new=1, old=1)
+2026-10-28 00:00:10.751 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666]: [webPageID=8] WebPage::unfreezeLayerTree: Removing a reason to freeze layer tree (reason=128, new=1, old=1)
+2026-10-28 00:00:10.751 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666]: [webPageID=8] WebPage::unfreezeLayerTree: Removing a reason to freeze layer tree (reason=32, new=1, old=1)
+2026-10-28 00:00:10.751 Df loom[86638:649ac1] [com.apple.WebKit:Loading] 0x71b674018 - [pageProxyID=7, webPageID=8, PID=86666] WebPageProxy::didCommitLoadForFrame: frameID=4294967297, isMainFrame=1
+2026-10-28 00:00:10.766 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=34] ResourceLoader::willSendRequestInternal: calling completion handler
+2026-10-28 00:00:10.766 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=34 SubResourceLoader::willSendRequestInternal: resource load finished; calling completion handler
+2026-10-28 00:00:10.766 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] 0x10e0680e0 - [resourceLoader=0x10f22ea00, frameLoader=0x10e119ce0, frame=0x10e2140c0, webPageID=8, frameID=4294967297, resourceID=34] WebLoaderStrategy::tryLoadingUsingURLSchemeHandler: URL will be handled by a UIProcess URL scheme handler
+2026-10-28 00:00:10.766 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=1, webPageID=8, frameID=4294967297, taskID=34] WebURLSchemeTaskProxy::startLoading
+2026-10-28 00:00:10.766 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666]: [webPageID=8] WebPage::freezeLayerTree: Adding a reason to freeze layer tree (reason=128, new=129, old=1)
+2026-10-28 00:00:10.766 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=35] ResourceLoader::willSendRequestInternal: calling completion handler
+2026-10-28 00:00:10.766 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=35 SubResourceLoader::willSendRequestInternal: resource load finished; calling completion handler
+2026-10-28 00:00:10.766 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] 0x10e0680e0 - [resourceLoader=0x10f22f000, frameLoader=0x10e119ce0, frame=0x10e2140c0, webPageID=8, frameID=4294967297, resourceID=35] WebLoaderStrategy::tryLoadingUsingURLSchemeHandler: URL will be handled by a UIProcess URL scheme handler
+2026-10-28 00:00:10.766 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=1, webPageID=8, frameID=4294967297, taskID=35] WebURLSchemeTaskProxy::startLoading
+2026-10-28 00:00:10.766 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=1, webPageID=8, frameID=4294967297, taskID=29] WebURLSchemeTaskProxy::didComplete
+2026-10-28 00:00:10.766 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=29 SubResourceLoader::didFinishLoading
+2026-10-28 00:00:10.768 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=1, webPageID=8, frameID=4294967297, taskID=34] WebURLSchemeTaskProxy::didComplete
+2026-10-28 00:00:10.768 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=34 SubResourceLoader::didFinishLoading
+2026-10-28 00:00:10.773 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=1, webPageID=8, frameID=4294967297, taskID=35] WebURLSchemeTaskProxy::didComplete
+2026-10-28 00:00:10.773 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=35 SubResourceLoader::didFinishLoading
+2026-10-28 00:00:10.773 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666]: [webPageID=8] WebPage::unfreezeLayerTree: Removing a reason to freeze layer tree (reason=128, new=1, old=129)
+2026-10-28 00:00:10.774 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666]: [webPageID=8] WebPage::unfreezeLayerTree: Removing a reason to freeze layer tree (reason=1, new=0, old=1)
+2026-10-28 00:00:10.774 Df loom[86638:649bfc] [com.apple.WebKit:Layout] WebContent[86666]: [webFrameID=4294967297, webPageID=8] WebLocalFrameLoaderClient::completePageTransitionIfNeeded: dispatching didCompletePageTransition
+2026-10-28 00:00:10.774 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8 frameID=4294967297 isMainFrame=1] FrameLoader::setState: main frame load completed
+2026-10-28 00:00:10.774 Df loom[86638:649bfc] [com.apple.WebKit:PerformanceLogging] WebContent[86666]: Memory usage info dump at <private>:
+2026-10-28 00:00:10.774 Df loom[86638:649bfc] [com.apple.WebKit:PerformanceLogging] WebContent[86666]:   <private>: 1
+2026-10-28 00:00:10.774 Df loom[86638:649bfc] [com.apple.WebKit:PerformanceLogging] WebContent[86666]:   <private>: 0
+2026-10-28 00:00:10.774 Df loom[86638:649bfc] [com.apple.WebKit:PerformanceLogging] WebContent[86666]:   <private>: 1
+2026-10-28 00:00:10.774 Df loom[86638:649bfc] [com.apple.WebKit:PerformanceLogging] WebContent[86666]:   <private>: 0
+2026-10-28 00:00:10.774 Df loom[86638:649bfc] [com.apple.WebKit:PerformanceLogging] WebContent[86666]:   <private>: 0
+2026-10-28 00:00:10.774 Df loom[86638:649bfc] [com.apple.WebKit:PerformanceLogging] WebContent[86666]:   <private>: 13
+2026-10-28 00:00:10.774 Df loom[86638:649bfc] [com.apple.WebKit:PerformanceLogging] WebContent[86666]:   <private>: 0
+2026-10-28 00:00:10.774 Df loom[86638:649bfc] [com.apple.WebKit:PerformanceLogging] WebContent[86666]:   <private>: 13
+2026-10-28 00:00:10.774 Df loom[86638:649bfc] [com.apple.WebKit:PerformanceLogging] WebContent[86666]:   <private>: 31
+2026-10-28 00:00:10.774 Df loom[86638:649bfc] [com.apple.WebKit:PerformanceLogging] WebContent[86666]:   <private>: 495478
+2026-10-28 00:00:10.774 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666]: ProgressTracker::progressCompleted: frameID 4294967297, value 0.500000, tracked frames 1, originating frameID 4294967297, isMainLoad 1
+2026-10-28 00:00:10.774 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666]: ProgressTracker::finalProgressComplete: value 0.500000, tracked frames 0, originating frameID 4294967297, isMainLoad 1, isMainLoadProgressing 0
+2026-10-28 00:00:10.774 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8 frameID=4294967297 isMainFrame=1] FrameLoader::checkLoadCompleteForThisFrame: Finished frame load
+2026-10-28 00:00:10.775 Df loom[86638:649ac1] [com.apple.WebKit:Loading] 0x71b674018 - [pageProxyID=7, webPageID=8, PID=86666] WebPageProxy::didFinishLoadForFrame: frameID=4294967297, isMainFrame=1
+2026-10-28 00:00:10.775 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230981c0 - NavigationState will release its process network assertion soon because the page load completed
+2026-10-28 00:00:10.775 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4330 - [PID=86666, throttler=0x1230b4710] ProcessThrottler::Activity::invalidate: Ending foreground activity / 'Client navigation'
+2026-10-28 00:00:10.775 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4710 - [PID=86666] ProcessThrottler::setThrottleState: Updating process assertion type to 1 (foregroundActivities=0, backgroundActivities=1)
+2026-10-28 00:00:10.775 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4680 - [PID=86666] WebProcessProxy::didChangeThrottleState: type=1
+2026-10-28 00:00:10.775 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4680 - [PID=86666] WebProcessProxy::didChangeThrottleState(Background) Taking background assertion for network process
+2026-10-28 00:00:10.775 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c40f0 - [PID=86665, throttler=0x1230d8220] ProcessThrottler::Activity::Activity: Starting background activity / 'Networking for background view(s)'
+2026-10-28 00:00:10.775 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c44e0 - [PID=86665, throttler=0x1230d8220] ProcessThrottler::Activity::invalidate: Ending foreground activity / 'Networking for foreground view(s)'
+2026-10-28 00:00:10.775 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4120 - [PID=86663, throttler=0x1230d0280] ProcessThrottler::Activity::Activity: Starting background activity / 'GPU for background view(s)'
+2026-10-28 00:00:10.775 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4510 - [PID=86663, throttler=0x1230d0280] ProcessThrottler::Activity::invalidate: Ending foreground activity / 'GPU for foreground view(s)'
+2026-10-28 00:00:10.775 Df loom[86638:649ad9] [com.apple.WebKit:ProcessSuspension] 0x1231441e0 - ProcessAssertion::acquireSync Trying to take RBS assertion 'WebProcess Background Assertion' for process with PID=86666
+2026-10-28 00:00:10.776 Df loom[86638:649ad9] [com.apple.WebKit:ProcessSuspension] 0x1231441e0 - ProcessAssertion::acquireSync Successfully took RBS assertion 'WebProcess Background Assertion' for process with PID=86666
+2026-10-28 00:00:10.792 Df loom[86638:649ac1] [com.apple.WebKit:Loading] 0x71b674018 - [pageProxyID=7, webPageID=8, PID=86666] WebPageProxy::didFinishDocumentLoadForFrame: frameID=4294967297, isMainFrame=1
+2026-10-28 00:00:10.793 Df loom[86638:649bfc] [com.apple.WebKit:Layout] WebContent[86666]: [pageID=8, frameID=4294967297, isMainFrame=1] LocalFrameView::fireLayoutRelatedMilestonesIfNeeded: Firing first visually non-empty layout milestone on the main frame
+2026-10-28 00:00:10.793 Df loom[86638:649bfc] [com.apple.WebKit:Layout] WebContent[86666]: [webFrameID=4294967297, webPageID=8] WebLocalFrameLoaderClient::dispatchDidReachLayoutMilestone: dispatching DidFirstLayoutForFrame
+2026-10-28 00:00:10.793 Df loom[86638:649bfc] [com.apple.WebKit:Layout] WebContent[86666]: [webFrameID=4294967297, webPageID=8] WebLocalFrameLoaderClient::dispatchDidReachLayoutMilestone: dispatching DidReachLayoutMilestone (milestones=DidFirstLayout, DidFirstVisuallyNonEmptyLayout)
+2026-10-28 00:00:10.793 Df loom[86638:649bfc] [com.apple.WebKit:Layout] WebContent[86666]: [webFrameID=4294967297, webPageID=8] WebLocalFrameLoaderClient::dispatchDidReachLayoutMilestone: dispatching DidFirstVisuallyNonEmptyLayoutForFrame
+2026-10-28 00:00:10.794 Df loom[86638:649bfc] [com.apple.WebKit:Layout] WebContent[86666]: [webFrameID=4294967297, webPageID=8] WebLocalFrameLoaderClient::dispatchDidReachLayoutMilestone: dispatching DidReachLayoutMilestone (milestones=DidFirstMeaningfulPaint)
+2026-10-28 00:00:10.799 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=52] ResourceLoader::willSendRequestInternal: calling completion handler
+2026-10-28 00:00:10.799 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=52 SubResourceLoader::willSendRequestInternal: resource load finished; calling completion handler
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] 0x10e0680e0 - [resourceLoader=0x10fe7f200, frameLoader=0x10e119ce0, frame=0x10e2140c0, webPageID=8, frameID=4294967297, resourceID=52] WebLoaderStrategy::tryLoadingUsingURLSchemeHandler: URL will be handled by a UIProcess URL scheme handler
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=1, webPageID=8, frameID=4294967297, taskID=52] WebURLSchemeTaskProxy::startLoading
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=53] ResourceLoader::willSendRequestInternal: calling completion handler
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=53 SubResourceLoader::willSendRequestInternal: resource load finished; calling completion handler
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] 0x10e0680e0 - [resourceLoader=0x10fe7f800, frameLoader=0x10e119ce0, frame=0x10e2140c0, webPageID=8, frameID=4294967297, resourceID=53] WebLoaderStrategy::tryLoadingUsingURLSchemeHandler: URL will be handled by a UIProcess URL scheme handler
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=1, webPageID=8, frameID=4294967297, taskID=53] WebURLSchemeTaskProxy::startLoading
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=54] ResourceLoader::willSendRequestInternal: calling completion handler
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=54 SubResourceLoader::willSendRequestInternal: resource load finished; calling completion handler
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] 0x10e0680e0 - [resourceLoader=0x10fe63000, frameLoader=0x10e119ce0, frame=0x10e2140c0, webPageID=8, frameID=4294967297, resourceID=54] WebLoaderStrategy::tryLoadingUsingURLSchemeHandler: URL will be handled by a UIProcess URL scheme handler
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=1, webPageID=8, frameID=4294967297, taskID=54] WebURLSchemeTaskProxy::startLoading
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=55] ResourceLoader::willSendRequestInternal: calling completion handler
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=55 SubResourceLoader::willSendRequestInternal: resource load finished; calling completion handler
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] 0x10e0680e0 - [resourceLoader=0x10fe65400, frameLoader=0x10e119ce0, frame=0x10e2140c0, webPageID=8, frameID=4294967297, resourceID=55] WebLoaderStrategy::tryLoadingUsingURLSchemeHandler: URL will be handled by a UIProcess URL scheme handler
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=1, webPageID=8, frameID=4294967297, taskID=55] WebURLSchemeTaskProxy::startLoading
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=56] ResourceLoader::willSendRequestInternal: calling completion handler
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=56 SubResourceLoader::willSendRequestInternal: resource load finished; calling completion handler
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] 0x10e0680e0 - [resourceLoader=0x10fe65a00, frameLoader=0x10e119ce0, frame=0x10e2140c0, webPageID=8, frameID=4294967297, resourceID=56] WebLoaderStrategy::tryLoadingUsingURLSchemeHandler: URL will be handled by a UIProcess URL scheme handler
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=1, webPageID=8, frameID=4294967297, taskID=56] WebURLSchemeTaskProxy::startLoading
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=57] ResourceLoader::willSendRequestInternal: calling completion handler
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=57 SubResourceLoader::willSendRequestInternal: resource load finished; calling completion handler
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] 0x10e0680e0 - [resourceLoader=0x10fe66600, frameLoader=0x10e119ce0, frame=0x10e2140c0, webPageID=8, frameID=4294967297, resourceID=57] WebLoaderStrategy::tryLoadingUsingURLSchemeHandler: URL will be handled by a UIProcess URL scheme handler
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=1, webPageID=8, frameID=4294967297, taskID=57] WebURLSchemeTaskProxy::startLoading
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=58] ResourceLoader::willSendRequestInternal: calling completion handler
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=58 SubResourceLoader::willSendRequestInternal: resource load finished; calling completion handler
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] 0x10e0680e0 - [resourceLoader=0x10fe66c00, frameLoader=0x10e119ce0, frame=0x10e2140c0, webPageID=8, frameID=4294967297, resourceID=58] WebLoaderStrategy::tryLoadingUsingURLSchemeHandler: URL will be handled by a UIProcess URL scheme handler
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=1, webPageID=8, frameID=4294967297, taskID=58] WebURLSchemeTaskProxy::startLoading
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=59] ResourceLoader::willSendRequestInternal: calling completion handler
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=59 SubResourceLoader::willSendRequestInternal: resource load finished; calling completion handler
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] 0x10e0680e0 - [resourceLoader=0x10fe67800, frameLoader=0x10e119ce0, frame=0x10e2140c0, webPageID=8, frameID=4294967297, resourceID=59] WebLoaderStrategy::tryLoadingUsingURLSchemeHandler: URL will be handled by a UIProcess URL scheme handler
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=1, webPageID=8, frameID=4294967297, taskID=59] WebURLSchemeTaskProxy::startLoading
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=60] ResourceLoader::willSendRequestInternal: calling completion handler
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=60 SubResourceLoader::willSendRequestInternal: resource load finished; calling completion handler
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] 0x10e0680e0 - [resourceLoader=0x10fe68a00, frameLoader=0x10e119ce0, frame=0x10e2140c0, webPageID=8, frameID=4294967297, resourceID=60] WebLoaderStrategy::tryLoadingUsingURLSchemeHandler: URL will be handled by a UIProcess URL scheme handler
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=1, webPageID=8, frameID=4294967297, taskID=60] WebURLSchemeTaskProxy::startLoading
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=61] ResourceLoader::willSendRequestInternal: calling completion handler
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=61 SubResourceLoader::willSendRequestInternal: resource load finished; calling completion handler
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] 0x10e0680e0 - [resourceLoader=0x10fe69000, frameLoader=0x10e119ce0, frame=0x10e2140c0, webPageID=8, frameID=4294967297, resourceID=61] WebLoaderStrategy::tryLoadingUsingURLSchemeHandler: URL will be handled by a UIProcess URL scheme handler
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=1, webPageID=8, frameID=4294967297, taskID=61] WebURLSchemeTaskProxy::startLoading
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=62] ResourceLoader::willSendRequestInternal: calling completion handler
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=62 SubResourceLoader::willSendRequestInternal: resource load finished; calling completion handler
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] 0x10e0680e0 - [resourceLoader=0x10fe69600, frameLoader=0x10e119ce0, frame=0x10e2140c0, webPageID=8, frameID=4294967297, resourceID=62] WebLoaderStrategy::tryLoadingUsingURLSchemeHandler: URL will be handled by a UIProcess URL scheme handler
+2026-10-28 00:00:10.800 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=1, webPageID=8, frameID=4294967297, taskID=62] WebURLSchemeTaskProxy::startLoading
+2026-10-28 00:00:10.806 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=64] ResourceLoader::willSendRequestInternal: calling completion handler
+2026-10-28 00:00:10.806 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=64 SubResourceLoader::willSendRequestInternal: resource load finished; calling completion handler
+2026-10-28 00:00:10.806 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] 0x10e0680e0 - [resourceLoader=0x10fe79800, frameLoader=0x10e119ce0, frame=0x10e2140c0, webPageID=8, frameID=4294967297, resourceID=64] WebLoaderStrategy::tryLoadingUsingURLSchemeHandler: URL will be handled by a UIProcess URL scheme handler
+2026-10-28 00:00:10.806 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=2, webPageID=8, frameID=4294967297, taskID=64] WebURLSchemeTaskProxy::startLoading
+2026-10-28 00:00:10.806 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=65] ResourceLoader::willSendRequestInternal: calling completion handler
+2026-10-28 00:00:10.806 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=65 SubResourceLoader::willSendRequestInternal: resource load finished; calling completion handler
+2026-10-28 00:00:10.806 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] 0x10e0680e0 - [resourceLoader=0x10fe7b600, frameLoader=0x10e119ce0, frame=0x10e2140c0, webPageID=8, frameID=4294967297, resourceID=65] WebLoaderStrategy::tryLoadingUsingURLSchemeHandler: URL will be handled by a UIProcess URL scheme handler
+2026-10-28 00:00:10.806 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=2, webPageID=8, frameID=4294967297, taskID=65] WebURLSchemeTaskProxy::startLoading
+2026-10-28 00:00:10.806 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=66] ResourceLoader::willSendRequestInternal: calling completion handler
+2026-10-28 00:00:10.806 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=66 SubResourceLoader::willSendRequestInternal: resource load finished; calling completion handler
+2026-10-28 00:00:10.806 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] 0x10e0680e0 - [resourceLoader=0x10fe7ce00, frameLoader=0x10e119ce0, frame=0x10e2140c0, webPageID=8, frameID=4294967297, resourceID=66] WebLoaderStrategy::tryLoadingUsingURLSchemeHandler: URL will be handled by a UIProcess URL scheme handler
+2026-10-28 00:00:10.806 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=2, webPageID=8, frameID=4294967297, taskID=66] WebURLSchemeTaskProxy::startLoading
+2026-10-28 00:00:10.806 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=1, webPageID=8, frameID=4294967297, taskID=52] WebURLSchemeTaskProxy::didComplete
+2026-10-28 00:00:10.806 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=52 SubResourceLoader::didFinishLoading
+2026-10-28 00:00:10.806 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=1, webPageID=8, frameID=4294967297, taskID=53] WebURLSchemeTaskProxy::didComplete
+2026-10-28 00:00:10.806 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=53 SubResourceLoader::didFinishLoading
+2026-10-28 00:00:10.806 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=1, webPageID=8, frameID=4294967297, taskID=54] WebURLSchemeTaskProxy::didComplete
+2026-10-28 00:00:10.806 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=54 SubResourceLoader::didFinishLoading
+2026-10-28 00:00:10.806 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=1, webPageID=8, frameID=4294967297, taskID=55] WebURLSchemeTaskProxy::didComplete
+2026-10-28 00:00:10.806 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=55 SubResourceLoader::didFinishLoading
+2026-10-28 00:00:10.806 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=1, webPageID=8, frameID=4294967297, taskID=56] WebURLSchemeTaskProxy::didComplete
+2026-10-28 00:00:10.806 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=56 SubResourceLoader::didFinishLoading
+2026-10-28 00:00:10.806 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=1, webPageID=8, frameID=4294967297, taskID=57] WebURLSchemeTaskProxy::didComplete
+2026-10-28 00:00:10.806 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=57 SubResourceLoader::didFinishLoading
+2026-10-28 00:00:10.807 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=1, webPageID=8, frameID=4294967297, taskID=58] WebURLSchemeTaskProxy::didComplete
+2026-10-28 00:00:10.807 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=58 SubResourceLoader::didFinishLoading
+2026-10-28 00:00:10.807 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=1, webPageID=8, frameID=4294967297, taskID=59] WebURLSchemeTaskProxy::didComplete
+2026-10-28 00:00:10.807 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=59 SubResourceLoader::didFinishLoading
+2026-10-28 00:00:10.807 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=1, webPageID=8, frameID=4294967297, taskID=60] WebURLSchemeTaskProxy::didComplete
+2026-10-28 00:00:10.807 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=60 SubResourceLoader::didFinishLoading
+2026-10-28 00:00:10.807 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=1, webPageID=8, frameID=4294967297, taskID=61] WebURLSchemeTaskProxy::didComplete
+2026-10-28 00:00:10.807 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=61 SubResourceLoader::didFinishLoading
+2026-10-28 00:00:10.807 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=1, webPageID=8, frameID=4294967297, taskID=62] WebURLSchemeTaskProxy::didComplete
+2026-10-28 00:00:10.807 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=62 SubResourceLoader::didFinishLoading
+2026-10-28 00:00:10.811 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4710 - [PID=86666] ProcessThrottler::setThrottleState: Updating process assertion type to 3 (foregroundActivities=1, backgroundActivities=1)
+2026-10-28 00:00:10.811 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4680 - [PID=86666] WebProcessProxy::didChangeThrottleState: type=2
+2026-10-28 00:00:10.811 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4680 - [PID=86666] WebProcessProxy::didChangeThrottleState(Foreground) Taking foreground assertion for network process
+2026-10-28 00:00:10.811 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c41b0 - [PID=86665, throttler=0x1230d8220] ProcessThrottler::Activity::Activity: Starting foreground activity / 'Networking for foreground view(s)'
+2026-10-28 00:00:10.811 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c40f0 - [PID=86665, throttler=0x1230d8220] ProcessThrottler::Activity::invalidate: Ending background activity / 'Networking for background view(s)'
+2026-10-28 00:00:10.811 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c41e0 - [PID=86663, throttler=0x1230d0280] ProcessThrottler::Activity::Activity: Starting foreground activity / 'GPU for foreground view(s)'
+2026-10-28 00:00:10.811 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4120 - [PID=86663, throttler=0x1230d0280] ProcessThrottler::Activity::invalidate: Ending background activity / 'GPU for background view(s)'
+2026-10-28 00:00:10.811 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4180 - [PID=86666, throttler=0x1230b4710] ProcessThrottler::Activity::Activity: Starting foreground activity / 'WebPageProxy::runJavaScriptInFrameInScriptWorld'
+2026-10-28 00:00:10.811 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=2, webPageID=8, frameID=4294967297, taskID=64] WebURLSchemeTaskProxy::didComplete
+2026-10-28 00:00:10.811 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=64 SubResourceLoader::didFinishLoading
+2026-10-28 00:00:10.811 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=2, webPageID=8, frameID=4294967297, taskID=66] WebURLSchemeTaskProxy::didComplete
+2026-10-28 00:00:10.811 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=66 SubResourceLoader::didFinishLoading
+2026-10-28 00:00:10.811 Df loom[86638:649bfc] [com.apple.WebKit:Process] WebContent[86666] 0x1048ba718 - [webPageID=8] WebPage::runJavaScriptInFrameInScriptWorld: frameID=0
+2026-10-28 00:00:10.811 Df loom[86638:649bfc] [com.apple.WebKit:Process] WebContent[86666] 0x1048ba718 - [webPageID=8] WebPage::runJavaScriptInFrameInScriptWorld: Request to run JavaScript succeeded
+2026-10-28 00:00:10.811 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4180 - [PID=86666, throttler=0x1230b4710] ProcessThrottler::Activity::invalidate: Ending foreground activity / 'WebPageProxy::runJavaScriptInFrameInScriptWorld'
+2026-10-28 00:00:10.811 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4710 - [PID=86666] ProcessThrottler::setThrottleState: Updating process assertion type to 1 (foregroundActivities=0, backgroundActivities=2)
+2026-10-28 00:00:10.811 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4680 - [PID=86666] WebProcessProxy::didChangeThrottleState: type=1
+2026-10-28 00:00:10.811 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4680 - [PID=86666] WebProcessProxy::didChangeThrottleState(Background) Taking background assertion for network process
+2026-10-28 00:00:10.811 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4240 - [PID=86665, throttler=0x1230d8220] ProcessThrottler::Activity::Activity: Starting background activity / 'Networking for background view(s)'
+2026-10-28 00:00:10.811 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c41b0 - [PID=86665, throttler=0x1230d8220] ProcessThrottler::Activity::invalidate: Ending foreground activity / 'Networking for foreground view(s)'
+2026-10-28 00:00:10.811 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4270 - [PID=86663, throttler=0x1230d0280] ProcessThrottler::Activity::Activity: Starting background activity / 'GPU for background view(s)'
+2026-10-28 00:00:10.811 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c41e0 - [PID=86663, throttler=0x1230d0280] ProcessThrottler::Activity::invalidate: Ending foreground activity / 'GPU for foreground view(s)'
+2026-10-28 00:00:10.813 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=2, webPageID=8, frameID=4294967297, taskID=65] WebURLSchemeTaskProxy::didComplete
+2026-10-28 00:00:10.813 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=65 SubResourceLoader::didFinishLoading
+2026-10-28 00:00:10.819 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=68] ResourceLoader::willSendRequestInternal: calling completion handler
+2026-10-28 00:00:10.819 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=68 SubResourceLoader::willSendRequestInternal: resource load finished; calling completion handler
+2026-10-28 00:00:10.819 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] 0x10e0680e0 - [resourceLoader=0x10fe75000, frameLoader=0x10e119ce0, frame=0x10e2140c0, webPageID=8, frameID=4294967297, resourceID=68] WebLoaderStrategy::tryLoadingUsingURLSchemeHandler: URL will be handled by a UIProcess URL scheme handler
+2026-10-28 00:00:10.819 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=2, webPageID=8, frameID=4294967297, taskID=68] WebURLSchemeTaskProxy::startLoading
+2026-10-28 00:00:10.819 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=69] ResourceLoader::willSendRequestInternal: calling completion handler
+2026-10-28 00:00:10.819 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=69 SubResourceLoader::willSendRequestInternal: resource load finished; calling completion handler
+2026-10-28 00:00:10.819 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] 0x10e0680e0 - [resourceLoader=0x10fe75c00, frameLoader=0x10e119ce0, frame=0x10e2140c0, webPageID=8, frameID=4294967297, resourceID=69] WebLoaderStrategy::tryLoadingUsingURLSchemeHandler: URL will be handled by a UIProcess URL scheme handler
+2026-10-28 00:00:10.819 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=2, webPageID=8, frameID=4294967297, taskID=69] WebURLSchemeTaskProxy::startLoading
+2026-10-28 00:00:10.823 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=70] ResourceLoader::willSendRequestInternal: calling completion handler
+2026-10-28 00:00:10.823 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=70 SubResourceLoader::willSendRequestInternal: resource load finished; calling completion handler
+2026-10-28 00:00:10.823 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] 0x10e0680e0 - [resourceLoader=0x10fe76200, frameLoader=0x10e119ce0, frame=0x10e2140c0, webPageID=8, frameID=4294967297, resourceID=70] WebLoaderStrategy::tryLoadingUsingURLSchemeHandler: URL will be handled by a UIProcess URL scheme handler
+2026-10-28 00:00:10.823 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=2, webPageID=8, frameID=4294967297, taskID=70] WebURLSchemeTaskProxy::startLoading
+2026-10-28 00:00:10.823 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=71] ResourceLoader::willSendRequestInternal: calling completion handler
+2026-10-28 00:00:10.823 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=71 SubResourceLoader::willSendRequestInternal: resource load finished; calling completion handler
+2026-10-28 00:00:10.823 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] 0x10e0680e0 - [resourceLoader=0x10fe78c00, frameLoader=0x10e119ce0, frame=0x10e2140c0, webPageID=8, frameID=4294967297, resourceID=71] WebLoaderStrategy::tryLoadingUsingURLSchemeHandler: URL will be handled by a UIProcess URL scheme handler
+2026-10-28 00:00:10.823 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=2, webPageID=8, frameID=4294967297, taskID=71] WebURLSchemeTaskProxy::startLoading
+2026-10-28 00:00:10.823 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=72] ResourceLoader::willSendRequestInternal: calling completion handler
+2026-10-28 00:00:10.823 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=72 SubResourceLoader::willSendRequestInternal: resource load finished; calling completion handler
+2026-10-28 00:00:10.823 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] 0x10e0680e0 - [resourceLoader=0x10fe7da00, frameLoader=0x10e119ce0, frame=0x10e2140c0, webPageID=8, frameID=4294967297, resourceID=72] WebLoaderStrategy::tryLoadingUsingURLSchemeHandler: URL will be handled by a UIProcess URL scheme handler
+2026-10-28 00:00:10.823 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=2, webPageID=8, frameID=4294967297, taskID=72] WebURLSchemeTaskProxy::startLoading
+2026-10-28 00:00:10.823 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=73] ResourceLoader::willSendRequestInternal: calling completion handler
+2026-10-28 00:00:10.823 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=73 SubResourceLoader::willSendRequestInternal: resource load finished; calling completion handler
+2026-10-28 00:00:10.823 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] 0x10e0680e0 - [resourceLoader=0x10fe67800, frameLoader=0x10e119ce0, frame=0x10e2140c0, webPageID=8, frameID=4294967297, resourceID=73] WebLoaderStrategy::tryLoadingUsingURLSchemeHandler: URL will be handled by a UIProcess URL scheme handler
+2026-10-28 00:00:10.823 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=2, webPageID=8, frameID=4294967297, taskID=73] WebURLSchemeTaskProxy::startLoading
+2026-10-28 00:00:10.823 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=74] ResourceLoader::willSendRequestInternal: calling completion handler
+2026-10-28 00:00:10.823 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=74 SubResourceLoader::willSendRequestInternal: resource load finished; calling completion handler
+2026-10-28 00:00:10.823 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] 0x10e0680e0 - [resourceLoader=0x10fe71400, frameLoader=0x10e119ce0, frame=0x10e2140c0, webPageID=8, frameID=4294967297, resourceID=74] WebLoaderStrategy::tryLoadingUsingURLSchemeHandler: URL will be handled by a UIProcess URL scheme handler
+2026-10-28 00:00:10.823 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=2, webPageID=8, frameID=4294967297, taskID=74] WebURLSchemeTaskProxy::startLoading
+2026-10-28 00:00:10.824 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=2, webPageID=8, frameID=4294967297, taskID=68] WebURLSchemeTaskProxy::didComplete
+2026-10-28 00:00:10.824 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=68 SubResourceLoader::didFinishLoading
+2026-10-28 00:00:10.824 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=2, webPageID=8, frameID=4294967297, taskID=69] WebURLSchemeTaskProxy::didComplete
+2026-10-28 00:00:10.824 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=69 SubResourceLoader::didFinishLoading
+2026-10-28 00:00:10.825 Df loom[86638:649bfc] [com.apple.WebKit:Fonts] WebContent[86666]: Registering font <private> with fontURL <private>
+2026-10-28 00:00:10.838 Df loom[86638:649bfc] [com.apple.WebKit:Fonts] WebContent[86666]: Registering font <private> with fontURL <private>
+2026-10-28 00:00:10.840 Df loom[86638:649bfc] [com.apple.WebKit:Fonts] WebContent[86666]: Could not register font <private>, error The file has already been registered in the specified scope.
+2026-10-28 00:00:10.840 Df loom[86638:649bfc] [com.apple.WebKit:Fonts] WebContent[86666]: Registering font <private> with fontURL <private>
+2026-10-28 00:00:10.841 Df loom[86638:649bfc] [com.apple.WebKit:Fonts] WebContent[86666]: Could not register font <private>, error The file has already been registered in the specified scope.
+2026-10-28 00:00:10.841 Df loom[86638:649bfc] [com.apple.WebKit:Fonts] WebContent[86666]: Registering font <private> with fontURL <private>
+2026-10-28 00:00:10.841 Df loom[86638:649bfc] [com.apple.WebKit:Fonts] WebContent[86666]: Could not register font <private>, error The file has already been registered in the specified scope.
+2026-10-28 00:00:10.841 Df loom[86638:649bfc] [com.apple.WebKit:Fonts] WebContent[86666]: Registering font <private> with fontURL <private>
+2026-10-28 00:00:10.841 Df loom[86638:649bfc] [com.apple.WebKit:Fonts] WebContent[86666]: Could not register font <private>, error The file has already been registered in the specified scope.
+2026-10-28 00:00:10.841 Df loom[86638:649bfc] [com.apple.WebKit:Fonts] WebContent[86666]: Registering font <private> with fontURL <private>
+2026-10-28 00:00:10.841 Df loom[86638:649bfc] [com.apple.WebKit:Fonts] WebContent[86666]: Could not register font <private>, error The file has already been registered in the specified scope.
+2026-10-28 00:00:10.848 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=75] ResourceLoader::willSendRequestInternal: calling completion handler
+2026-10-28 00:00:10.848 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=75 SubResourceLoader::willSendRequestInternal: resource load finished; calling completion handler
+2026-10-28 00:00:10.848 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] 0x10e0680e0 - [resourceLoader=0x10fe63600, frameLoader=0x10e119ce0, frame=0x10e2140c0, webPageID=8, frameID=4294967297, resourceID=75] WebLoaderStrategy::tryLoadingUsingURLSchemeHandler: URL will be handled by a UIProcess URL scheme handler
+2026-10-28 00:00:10.848 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=1, webPageID=8, frameID=4294967297, taskID=75] WebURLSchemeTaskProxy::startLoading
+2026-10-28 00:00:10.851 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=2, webPageID=8, frameID=4294967297, taskID=70] WebURLSchemeTaskProxy::didComplete
+2026-10-28 00:00:10.851 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=70 SubResourceLoader::didFinishLoading
+2026-10-28 00:00:10.851 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=2, webPageID=8, frameID=4294967297, taskID=71] WebURLSchemeTaskProxy::didComplete
+2026-10-28 00:00:10.851 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=71 SubResourceLoader::didFinishLoading
+2026-10-28 00:00:10.851 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=2, webPageID=8, frameID=4294967297, taskID=72] WebURLSchemeTaskProxy::didComplete
+2026-10-28 00:00:10.851 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=72 SubResourceLoader::didFinishLoading
+2026-10-28 00:00:10.851 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=2, webPageID=8, frameID=4294967297, taskID=73] WebURLSchemeTaskProxy::didComplete
+2026-10-28 00:00:10.851 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=73 SubResourceLoader::didFinishLoading
+2026-10-28 00:00:10.851 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=1, webPageID=8, frameID=4294967297, taskID=75] WebURLSchemeTaskProxy::didComplete
+2026-10-28 00:00:10.851 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=75 SubResourceLoader::didFinishLoading
+2026-10-28 00:00:10.864 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=102] ResourceLoader::willSendRequestInternal: calling completion handler
+2026-10-28 00:00:10.864 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=102 SubResourceLoader::willSendRequestInternal: resource load finished; calling completion handler
+2026-10-28 00:00:10.864 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] 0x10e0680e0 - [resourceLoader=0x10fe75000, frameLoader=0x10e119ce0, frame=0x10e2140c0, webPageID=8, frameID=4294967297, resourceID=102] WebLoaderStrategy::tryLoadingUsingURLSchemeHandler: URL will be handled by a UIProcess URL scheme handler
+2026-10-28 00:00:10.864 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=2, webPageID=8, frameID=4294967297, taskID=102] WebURLSchemeTaskProxy::startLoading
+2026-10-28 00:00:10.864 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=103] ResourceLoader::willSendRequestInternal: calling completion handler
+2026-10-28 00:00:10.864 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=103 SubResourceLoader::willSendRequestInternal: resource load finished; calling completion handler
+2026-10-28 00:00:10.864 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] 0x10e0680e0 - [resourceLoader=0x10fe79e00, frameLoader=0x10e119ce0, frame=0x10e2140c0, webPageID=8, frameID=4294967297, resourceID=103] WebLoaderStrategy::tryLoadingUsingURLSchemeHandler: URL will be handled by a UIProcess URL scheme handler
+2026-10-28 00:00:10.864 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=2, webPageID=8, frameID=4294967297, taskID=103] WebURLSchemeTaskProxy::startLoading
+2026-10-28 00:00:10.867 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=2, webPageID=8, frameID=4294967297, taskID=102] WebURLSchemeTaskProxy::didComplete
+2026-10-28 00:00:10.867 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=102 SubResourceLoader::didFinishLoading
+2026-10-28 00:00:10.868 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4710 - [PID=86666] ProcessThrottler::setThrottleState: Updating process assertion type to 3 (foregroundActivities=1, backgroundActivities=1)
+2026-10-28 00:00:10.868 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4680 - [PID=86666] WebProcessProxy::didChangeThrottleState: type=2
+2026-10-28 00:00:10.868 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4680 - [PID=86666] WebProcessProxy::didChangeThrottleState(Foreground) Taking foreground assertion for network process
+2026-10-28 00:00:10.868 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4120 - [PID=86665, throttler=0x1230d8220] ProcessThrottler::Activity::Activity: Starting foreground activity / 'Networking for foreground view(s)'
+2026-10-28 00:00:10.868 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4240 - [PID=86665, throttler=0x1230d8220] ProcessThrottler::Activity::invalidate: Ending background activity / 'Networking for background view(s)'
+2026-10-28 00:00:10.868 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4180 - [PID=86663, throttler=0x1230d0280] ProcessThrottler::Activity::Activity: Starting foreground activity / 'GPU for foreground view(s)'
+2026-10-28 00:00:10.868 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4270 - [PID=86663, throttler=0x1230d0280] ProcessThrottler::Activity::invalidate: Ending background activity / 'GPU for background view(s)'
+2026-10-28 00:00:10.868 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c40f0 - [PID=86666, throttler=0x1230b4710] ProcessThrottler::Activity::Activity: Starting foreground activity / 'WebPageProxy::runJavaScriptInFrameInScriptWorld'
+2026-10-28 00:00:10.868 Df loom[86638:649bfc] [com.apple.WebKit:Process] WebContent[86666] 0x1048ba718 - [webPageID=8] WebPage::runJavaScriptInFrameInScriptWorld: frameID=0
+2026-10-28 00:00:10.868 Df loom[86638:649bfc] [com.apple.WebKit:Process] WebContent[86666] 0x1048ba718 - [webPageID=8] WebPage::runJavaScriptInFrameInScriptWorld: Request to run JavaScript succeeded
+2026-10-28 00:00:10.868 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=2, webPageID=8, frameID=4294967297, taskID=103] WebURLSchemeTaskProxy::didComplete
+2026-10-28 00:00:10.868 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=103 SubResourceLoader::didFinishLoading
+2026-10-28 00:00:10.868 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c40f0 - [PID=86666, throttler=0x1230b4710] ProcessThrottler::Activity::invalidate: Ending foreground activity / 'WebPageProxy::runJavaScriptInFrameInScriptWorld'
+2026-10-28 00:00:10.868 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4710 - [PID=86666] ProcessThrottler::setThrottleState: Updating process assertion type to 1 (foregroundActivities=0, backgroundActivities=2)
+2026-10-28 00:00:10.868 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4680 - [PID=86666] WebProcessProxy::didChangeThrottleState: type=1
+2026-10-28 00:00:10.868 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4680 - [PID=86666] WebProcessProxy::didChangeThrottleState(Background) Taking background assertion for network process
+2026-10-28 00:00:10.868 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c41e0 - [PID=86665, throttler=0x1230d8220] ProcessThrottler::Activity::Activity: Starting background activity / 'Networking for background view(s)'
+2026-10-28 00:00:10.868 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4120 - [PID=86665, throttler=0x1230d8220] ProcessThrottler::Activity::invalidate: Ending foreground activity / 'Networking for foreground view(s)'
+2026-10-28 00:00:10.868 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4210 - [PID=86663, throttler=0x1230d0280] ProcessThrottler::Activity::Activity: Starting background activity / 'GPU for background view(s)'
+2026-10-28 00:00:10.868 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4180 - [PID=86663, throttler=0x1230d0280] ProcessThrottler::Activity::invalidate: Ending foreground activity / 'GPU for foreground view(s)'
+2026-10-28 00:00:10.868 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=106] ResourceLoader::willSendRequestInternal: calling completion handler
+2026-10-28 00:00:10.868 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=106 SubResourceLoader::willSendRequestInternal: resource load finished; calling completion handler
+2026-10-28 00:00:10.868 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] 0x10e0680e0 - [resourceLoader=0x10fe63600, frameLoader=0x10e119ce0, frame=0x10e2140c0, webPageID=8, frameID=4294967297, resourceID=106] WebLoaderStrategy::tryLoadingUsingURLSchemeHandler: URL will be handled by a UIProcess URL scheme handler
+2026-10-28 00:00:10.868 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=2, webPageID=8, frameID=4294967297, taskID=106] WebURLSchemeTaskProxy::startLoading
+2026-10-28 00:00:10.868 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4710 - [PID=86666] ProcessThrottler::setThrottleState: Updating process assertion type to 3 (foregroundActivities=1, backgroundActivities=1)
+2026-10-28 00:00:10.868 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4680 - [PID=86666] WebProcessProxy::didChangeThrottleState: type=2
+2026-10-28 00:00:10.868 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4680 - [PID=86666] WebProcessProxy::didChangeThrottleState(Foreground) Taking foreground assertion for network process
+2026-10-28 00:00:10.868 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c42d0 - [PID=86665, throttler=0x1230d8220] ProcessThrottler::Activity::Activity: Starting foreground activity / 'Networking for foreground view(s)'
+2026-10-28 00:00:10.868 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c41e0 - [PID=86665, throttler=0x1230d8220] ProcessThrottler::Activity::invalidate: Ending background activity / 'Networking for background view(s)'
+2026-10-28 00:00:10.868 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4330 - [PID=86663, throttler=0x1230d0280] ProcessThrottler::Activity::Activity: Starting foreground activity / 'GPU for foreground view(s)'
+2026-10-28 00:00:10.868 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4210 - [PID=86663, throttler=0x1230d0280] ProcessThrottler::Activity::invalidate: Ending background activity / 'GPU for background view(s)'
+2026-10-28 00:00:10.868 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c42a0 - [PID=86666, throttler=0x1230b4710] ProcessThrottler::Activity::Activity: Starting foreground activity / 'WebPageProxy::runJavaScriptInFrameInScriptWorld'
+2026-10-28 00:00:10.869 Df loom[86638:649bfc] [com.apple.WebKit:Process] WebContent[86666] 0x1048ba718 - [webPageID=8] WebPage::runJavaScriptInFrameInScriptWorld: frameID=0
+2026-10-28 00:00:10.869 Df loom[86638:649bfc] [com.apple.WebKit:Process] WebContent[86666] 0x1048ba718 - [webPageID=8] WebPage::runJavaScriptInFrameInScriptWorld: Request to run JavaScript succeeded
+2026-10-28 00:00:10.869 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=2, webPageID=8, frameID=4294967297, taskID=106] WebURLSchemeTaskProxy::didComplete
+2026-10-28 00:00:10.869 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=106 SubResourceLoader::didFinishLoading
+2026-10-28 00:00:10.869 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c42a0 - [PID=86666, throttler=0x1230b4710] ProcessThrottler::Activity::invalidate: Ending foreground activity / 'WebPageProxy::runJavaScriptInFrameInScriptWorld'
+2026-10-28 00:00:10.869 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4710 - [PID=86666] ProcessThrottler::setThrottleState: Updating process assertion type to 1 (foregroundActivities=0, backgroundActivities=2)
+2026-10-28 00:00:10.869 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4680 - [PID=86666] WebProcessProxy::didChangeThrottleState: type=1
+2026-10-28 00:00:10.869 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4680 - [PID=86666] WebProcessProxy::didChangeThrottleState(Background) Taking background assertion for network process
+2026-10-28 00:00:10.869 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c43f0 - [PID=86665, throttler=0x1230d8220] ProcessThrottler::Activity::Activity: Starting background activity / 'Networking for background view(s)'
+2026-10-28 00:00:10.869 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c42d0 - [PID=86665, throttler=0x1230d8220] ProcessThrottler::Activity::invalidate: Ending foreground activity / 'Networking for foreground view(s)'
+2026-10-28 00:00:10.869 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4420 - [PID=86663, throttler=0x1230d0280] ProcessThrottler::Activity::Activity: Starting background activity / 'GPU for background view(s)'
+2026-10-28 00:00:10.869 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4330 - [PID=86663, throttler=0x1230d0280] ProcessThrottler::Activity::invalidate: Ending foreground activity / 'GPU for foreground view(s)'
+2026-10-28 00:00:10.901 Df loom[86638:649ac1] [com.apple.WebKit:Loading] 0x71b674018 - [pageProxyID=7, webPageID=8, PID=86666] WebPageProxy::didGeneratePageLoadTiming: url=<private> firstVisualLayout=0.045 firstMeaningfulPaint=0.053 domContentLoaded=0.044 loadEvent=0.026 subresourcesFinished=0.026
+2026-10-28 00:00:11.367 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=136] ResourceLoader::willSendRequestInternal: calling completion handler
+2026-10-28 00:00:11.367 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=136 SubResourceLoader::willSendRequestInternal: resource load finished; calling completion handler
+2026-10-28 00:00:11.367 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] 0x10e0680e0 - [resourceLoader=0x10f220c00, frameLoader=0x10e119ce0, frame=0x10e2140c0, webPageID=8, frameID=4294967297, resourceID=136] WebLoaderStrategy::tryLoadingUsingURLSchemeHandler: URL will be handled by a UIProcess URL scheme handler
+2026-10-28 00:00:11.367 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=2, webPageID=8, frameID=4294967297, taskID=136] WebURLSchemeTaskProxy::startLoading
+2026-10-28 00:00:11.371 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=2, webPageID=8, frameID=4294967297, taskID=136] WebURLSchemeTaskProxy::didComplete
+2026-10-28 00:00:11.371 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=136 SubResourceLoader::didFinishLoading
+2026-10-28 00:00:11.599 Df loom[86638:649bfc] [com.apple.WebKit:Network] WebContent[86666] [schemeHandler=2, webPageID=8, frameID=4294967297, taskID=74] WebURLSchemeTaskProxy::didComplete
+2026-10-28 00:00:11.599 Df loom[86638:649bfc] [com.apple.WebKit:ResourceLoading] WebContent[86666]: [pageID=8, frameID=4294967297, resourceID=74 SubResourceLoader::didFinishLoading
+2026-10-28 00:00:11.870 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x123144180 - ~ProcessAssertion: Releasing process assertion 'WebProcess Foreground Assertion' for process with PID=86666
+2026-10-28 00:00:13.776 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230981c0 NavigationState is releasing background process assertion because a page load completed
+2026-10-28 00:00:13.776 Df loom[86638:649ac1] [com.apple.WebKit:Process] Dropping network activity on WebProcess with PID 86666
+2026-10-28 00:00:13.776 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4360 - [PID=86666, throttler=0x1230b4710] ProcessThrottler::Activity::invalidate: Ending background activity / 'Page Load'
+2026-10-28 00:00:13.779 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4710 - [PID=86666] ProcessThrottler::sendPrepareToSuspendIPC: Sending PrepareToSuspend(1, isSuspensionImminent=0) IPC, remainingRunTime=0.000000s
+2026-10-28 00:00:13.779 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4680 - [PID=86666] WebProcessProxy::sendPrepareToSuspend: isSuspensionImminent=0
+2026-10-28 00:00:13.780 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666]: [sessionID=1] WebProcess::prepareToSuspend: isSuspensionImminent=0, remainingRunTime=0.000253s
+2026-10-28 00:00:13.780 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666] 0x10e058100 - [sessionID=1] WebProcess::releaseMemory: BEGIN
+2026-10-28 00:00:13.789 Df loom[86638:649bfc] [com.apple.WebKit:MemoryPressure] WebContent[86666] Memory pressure relief: Total: res = 26722304/20643840/-6078464, res+swap = 35357512/27853640/-7503872
+2026-10-28 00:00:13.789 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666] 0x10e058100 - [sessionID=1] WebProcess::releaseMemory: END
+2026-10-28 00:00:13.789 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666]: [sessionID=1] WebProcess::freezeAllLayerTrees: WebProcess is freezing all layer trees
+2026-10-28 00:00:13.789 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666]: [webPageID=8] WebPage::freezeLayerTree: Adding a reason to freeze layer tree (reason=4, new=4, old=0)
+2026-10-28 00:00:13.789 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666]: [sessionID=1] WebProcess::destroyRenderingResources: took 0.27ms
+2026-10-28 00:00:13.789 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666]: [sessionID=1] WebProcess::markAllLayersVolatile:
+2026-10-28 00:00:13.789 Df loom[86638:649bfc] [com.apple.WebKit:Layers] WebContent[86666]: [webPageID=8] WebPage::markLayersVolatile
+2026-10-28 00:00:13.798 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666]: [webPageID=8] WebPage::markLayersVolatile: Failed to mark all layers as volatile, will retry in 20 ms
+2026-10-28 00:00:13.918 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666]: [webPageID=8] WebPage::markLayersVolatile: Failed to mark all layers as volatile, will retry in 40 ms
+2026-10-28 00:00:14.057 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666]: [webPageID=8] WebPage::markLayersVolatile: Failed to mark all layers as volatile, will retry in 80 ms
+2026-10-28 00:00:14.237 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666]: [webPageID=8] WebPage::markLayersVolatile: Failed to mark all layers as volatile, will retry in 160 ms
+2026-10-28 00:00:14.497 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666]: [webPageID=8] WebPage::markLayersVolatile: Failed to mark all layers as volatile, will retry in 320 ms
+2026-10-28 00:00:14.915 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666]: [webPageID=8] WebPage::markLayersVolatile: Failed to mark all layers as volatile, will retry in 640 ms
+2026-10-28 00:00:15.655 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666]: [webPageID=8] WebPage::markLayersVolatile: Failed to mark all layers as volatile, will retry in 1280 ms
+2026-10-28 00:00:15.893 Df loom[86638:649bfc] [com.apple.WebKit:ActivityState] WebContent[86666] 0x10e18d2e0 - UserActivity::Impl::endActivity: description=App nap disabled for page due to user activity
+2026-10-28 00:00:17.035 Df loom[86638:649bfc] [com.apple.WebKit:Layers] WebContent[86666] 0x1048ba718 - [webPageID=8] WebPage::markLayersVolatile: Failed to mark layers as volatile within 2000ms
+2026-10-28 00:00:17.035 E  loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666] 0x10e058100 - [sessionID=1] WebProcess::markAllLayersVolatile: Failed to mark layers as volatile for webPageID=8
+2026-10-28 00:00:17.035 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666]: [sessionID=1] WebProcess::prepareToSuspend: Process is ready to suspend
+2026-10-28 00:00:17.035 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4710 - [PID=86666] ProcessThrottler::processReadyToSuspend: Updating process assertion to allow suspension
+2026-10-28 00:00:17.035 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4710 - [PID=86666] ProcessThrottler::setThrottleState: Updating process assertion type to 0 (foregroundActivities=0, backgroundActivities=0)
+2026-10-28 00:00:17.035 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4710 - [PID=86666] ProcessThrottler::clearAssertion:
+2026-10-28 00:00:17.035 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4710 - [PID=86666] ProcessThrottler::clearAssertion: Releasing near-suspended assertion
+2026-10-28 00:00:17.035 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4680 - [PID=86666] WebProcessProxy::didChangeThrottleState: type=0
+2026-10-28 00:00:17.035 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4680 - [PID=86666] WebProcessProxy::didChangeThrottleState(Suspended) Release all assertions for network process
+2026-10-28 00:00:17.035 Df loom[86638:649be8] [com.apple.WebKit:ProcessSuspension] 0x123144180 - ProcessAssertion::acquireSync Trying to take RBS assertion 'WebProcess NearSuspended Assertion' for process with PID=86666
+2026-10-28 00:00:17.035 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c43f0 - [PID=86665, throttler=0x1230d8220] ProcessThrottler::Activity::invalidate: Ending background activity / 'Networking for background view(s)'
+2026-10-28 00:00:17.035 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4420 - [PID=86663, throttler=0x1230d0280] ProcessThrottler::Activity::invalidate: Ending background activity / 'GPU for background view(s)'
+2026-10-28 00:00:17.037 Df loom[86638:649be8] [com.apple.WebKit:ProcessSuspension] 0x123144180 - ProcessAssertion::acquireSync Successfully took RBS assertion 'WebProcess NearSuspended Assertion' for process with PID=86666
+2026-10-28 00:00:17.037 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x123144180 - ~ProcessAssertion: Releasing process assertion 'WebProcess NearSuspended Assertion' for process with PID=86666
+2026-10-28 00:00:18.035 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1231441e0 - ~ProcessAssertion: Releasing process assertion 'WebProcess Background Assertion' for process with PID=86666
+2026-10-28 00:00:19.022 Df loom[86638:649ac1] [com.apple.xpc:connection] [0x71b744280] invalidated because the current process cancelled the connection by calling xpc_connection_cancel()
+2026-10-28 00:00:24.739 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.739 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4710 - [PID=86666] ProcessThrottler::updateThrottleStateIfNeeded: sending ProcessDidResume IPC because the process was suspended (probable wakeup reason: WebPage_WindowAndViewFramesChanged)
+2026-10-28 00:00:24.739 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4680 - [PID=86666] WebProcessProxy::sendProcessDidResume:
+2026-10-28 00:00:24.739 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4710 - [PID=86666] ProcessThrottler::setThrottleState: Updating process assertion type to 1 (foregroundActivities=0, backgroundActivities=1)
+2026-10-28 00:00:24.739 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4680 - [PID=86666] WebProcessProxy::didChangeThrottleState: type=1
+2026-10-28 00:00:24.739 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4680 - [PID=86666] WebProcessProxy::didChangeThrottleState(Background) Taking background assertion for network process
+2026-10-28 00:00:24.739 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4120 - [PID=86665, throttler=0x1230d8220] ProcessThrottler::Activity::Activity: Starting background activity / 'Networking for background view(s)'
+2026-10-28 00:00:24.739 Df loom[86638:649ac3] [com.apple.WebKit:ProcessSuspension] 0x123144180 - ProcessAssertion::acquireSync Trying to take RBS assertion 'WebProcess Background Assertion' for process with PID=86666
+2026-10-28 00:00:24.739 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4180 - [PID=86663, throttler=0x1230d0280] ProcessThrottler::Activity::Activity: Starting background activity / 'GPU for background view(s)'
+2026-10-28 00:00:24.740 Df loom[86638:649ac3] [com.apple.WebKit:ProcessSuspension] 0x123144180 - ProcessAssertion::acquireSync Successfully took RBS assertion 'WebProcess Background Assertion' for process with PID=86666
+2026-10-28 00:00:24.742 Df loom[86638:649bfc] [com.apple.WebKit:PerformanceLogging] WebContent[86666]: PerformanceMonitor:measurePostBackgroundingMemoryUsage: Process was using 28164936 bytes of memory after becoming non visible.
+2026-10-28 00:00:24.742 Df loom[86638:649bfc] [com.apple.WebKit:PerformanceLogging] WebContent[86666]: PerformanceMonitor::measurePostLoadMemoryUsage: Process was using 28164936 bytes of memory after the page load.
+2026-10-28 00:00:24.742 Df loom[86638:649bfc] [com.apple.WebKit:Process] WebContent[86666] WebProcess::initializeAccessibility, pid = 86666
+2026-10-28 00:00:24.752 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.753 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.753 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.753 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.753 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.753 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.754 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.755 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.757 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.759 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.760 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.760 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.761 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.761 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.763 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.763 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.763 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.763 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.763 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.763 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.763 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.763 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.763 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.763 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.763 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.763 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.763 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.763 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.763 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.763 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.763 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.763 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.763 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.763 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.763 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.763 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.763 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.763 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.763 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.763 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.763 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.763 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.763 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.763 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.763 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.763 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.763 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.763 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.765 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.781 Df loom[86638:649bfc] [com.apple.WebKit:Process] WebContent[86666] WebPage::sendAccessibilityTokenIfNeeded sending deferred token for pageID=8
+2026-10-28 00:00:24.781 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666] 0x10e058100 - [sessionID=1] WebProcess::processDidResume:
+2026-10-28 00:00:24.781 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666] 0x10e058100 - [sessionID=1] WebProcess::cancelMarkAllLayersVolatile:
+2026-10-28 00:00:24.781 Df loom[86638:649bfc] [com.apple.WebKit:Layers] WebContent[86666] 0x1048ba718 - [webPageID=8] WebPage::cancelMarkLayersVolatile:
+2026-10-28 00:00:24.781 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666] 0x10e058100 - [sessionID=1] WebProcess::unfreezeAllLayerTrees: WebProcess is unfreezing all layer trees
+2026-10-28 00:00:24.781 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666]: [webPageID=8] WebPage::unfreezeLayerTree: Removing a reason to freeze layer tree (reason=4, new=0, old=4)
+2026-10-28 00:00:24.782 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4710 - [PID=86666] ProcessThrottler::sendPrepareToSuspendIPC: Sending PrepareToSuspend(2, isSuspensionImminent=0) IPC, remainingRunTime=0.000000s
+2026-10-28 00:00:24.782 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4680 - [PID=86666] WebProcessProxy::sendPrepareToSuspend: isSuspensionImminent=0
+2026-10-28 00:00:24.786 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666]: [sessionID=1] WebProcess::prepareToSuspend: isSuspensionImminent=0, remainingRunTime=0.004195s
+2026-10-28 00:00:24.786 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666]: [sessionID=1] WebProcess::freezeAllLayerTrees: WebProcess is freezing all layer trees
+2026-10-28 00:00:24.786 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666]: [webPageID=8] WebPage::freezeLayerTree: Adding a reason to freeze layer tree (reason=4, new=4, old=0)
+2026-10-28 00:00:24.786 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666]: [sessionID=1] WebProcess::destroyRenderingResources: took 0.01ms
+2026-10-28 00:00:24.786 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666]: [sessionID=1] WebProcess::markAllLayersVolatile:
+2026-10-28 00:00:24.786 Df loom[86638:649bfc] [com.apple.WebKit:Layers] WebContent[86666]: [webPageID=8] WebPage::markLayersVolatile
+2026-10-28 00:00:24.794 Df loom[86638:649bfc] [com.apple.AppKit:AutomaticTermination] WebContent[86666] void _NSDisableAutomaticTerminationAndLog(NSString *) NSAccessibility Request Received
+2026-10-28 00:00:24.796 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666]: [webPageID=8] WebPage::markLayersVolatile: Failed to mark all layers as volatile, will retry in 20 ms
+2026-10-28 00:00:24.820 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.913 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.915 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666]: [webPageID=8] WebPage::markLayersVolatile: Failed to mark all layers as volatile, will retry in 40 ms
+2026-10-28 00:00:24.968 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:24.968 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:25.055 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666]: [webPageID=8] WebPage::markLayersVolatile: Failed to mark all layers as volatile, will retry in 80 ms
+2026-10-28 00:00:25.237 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666]: [webPageID=8] WebPage::markLayersVolatile: Failed to mark all layers as volatile, will retry in 160 ms
+2026-10-28 00:00:25.497 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666]: [webPageID=8] WebPage::markLayersVolatile: Failed to mark all layers as volatile, will retry in 320 ms
+2026-10-28 00:00:25.877 Df loom[86638:649bfc] [com.apple.WebKit:PerformanceLogging] WebContent[86666]: PerformanceMonitor::measurePostLoadCPUUsage: Process was using 0.1% CPU after the page load.
+2026-10-28 00:00:25.878 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666]: [webPageID=8] WebPage::markLayersVolatile: Failed to mark all layers as volatile, will retry in 640 ms
+2026-10-28 00:00:26.617 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666]: [webPageID=8] WebPage::markLayersVolatile: Failed to mark all layers as volatile, will retry in 1280 ms
+2026-10-28 00:00:27.997 Df loom[86638:649bfc] [com.apple.WebKit:Layers] WebContent[86666] 0x1048ba718 - [webPageID=8] WebPage::markLayersVolatile: Failed to mark layers as volatile within 2000ms
+2026-10-28 00:00:27.997 E  loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666] 0x10e058100 - [sessionID=1] WebProcess::markAllLayersVolatile: Failed to mark layers as volatile for webPageID=8
+2026-10-28 00:00:27.997 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666]: [sessionID=1] WebProcess::prepareToSuspend: Process is ready to suspend
+2026-10-28 00:00:27.997 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4710 - [PID=86666] ProcessThrottler::processReadyToSuspend: Updating process assertion to allow suspension
+2026-10-28 00:00:27.997 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4710 - [PID=86666] ProcessThrottler::setThrottleState: Updating process assertion type to 0 (foregroundActivities=0, backgroundActivities=0)
+2026-10-28 00:00:27.997 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4710 - [PID=86666] ProcessThrottler::clearAssertion:
+2026-10-28 00:00:27.997 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4710 - [PID=86666] ProcessThrottler::clearAssertion: Releasing near-suspended assertion
+2026-10-28 00:00:27.997 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4680 - [PID=86666] WebProcessProxy::didChangeThrottleState: type=0
+2026-10-28 00:00:27.997 Df loom[86638:649be8] [com.apple.WebKit:ProcessSuspension] 0x1231441e0 - ProcessAssertion::acquireSync Trying to take RBS assertion 'WebProcess NearSuspended Assertion' for process with PID=86666
+2026-10-28 00:00:27.997 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4680 - [PID=86666] WebProcessProxy::didChangeThrottleState(Suspended) Release all assertions for network process
+2026-10-28 00:00:27.997 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4120 - [PID=86665, throttler=0x1230d8220] ProcessThrottler::Activity::invalidate: Ending background activity / 'Networking for background view(s)'
+2026-10-28 00:00:27.997 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4180 - [PID=86663, throttler=0x1230d0280] ProcessThrottler::Activity::invalidate: Ending background activity / 'GPU for background view(s)'
+2026-10-28 00:00:27.998 Df loom[86638:649be8] [com.apple.WebKit:ProcessSuspension] 0x1231441e0 - ProcessAssertion::acquireSync Successfully took RBS assertion 'WebProcess NearSuspended Assertion' for process with PID=86666
+2026-10-28 00:00:27.998 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1231441e0 - ~ProcessAssertion: Releasing process assertion 'WebProcess NearSuspended Assertion' for process with PID=86666
+2026-10-28 00:00:28.997 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x123144180 - ~ProcessAssertion: Releasing process assertion 'WebProcess Background Assertion' for process with PID=86666
+2026-10-28 00:00:46.966 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.967 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.967 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.968 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.969 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.969 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.969 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.969 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.969 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.969 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.969 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.969 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.969 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.969 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.969 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.969 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.970 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.970 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.970 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.970 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.970 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.970 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.970 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.970 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.970 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.970 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.970 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.970 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.970 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.970 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.970 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.970 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.970 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.970 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.970 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.970 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.970 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.971 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.971 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:46.975 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:47.024 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:47.340 Df loom[86638:649ac1] [com.apple.xpc:connection] [0x71b744c80] invalidated because the current process cancelled the connection by calling xpc_connection_cancel()
+2026-10-28 00:00:47.340 Df loom[86638:649ac1] [com.apple.xpc:connection] [0x71b744dc0] invalidated because the current process cancelled the connection by calling xpc_connection_cancel()
+2026-10-28 00:00:47.398 Df loom[86638:649ac1] [com.apple.WebKit:ViewState] 0x71b674018 - [pageProxyID=7, webPageID=8, PID=86666] WebPageProxy::updateActivityState: view visibility state changed 0 -> 1
+2026-10-28 00:00:47.398 Df loom[86638:649ac1] [com.apple.WebKit:ViewState] 0x71b674018 - [pageProxyID=7, webPageID=8, PID=86666] WebPageProxy::viewIsBecomingVisible:
+2026-10-28 00:00:47.398 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4710 - [PID=86666] ProcessThrottler::updateThrottleStateIfNeeded: sending ProcessDidResume IPC because the process was suspended (probable wakeup reason: WebPage_SetActivityState)
+2026-10-28 00:00:47.398 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4680 - [PID=86666] WebProcessProxy::sendProcessDidResume:
+2026-10-28 00:00:47.398 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4710 - [PID=86666] ProcessThrottler::setThrottleState: Updating process assertion type to 1 (foregroundActivities=0, backgroundActivities=1)
+2026-10-28 00:00:47.399 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4680 - [PID=86666] WebProcessProxy::didChangeThrottleState: type=1
+2026-10-28 00:00:47.399 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4680 - [PID=86666] WebProcessProxy::didChangeThrottleState(Background) Taking background assertion for network process
+2026-10-28 00:00:47.399 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4120 - [PID=86665, throttler=0x1230d8220] ProcessThrottler::Activity::Activity: Starting background activity / 'Networking for background view(s)'
+2026-10-28 00:00:47.399 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4180 - [PID=86663, throttler=0x1230d0280] ProcessThrottler::Activity::Activity: Starting background activity / 'GPU for background view(s)'
+2026-10-28 00:00:47.399 Df loom[86638:649be8] [com.apple.WebKit:ProcessSuspension] 0x123144180 - ProcessAssertion::acquireSync Trying to take RBS assertion 'WebProcess Background Assertion' for process with PID=86666
+2026-10-28 00:00:47.399 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x71b674018 - [pageProxyID=7, webPageID=8, PID=86666] WebPageProxy::updateThrottleState: UIProcess is taking a foreground assertion because the view is visible
+2026-10-28 00:00:47.399 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4710 - [PID=86666] ProcessThrottler::setThrottleState: Updating process assertion type to 3 (foregroundActivities=1, backgroundActivities=1)
+2026-10-28 00:00:47.399 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4680 - [PID=86666] WebProcessProxy::didChangeThrottleState: type=2
+2026-10-28 00:00:47.399 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4680 - [PID=86666] WebProcessProxy::didChangeThrottleState(Foreground) Taking foreground assertion for network process
+2026-10-28 00:00:47.399 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c41e0 - [PID=86665, throttler=0x1230d8220] ProcessThrottler::Activity::Activity: Starting foreground activity / 'Networking for foreground view(s)'
+2026-10-28 00:00:47.399 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4120 - [PID=86665, throttler=0x1230d8220] ProcessThrottler::Activity::invalidate: Ending background activity / 'Networking for background view(s)'
+2026-10-28 00:00:47.399 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4210 - [PID=86663, throttler=0x1230d0280] ProcessThrottler::Activity::Activity: Starting foreground activity / 'GPU for foreground view(s)'
+2026-10-28 00:00:47.399 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4180 - [PID=86663, throttler=0x1230d0280] ProcessThrottler::Activity::invalidate: Ending background activity / 'GPU for background view(s)'
+2026-10-28 00:00:47.399 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c41b0 - [PID=86666, throttler=0x1230b4710] ProcessThrottler::Activity::Activity: Starting foreground activity / 'View is visible'
+2026-10-28 00:00:47.399 Df loom[86638:649be8] [com.apple.WebKit:ProcessSuspension] 0x123144180 - ProcessAssertion::acquireSync Successfully took RBS assertion 'WebProcess Background Assertion' for process with PID=86666
+2026-10-28 00:00:47.399 Df loom[86638:649be8] [com.apple.WebKit:ProcessSuspension] 0x1231441e0 - ProcessAssertion::acquireSync Trying to take RBS assertion 'WebProcess Foreground Assertion' for process with PID=86666
+2026-10-28 00:00:47.399 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:00:47.399 Df loom[86638:649be8] [com.apple.WebKit:ProcessSuspension] 0x1231441e0 - ProcessAssertion::acquireSync Successfully took RBS assertion 'WebProcess Foreground Assertion' for process with PID=86666
+2026-10-28 00:00:47.400 Df loom[86638:649bfc] [com.apple.WebKit:MemoryPressure] WebContent[86666] Current memory footprint: 26 MB
+2026-10-28 00:00:47.400 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666] 0x10e058100 - [sessionID=1] WebProcess::processDidResume:
+2026-10-28 00:00:47.400 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666] 0x10e058100 - [sessionID=1] WebProcess::cancelMarkAllLayersVolatile:
+2026-10-28 00:00:47.400 Df loom[86638:649bfc] [com.apple.WebKit:Layers] WebContent[86666] 0x1048ba718 - [webPageID=8] WebPage::cancelMarkLayersVolatile:
+2026-10-28 00:00:47.400 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666] 0x10e058100 - [sessionID=1] WebProcess::unfreezeAllLayerTrees: WebProcess is unfreezing all layer trees
+2026-10-28 00:00:47.400 Df loom[86638:649bfc] [com.apple.WebKit:ProcessSuspension] WebContent[86666]: [webPageID=8] WebPage::unfreezeLayerTree: Removing a reason to freeze layer tree (reason=4, new=0, old=4)
+2026-10-28 00:00:47.400 Df loom[86638:649bfc] [com.apple.WebKit:ActivityState] WebContent[86666] 0x10e18d2e0 - UserActivity::Impl::beginActivity: description=App nap disabled for page due to user activity
+2026-10-28 00:00:47.400 Df loom[86638:649bfc] [com.apple.WebKit:PerformanceLogging] WebContent[86666]: PerformanceMonitor::measureCPUUsageInActivityState: Process is using 0.5% CPU in state: <private>
+2026-10-28 00:00:47.401 Df loom[86638:649ac1] [com.apple.WebKit:ViewState] 0x123108100 [pageProxyID=7, webPageID=8, PID=86666, DisplayID=3] RemoteLayerTreeDrawingAreaProxyMac::scheduleDisplayRefreshCallbacks
+2026-10-28 00:00:47.425 Df loom[86638:649ac1] [com.apple.WebKit:ViewState] 0x123108100 [pageProxyID=7, webPageID=8, PID=86666, DisplayID=3] RemoteLayerTreeDrawingAreaProxyMac::didRefreshDisplay
+2026-10-28 00:00:48.400 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x123144180 - ~ProcessAssertion: Releasing process assertion 'WebProcess Background Assertion' for process with PID=86666
+2026-10-28 00:01:10.670 Df loom[86638:649bfc] [com.apple.WebKit:MemoryPressure] WebContent[86666] Current memory footprint: 26 MB
+2026-10-28 00:01:34.441 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSwapping] 0x1230980e0 - [PID=0] WebProcessCache::setApplicationIsActive: (isActive=1)
+2026-10-28 00:01:34.468 Df loom[86638:649bfc] [com.apple.WebKit:PerformanceLogging] WebContent[86666]: PerformanceMonitor::measureCPUUsageInActivityState: Process is using 0.0% CPU in state: <private>
+2026-10-28 00:01:34.474 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.794 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.795 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.795 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.795 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.795 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.795 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.795 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.795 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.795 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.795 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.795 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.795 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.795 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.795 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.795 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.795 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.795 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.795 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.795 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.795 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.795 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.795 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.795 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.795 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.795 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.795 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.795 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.795 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.795 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c40f0 - [PID=86666, throttler=0x1230b4710] ProcessThrottler::Activity::Activity: Starting background activity / 'Remote AX element'
+2026-10-28 00:01:34.795 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.795 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.795 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.795 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.795 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.795 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.795 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.795 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.795 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.795 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.807 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.812 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.812 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:34.818 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:35.125 Df loom[86638:649ac1] [com.apple.xpc:connection] [0x71b744f00] invalidated because the current process cancelled the connection by calling xpc_connection_cancel()
+2026-10-28 00:01:35.125 Df loom[86638:649ac1] [com.apple.xpc:connection] [0x71b745040] invalidated because the current process cancelled the connection by calling xpc_connection_cancel()
+2026-10-28 00:01:35.138 Df loom[86638:649ac1] [com.apple.WebKit:ViewState] 0x71b674018 - [pageProxyID=7, webPageID=8, PID=86666] WebPageProxy::updateActivityState: view visibility state changed 1 -> 0
+2026-10-28 00:01:35.138 Df loom[86638:649ac1] [com.apple.WebKit:ViewState] 0x71b674018 - [pageProxyID=7, webPageID=8, PID=86666] WebPageProxy::viewIsBecomingInvisible:
+2026-10-28 00:01:35.138 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x71b674018 - [pageProxyID=7, webPageID=8, PID=86666] WebPageProxy::updateThrottleState: UIProcess is releasing a foreground assertion because the view is no longer visible
+2026-10-28 00:01:35.138 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4180 - [PID=86666, throttler=0x1230b4710] ProcessThrottler::Activity::Activity: Starting background activity / 'View was recently visible'
+2026-10-28 00:01:35.138 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c41b0 - [PID=86666, throttler=0x1230b4710] ProcessThrottler::Activity::invalidate: Ending foreground activity / 'View is visible'
+2026-10-28 00:01:35.138 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4710 - [PID=86666] ProcessThrottler::setThrottleState: Updating process assertion type to 1 (foregroundActivities=0, backgroundActivities=3)
+2026-10-28 00:01:35.138 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4680 - [PID=86666] WebProcessProxy::didChangeThrottleState: type=1
+2026-10-28 00:01:35.138 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4680 - [PID=86666] WebProcessProxy::didChangeThrottleState(Background) Taking background assertion for network process
+2026-10-28 00:01:35.138 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4240 - [PID=86665, throttler=0x1230d8220] ProcessThrottler::Activity::Activity: Starting background activity / 'Networking for background view(s)'
+2026-10-28 00:01:35.138 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c41e0 - [PID=86665, throttler=0x1230d8220] ProcessThrottler::Activity::invalidate: Ending foreground activity / 'Networking for foreground view(s)'
+2026-10-28 00:01:35.138 Df loom[86638:64aa65] [com.apple.WebKit:ProcessSuspension] 0x123144180 - ProcessAssertion::acquireSync Trying to take RBS assertion 'WebProcess Background Assertion' for process with PID=86666
+2026-10-28 00:01:35.138 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4270 - [PID=86663, throttler=0x1230d0280] ProcessThrottler::Activity::Activity: Starting background activity / 'GPU for background view(s)'
+2026-10-28 00:01:35.138 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4210 - [PID=86663, throttler=0x1230d0280] ProcessThrottler::Activity::invalidate: Ending foreground activity / 'GPU for foreground view(s)'
+2026-10-28 00:01:35.138 Df loom[86638:649bfc] [com.apple.WebKit:PerformanceLogging] WebContent[86666]: PerformanceMonitor::measureCPUUsageInActivityState: Process is using 1.7% CPU in state: <private>
+2026-10-28 00:01:35.138 Df loom[86638:64aa65] [com.apple.WebKit:ProcessSuspension] 0x123144180 - ProcessAssertion::acquireSync Successfully took RBS assertion 'WebProcess Background Assertion' for process with PID=86666
+2026-10-28 00:01:35.251 Df loom[86638:649ac1] [com.apple.WebKit:ViewState] 0x71b674018 - [pageProxyID=7, webPageID=8, PID=86666] WebPageProxy::updateActivityState: view visibility state changed 0 -> 1
+2026-10-28 00:01:35.251 Df loom[86638:649ac1] [com.apple.WebKit:ViewState] 0x71b674018 - [pageProxyID=7, webPageID=8, PID=86666] WebPageProxy::viewIsBecomingVisible:
+2026-10-28 00:01:35.251 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x71b674018 - [pageProxyID=7, webPageID=8, PID=86666] WebPageProxy::updateThrottleState: UIProcess is taking a foreground assertion because the view is visible
+2026-10-28 00:01:35.251 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4710 - [PID=86666] ProcessThrottler::setThrottleState: Updating process assertion type to 3 (foregroundActivities=1, backgroundActivities=3)
+2026-10-28 00:01:35.251 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4680 - [PID=86666] WebProcessProxy::didChangeThrottleState: type=2
+2026-10-28 00:01:35.251 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4680 - [PID=86666] WebProcessProxy::didChangeThrottleState(Foreground) Taking foreground assertion for network process
+2026-10-28 00:01:35.251 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c41e0 - [PID=86665, throttler=0x1230d8220] ProcessThrottler::Activity::Activity: Starting foreground activity / 'Networking for foreground view(s)'
+2026-10-28 00:01:35.251 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4240 - [PID=86665, throttler=0x1230d8220] ProcessThrottler::Activity::invalidate: Ending background activity / 'Networking for background view(s)'
+2026-10-28 00:01:35.251 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4210 - [PID=86663, throttler=0x1230d0280] ProcessThrottler::Activity::Activity: Starting foreground activity / 'GPU for foreground view(s)'
+2026-10-28 00:01:35.251 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4270 - [PID=86663, throttler=0x1230d0280] ProcessThrottler::Activity::invalidate: Ending background activity / 'GPU for background view(s)'
+2026-10-28 00:01:35.251 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c41b0 - [PID=86666, throttler=0x1230b4710] ProcessThrottler::Activity::Activity: Starting foreground activity / 'View is visible'
+2026-10-28 00:01:35.251 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230c4180 - [PID=86666, throttler=0x1230b4710] ProcessThrottler::Activity::invalidate: Ending background activity / 'View was recently visible'
+2026-10-28 00:01:35.251 Df loom[86638:649ac1] [com.apple.WebKit:ViewState] 0x123108100 [pageProxyID=7, webPageID=8, PID=86666, DisplayID=3] RemoteLayerTreeDrawingAreaProxyMac::didRefreshDisplay
+2026-10-28 00:01:35.251 Df loom[86638:649bfc] [com.apple.WebKit:PerformanceLogging] WebContent[86666]: PerformanceMonitor::measureCPUUsageInActivityState: Process is using 0.4% CPU in state: <private>
+2026-10-28 00:01:35.253 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:01:35.752 Df loom[86638:649ac1] [com.apple.WebKit:ViewState] 0x123108100 [pageProxyID=7, webPageID=8, PID=86666, DisplayID=3] RemoteLayerTreeDrawingAreaProxyMac::scheduleDisplayRefreshCallbacks
+2026-10-28 00:01:36.252 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x123144180 - ~ProcessAssertion: Releasing process assertion 'WebProcess Background Assertion' for process with PID=86666
+2026-10-28 00:01:40.670 Df loom[86638:649bfc] [com.apple.WebKit:MemoryPressure] WebContent[86666] Current memory footprint: 26 MB
+2026-10-28 00:02:07.402 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:02:07.407 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:02:07.407 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:02:07.407 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:02:07.407 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:02:07.407 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:02:07.408 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:02:07.425 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:02:07.518 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:02:07.518 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:02:07.518 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:02:07.518 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:02:07.518 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:02:07.518 Df loom[86638:649ac1] [com.apple.WebKit:Process] WebProcessPool::initializeAccessibility
+2026-10-28 00:02:07.570 Df loom[86638:64b074] [com.apple.xpc:connection] [0x71b08c500] invalidated because the current process cancelled the connection by calling xpc_connection_cancel()

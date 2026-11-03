@@ -1,0 +1,8 @@
+2026-10-28 00:00:10.751 Df loom[86638:649ac1] [com.apple.WebKit:Loading] 0x71b674018 - [pageProxyID=7, webPageID=8, PID=86666] WebPageProxy::didCommitLoadForFrame: frameID=4294967297, isMainFrame=1
+2026-10-28 00:00:10.775 Df loom[86638:649ac1] [com.apple.WebKit:Loading] 0x71b674018 - [pageProxyID=7, webPageID=8, PID=86666] WebPageProxy::didFinishLoadForFrame: frameID=4294967297, isMainFrame=1
+2026-10-28 00:00:10.901 Df loom[86638:649ac1] [com.apple.WebKit:Loading] 0x71b674018 - [pageProxyID=7, webPageID=8, PID=86666] WebPageProxy::didGeneratePageLoadTiming: url=<private> firstVisualLayout=0.045 firstMeaningfulPaint=0.053 domContentLoaded=0.044 loadEvent=0.026 subresourcesFinished=0.026
+2026-10-28 00:00:17.035 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4680 - [PID=86666] WebProcessProxy::didChangeThrottleState(Suspended) Release all assertions for network process
+2026-10-28 00:00:24.781 Df loom[86638:649bfc] [com.apple.WebKit:Process] WebContent[86666] WebPage::sendAccessibilityTokenIfNeeded sending deferred token for pageID=8
+2026-10-28 00:00:27.997 Df loom[86638:649ac1] [com.apple.WebKit:ProcessSuspension] 0x1230b4680 - [PID=86666] WebProcessProxy::didChangeThrottleState(Suspended) Release all assertions for network process
+2026-10-28 00:00:47.398 Df loom[86638:649ac1] [com.apple.WebKit:ViewState] 0x71b674018 - [pageProxyID=7, webPageID=8, PID=86666] WebPageProxy::viewIsBecomingVisible:
+2026-10-28 00:01:35.251 Df loom[86638:649ac1] [com.apple.WebKit:ViewState] 0x71b674018 - [pageProxyID=7, webPageID=8, PID=86666] WebPageProxy::viewIsBecomingVisible:

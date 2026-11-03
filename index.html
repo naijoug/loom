@@ -4,10 +4,18 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Loom</title>
+    <style>
+      #loom-startup { position: fixed; inset: 0; display: grid; place-content: center; gap: 16px; text-align: center; font: 16px system-ui, sans-serif; background: #f7f7f5; color: #242424; }
+      #loom-startup button { padding: 8px 18px; font: inherit; cursor: pointer; }
+      @media (prefers-color-scheme: dark) { #loom-startup { background: #111214; color: #ededed; } }
+    </style>
   </head>
 
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <div id="root"><section id="loom-startup" aria-label="Loom startup">
+      <strong>Loom</strong><span id="loom-startup-status" role="status">Opening Loom… / 正在打开 Loom…</span>
+      <button id="loom-startup-retry" type="button" hidden>Retry / 重试</button>
+    </section></div>
+    <script type="module" src="/src/bootstrap.ts"></script>
   </body>
 </html>

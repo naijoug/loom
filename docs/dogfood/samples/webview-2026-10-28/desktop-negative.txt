@@ -1,0 +1,5 @@
+Loom local dev stopped
+FAIL desktop cycle 1: the process never reported a ready interface
+Starting Loom desktop app at http://127.0.0.1:1420...
+Stop: press Ctrl+C, or run scripts/debug.sh stop from another terminal.
+Expected failure exit: 1

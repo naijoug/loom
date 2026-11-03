@@ -1,0 +1,44 @@
+Window: "Loom", App: Loom.
+0 standard window Loom, Secondary Actions: Raise
+	1 scroll area
+		2 HTML content Description: Loom, URL: tauri://localhost
+			3 container Features
+				4 button Chat (⌘1)
+				5 button Learn (⌘2)
+				6 button Research (⌘3)
+				7 button Discuss (⌘4)
+				8 button Settings (⌘,)
+			9 container Projects
+				10 button Collapse sidebar
+				11 search text field (settable) Search chats…
+					12 text Search chats…
+				13 text Projects
+				14 button Add project
+				15 container
+					16 button (expanded) project, Help: /private/var/folders/wh/8gkvgk297s392p974p39b0s40000gp/T/loom-p8-desktop-n4rw2_aq/project, Secondary Actions: Collapse
+					17 button New chat · project, Help: New chat
+					18 content list
+						19 button Read-only P8 native acceptance: explain bounded queues in… Codex, Help: P8 native acceptance: explain bounded queues in…
+					20 button (collapsed) P8 acceptance, Help: /var/folders/wh/8gkvgk297s392p974p39b0s40000gp/T/loom-p8-desktop-n4rw2_aq/project, Secondary Actions: Expand
+					21 button New chat · P8 acceptance, Help: New chat
+				22 toggle button Archived, Value: off
+			23 container
+				24 heading What should we work on?, Value: 1
+					25 text What should we work on?
+				26 text Pick a project, Agent and permissions below, then send your first message.
+				27 text entry area (settable) Message, Value: [text entry area: Message], Placeholder: Ask about this project…
+					28 text Ask about this project…
+				29 pop up button Project: project, Help: /private/var/folders/wh/8gkvgk297s392p974p39b0s40000gp/T/loom-p8-desktop-n4rw2_aq/project
+				30 pop up button Select Agent
+				31 pop up button Permissions: Read-only, Help: Reads and explores without changing files
+				32 button (disabled) Send message, Help: Send message (Enter)
+	33 close button
+	34 full screen button Help: this button also has an action to zoom the window, Secondary Actions: zoom the window
+	35 minimize button
+36 menu bar
+	37 Loom
+	38 File
+	39 Edit
+	40 View
+	41 Window
+	42 Help

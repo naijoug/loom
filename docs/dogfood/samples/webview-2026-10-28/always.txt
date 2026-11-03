@@ -1,0 +1,12 @@
+Loom local dev stopped
+Starting Loom desktop app at http://127.0.0.1:1420...
+Stop: press Ctrl+C, or run scripts/debug.sh stop from another terminal.
+[loom-startup] {"at":1793183143577,"automaticReloads":0,"event":"native_ready","generation":0,"phase":"Loading","pid":49869}
+[loom-startup] {"at":1793183143791,"automaticReloads":0,"event":"navigation_started","generation":1,"phase":"Loading","pid":49869}
+[loom-startup] {"at":1793183143802,"automaticReloads":0,"event":"navigation_finished","generation":1,"phase":"Loading","pid":49869}
+[loom-startup] {"at":1793183158793,"automaticReloads":1,"event":"ready_timeout","generation":2,"phase":"Reloading","pid":49869}
+[loom-startup] {"at":1793183158795,"automaticReloads":1,"event":"automatic_reload","generation":2,"phase":"Reloading","pid":49869}
+[loom-startup] {"at":1793183158801,"automaticReloads":1,"event":"navigation_started","generation":3,"phase":"Loading","pid":49869}
+[loom-startup] {"at":1793183158803,"automaticReloads":1,"event":"navigation_finished","generation":3,"phase":"Loading","pid":49869}
+[loom-startup] {"at":1793183173804,"automaticReloads":1,"event":"ready_timeout","generation":3,"phase":"Failed","pid":49869}
+[loom-startup] {"at":1793183173805,"automaticReloads":1,"event":"recovery_exhausted","generation":3,"phase":"Failed","pid":49869}

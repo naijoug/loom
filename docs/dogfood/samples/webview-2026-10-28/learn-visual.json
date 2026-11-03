@@ -1,0 +1,13 @@
+{
+  "status": "passed",
+  "kind": "synthetic-web-only",
+  "checks": [
+    "overview fills window; source link opens highlighted range",
+    "architecture diagram nodes navigate; module page marks stale refs; wiki link to ungenerated page",
+    "job logs",
+    "en/zh-CN × light/dark; 700px stacked sidebar without overflow",
+    "running pipeline; failed stage summary with raw stderr behind details; storage error",
+    "URL validation; create runs fetch → architecture → level-1 pages",
+    "rail returns to Chat"
+  ]
+}

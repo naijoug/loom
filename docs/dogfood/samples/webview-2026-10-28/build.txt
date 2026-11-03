@@ -1,0 +1,83 @@
+
+> loom@0.1.0 tauri /Users/guojian/Workspace/naijoug/loom
+> tauri build --no-bundle
+
+        Info Looking up installed tauri packages to check mismatched versions...
+     Running beforeBuildCommand `pnpm build`
+
+> loom@0.1.0 build /Users/guojian/Workspace/naijoug/loom
+> tsc && vite build
+
+vite v7.3.3 building client environment for production...
+transforming...
+node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/regexes.js (74:0): A comment
+
+"/** Anchors a pattern source. The interpolation lives here rather than at the call site because
+ * esbuild will not drop a `@__PURE__` call whose own argument interpolates a variable, but it
+ * will drop `anchor(dateSource)`. Keeping it inline pinned `date` into every bundle. */"
+
+in "node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/regexes.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/util.js (400:0): A comment
+
+"// Wrapped in a `@__PURE__` IIFE: esbuild never tree-shakes a top-level initializer that contains a member access on `Number`, so the bare object literal survived into every bundle."
+
+in "node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/util.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+✓ 2244 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                               0.98 kB │ gzip:  0.59 kB
+dist/assets/inter-vietnamese-400-normal-DMkecbls.woff2        4.97 kB
+dist/assets/inter-greek-ext-400-normal-DGGRlc-M.woff2         5.26 kB
+dist/assets/geist-mono-cyrillic-400-normal-Ce5q_31Z.woff2     5.46 kB
+dist/assets/geist-mono-latin-ext-400-normal-Cgks_Qgx.woff2    6.42 kB
+dist/assets/inter-vietnamese-400-normal-Bbgyi5SW.woff         6.50 kB
+dist/assets/inter-greek-ext-400-normal-KugGGMne.woff          7.06 kB
+dist/assets/geist-mono-cyrillic-400-normal-BPBWmzPh.woff      7.16 kB
+dist/assets/inter-cyrillic-400-normal-obahsSVq.woff2          7.71 kB
+dist/assets/inter-greek-400-normal-B4URO6DV.woff2             7.78 kB
+dist/assets/geist-mono-latin-ext-400-normal-CxNRRMGd.woff     8.74 kB
+dist/assets/inter-cyrillic-400-normal-HOLc17fK.woff           9.78 kB
+dist/assets/inter-greek-400-normal-q2sYcFCs.woff              9.92 kB
+dist/assets/inter-cyrillic-ext-400-normal-BQZuk6qB.woff2     10.23 kB
+dist/assets/inter-cyrillic-ext-400-normal-DQukG94-.woff      13.34 kB
+dist/assets/geist-mono-latin-400-normal-LC9RFr9I.woff2       14.71 kB
+dist/assets/geist-mono-latin-400-normal-CoULgQGM.woff        19.17 kB
+dist/assets/inter-latin-400-normal-C38fXH4l.woff2            23.66 kB
+dist/assets/inter-latin-400-normal-CyCys3Eg.woff             30.70 kB
+dist/assets/geist-sans-latin-400-normal-gapTbOY8.woff2       33.40 kB
+dist/assets/inter-latin-ext-400-normal-C1nco2VV.woff2        35.00 kB
+dist/assets/geist-sans-latin-400-normal-BOaIZNA2.woff        38.91 kB
+dist/assets/inter-latin-ext-400-normal-77YHD8bZ.woff         47.56 kB
+dist/assets/ErrorText-B2wM_62i.css                            0.50 kB │ gzip:  0.27 kB
+dist/assets/SourceViewer-Biz1xGEx.css                         2.00 kB │ gzip:  0.74 kB
+dist/assets/AgentPicker-B0XFbBc9.css                          2.12 kB │ gzip:  0.81 kB
+dist/assets/Markdown-LylCGCbL.css                             2.70 kB │ gzip:  0.86 kB
+dist/assets/index-B1i6w4CG.css                                5.59 kB │ gzip:  1.48 kB
+dist/assets/index-DweELxIC.css                                6.14 kB │ gzip:  1.55 kB
+dist/assets/SettingsPage-pda1NUT0.css                         6.19 kB │ gzip:  1.73 kB
+dist/assets/index-DvnPAVUG.css                                7.98 kB │ gzip:  1.89 kB
+dist/assets/SkillsPanel-C_ZPn3RM.css                          9.28 kB │ gzip:  2.07 kB
+dist/assets/main-BVkN-G3V.css                                14.61 kB │ gzip:  3.94 kB
+dist/assets/index-lOLKonT-.css                               17.72 kB │ gzip:  4.00 kB
+dist/assets/rotate-ccw-CosVpmG_.js                            0.20 kB │ gzip:  0.18 kB
+dist/assets/trash-2-8G9O1uru.js                               0.33 kB │ gzip:  0.22 kB
+dist/assets/search-Bqo8vMa8.js                                0.43 kB │ gzip:  0.29 kB
+dist/assets/ErrorText-BCodOdNU.js                             1.22 kB │ gzip:  0.64 kB
+dist/assets/inlineCardsSetting-AJoWyMNl.js                    2.50 kB │ gzip:  0.90 kB
+dist/assets/AgentPicker-CdPwrYaQ.js                           3.47 kB │ gzip:  1.54 kB
+dist/assets/SourceViewer-C9PBxJth.js                          4.13 kB │ gzip:  1.70 kB
+dist/assets/index-DYxT9cX3.js                                 5.64 kB │ gzip:  2.16 kB
+dist/assets/index-DN8p3520.js                                 7.75 kB │ gzip:  3.14 kB
+dist/assets/SettingsPage-BUOa9K1f.js                         12.60 kB │ gzip:  4.29 kB
+dist/assets/index-BiR3LPI1.js                                13.73 kB │ gzip:  4.52 kB
+dist/assets/index-Bv-t22hd.js                                14.94 kB │ gzip:  4.67 kB
+dist/assets/index-CpQUZ4rb.js                                20.17 kB │ gzip:  6.67 kB
+dist/assets/SkillsPanel-C7aS4Ccn.js                          36.52 kB │ gzip: 10.46 kB
+dist/assets/index-BVfrFoTS.js                                50.01 kB │ gzip: 15.55 kB
+dist/assets/Markdown-J7r8sYIi.js                            174.52 kB │ gzip: 54.34 kB
+dist/assets/InlineCardView-D05IyZcU.js                      201.86 kB │ gzip: 63.21 kB
+dist/assets/main-CYTegA7_.js                                205.79 kB │ gzip: 68.38 kB
+✓ built in 1.19s
+   Compiling loom v0.1.0 (/Users/guojian/Workspace/naijoug/loom/src-tauri)
+    Finished `release` profile [optimized] target(s) in 30.36s
+       Built application at: /Users/guojian/Workspace/naijoug/loom/src-tauri/target/release/loom

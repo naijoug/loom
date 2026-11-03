@@ -1,4 +1,5 @@
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useLayoutEffect, useState } from "react";
+import { acknowledgeStartup } from "../appStartup";
 import { useT } from "../i18n";
 import { hasTauriRuntime } from "../hooks/runtime";
 import { useAppState } from "../state/AppStateContext";
@@ -24,6 +25,7 @@ export function shortcutView(event: Pick<KeyboardEvent, "key" | "metaKey" | "ctr
 /** App frame: the activity rail plus one pane per feature. Features mount on first visit (Chat at startup) and stay mounted; Settings mounts while open. */
 export function AppShell() {
   const { state, dispatch } = useAppState();
+  useLayoutEffect(acknowledgeStartup, []);
   const current = state.app.currentView;
   const [visited, setVisited] = useState<ReadonlySet<AppView>>(() => new Set([current]));
   const select = (view: AppView) => dispatch({ type: "app/viewSelected", view });

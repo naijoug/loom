@@ -19,6 +19,7 @@
   "exclude": [
     "src/workbench",
     "src/api/workbenchClient.ts",
-    "src/main.tsx"
+    "src/main.tsx",
+    "src/bootstrap.ts"
   ]
 }

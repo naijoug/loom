@@ -1,0 +1,48 @@
+Window: "Loom", App: Loom.
+0 standard window Loom, Secondary Actions: Raise
+	1 scroll area
+		2 HTML content Description: Loom, URL: tauri://localhost
+			3 container Features
+				4 button Chat (⌘1)
+				5 button Learn (⌘2)
+				6 button Research (⌘3)
+				7 button Discuss (⌘4)
+				8 button Settings (⌘,)
+			9 container Projects
+				10 button Collapse sidebar
+				11 search text field (settable) Search chats…
+					12 text Search chats…
+				13 text Projects
+				14 button Add project
+				15 container
+					16 button (expanded) project, Help: /private/var/folders/wh/8gkvgk297s392p974p39b0s40000gp/T/loom-p8-desktop-n4rw2_aq/project, Secondary Actions: Collapse
+					17 button New chat · project, Help: New chat
+					18 content list
+						19 button Read-only P8 native acceptance: explain bounded queues in… Codex, Help: P8 native acceptance: explain bounded queues in…
+					20 button (expanded) P8 acceptance, Help: /var/folders/wh/8gkvgk297s392p974p39b0s40000gp/T/loom-p8-desktop-n4rw2_aq/project, Secondary Actions: Collapse
+					21 button New chat · P8 acceptance, Help: New chat
+					22 content list
+						23 button Read-only P8 native acceptance: explain bounded queues in… Codex, Help: P8 native acceptance: explain bounded queues in…
+				24 toggle button Archived, Value: off
+			25 container
+				26 heading What should we work on?, Value: 1
+					27 text What should we work on?
+				28 text Pick a project, Agent and permissions below, then send your first message.
+				29 text entry area (settable) Message, Value: [text entry area: Message], Placeholder: Ask about this project…
+					30 text Ask about this project…
+				31 pop up button Project: project, Help: /private/var/folders/wh/8gkvgk297s392p974p39b0s40000gp/T/loom-p8-desktop-n4rw2_aq/project
+				32 pop up button Select Agent
+				33 pop up button Permissions: Read-only, Help: Reads and explores without changing files
+				34 button (disabled) Send message, Help: Send message (Enter)
+	35 close button
+	36 full screen button Help: this button also has an action to zoom the window, Secondary Actions: zoom the window
+	37 minimize button
+38 menu bar
+	39 Loom
+	40 File
+	41 Edit
+	42 View
+	43 Window
+	44 Help
+
+The focused UI element is 2 HTML content Description: Loom, URL: tauri://localhost

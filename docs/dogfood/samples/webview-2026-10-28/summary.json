@@ -1,0 +1,155 @@
+{
+  "date": "2026-10-28",
+  "baseline": "8e56fbdfc3d101348884c091ee0aad3d876681a7",
+  "worktree": "P7/P8 + startup recovery; uncommitted",
+  "rootCauseStatus": "Original single OS/rendering trigger not independently reproduced. Confirmed application gap: no interface-ready handshake or startup recovery.",
+  "realModelCallsStartedByThisTask": 0,
+  "targeted": {
+    "rustPassed": 6,
+    "frontendAndContractPassed": 9
+  },
+  "check": {
+    "command": "RUST_TEST_THREADS=1 pnpm check",
+    "status": "passed",
+    "frontendPassed": 148,
+    "rustPassed": 328,
+    "rustIgnored": 30,
+    "failed": 0
+  },
+  "nativeFaults": {
+    "once": {
+      "status": "passed",
+      "automaticReloads": 1,
+      "interfaceReady": true
+    },
+    "always": {
+      "status": "passed",
+      "automaticReloads": 1,
+      "nativeDialogObserved": true,
+      "looped": false
+    }
+  },
+  "normalCycles": [
+    {
+      "cycle": 1,
+      "pid": 53391,
+      "status": "passed",
+      "kind": "native-GUI-plus-readiness",
+      "automaticReloads": 0,
+      "manualReloads": 0,
+      "nativeToReadyMs": 584
+    },
+    {
+      "cycle": 2,
+      "pid": 55932,
+      "status": "passed",
+      "kind": "native-GUI-plus-readiness",
+      "automaticReloads": 0,
+      "manualReloads": 0,
+      "nativeToReadyMs": 558
+    },
+    {
+      "cycle": 3,
+      "pid": 56353,
+      "status": "passed",
+      "kind": "native-GUI-plus-readiness",
+      "automaticReloads": 0,
+      "manualReloads": 0,
+      "nativeToReadyMs": 263
+    },
+    {
+      "cycle": 4,
+      "pid": 59118,
+      "status": "passed",
+      "kind": "native-GUI-plus-readiness",
+      "automaticReloads": 0,
+      "manualReloads": 1,
+      "nativeToReadyMs": 336
+    },
+    {
+      "cycle": 5,
+      "pid": 59712,
+      "status": "passed",
+      "kind": "native-GUI-plus-readiness",
+      "automaticReloads": 0,
+      "manualReloads": 0,
+      "nativeToReadyMs": 408
+    }
+  ],
+  "persistedHistoryComparison": {
+    "chatMessagesAndTurns": "unchanged",
+    "researchTurns": "unchanged",
+    "discussionTasksAndAttempts": "unchanged"
+  },
+  "desktopSmoke": {
+    "positiveCycles": 2,
+    "negativeProcessAliveWithoutReady": "correctly failed, exit 1"
+  },
+  "visual": {
+    "status": "passed",
+    "command": "pnpm smoke:visual",
+    "kind": "synthetic-web-only"
+  },
+  "noBundle": {
+    "status": "passed",
+    "command": "pnpm tauri build --no-bundle"
+  },
+  "artifactSha256": "2852bf3fa59cef1bfdf5396c042eeb9f80d327249db48eb28fbd8950a79f6e57",
+  "normalBundleBinarySha256": "2852bf3fa59cef1bfdf5396c042eeb9f80d327249db48eb28fbd8950a79f6e57",
+  "implementationSha256": {
+    "index.html": "1ab23ec7d3be690af24e268911408c27986fa9a0017dac3182a0acbadd85afcc",
+    "src/bootstrap.ts": "acc45489f6c075a7e1372901c8106fba4dece7a8dba20c448e54800132168ae3",
+    "src/appStartup.ts": "59f831ceb5d7048c680301c402a21d7076bab31f339e0582d43798b2623e3933",
+    "src/main.tsx": "67eefe0c626781179f8354adc00e64d9c8f6a4e89be5c95c74b5343f657ee0f4",
+    "src/shell/AppShell.tsx": "ee480bbb60dc06689274502e11600c0ef9ca4085dc318e721d7cc53127b4cb7f",
+    "src-tauri/src/webview_startup.rs": "de67e0615761ee370f580e7c4638fb6c7405813d9a721a552ed35982c82dcc1b",
+    "src-tauri/src/lib.rs": "a5f84a00d8a08293f8340ba46dd42e1cb9065502f7dfc97a2484f727a091ce3a",
+    "src-tauri/src/desktop_menu.rs": "21abcca776b4a58bda8ec600a9dd78337034915db9c8588140099d2646212782",
+    "scripts/desktop-smoke.sh": "c8a74ba1e2ab94b5f4f2a1f30281a575669e02c84e8c4c93ef7382c7ddc4b699",
+    "scripts/webview-startup-fixture.mjs": "3091e1b071f59253760f5b333dce101fd59846e63debb11763a01286668761e5",
+    "tests/unit/appStartup.test.cjs": "e736b96e2dd4716c42a729580a833bb12b70eb879e5eb994f53e06c47fe25fcd",
+    "src-tauri/src/skills/tests.rs": "c91ad0c72d15e94268294dce4dc2d672b401e2c535f743cee8d73e33f09ea108"
+  },
+  "files": {
+    "simple-chat-visual.json": "ad7a348fa3335f3bc241588aac6586ca50a8b35bba42a687977780a20c5e4756",
+    "bundle.txt": "94f58dda6c047a12c2cb35b41f1a872777767c9c49fe56e7994338eb57fc7635",
+    "final-2-research-ax.txt": "97910929747cc8e77c362b28f3690cfee1f31f5352351af6cdc8faf3d417a4bf",
+    "final-4-manual-reload-ax.txt": "7cba9cc239a82f3da3e384dae71c29d82930126cf1b71c2f869de908af943a50",
+    "historical-timeline.txt": "b861ef5cf8b1176f68b33e9a81030285fd7e821cf0c314fa985f7283262f6258",
+    "normal-system-comparison.txt": "3f2ff0c85ab1be3eeba4adf83c89e1eb102922926c06b31a38671e49f55caffb",
+    "check.txt": "f7588e2479a8ac1c822206043e71dc7918a9bdbdb34aae831926ee5466f5ce84",
+    "check-serial-first.txt": "a9a5c88e85d479a2af84e39527757122eb2f400800eef1bfdb4a930c6532e509",
+    "activity-rail-visual.json": "dfe0943aab8e42889e3d7a476d49aafdf0a38f6aebc114103bfc59444e4b5737",
+    "once-recovered-ax.txt": "818c8d6b77fe11777672db1f2bba34194207615ba77f7c4baac5093ca740e3e0",
+    "skills-visual.json": "4170f9c2abc45e5431eebb95bccfb65f525363e6411bc3c9a6faadd2a304679f",
+    "starting-worktree.json": "ead9bfe8aac28fd7ea6b5d7e65719d6b79c4c338ff9721e6d511a2157b111bc2",
+    "once.txt": "e6a286dc643cd4cf2d3f278fb6a76d0222b981ee49e857db2e6d744d1b760a3e",
+    "frontend-targeted.txt": "0d3b4a3eeaae5d390108a2b389a3b71d6f4ab0ddd0ced7ae461fd59456ef03af",
+    "desktop-cycle-2.txt": "a1888713a430db5f8ec3bbdf18843780c43be9f7aa2e14689aecef0c5000b2af",
+    "check-second.txt": "d780c24cb68a9517e817124973a9b69221c978e37c3d1ef3c4133e5142c2f1a5",
+    "rust-targeted.txt": "3257daeab89580b8de13726c2af54ce73f5b48457adda7b02a3b3634d2b7e60d",
+    "always-failed-ax.txt": "38324ca8e8cfac5f22869598fc99b00658434e987adb6061341d6094c7a1e8de",
+    "build.txt": "0ddf5dba094bba99b7cfdee5c2c55c8b31f5fa258ba8f3228737386406ed356f",
+    "desktop-cycle-1.txt": "fa5c7e5c5bb3a0216caf3e2f6429b0be8891e33260aac327dcc2122459fe1a86",
+    "final-3-cancel-preserves-view.txt": "41f77ec1b1c65e6202c34701ad72de044d88a1b8e3b4fe2556236d569d3806c8",
+    "final-5.txt": "36623458c30b967cf60937e491979d04bb6deb1f0a77b0e31016321f6e0129ae",
+    "final-4.txt": "babe26dc1c06db2b5114f7ae832a79cbc8b7b37fc72efef259bc39ff0330b8a4",
+    "always.txt": "93059ba18294836a7b30ef0d91df113ee90eba18f53bef67b183944ea096afdd",
+    "learn-visual.json": "c001cc7af1ab2fba399872fcac90270e06d818884ade727b4e6e3ff7d6a53b36",
+    "final-5-ready-ax.txt": "7cba9cc239a82f3da3e384dae71c29d82930126cf1b71c2f869de908af943a50",
+    "historical-webkit.txt": "398933c88c60f490dcf11777bdfb6b202537fb5148b2fa9713d4a6059f59dbff",
+    "research-visual.json": "adc4ad88c3ad9786cb5721bb20c4b413796e8c333e1a3ca5157fb17db41b740b",
+    "final-3.txt": "c405e7fb653d0210beac59f7020afcf764e48df39d9d0f0024084fb6dfe44e96",
+    "final-2.txt": "e7cf732493b86bd9b7c23b1deee121d35bc5c1e03bc7a3fcda49f62006bec31b",
+    "serial-harness-fix.txt": "6355349b3129faf9301efc9e95a069db8b40cc5ebe7047594104fdfe6a9a1ba4",
+    "final-1.txt": "ccb485ba7fe4f7c186a3f1c90852dc323ec01bfaa05f4dc87a41bcf84d737517",
+    "desktop-negative.txt": "3624ab45126f70bb452f5f631bf2f00df1db60bd9ebf23460f8da815c882a7de",
+    "desktop-positive.txt": "5380ebcf40da6e81a18b36e64ab9c19591123dca8c293b388e4bc857db4f2cd1",
+    "historical-full.txt": "79373327c3751ce1d98739b64047b7d93d1f1a93f4ca993b15001e5747a1cea7",
+    "discuss-visual.json": "2c4fde3f4af33cddb5e7521c1c116bbe3dd207162367a80ff05c6ee57ea12fad",
+    "visual.txt": "20d8b242e318aa6f9c8d917fd6df0b9f577ebcd93e84ee815bb6a06600c5c0ed",
+    "openui-inline-cards-visual.json": "8d53d59252cf71cae44f54ad04e9ac04da8cb52da6f7bb912f9722bcb1d5df66",
+    "check-first.txt": "5b4109e03bd8ee50fdfec95e89ae3daefe3c6abc7666c600b314b1f6fad9395e",
+    "final-1-chat-ax.txt": "acca294d40bd0818fded8b56e92d7199c187059aeb79f98f6c7c7a1c04946c9d"
+  }
+}

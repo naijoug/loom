@@ -11,6 +11,7 @@ cleanup() {
     kill "${ACTIVE_PID}" 2>/dev/null || true
     wait "${ACTIVE_PID}" 2>/dev/null || true
   fi
+  "${ROOT_DIR}/scripts/debug.sh" stop >/dev/null 2>&1 || true
 }
 
 trap cleanup EXIT INT TERM
@@ -26,23 +27,37 @@ if [[ ! -x "${BINARY}" ]]; then
   exit 1
 fi
 
-"${ROOT_DIR}/scripts/debug.sh" stop >/dev/null 2>&1 || true
+"${ROOT_DIR}/scripts/debug.sh" stop
 
 run_cycle() {
   local cycle="$1"
   local log_file="${ARTIFACT_DIR}/cycle-${cycle}.log"
 
-  "${BINARY}" >"${log_file}" 2>&1 &
+  LOOM_PREVIEW_BINARY="${BINARY}" "${ROOT_DIR}/scripts/debug.sh" desktop >"${log_file}" 2>&1 &
   ACTIVE_PID="$!"
 
-  for _ in {1..20}; do
+  local ready=0
+  for _ in {1..200}; do
     if ! kill -0 "${ACTIVE_PID}" 2>/dev/null; then
       echo "FAIL desktop cycle ${cycle}: process exited during startup" >&2
       sed -n '1,160p' "${log_file}" >&2
       exit 1
     fi
+    if grep -Fq '"event":"interface_ready"' "${log_file}"; then
+      ready=1
+      break
+    fi
+    if grep -Fq '"event":"recovery_exhausted"' "${log_file}"; then
+      break
+    fi
     sleep 0.2
   done
+
+  if [[ "${ready}" != "1" ]]; then
+    echo "FAIL desktop cycle ${cycle}: the process never reported a ready interface" >&2
+    sed -n '1,160p' "${log_file}" >&2
+    exit 1
+  fi
 
   if grep -Eiq "panic|fatal error|segmentation fault" "${log_file}"; then
     echo "FAIL desktop cycle ${cycle}: fatal output detected" >&2
@@ -53,11 +68,11 @@ run_cycle() {
   kill "${ACTIVE_PID}" 2>/dev/null || true
   wait "${ACTIVE_PID}" 2>/dev/null || true
   ACTIVE_PID=""
-  echo "OK   desktop cycle ${cycle}"
+  echo "OK   desktop cycle ${cycle}: interface_ready"
 }
 
 run_cycle 1
 run_cycle 2
 
-echo "Desktop launch/restart smoke passed"
+echo "Desktop launch/restart readiness smoke passed (native GUI appearance still requires observation)"
 echo "Logs: ${ARTIFACT_DIR}"

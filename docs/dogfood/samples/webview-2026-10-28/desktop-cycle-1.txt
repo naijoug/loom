@@ -1,0 +1,6 @@
+Starting Loom desktop app at http://127.0.0.1:1420...
+Stop: press Ctrl+C, or run scripts/debug.sh stop from another terminal.
+[loom-startup] {"at":1793184471990,"automaticReloads":0,"event":"native_ready","generation":0,"phase":"Loading","pid":60665}
+[loom-startup] {"at":1793184472271,"automaticReloads":0,"event":"navigation_started","generation":1,"phase":"Loading","pid":60665}
+[loom-startup] {"at":1793184472273,"automaticReloads":0,"event":"navigation_finished","generation":1,"phase":"Loading","pid":60665}
+[loom-startup] {"at":1793184472304,"automaticReloads":0,"event":"interface_ready","generation":1,"phase":"Ready","pid":60665}

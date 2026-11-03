@@ -1,0 +1,21 @@
+
+> loom@0.1.0 test /Users/guojian/Workspace/naijoug/loom
+> node scripts/run-tests.mjs -- tests/unit/appStartup.test.cjs tests/unit/activityRail.test.cjs tests/unit/contract.test.cjs
+
+✔ the registry lists only delivered features, Chat first and mounted from startup (0.561917ms)
+✔ Cmd+1…4 follow rail order and Cmd+, opens Settings; other chords are ignored (0.13275ms)
+✔ the rail switches features without remounting Chat or losing its draft (238.061333ms)
+✔ startup readiness uses the original document generation and StrictMode does not duplicate it (0.664291ms)
+✔ a stale native acknowledgement stays rejected instead of retrying with a new generation (0.074917ms)
+✔ a bootstrap failure produces a visible actionable fallback without rendering React (41.014ms)
+✔ frontend command event and schema contract matches the canonical fixture (1.751416ms)
+✔ Tauri core and event access stays behind the typed client (23.606ms)
+✔ typed Tauri client forwards invoke payloads and unwraps event payloads (0.395459ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 889.881334

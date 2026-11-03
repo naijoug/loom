@@ -5,6 +5,7 @@ use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     AppHandle,
 };
+pub(crate) const RELOAD_ID: &str = "loom-reload-interface";
 pub(crate) const QUIT_ID: &str = "loom-graceful-quit";
 pub(crate) fn build<R: tauri::Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
     let menu = Menu::default(app)?;
@@ -28,5 +29,13 @@ pub(crate) fn build<R: tauri::Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu
     let replacement = MenuItem::with_id(app, QUIT_ID, label, true, Some("Cmd+Q"))?;
     application.remove_at(index)?;
     application.insert(&replacement, index)?;
+    let reload = MenuItem::with_id(
+        app,
+        RELOAD_ID,
+        "Reload Interface… / 重新加载界面…",
+        true,
+        Some("Cmd+Alt+R"),
+    )?;
+    application.insert(&reload, index)?;
     Ok(menu)
 }

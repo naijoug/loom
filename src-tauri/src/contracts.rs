@@ -13,6 +13,8 @@ const COMMANDS: &[&str] = &[
     "load_update_drafts",
     "save_update_drafts",
     "health_check",
+    "webview_startup_context",
+    "report_webview_startup",
     "create_agent",
     "delete_agent",
     "diagnose_agents",

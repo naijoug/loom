@@ -1,0 +1,15 @@
+{
+  "status": "passed",
+  "kind": "synthetic-web-only",
+  "checks": [
+    "reports fill window; follow-up context chip; stale citation marked; source link opens highlighted range",
+    "job logs",
+    "follow-up runs and renders a third report",
+    "web-only research hides the source browser",
+    "en/zh-CN × light/dark; 700px stacked sidebar without overflow",
+    "Stop marks the question stopped; Retry answers it",
+    "failed question with error summary and replay warning; storage error",
+    "question required; create with project runs and answers",
+    "rail returns to Chat"
+  ]
+}

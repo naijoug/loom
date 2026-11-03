@@ -1,0 +1,75 @@
+Window: "Loom", App: Loom.
+0 standard window Loom, Secondary Actions: Raise
+	1 scroll area
+		2 HTML content Description: Loom, URL: tauri://localhost
+			3 container Features
+				4 button Chat (⌘1)
+				5 button Learn (⌘2)
+				6 button Research (⌘3)
+				7 button Discuss (⌘4)
+				8 button Settings (⌘,)
+			9 container
+				10 text Research
+				11 toggle button New research, Value: off
+				12 container Research
+					13 content list
+						14 button P8 native Research acceptance. Explain one benefit and one risk of bounded queu… No project
+			15 container
+				16 heading P8 native Research acceptance. Explain one benefit and one risk of bounded queu…, Value: 1
+					17 text P8 native Research acceptance. Explain one benefit and one risk of bounded queu…
+				18 text Codex  ·  No project
+				19 toggle button Run logs, Value: off
+				20 button Delete research
+				21 container
+					22 text Question 1 P8 native Research acceptance. Explain one benefit and one risk of bounded queues in under 80 words. Do not use tools, browse, read files or change anything. End with P8-RESEARCH-DONE.
+					23 container Bounded Queues
+						24 heading Bounded Queues, Value: 1
+							25 text Bounded Queues
+						26 heading Conclusion, Value: 2
+							27 text Conclusion
+						28 text Bounded queues limit memory use during traffic spikes. Their risk is overload: once full, they must block producers or reject work.
+						29 heading Evidence, Value: 2
+							30 text Evidence
+						31 text A fixed capacity caps queued items; arrivals exceeding processing capacity eventually exhaust available slots. This follows from the queue model, without external verification.
+						32 heading References, Value: 2
+							33 text References
+						34 text None; tools and browsing were prohibited.
+						35 heading Open questions, Value: 2
+							36 text Open questions
+						37 text Actual overload behavior depends on the implementation; its documentation would confirm it.
+						38 text P8-RESEARCH-DONE
+				39 container
+					40 text Question 2 P8 shutdown acceptance: expand the previous answer into 200 detailed points. Do not use tools or read files. Stopped Stopped before the report was finished.
+				41 container
+					42 text Question 3 The long generation was deliberately stopped for a lifecycle test. Give one sentence, under 20 words, confirming bounded queues provide backpressure. Include P8-RESEARCH-RECOVERED. Do not use tools. Earlier questions replayed
+					43 container Backpressure
+						44 heading Backpressure, Value: 1
+							45 text Backpressure
+						46 heading Conclusion, Value: 2
+							47 text Conclusion
+						48 text Bounded queues provide backpressure by blocking producers when full—P8-RESEARCH-RECOVERED.
+						49 heading Evidence, Value: 2
+							50 text Evidence
+						51 text Capacity limits
+						52 heading References, Value: 2
+							53 text References
+						54 text None
+						55 heading Open questions, Value: 2
+							56 text Open questions
+						57 text None
+				58 text Follow-up question
+				59 text entry area (settable) Follow-up question, Value: [text entry area], Placeholder: Ask a follow-up…
+					60 text Ask a follow-up…
+				61 button (disabled) Ask
+	62 close button
+	63 full screen button Help: this button also has an action to zoom the window, Secondary Actions: zoom the window
+	64 minimize button
+65 menu bar
+	66 Loom
+	67 File
+	68 Edit
+	69 View
+	70 Window
+	71 Help
+
+The focused UI element is 2 HTML content Description: Loom, URL: tauri://localhost

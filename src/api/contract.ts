@@ -14,6 +14,8 @@ export const TAURI_COMMANDS = {
   loadUpdateDrafts: "load_update_drafts",
   saveUpdateDrafts: "save_update_drafts",
   healthCheck: "health_check",
+  webviewStartupContext: "webview_startup_context",
+  reportWebviewStartup: "report_webview_startup",
   createAgent: "create_agent",
   deleteAgent: "delete_agent",
   diagnoseAgents: "diagnose_agents",
