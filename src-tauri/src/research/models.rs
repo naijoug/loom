@@ -3,7 +3,20 @@ use serde::{Deserialize, Serialize};
 
 pub use crate::source_files::{RefStats, SourceRef, SourceText, TreeEntry};
 
-pub const RESEARCH_SCHEMA_VERSION: u32 = 1;
+pub const RESEARCH_SCHEMA_VERSION: u32 = 2;
+
+#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum Workflow {
+    #[default]
+    Legacy,
+    Target,
+}
+impl Workflow {
+    pub fn is_legacy(&self) -> bool {
+        *self == Self::Legacy
+    }
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -41,6 +54,12 @@ pub struct Turn {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Research {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub active_owner: Option<super::admission::Owner>,
+    #[serde(default, skip_serializing_if = "Workflow::is_legacy")]
+    pub workflow: Workflow,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target: Option<super::target_models::TargetConfig>,
     pub schema_version: u32,
     pub research_id: String,
     pub title: String,
@@ -76,6 +95,10 @@ impl Research {
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ResearchSummary {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub active_owner: Option<super::admission::Owner>,
+    #[serde(default, skip_serializing_if = "Workflow::is_legacy")]
+    pub workflow: Workflow,
     pub research_id: String,
     pub title: String,
     pub agent_name: String,
@@ -97,7 +120,7 @@ pub struct ResearchList {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct CreateResearchInput {
     pub question: String,
     pub agent_id: String,

@@ -2,6 +2,8 @@
 
 状态：2026-10-27 实现（[Agent 调用层与左侧功能栏计划](../plans/2026-10-26/22:42-agent-layer-and-activity-rail.md) P6，按 §8-2 默认决策）。范围见 [需求文档](../requirements.md) 的“Research 范围”，安全边界见 [安全策略](../security-policy.md#research)。命令、事件与模型样本由 `contracts/tauri-contract.json` 两端共同校验。
 
+2026-10-28 扩展状态：普通 Research 保留原问答行为，存储已支持 v1 读取与首次写入备份升级到 v2。目标 Research 的存储、跨进程租约、材料分页和独立 IPC 已接入；App 后端链路已有真实验证，开发入口通过 `LOOM_RESEARCH_TARGETS=1` 显式启用、默认关闭，前端尚未接入。GitHub／网站／连续调研与实验仍按 [多目标计划](../plans/2026-10-28/04:41-research-targets-and-experiments.md) 实施，R1/R2 后端出口和工程门禁已通过；原生 UI 验收仍由 R5–R7 执行。
+
 ## 存储
 
 研究只写入应用数据目录，不写入用户项目：
@@ -14,8 +16,8 @@
   jobs/<jobId>/{job.json, prompt.md, stdout.log, stderr.log}
 ```
 
-- `research.json` 原子写入（进程内锁）；`schemaVersion = 1`。读取时把上个进程遗留的 `running` 问题标为 `interrupted`，不自动重启。
-- 同一研究同一时刻最多一个作业（进程内登记表）；删除研究前必须没有运行中的作业。
+- `research.json` 原子写入；新记录 `schemaVersion = 2`。v1 记录读取时保持磁盘不变，首次写入前保存并校验 `research.v1.backup.json`。未来 schema 拒绝读取与写回。无活动跨进程租约时，读取返回 `interrupted` 投影，不在读路径写入恢复状态。
+- 同一研究同一时刻最多一个 writer（OS 文件锁，普通 Job 与目标 run 共用）。进程内登记表只是本机投影；删除取得同一租约。停止请求绑定 run/job 与本次 lease token，旧 attempt 的迟到取消不会误停重试。
 - `Turn`：`index`、`question`、`status`（`running` / `done` / `failed` / `cancelled` / `interrupted`）、`jobId`、起止时间、`error?`、`warnings[]`、`refs?`（有效 / 无效引用数）、`context?`（`native` 原生续聊 / `replay` 回放历史；首问为空）。
 - 列表摘要的 `status` 取最后一个问题：运行中 `running`，完成 `ready`，否则 `failed`。
 
@@ -65,3 +67,33 @@
 - 入口：左侧功能栏 Research（⌘3）；首次访问后保持挂载，Chat 保持挂载（隐藏）。
 - `src/features/research/`：研究列表、新建表单（共享 `AgentPicker`，模型输入随诊断能力显示）、问答列表（上下文标签、警告、错误摘要、报告）、追问框、停止 / 重试 / 删除、作业日志；源码查看器为共享 `components/SourceViewer`。
 - 非 Tauri 环境显示“仅桌面可用”。DEV 专用 `?fixture=simple-chat&researchFixture=ready|empty|running|failed|error` 注入合成 API，生产构建不包含。
+
+
+## 目标 Research 后端（实施中，未开放 UI）
+
+- `workflow = legacy | target` 不可原地切换；旧 ask/retry/cancel、turn、日志及源码入口对 target 返回 `workflow_mismatch`。普通创建输入拒绝未知的 target 字段。
+- 目标命令：`research_preflight/start_run/ask_run/retry_run/resume_run/cancel_run/get_run/list_runs/read_report/list_report_tree/read_report_source/list_evidence/read_evidence/export`。全部检查主窗口。新运行须开启开发开关；已保存资料读取不依赖开关。`research_export` 取得同一 writer lease，在应用受管目录导出 Markdown 和脱敏材料；显式 includeRaw 才包含经 hash 校验的原始 Evidence，并返回分享前审查提示。
+- 预检冻结规范路径、Agent 配置、工具身份、预算和 5 分钟期限；开始只接受 preflightId/requestId。重复 requestId 不重启进程；失败请求也保存，换请求体报冲突。已消费的预检不能通过新 requestId 再启动。
+- target 的 `runs/<runId>/events.jsonl` 为权威记录，`state.json` 为可重建投影。读者忽略半条尾记录；恢复持有 writer 后修复尾部、保守扣除未知调用预留。retry/resume 不清零用量；模型补读上限同样持久化。
+- 报告 manifest 绑定 run 与已发布 snapshot/evidence 集合，report ID 包含 manifest 摘要；快照按清单及源码内容 hash 验证，缺失或篡改不会回退 workspace。只读追问复制 parentReport 的固定材料 ID，采集预算为 0，不访问当前目标。
+- 模型仅可返回严格的 `answer` / `need_material` JSON。每交换最多 4 个读取、源码窗口最多 200 行、序列化材料最多 48,000 字符；读取范围超过文件末尾时与共享源码查看器一样裁到 EOF，起点越界仍拒绝。每报告 3 次补读、1 次纠错、最多 5 次模型调用。
+- `loom://research-event` 的 target 事件包含 researchId/runId、status/phase、progress、stopReason/error；读取磁盘状态仍是恢复依据。旧事件形状保持兼容。
+- 当前 App 链路使用固定 REA 6.8.0 私有 MCP、固定工具枚举和 schema 校验，先静态识别，再 JS 分析、保存 Evidence 与源码快照，最后通过 evidenceOnly CLI 生成报告。原始 Evidence 与模型视图分开 hash；默认材料读取只提供派生视图。App 不执行，原生引擎只提供诊断。
+- 尚待完成的约束与验证见 [后端实施记录](../dogfood/2026-10-28-research-targets-r1-backend.md)，不能将默认关闭的后端切片描述为完整目标研究产品交付。
+
+
+### R1 持久化与恢复补充
+
+- `runs/<runId>/disk.json` 保存每次文件/目录写入的容量预留、已确认字节与发布位置；metadata/journal 和最终报告保留独立额度。usage 区分 `diskBytes` 与 `diskReservedBytes`。工具 cwd 在运行中与退出后检测额度；这不是 OS 文件系统配额。
+- 完成事件丢失时，受锁恢复验证已 rename 的 artifact，再关联 snapshot/evidence/report；未知写入保留预留，不通过重启清空预算。首次研究与 initial run 一起原子发布，pending 请求回放不重新执行。
+- 每次补读后的完整有界 context 另存不可变文件，由 run 的 `materialContext` 引用并验证 scope/hash。manifest 始终保留；旧页被容量淘汰时明示，证据目录支持 `evidence_index`，材料分页返回 `nextCursor`。
+- `research_get/list` 的 `activeOwner?` 为当前租约投影，不作为持久化活动事实。空闲锁重新取得时清理旧 owner 文件；读取不写入恢复状态。
+- 版本检查在统一 supervisor 下运行；start/continue 先登记 request/run，再由该运行验证 CLI。新模式只在 macOS 开放开发开关，其他平台明确 unsupported。
+
+
+### 静态 App 采集与测试边界
+
+- 目录、独立 `.js/.mjs/.cjs`、ASAR 的合法源码成员统一捕获到受管目录，记录原始路径/容器 SHA/文件 SHA 与 omissions；REA 分析该捕获而不执行原 App。ASAR companion 只允许声明成员路径，链接、越界、完整性错误均拒绝。
+- 已完成的源码捕获在 REA 调用前发布，因此取消或 provider_timeout 也可保留源码。provider tool error 会在剩余额度内读取 bundle，宿主部分报告不冒充完整模型结论。
+- `LOOM_PROFILE_DIR` 同时隔离 Research 的验收数据；普通安装的原存储路径不变。读取旧报告不创建 workspace。
+- `ipc_tests.rs` 使用 Tauri MockRuntime 的真实 invoke handler，覆盖序列化、窗口、幂等与控制链；这不是原生 WebView/视觉证据。测试专用上下文仅存在于 cfg(test)，生产构建不包含。

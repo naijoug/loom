@@ -1,6 +1,6 @@
 //! Loom-managed research directories under `<appData>/research/<researchId>/`.
 //! Nothing is ever written into the user's project.
-use super::models::*;
+use super::{admission, files, models::*};
 use crate::storage::atomic_write_json;
 use std::{
     collections::HashMap,
@@ -22,8 +22,9 @@ fn research_lock() -> &'static Mutex<()> {
 pub fn next_id(prefix: &str) -> String {
     static SEQUENCE: AtomicU64 = AtomicU64::new(0);
     format!(
-        "{prefix}-{}-{}",
+        "{prefix}-{}-{}-{}",
         crate::models::now_ms(),
+        std::process::id(),
         SEQUENCE.fetch_add(1, Ordering::Relaxed)
     )
 }
@@ -44,45 +45,62 @@ pub fn valid_id(id: &str) -> bool {
 pub struct RunningJob {
     pub job_id: String,
     pub cancel: Arc<AtomicBool>,
+    _lease: Arc<admission::Lease>,
 }
 
-fn running() -> &'static Mutex<HashMap<String, RunningJob>> {
-    static RUNNING: OnceLock<Mutex<HashMap<String, RunningJob>>> = OnceLock::new();
+fn running() -> &'static Mutex<HashMap<PathBuf, RunningJob>> {
+    static RUNNING: OnceLock<Mutex<HashMap<PathBuf, RunningJob>>> = OnceLock::new();
     RUNNING.get_or_init(Default::default)
 }
 
-pub fn running_job(research_id: &str) -> Option<RunningJob> {
-    running().lock().ok()?.get(research_id).cloned()
+pub fn running_job(store: &Store, research_id: &str) -> Option<RunningJob> {
+    running()
+        .lock()
+        .ok()?
+        .get(&store.dir(research_id).ok()?)
+        .cloned()
 }
 
 /// Claims the single job slot of a research.
-pub fn claim_job(research_id: &str, job_id: &str) -> Result<Arc<AtomicBool>, String> {
+pub fn claim_job(
+    store: &Store,
+    research_id: &str,
+    job_id: &str,
+) -> Result<Arc<AtomicBool>, String> {
+    store.require_legacy(research_id)?;
+    let key = store.dir(research_id)?;
     let mut map = running().lock().map_err(|_| "research registry poisoned")?;
-    if map.contains_key(research_id) {
+    if map.contains_key(&key) {
         return Err("This research is already answering a question".into());
     }
+    let mut lease = admission::acquire(&store.root, research_id)?;
+    lease.bind(job_id, "legacy")?;
     let cancel = Arc::new(AtomicBool::new(false));
     map.insert(
-        research_id.into(),
+        key,
         RunningJob {
             job_id: job_id.into(),
             cancel: cancel.clone(),
+            _lease: Arc::new(lease),
         },
     );
     Ok(cancel)
 }
 
-pub fn release_job(research_id: &str, job_id: &str) {
+pub fn release_job(store: &Store, research_id: &str, job_id: &str) {
+    let Ok(key) = store.dir(research_id) else {
+        return;
+    };
     if let Ok(mut map) = running().lock() {
-        if map.get(research_id).is_some_and(|job| job.job_id == job_id) {
-            map.remove(research_id);
+        if map.get(&key).is_some_and(|job| job.job_id == job_id) {
+            map.remove(&key);
         }
     }
 }
 
 #[derive(Clone)]
 pub struct Store {
-    root: PathBuf,
+    pub(super) root: PathBuf,
 }
 
 impl Store {
@@ -96,55 +114,85 @@ impl Store {
         if !valid_id(research_id) {
             return Err("Invalid research id".into());
         }
-        let dir = self.root.join(research_id);
-        if fs::symlink_metadata(&dir).is_ok_and(|meta| meta.file_type().is_symlink()) {
-            return Err("Research directory must not be a symlink".into());
-        }
-        Ok(dir)
+        files::path(&self.root, research_id)
     }
 
     /// Empty working directory for research without a project.
     pub fn workspace(&self, research_id: &str) -> Result<PathBuf, String> {
-        let path = self.dir(research_id)?.join("workspace");
+        let path = self.workspace_path(research_id)?;
         fs::create_dir_all(&path).map_err(|e| format!("failed to create workspace: {e}"))?;
         Ok(path)
     }
+    pub fn workspace_path(&self, research_id: &str) -> Result<PathBuf, String> {
+        files::path(&self.dir(research_id)?, "workspace")
+    }
 
     pub fn create(&self, research: &Research) -> Result<(), String> {
+        let _lease = admission::acquire(&self.root, &research.research_id)?;
         let dir = self.dir(&research.research_id)?;
         fs::create_dir_all(&self.root)
             .map_err(|e| format!("failed to create research root: {e}"))?;
         fs::create_dir(&dir).map_err(|e| format!("failed to create research: {e}"))?;
-        atomic_write_json(&dir.join("research.json"), research)
+        let mut persisted = research.clone();
+        persisted.active_owner = None;
+        atomic_write_json(&dir.join("research.json"), &persisted)
     }
 
     fn read(&self, research_id: &str) -> Result<Research, String> {
-        let path = self.dir(research_id)?.join("research.json");
-        let text = fs::read_to_string(&path).map_err(|e| format!("research unreadable: {e}"))?;
-        serde_json::from_str(&text).map_err(|e| format!("research.json is invalid: {e}"))
+        let path = files::path(&self.dir(research_id)?, "research.json")?;
+        let research: Research = files::read_json(&path, 4 * 1024 * 1024)?;
+        if !matches!(research.schema_version, 1 | 2) || research.research_id != research_id {
+            return Err("unsupported_or_mismatched_research_schema".into());
+        }
+        if research.schema_version == 1 && research.workflow != Workflow::Legacy {
+            return Err("invalid_research_workflow".into());
+        }
+        if (research.workflow == Workflow::Target) != research.target.is_some() {
+            return Err("invalid_research_workflow".into());
+        }
+        Ok(research)
     }
 
-    /// Loads a research, marking turns left `running` by a previous process as
-    /// interrupted. Interrupted turns are never restarted automatically.
+    /// Read-only projection. Readers never overwrite another process's state.
     pub fn load(&self, research_id: &str) -> Result<Research, String> {
         let _lock = research_lock()
             .lock()
             .map_err(|_| "research lock poisoned")?;
         let mut research = self.read(research_id)?;
-        let active = running_job(research_id).map(|job| job.job_id);
-        let mut changed = false;
-        for turn in &mut research.turns {
-            if turn.status == TurnStatus::Running && Some(&turn.job_id) != active.as_ref() {
-                turn.status = TurnStatus::Interrupted;
-                turn.error =
-                    Some("Interrupted: Loom stopped while this question was running".into());
-                changed = true;
-            }
-        }
-        if changed {
-            atomic_write_json(&self.dir(research_id)?.join("research.json"), &research)?;
+        research.active_owner = admission::owner(&self.root, research_id)?;
+        if !admission::is_active(&self.root, research_id)? {
+            interrupt_stale(&mut research, None);
         }
         Ok(research)
+    }
+
+    pub fn require_legacy(&self, id: &str) -> Result<Research, String> {
+        let research = self.load(id)?;
+        if research.workflow != Workflow::Legacy {
+            return Err("workflow_mismatch".into());
+        }
+        Ok(research)
+    }
+
+    pub fn cancel_legacy(&self, id: &str) -> Result<bool, String> {
+        self.require_legacy(id)?;
+        let Some(owner) = admission::owner(&self.root, id)? else {
+            return Ok(false);
+        };
+        if owner.workflow != "legacy" {
+            return Err("workflow_mismatch".into());
+        }
+        let requested = admission::request_cancel(&self.root, id, &owner.run_id)?;
+        if let Some(job) = running_job(self, id) {
+            if job.job_id == owner.run_id {
+                job.cancel.store(true, Ordering::Relaxed);
+            }
+        }
+        Ok(requested)
+    }
+
+    pub fn is_cancelled(&self, id: &str, job_id: &str) -> bool {
+        admission::cancelled(&self.root, id, job_id)
     }
 
     pub fn update<T>(
@@ -155,26 +203,86 @@ impl Store {
         let _lock = research_lock()
             .lock()
             .map_err(|_| "research lock poisoned")?;
+        let owner = running_job(self, research_id);
+        let _lease = if owner.is_none() {
+            Some(admission::acquire(&self.root, research_id)?)
+        } else {
+            None
+        };
         let mut research = self.read(research_id)?;
+        if research.workflow != Workflow::Legacy {
+            return Err("workflow_mismatch".into());
+        }
+        if research.schema_version == 1 {
+            let backup = self.dir(research_id)?.join("research.v1.backup.json");
+            if !backup.exists() {
+                let original = files::read_bytes(
+                    &self.dir(research_id)?.join("research.json"),
+                    4 * 1024 * 1024,
+                )?;
+                files::write_bytes(&backup, &original)?;
+            } else {
+                let saved: Research = files::read_json(&backup, 4 * 1024 * 1024)?;
+                if saved.schema_version != 1
+                    || saved.research_id != research_id
+                    || saved.workflow != Workflow::Legacy
+                {
+                    return Err("invalid_legacy_backup".into());
+                }
+            }
+            research.schema_version = 2;
+        }
+        interrupt_stale(&mut research, owner.as_ref().map(|v| v.job_id.as_str()));
         let value = change(&mut research)?;
+        if research.workflow != Workflow::Legacy || research.schema_version != 2 {
+            return Err("research_workflow_is_immutable".into());
+        }
         research.updated_at_ms = crate::models::now_ms();
-        atomic_write_json(&self.dir(research_id)?.join("research.json"), &research)?;
+        research.active_owner = None;
+        files::write_json(&self.dir(research_id)?.join("research.json"), &research)?;
         Ok((research, value))
     }
 
     pub fn list(&self) -> ResearchList {
         let mut items = Vec::new();
         let mut storage_errors = Vec::new();
-        if let Ok(entries) = fs::read_dir(&self.root) {
+        let entries = match fs::symlink_metadata(&self.root) {
+            Ok(meta) if !meta.is_dir() || meta.file_type().is_symlink() => Err(
+                std::io::Error::other("research root is not an ordinary directory"),
+            ),
+            Ok(_) => fs::read_dir(&self.root),
+            Err(error) => Err(error),
+        };
+        if let Ok(entries) = entries {
             for entry in entries.flatten() {
                 let name = entry.file_name().to_string_lossy().into_owned();
                 if !valid_id(&name) {
                     continue;
                 }
                 match self.load(&name) {
-                    Ok(research) => items.push(summary(&research)),
+                    Ok(research) => {
+                        let mut item = summary(&research);
+                        if research.workflow == Workflow::Target {
+                            match super::target_store::TargetStore::open(self.clone(), &name)
+                                .and_then(|target| target.list_runs())
+                            {
+                                Ok(runs) => {
+                                    if let Some(run) = runs.last() {
+                                        item.status = run.state.status.as_str().into();
+                                    }
+                                    item.turns = runs.len();
+                                }
+                                Err(error) => storage_errors.push(format!("{name}: {error}")),
+                            }
+                        }
+                        items.push(item);
+                    }
                     Err(error) => storage_errors.push(format!("{name}: {error}")),
                 }
+            }
+        } else if let Err(error) = entries {
+            if error.kind() != std::io::ErrorKind::NotFound {
+                storage_errors.push(format!("research root unavailable: {error}"));
             }
         }
         items.sort_by_key(|s| std::cmp::Reverse(s.updated_at_ms));
@@ -185,9 +293,7 @@ impl Store {
     }
 
     pub fn delete(&self, research_id: &str) -> Result<(), String> {
-        if running_job(research_id).is_some() {
-            return Err("Stop the running question before deleting this research".into());
-        }
+        let _lease = admission::acquire(&self.root, research_id)?;
         let dir = self.dir(research_id)?;
         if !dir.starts_with(&self.root) || !dir.join("research.json").is_file() {
             return Err("Research not found".into());
@@ -196,10 +302,8 @@ impl Store {
     }
 
     fn turn_path(&self, research_id: &str, index: u32) -> Result<PathBuf, String> {
-        Ok(self
-            .dir(research_id)?
-            .join("turns")
-            .join(format!("{index}.md")))
+        self.require_legacy(research_id)?;
+        files::path(&self.dir(research_id)?, &format!("turns/{index}.md"))
     }
 
     pub fn write_turn(&self, research_id: &str, index: u32, markdown: &str) -> Result<(), String> {
@@ -217,10 +321,11 @@ impl Store {
     }
 
     pub fn job_dir(&self, research_id: &str, job_id: &str) -> Result<PathBuf, String> {
+        self.require_legacy(research_id)?;
         if !valid_id(job_id) {
             return Err("Invalid job id".into());
         }
-        Ok(self.dir(research_id)?.join("jobs").join(job_id))
+        files::path(&self.dir(research_id)?, &format!("jobs/{job_id}"))
     }
 
     pub fn save_job(&self, research_id: &str, job: &JobRecord) -> Result<(), String> {
@@ -303,6 +408,15 @@ impl Store {
     }
 }
 
+fn interrupt_stale(research: &mut Research, active: Option<&str>) {
+    for turn in &mut research.turns {
+        if turn.status == TurnStatus::Running && active != Some(turn.job_id.as_str()) {
+            turn.status = TurnStatus::Interrupted;
+            turn.error = Some("Interrupted: Loom stopped while this question was running".into());
+        }
+    }
+}
+
 fn write_text(path: &Path, text: &str) -> Result<(), String> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)
@@ -320,6 +434,8 @@ pub fn summary(research: &Research) -> ResearchSummary {
         _ => "failed",
     };
     ResearchSummary {
+        active_owner: research.active_owner.clone(),
+        workflow: research.workflow,
         research_id: research.research_id.clone(),
         title: research.title.clone(),
         agent_name: research.agent_name.clone(),
@@ -343,7 +459,10 @@ pub(crate) mod tests {
 
     pub(crate) fn sample_research(id: &str) -> Research {
         Research {
-            schema_version: RESEARCH_SCHEMA_VERSION,
+            active_owner: None,
+            workflow: Workflow::Legacy,
+            target: None,
+            schema_version: 1, // Historical legacy fixture exercises migration.
             research_id: id.into(),
             title: "How does it work?".into(),
             agent_id: "agent".into(),
@@ -399,17 +518,69 @@ pub(crate) mod tests {
         let mut live = sample_research("research-b");
         live.turns.push(turn(1, TurnStatus::Running, "job-live"));
         store.create(&live).unwrap();
-        claim_job("research-b", "job-live").unwrap();
-        assert!(claim_job("research-b", "job-other").is_err());
+        claim_job(&store, "research-b", "job-live").unwrap();
+        assert!(claim_job(&store, "research-b", "job-other").is_err());
         assert_eq!(
             store.load("research-b").unwrap().turns[0].status,
             TurnStatus::Running
         );
         assert!(store.delete("research-b").is_err());
-        release_job("research-b", "job-live");
+        release_job(&store, "research-b", "job-live");
         store.delete("research-b").unwrap();
         assert!(store.load("research-b").is_err());
         fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn future_schema_and_failed_backup_never_replace_original_data() {
+        let root = temp_root();
+        let store = Store::new(&root);
+        store.create(&sample_research("research-schema")).unwrap();
+        let path = store.dir("research-schema").unwrap().join("research.json");
+        let original = fs::read(&path).unwrap();
+        let backup = store
+            .dir("research-schema")
+            .unwrap()
+            .join("research.v1.backup.json");
+        fs::create_dir(&backup).unwrap();
+        // A corrupt pre-existing backup must not be treated as a valid backup.
+        assert!(store.update("research-schema", |_| Ok(())).is_err());
+        assert_eq!(fs::read(&path).unwrap(), original);
+        fs::remove_dir(&backup).unwrap();
+        let mut future = sample_research("research-schema");
+        future.schema_version = 99;
+        files::write_json(&path, &future).unwrap();
+        let before = fs::read(&path).unwrap();
+        assert!(store.load("research-schema").is_err());
+        assert!(store.update("research-schema", |_| Ok(())).is_err());
+        assert_eq!(fs::read(path).unwrap(), before);
+        fs::remove_dir_all(root).unwrap();
+    }
+    #[test]
+    fn broken_root_and_inconsistent_workflow_are_visible_without_repair() {
+        let root = temp_root();
+        let store = Store::new(&root);
+        fs::write(&store.root, "not a directory").unwrap();
+        assert!(!store.list().storage_errors.is_empty());
+        assert_eq!(fs::read_to_string(&store.root).unwrap(), "not a directory");
+        fs::remove_file(&store.root).unwrap();
+        let mut malformed = sample_research("research-shape");
+        malformed.target = Some(super::super::target_models::TargetConfig {
+            target: super::super::target_models::Target::App {
+                path: "/not-read".into(),
+            },
+            run_ids: vec![],
+        });
+        store.create(&malformed).unwrap();
+        assert!(store.load("research-shape").is_err());
+        assert!(!store.list().storage_errors.is_empty());
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn legacy_create_rejects_target_payload_fields() {
+        let input = serde_json::json!({"question":"Explain","agentId":"a","language":"en","target":{"kind":"app","path":"/app"}});
+        assert!(serde_json::from_value::<CreateResearchInput>(input).is_err());
     }
 
     #[test]

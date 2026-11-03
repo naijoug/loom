@@ -10,7 +10,7 @@ Loom 通过 Rust Agent 调用层 `src-tauri/src/agent/`（参数在 `invocation.
 
 内建 Agent 为 Claude Code、Codex、OpenCode、Grok；Dummy 仅在 debug/test 构建出现。已保存的命令路径覆盖和启用状态不被重新探测覆盖。诊断直接执行 `--version`，两秒超时，取不到版本显示 `unknown`；能启动但 `--version` 非零退出（常见于安装不完整）标为 `broken`，Settings 与 Agent 选择器显示“安装已损坏”且不可选；“已安装”只代表找到可执行文件，登录/模型可用性需真实调用验证。
 
-诊断返回 `capabilities { structuredStream, toolEvents, nativeResume, inlineCards, modelSelection, modes }`。每个 mode 含适配器生成的 policy 文本；设置表格不自行拼写参数。单项测试同样仅执行版本探测。
+诊断返回 `capabilities { structuredStream, toolEvents, nativeResume, inlineCards, modelSelection, evidenceOnly?, modes }`。每个 mode 含适配器生成的 policy 文本；设置表格不自行拼写参数。单项测试同样仅执行版本探测。`evidenceOnly` 为新 Research 的独立无工具执行配置，当前只对受测 Claude 2.1.311／无额外 argv 声明；不是模型登录可用证明，也不改变原有 explore/ask/auto。详见 [Agent 层](architecture/agent-layer.md)。
 
 ## 启动前检查与错误格式
 

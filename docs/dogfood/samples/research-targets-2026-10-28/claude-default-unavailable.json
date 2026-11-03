@@ -1,0 +1,44 @@
+{
+  "status": "failed",
+  "startedAt": "2026-10-28T13:06:55.946Z",
+  "elapsedMs": 1538,
+  "program": "claude",
+  "args": [
+    "--safe-mode",
+    "--tools",
+    "",
+    "--strict-mcp-config",
+    "--mcp-config",
+    "{\"mcpServers\":{}}",
+    "--no-session-persistence",
+    "--no-chrome",
+    "--disable-slash-commands",
+    "--permission-mode",
+    "plan",
+    "--print",
+    "--verbose",
+    "--output-format",
+    "stream-json"
+  ],
+  "checks": {
+    "toolsDisabled": true,
+    "mcpDisabled": true,
+    "noToolEvents": true,
+    "hookDisabled": true,
+    "mcpNeverSpawned": true,
+    "noWrite": true,
+    "noCanaryRead": true,
+    "modelResponded": false
+  },
+  "model": "auto/glm-5.3[1m]",
+  "resultSubtype": "success",
+  "exit": {
+    "code": 1,
+    "signal": null
+  },
+  "timedOut": false,
+  "capped": false,
+  "stdoutBytes": 5618,
+  "stderrBytes": 83,
+  "resultSummary": "API Error: 410 NVIDIA NIM: The model 'z-ai/glm-5.3' has reached its end of life on 2026-10-28T08:00:00Z and is no longer available."
+}

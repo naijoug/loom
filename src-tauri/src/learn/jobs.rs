@@ -489,6 +489,7 @@ impl Job {
         };
         append(&job_dir.join("prompt.md"), &format!("{separator}{prompt}"));
         let request = AdapterInvocationRequest {
+            execution_profile: None,
             project_path: &checkout,
             prompt,
             prompt_file: None,

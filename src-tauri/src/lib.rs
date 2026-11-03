@@ -14,12 +14,15 @@ mod migrations;
 pub mod models;
 pub mod process_supervisor;
 mod projects;
+mod rea;
 mod research;
+mod research_sources;
 mod session_capture;
 mod settings;
 pub mod skills;
 mod source_files;
 mod storage;
+mod tool_process;
 mod webview_startup;
 
 use serde::Serialize;
@@ -139,6 +142,20 @@ pub fn run() {
             research::commands::research_list_tree,
             research::commands::research_read_source,
             research::commands::research_delete,
+            research::target_commands::research_preflight,
+            research::target_commands::research_start_run,
+            research::target_commands::research_get_run,
+            research::target_commands::research_list_runs,
+            research::target_commands::research_cancel_run,
+            research::target_commands::research_read_report,
+            research::target_commands::research_list_report_tree,
+            research::target_commands::research_read_report_source,
+            research::target_commands::research_list_evidence,
+            research::target_commands::research_read_evidence,
+            research::target_commands::research_ask_run,
+            research::target_commands::research_retry_run,
+            research::target_commands::research_resume_run,
+            research::target_commands::research_export,
             discuss::commands::discuss_list,
             discuss::commands::discuss_create,
             discuss::commands::discuss_get,

@@ -221,7 +221,13 @@ fn os_releases_lock_after_child_is_killed() {
     let mut output = BufReader::new(child.stdout.take().unwrap());
     let mut ready = false;
     for line in (&mut output).lines() {
-        if line.unwrap() == "skills-lock-ready" {
+        let line = line.unwrap();
+        // With RUST_TEST_THREADS=1 libtest prints the test name on the same
+        // line as uncaptured stdout. Both forms are the child's ready marker.
+        if line == "skills-lock-ready"
+            || line.strip_prefix("test skills::tests::coordination_child ... ")
+                == Some("skills-lock-ready")
+        {
             ready = true;
             break;
         }

@@ -31,7 +31,9 @@ Skills 原生验收可先用 `pnpm tauri build --debug --bundles app` 构建，�
 
 真实 CLI 测试通过 `LOOM_REAL_CHAT=1 cargo test --manifest-path src-tauri/Cargo.toml <test-name> -- --ignored --nocapture` 显式启用，会消耗模型额度。测试名和当前结果见 [测试指南](../docs/testing.md) 与 [本轮验收](../docs/dogfood/2026-10-20-simple-chat-acceptance.md)。
 
-目录中保留的 Craft/SDK/REA/旧 Task 实验脚本仅为历史研究资料，不再由默认预览或 CI 执行；重新启用须先核对其冻结依赖与契约。当前预览已不提供 Workbench 启动开关。
+目录中保留的 Craft/SDK/旧 REA 6.5.0／旧 Task 实验脚本仅为历史研究资料，不再由默认预览或 CI 执行；重新启用须先核对其冻结依赖与契约。当前预览已不提供 Workbench 启动开关。
+
+Research 新 R0 使用 `research-target-probe.mjs --node <兼容Node绝对路径> --rea <固定包入口绝对路径> --output <全新临时目录>`，网站检查另传 `--chrome <Chrome绝对路径>`。探针创建自己的 JS App／本机网页，并验证 MCP、静态分析、Evidence 导出、错误／超限／取消；不安装依赖、不改用户 MCP，浏览器只使用专用 profile。`research-cli-probe.mjs <临时目录> <模型名>` 调用真实 Claude 无工具 profile，会使用当前账号额度；不提供模型名时沿用 CLI 配置。结果与实际限制见 [R0 验收](../docs/dogfood/2026-10-28-research-targets-r0.md)。这两项为显式验收脚本，不属于日常默认 CI。
 
 Skills 视觉验收由 `pnpm smoke:visual` 同轮运行 `skills-smoke.mjs`。仅 DEV 的 `?fixture=simple-chat&skillsFixture=ready` 注入合成 API，可选 empty/loading/error/cancel；生产构建不包含该 fixture。截图和机器结果位于 `designs/exports/skills/`。
 
@@ -40,3 +42,17 @@ Learn 视觉验收同样由 `pnpm smoke:visual` 同轮运行 `learn-smoke.mjs`�
 Research 视觉验收同样由 `pnpm smoke:visual` 同轮运行 `research-smoke.mjs`。仅 DEV 的 `?fixture=simple-chat&researchFixture=ready` 注入合成 Research API（不调用 IPC、git 或模型），可选 empty/running/failed/error；截图和机器结果位于 `designs/exports/research/`。
 
 原生源码隔离探针可给 `LOOM_PREVIEW_BINARY` 搭配绝对 `LOOM_PREVIEW_SANDBOX_PROFILE`，debug.sh 在 macOS 用 sandbox-exec 启动准确 binary。2026-10-22 当前主机上即使 allow-default profile 也无法由原生自动化识别窗口，普通启动正常；因此此探针暂不能作为 G1 桌面通过证据，详见 Skills 当日验收。
+
+### Discuss 合成矩阵
+
+`discuss-smoke.mjs` 由 `pnpm smoke:visual` 调用，只操作 DEV `discussFixture`。覆盖两轮/汇总、失败/重试/取消、调用确认、引用/日志、中英文/深浅/窄窗口和 Chat 草稿保持。截图与结果在 `designs/exports/discuss/`；真实 CLI 入口见 [测试指南](../docs/testing.md#discussp7)。
+
+### P8 原生验收边界
+
+`LOOM_PROFILE_DIR` 的隔离范围是设置/Agent/最近项目与默认 Skills 库；Learn、Research、Discuss 使用 `app_data_dir()`，WebView 存储也不由该变量隔离。验收只创建明确命名的测试记录，不清理既有内容。当前原生证据与一次重启空白观察见 [P8 记录](../docs/dogfood/2026-10-28-p8-acceptance.md)。
+
+### 原生启动恢复验收
+
+`desktop-smoke.sh` 改为要求当前启动的 `interface_ready`，不把活着的空白进程计为通过。失败会输出启动阶段日志并清理本仓库测试进程。
+
+`node scripts/webview-startup-fixture.mjs once|always` 从 dist 创建仅验收使用的 `.tmp/webview-fixtures/` 与 Tauri override config。`once` 跳过首次前端入口，验证自动一次重载后恢复；`always` 验证上限与原生提示。先 `pnpm build`，测试结束重新 `pnpm tauri build --bundles app`，不得交付注入包。见 [验收](../docs/dogfood/2026-10-28-webview-restart.md)。

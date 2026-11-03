@@ -16,6 +16,9 @@ pub struct AgentCapabilities {
     /// Accepts `AdapterInvocationRequest::model` as a `--model` argument.
     #[serde(default)]
     pub model_selection: bool,
+    /// True only after diagnostics recognizes an accepted CLI version/configuration.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub evidence_only: bool,
     pub modes: Vec<ModeCapability>,
 }
 
@@ -24,6 +27,10 @@ pub struct AgentCapabilities {
 pub struct ModeCapability {
     pub mode: String,
     pub policy: String,
+}
+
+fn is_false(value: &bool) -> bool {
+    !value
 }
 
 pub fn capabilities(adapter: &str) -> AgentCapabilities {
@@ -59,6 +66,7 @@ pub fn capabilities(adapter: &str) -> AgentCapabilities {
         native_resume: structured,
         inline_cards: adapter == ADAPTER_CLAUDE,
         model_selection: structured,
+        evidence_only: false,
         modes: ["explore", "ask", "auto"]
             .into_iter()
             .zip(policies)

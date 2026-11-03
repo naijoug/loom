@@ -29,6 +29,8 @@ pub enum ProcessKind {
     Learn,
     /// Read-only agent runs of the newer features (Research, Discuss).
     Feature,
+    /// Non-agent REA, browser and evaluator processes share this supervisor.
+    Tool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -414,6 +416,59 @@ pub fn force_terminate_process_group(process_id: u32) -> Result<(), String> {
     signal_process_group(process_id, true)
 }
 
+/// After wait() reaped the owned parent, macOS can briefly expose a zombie-only
+/// group which rejects signals. Do not signal a historical PID again; accept
+/// the cleanup only if a bounded read-only probe proves the group disappeared.
+pub async fn cleanup_reaped_group(process_id: u32) -> Result<(), String> {
+    let result = force_terminate_process_group(process_id);
+    #[cfg(unix)]
+    {
+        finish_reaped_cleanup(result, || process_group_exists(process_id)).await
+    }
+    #[cfg(not(unix))]
+    {
+        result
+    }
+}
+
+#[cfg(unix)]
+async fn finish_reaped_cleanup(
+    result: Result<(), String>,
+    mut exists: impl FnMut() -> Result<bool, String>,
+) -> Result<(), String> {
+    let Err(error) = result else {
+        return Ok(());
+    };
+    let deadline = tokio::time::Instant::now() + std::time::Duration::from_millis(250);
+    loop {
+        if matches!(exists(), Ok(false)) {
+            return Ok(());
+        }
+        if tokio::time::Instant::now() >= deadline {
+            return Err(error);
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    }
+}
+
+#[cfg(unix)]
+pub fn process_group_exists(process_id: u32) -> Result<bool, String> {
+    if process_id <= 1 || process_id > i32::MAX as u32 {
+        return Err("invalid process group id".into());
+    }
+    unsafe {
+        if kill(-(process_id as i32), 0) == 0 {
+            return Ok(true);
+        }
+    }
+    let error = std::io::Error::last_os_error();
+    if error.raw_os_error() == Some(3) {
+        Ok(false)
+    } else {
+        Err(format!("process group probe failed: {error}"))
+    }
+}
+
 fn signal_process_group(process_id: u32, force: bool) -> Result<(), String> {
     if process_id <= 1 || process_id > i32::MAX as u32 {
         return Err("invalid process group id".into());
@@ -527,6 +582,33 @@ mod tests {
             ))
             .is_err());
         assert_eq!(registry.complete("chat-run"), Some(original));
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn reaped_cleanup_requires_observed_group_disappearance() {
+        let mut polls = 0;
+        finish_reaped_cleanup(Err("permission denied".into()), || {
+            polls += 1;
+            Ok(polls < 3)
+        })
+        .await
+        .unwrap();
+        assert_eq!(polls, 3);
+        assert_eq!(
+            finish_reaped_cleanup(Err("permission denied".into()), || Ok(true))
+                .await
+                .unwrap_err(),
+            "permission denied"
+        );
+        assert_eq!(
+            finish_reaped_cleanup(Err("permission denied".into()), || Err(
+                "probe denied".into()
+            ))
+            .await
+            .unwrap_err(),
+            "permission denied"
+        );
     }
 
     #[test]

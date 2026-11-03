@@ -1,5 +1,7 @@
 # REA 调研模块接入计划
 
+> 2026-10-28 适用范围更新：本文保留 6.5.0 与旧 Workbench／SDK worker 的历史计划及执行记录；相关内核已冻结，不属于当前桌面 Research。后续实施转 [Research 多目标研究与自动实验计划](../2026-10-28/04:41-research-targets-and-experiments.md) A 线。文中历史测试路径 `tests/unit/reaMcpContract.test.cjs` 现为 `tests/frozen-workbench/reaMcpContract.test.cjs`，可用 `node --test tests/frozen-workbench/reaMcpContract.test.cjs` 检查保存的旧契约；通过不证明新版 REA 可用。
+
 ## 目标
 
 研究并接入 [REA](https://github.com/morluto/rea) 6.5.0（MIT）作为 Loom 的本地调研/逆向工程 Source，使 Agent 能在需要闭源二进制、打包产物、运行时行为或版本对比证据时调用 REA 工具，并把 Evidence、审批与执行记录纳入 Loom 会话。

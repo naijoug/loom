@@ -1,0 +1,178 @@
+{
+  "package": {
+    "name": "rea-agents",
+    "version": "6.8.0",
+    "engines": {
+      "node": "^22.23.4 || ^24.22.1 || >=26.12.1"
+    },
+    "integrity": "sha512-9QDeRnGqEDzABZyr04eLnBXBv/c6I9/TWu/6M0MD4pEfkySI/BIgwTODIbAReX3C1x6hjw9+Jlx4A2yUSPZ9ww=="
+  },
+  "catalog": {
+    "counts": {
+      "cli_commands": 175,
+      "mcp_tools": 229,
+      "mcp_prompts": 6
+    },
+    "digests": {
+      "tools_sha256": "d587269e0bd2fe7f3514568951669b6824ef5ce96fea70db2373195f97772354",
+      "prompts_sha256": "9609379442110570cd52fdea61a777242350873bc28958f54827ca3590e680b7",
+      "combined_sha256": "4748bd4d8c81aaecf7fceceecfbaf14302cab6cb99cd878c0141b30b9eb577b2"
+    }
+  },
+  "protocol": "2025-06-18",
+  "selectedTools": [
+    {
+      "name": "binary_session",
+      "inputSchemaSha256": "40f9a73d3028a3bcff3b4efdbda94b1a792f5756e223e71530cec8767d5bff81",
+      "effects": [
+        "launchesProcess",
+        "idempotent"
+      ],
+      "availableAtProbe": true,
+      "required": [],
+      "properties": [
+        "expected_package_version",
+        "expected_catalog_digest",
+        "expected_server_path"
+      ]
+    },
+    {
+      "name": "inspect_desktop_application",
+      "inputSchemaSha256": "dc4a2580ce8998ec1fe3ad0dfbbac1e7a0103a1e376c549b339dc9a08863be60",
+      "effects": [
+        "mutatesSession",
+        "idempotent"
+      ],
+      "availableAtProbe": true,
+      "required": [
+        "path"
+      ],
+      "properties": [
+        "path",
+        "max_entries",
+        "max_probe_bytes",
+        "detail"
+      ]
+    },
+    {
+      "name": "analyze_javascript_application",
+      "inputSchemaSha256": "68397d586d565284e11d8c3268b102b3828d90c9b355d4f5c634f15efb346077",
+      "effects": [
+        "mutatesSession",
+        "writesFilesystem",
+        "launchesProcess",
+        "idempotent"
+      ],
+      "availableAtProbe": true,
+      "required": [
+        "input_path"
+      ],
+      "properties": [
+        "input_path",
+        "format",
+        "integrity_policy",
+        "source_paths",
+        "max_semantic_nodes",
+        "max_semantic_nodes_per_file",
+        "max_semantic_unknowns",
+        "max_semantic_unknowns_per_file",
+        "max_heap_mb",
+        "analysis_timeout_ms",
+        "detail",
+        "view"
+      ]
+    },
+    {
+      "name": "list_browser_targets",
+      "inputSchemaSha256": "98a855018193ecc24dab5895e08fa892ad042c09f90be854d22c65b5f2976bde",
+      "effects": [
+        "mutatesSession",
+        "accessesNetwork",
+        "idempotent"
+      ],
+      "availableAtProbe": true,
+      "required": [
+        "cdp_endpoint"
+      ],
+      "properties": [
+        "cdp_endpoint",
+        "allowed_origins"
+      ]
+    },
+    {
+      "name": "inspect_web_page",
+      "inputSchemaSha256": "14cd6fc1f52be0691e2a25f8c3d4073bf6b09f2f71801427f3ac1005683e0150",
+      "effects": [
+        "mutatesSession",
+        "accessesNetwork",
+        "idempotent"
+      ],
+      "availableAtProbe": true,
+      "required": [
+        "cdp_endpoint",
+        "target_id"
+      ],
+      "properties": [
+        "cdp_endpoint",
+        "allowed_origins",
+        "target_id",
+        "command_timeout_ms",
+        "observation_ms",
+        "include_accessibility_text",
+        "include_console_text",
+        "include_json_body_shapes",
+        "include_websocket_shapes",
+        "include_storage_keys",
+        "include_storage_fingerprints",
+        "include_script_sources"
+      ]
+    },
+    {
+      "name": "inspect_analysis_view",
+      "inputSchemaSha256": "b94c1ce4afab922c14b28066232c85b3302ae16756cac037737761eb6b2c68d0",
+      "effects": [
+        "mutatesSession",
+        "idempotent"
+      ],
+      "availableAtProbe": true,
+      "required": [
+        "source",
+        "view"
+      ],
+      "properties": [
+        "source",
+        "view"
+      ]
+    },
+    {
+      "name": "export_evidence_bundle",
+      "inputSchemaSha256": "9d278e4735f3bde30f8edb2c8d6166a7165bbb354f1248766b3aaa875a48f935",
+      "effects": [
+        "writesFilesystem",
+        "mayDiscardData",
+        "idempotent"
+      ],
+      "availableAtProbe": true,
+      "required": [
+        "path"
+      ],
+      "properties": [
+        "path",
+        "overwrite"
+      ]
+    },
+    {
+      "name": "get_evidence_bundle",
+      "inputSchemaSha256": "74612f2c5ec310b1fed1186caa8695e3bb87bd1a06755af002f4a95f10963e78",
+      "effects": [
+        "idempotent"
+      ],
+      "availableAtProbe": true,
+      "required": [],
+      "properties": [
+        "detail",
+        "filters"
+      ]
+    }
+  ]
+}

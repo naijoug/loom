@@ -1,0 +1,37 @@
+[
+  {
+    "source": "loom-research-r1-rust-tests.log",
+    "sha256": "768504924351a0600e7efcc84ca6cac48b349043cc852a14a3e3c2df1d53dd03",
+    "results": [
+      "test result: FAILED. 326 passed; 3 failed; 31 ignored; 0 measured; 0 filtered out; finished in 33.26s"
+    ]
+  },
+  {
+    "source": "loom-research-r1-http-tests-host.log",
+    "sha256": "bd1795307aaa187e524860c402043128a6daa9554dfcc555d5c3f9e8341b45be",
+    "results": [
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 358 filtered out; finished in 0.60s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+    ]
+  },
+  {
+    "source": "loom-research-r1-git-test-host.log",
+    "sha256": "2c19b9b77d22be5a72ceda600253d68b7e5f5d5aa497cd963fc9f71082a9b4d8",
+    "results": [
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 359 filtered out; finished in 0.25s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+    ]
+  },
+  {
+    "source": "loom-research-r1-ui-tests.log",
+    "sha256": "2f77fa68a9325b3818c4d133e0166eeff4a63eee74eb1b19687406e40495292c",
+    "results": [
+      "ℹ tests 4",
+      "ℹ pass 4",
+      "ℹ fail 0",
+      "ℹ skipped 0"
+    ]
+  }
+]

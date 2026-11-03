@@ -256,6 +256,7 @@ impl Pipeline {
         let prepared = agent::prepare_invocation(
             a,
             &AdapterInvocationRequest {
+                execution_profile: None,
                 project_path: &cwd,
                 prompt: &prompt,
                 prompt_file: None,

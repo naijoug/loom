@@ -1,0 +1,52 @@
+[
+  {
+    "file": "summary.json",
+    "bytes": 1451,
+    "sha256": "be27786d463d685b12d9b977a08be2960f100474df675fa6ee2055216e251397"
+  },
+  {
+    "file": "evidence.bundle.json",
+    "bytes": 118236,
+    "sha256": "4c869ffced7eea2718c22f641bfb240ea06270795277b03f400f918a434b5bc3"
+  },
+  {
+    "file": "session.json",
+    "bytes": 103851,
+    "sha256": "c1bea184c2d9b091fb0306b1adc1eba55be8c7e578dc1dcc502878448c0ba430"
+  },
+  {
+    "file": "website.json",
+    "bytes": 14910,
+    "sha256": "a18bedd6dd224ffa4f4067d3d968a82bebb9f475ae29fb5555a1e0113907a252"
+  },
+  {
+    "file": "export-receipt.json",
+    "bytes": 128,
+    "sha256": "5684eca9603301bfc67931c0c25e3539483a1853efe2627f552482478189cbd3"
+  },
+  {
+    "file": "targets.json",
+    "bytes": 2167,
+    "sha256": "b3aec367458f361940167a119b3229b21315a830ea60a796592ba7a708de94eb"
+  },
+  {
+    "file": "selected-schemas.json",
+    "bytes": 1795675,
+    "sha256": "16dbe2922631d280715422fe34061c8665933c5281cad76555bcc2b38d76644f"
+  },
+  {
+    "file": "javascript.json",
+    "bytes": 14311,
+    "sha256": "6749b17330e7909e9a1190c25aeb9fb327822825a8d1802605157da208641d9d"
+  },
+  {
+    "file": "catalog.json",
+    "bytes": 12105301,
+    "sha256": "e9c5bcf39ea664bccfad9188e75716be8a5ef75167abff69adc014d5a756e897"
+  },
+  {
+    "file": "desktop.json",
+    "bytes": 6314,
+    "sha256": "e4d790dd8dece5cb2980621299f447fd658ffd2b649ae5e16cc9745022d5c151"
+  }
+]

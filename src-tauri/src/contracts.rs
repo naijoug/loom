@@ -81,6 +81,20 @@ const COMMANDS: &[&str] = &[
     "research_list_tree",
     "research_read_source",
     "research_delete",
+    "research_preflight",
+    "research_start_run",
+    "research_get_run",
+    "research_list_runs",
+    "research_cancel_run",
+    "research_read_report",
+    "research_list_report_tree",
+    "research_read_report_source",
+    "research_list_evidence",
+    "research_read_evidence",
+    "research_ask_run",
+    "research_retry_run",
+    "research_resume_run",
+    "research_export",
     "discuss_list",
     "discuss_create",
     "discuss_get",
@@ -169,6 +183,12 @@ fn persisted_model_samples_round_trip_through_rust_types() {
     assert_model_sample::<crate::learn::models::PageContent>(samples, "learnPageContent");
     assert_model_sample::<crate::learn::models::LearnEvent>(samples, "learnEvent");
     assert_model_sample::<crate::research::models::Research>(samples, "research");
+    assert_model_sample::<crate::research::target_models::RunView>(samples, "researchTargetRun");
+    assert_model_sample::<crate::research::target_models::Material>(samples, "researchMaterial");
+    assert_model_sample::<crate::research::target_models::TargetEvent>(
+        samples,
+        "researchTargetEvent",
+    );
     assert_model_sample::<crate::discuss::models::Discussion>(samples, "discussion");
     assert_model_sample::<crate::discuss::models::Report>(samples, "discussReport");
     assert_model_sample::<crate::discuss::models::DiscussEvent>(samples, "discussEvent");

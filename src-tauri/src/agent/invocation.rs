@@ -39,6 +39,7 @@ impl AgentStage {
 
 #[derive(Clone, Debug)]
 pub struct AdapterInvocationRequest<'a> {
+    pub execution_profile: Option<&'a super::EvidenceProfile>,
     pub project_path: &'a Path,
     pub prompt: &'a str,
     pub prompt_file: Option<&'a Path>,
@@ -94,6 +95,9 @@ pub fn prepare_invocation(
     agent: &AgentConfig,
     request: &AdapterInvocationRequest<'_>,
 ) -> Result<PreparedAgentInvocation, String> {
+    if let Some(profile) = request.execution_profile {
+        return profile.prepare(agent, request);
+    }
     if let Some(mode) = request.chat_permission_mode {
         if !matches!(mode, "explore" | "ask" | "auto") {
             return Err("unsupported chat permission mode".into());
@@ -566,6 +570,7 @@ mod tests {
         let read_only = prepare_invocation(
             &agent,
             &AdapterInvocationRequest {
+                execution_profile: None,
                 project_path: root,
                 prompt: "review",
                 prompt_file: None,
@@ -586,6 +591,7 @@ mod tests {
         let writable = prepare_invocation(
             &agent,
             &AdapterInvocationRequest {
+                execution_profile: None,
                 project_path: root,
                 prompt: "implement",
                 prompt_file: None,
@@ -632,6 +638,7 @@ mod tests {
         let prepared = prepare_invocation(
             &agent,
             &AdapterInvocationRequest {
+                execution_profile: None,
                 project_path: Path::new("/repo"),
                 prompt: "fix it",
                 prompt_file: None,
@@ -657,6 +664,7 @@ mod tests {
         let error = prepare_invocation(
             &agent,
             &AdapterInvocationRequest {
+                execution_profile: None,
                 project_path: Path::new("/repo"),
                 prompt: "review",
                 prompt_file: None,
@@ -683,6 +691,7 @@ mod tests {
         ] {
             assert!(capabilities(adapter).model_selection);
             let request = AdapterInvocationRequest {
+                execution_profile: None,
                 project_path: root,
                 prompt: "study",
                 prompt_file: None,
@@ -709,6 +718,7 @@ mod tests {
             let without = prepare_invocation(
                 &agent(adapter),
                 &AdapterInvocationRequest {
+                    execution_profile: None,
                     model: None,
                     ..request.clone()
                 },
@@ -719,6 +729,7 @@ mod tests {
                 let error = prepare_invocation(
                     &agent(adapter),
                     &AdapterInvocationRequest {
+                        execution_profile: None,
                         model: Some(bad),
                         ..request.clone()
                     },
@@ -731,6 +742,7 @@ mod tests {
         let error = prepare_invocation(
             &agent("cli"),
             &AdapterInvocationRequest {
+                execution_profile: None,
                 project_path: root,
                 prompt: "study",
                 prompt_file: None,
@@ -753,6 +765,7 @@ mod tests {
         let prepared = prepare_invocation(
             &agent,
             &AdapterInvocationRequest {
+                execution_profile: None,
                 project_path: root,
                 prompt: "hello",
                 prompt_file: None,
@@ -798,6 +811,7 @@ mod tests {
         )
         .unwrap();
         let request = AdapterInvocationRequest {
+            execution_profile: None,
             project_path: Path::new("/repo"),
             prompt: "hi",
             prompt_file: None,
@@ -834,6 +848,7 @@ mod tests {
                         continue;
                     }
                     let request = AdapterInvocationRequest {
+                        execution_profile: None,
                         project_path: Path::new("/project with spaces"),
                         prompt: "--dangerously-skip-permissions",
                         prompt_file: None,
@@ -931,6 +946,7 @@ mod tests {
                     prepare_invocation(
                         &agent,
                         &AdapterInvocationRequest {
+                            execution_profile: None,
                             project_path: Path::new("/repo"),
                             prompt: "new input",
                             prompt_file: None,
@@ -960,6 +976,7 @@ mod opencode_tests {
         })).unwrap();
         for mode in ["explore", "ask", "auto"] {
             let request = AdapterInvocationRequest {
+                execution_profile: None,
                 project_path: Path::new("/project"),
                 prompt: "--prompt-looking-text",
                 prompt_file: None,

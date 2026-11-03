@@ -1,0 +1,14 @@
+{
+  "rustFull": "test result: ok. 365 passed; 0 failed; 33 ignored; 0 measured; 0 filtered out; finished in 28.91s",
+  "research": "41 passed; 4 ignored",
+  "toolProcess": "4 passed",
+  "ipcContracts": "5 passed",
+  "frontendTargeted": "7 passed",
+  "clippy": "all-targets/all-features -D warnings passed",
+  "typeScript": "passed",
+  "layers": "passed",
+  "nativeIpc": "not run",
+  "desktop": "not run",
+  "fullProductGates": "not run",
+  "earlierFailure": "Skills git_refresh_does_not_update_installed_copy_or_symlink_until_reviewed failed once; isolated retry and final full run passed; root cause not established"
+}

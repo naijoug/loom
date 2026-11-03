@@ -440,13 +440,17 @@ async fn git_raw(
             }
         }
     };
-    let cleanup = process_supervisor::force_terminate_process_group(pid);
+    let cleanup = if result.is_ok() {
+        process_supervisor::cleanup_reaped_group(pid).await
+    } else {
+        process_supervisor::force_terminate_process_group(pid)
+    };
     if result.is_err() {
         let _ = child.start_kill();
         let _ = tokio::time::timeout(Duration::from_secs(2), child.wait()).await;
     }
-    process_supervisor::supervisor().complete(&run_id);
     cleanup.map_err(SkillsError::invalid)?;
+    process_supervisor::supervisor().complete(&run_id);
     op.record.executions.last_mut().unwrap().exit_code =
         result.as_ref().ok().and_then(|s| s.code());
     let stdout = tokio::time::timeout(Duration::from_secs(2), &mut out.0)
@@ -699,7 +703,18 @@ mod tests {
         local_git(&remote, &["commit", "-qm", "version b"]);
         let op = Operation::begin(&repo, &source.source_id, "refresh").unwrap();
         import_using(repo.clone(), op, source.clone(), Some(a), |_| {}, runner()).await;
-        assert_eq!(list(&repo).unwrap()[0].phase, Phase::Committed);
+        let observed = list(&repo).unwrap().remove(0);
+        assert_eq!(
+            observed.phase,
+            Phase::Committed,
+            "operation error: {:?}; executions: {:?}",
+            observed.error,
+            observed
+                .executions
+                .iter()
+                .map(|e| (&e.error, e.exit_code))
+                .collect::<Vec<_>>()
+        );
         assert_eq!(repo.list().unwrap().skills[0].title, "Version B");
         assert!(fs::read_to_string(old_path.join("SKILL.md"))
             .unwrap()
@@ -743,7 +758,18 @@ mod tests {
         let context = TargetContext::new(&f.0.join("home"), Some(&f.0.join("project"))).unwrap();
         let op = Operation::begin(&repo, &source.source_id, "import").unwrap();
         import_using(repo.clone(), op, source.clone(), None, |_| {}, runner()).await;
-        assert_eq!(list(&repo).unwrap()[0].phase, Phase::Committed);
+        let observed = list(&repo).unwrap().remove(0);
+        assert_eq!(
+            observed.phase,
+            Phase::Committed,
+            "operation error: {:?}; executions: {:?}",
+            observed.error,
+            observed
+                .executions
+                .iter()
+                .map(|e| (&e.error, e.exit_code))
+                .collect::<Vec<_>>()
+        );
         let skill_id = repo.list().unwrap().skills[0].id.clone();
         let apply = |plan_id: &str| {
             let mut operation = Operation::begin(&repo, &source.source_id, "install").unwrap();
@@ -802,7 +828,18 @@ mod tests {
             runner(),
         )
         .await;
-        assert_eq!(list(&repo).unwrap()[0].phase, Phase::Committed);
+        let observed = list(&repo).unwrap().remove(0);
+        assert_eq!(
+            observed.phase,
+            Phase::Committed,
+            "operation error: {:?}; executions: {:?}",
+            observed.error,
+            observed
+                .executions
+                .iter()
+                .map(|e| (&e.error, e.exit_code))
+                .collect::<Vec<_>>()
+        );
         for status in installers::statuses(&repo, &context, &skill_id)
             .unwrap()
             .iter()

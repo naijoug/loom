@@ -1,0 +1,61 @@
+{
+  "status": "passed",
+  "scope": "R1 foundation and R2 static App backend; R3-R7 and E0-E2 remain",
+  "ipc": {
+    "harness": "actual Tauri invoke routing with MockRuntime, no native WebView",
+    "scenarios": 7,
+    "childHelper": 1,
+    "covered": [
+      "workflow matrix",
+      "main window guard",
+      "request replay/conflict",
+      "immutable report source",
+      "zero-collection followup",
+      "second app read/cancel",
+      "shutdown admission and drain",
+      "provider partial export",
+      "cancel version probe"
+    ]
+  },
+  "check": {
+    "frontendPassed": 149,
+    "rustPassed": 381,
+    "rustIgnored": 35,
+    "pnpmCheck": "passed",
+    "tauriNoBundleBuild": "passed"
+  },
+  "real": {
+    "script": {
+      "status": "completed",
+      "calls": 2,
+      "collections": 5,
+      "materialReads": 1,
+      "snapshotCount": 1,
+      "inputUnchanged": true,
+      "executionCanaryAbsent": true
+    },
+    "asar": {
+      "status": "completed",
+      "calls": 2,
+      "collections": 5,
+      "materialReads": 1,
+      "snapshotCount": 1,
+      "inputUnchanged": true,
+      "executionCanaryAbsent": true
+    },
+    "providerTimeout": {
+      "error": "rea_tool_error:provider_timeout",
+      "retainedRecords": 1
+    },
+    "cancel": {
+      "status": "cancelled",
+      "modelCalls": 0,
+      "ownedGroupExitConfirmed": true
+    }
+  },
+  "fixtureProvenance": {
+    "asarWriter": "@electron/asar 4.2.0",
+    "packedSha256": "cfdde53cf7ce07f7c9514f0dee512c8b698605ce38489f3277228d4ad09d5d5e",
+    "unpackedSha256": "7528e04394ac440b6c1626126d78c0146ee036811177604cd563afe334a8edfd"
+  }
+}

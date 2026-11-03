@@ -3,6 +3,7 @@
 //! `LOOM_REAL_RESEARCH=1 LOOM_REAL_RESEARCH_ROOT=<dir> cargo test research::real_tests::<name> -- --ignored --nocapture`
 //! asks one question about a project (this checkout by default) and one follow-up through the
 //! same job pipeline as the desktop commands, then prints timings, citations and warnings.
+use super::models::Workflow;
 use super::{
     jobs::Job,
     models::{Research, Turn, TurnStatus, RESEARCH_SCHEMA_VERSION},
@@ -70,6 +71,9 @@ async fn research(default_command: &str, adapter: &str) {
     let store = Store::new(&root);
     let now = now_ms();
     let research = Research {
+        active_owner: None,
+        workflow: Workflow::Legacy,
+        target: None,
         schema_version: RESEARCH_SCHEMA_VERSION,
         research_id: store::next_id("research"),
         title: prompt::title(&questions[0]),
@@ -117,7 +121,7 @@ async fn research(default_command: &str, adapter: &str) {
             research_id: id.clone(),
             job_id: job_id.clone(),
             turn: index,
-            cancel: store::claim_job(&id, &job_id).unwrap(),
+            cancel: store::claim_job(&store, &id, &job_id).unwrap(),
             agent: agent.clone(),
             emit: Arc::new(|event| println!("event: {}", serde_json::to_string(&event).unwrap())),
         };

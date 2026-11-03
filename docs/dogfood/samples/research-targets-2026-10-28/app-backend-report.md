@@ -1,0 +1,9 @@
+The published source filters items through the exported function `select(items, needle)`, which returns `items.filter(item => item.includes(needle))`. Each item's `includes(needle)` result determines whether it is retained. [Source: index.js](loom-src:Contents/Resources/app/index.js#L1-L1)
+
+- **Observed static facts:** The function directly delegates to `filter` and each item's `includes` method. Its body contains no input validation, case conversion, whitespace trimming, sorting, or field lookup. The package declares `index.js` as its main entry point. [index.js](loom-src:Contents/Resources/app/index.js#L1-L1) · [package.json](loom-src:Contents/Resources/app/package.json#L1-L1)
+
+- **Inferred behavior under standard JavaScript semantics:** If `items` is an ordinary array of strings, the function returns a new array containing strings that contain `needle` as a case-sensitive substring, preserving their original order. For example, `select(['Apple', 'apple', 'pineapple'], 'app')` would return `['apple', 'pineapple']`. This example is inferred from the code; it was not executed. [index.js](loom-src:Contents/Resources/app/index.js#L1-L1)
+
+- **Type-dependent limits:** The source does not establish that items are strings. If an item is an array, its standard `includes` method tests element membership. An item without a callable `includes` method would cause an error when evaluated. Custom methods could also change the behavior. [index.js](loom-src:Contents/Resources/app/index.js#L1-L1)
+
+- **Coverage, counterevidence, and unknowns:** The supplied material covers the implementation and declared entry point, but contains no runtime observations confirming or contradicting this interpretation. Whether the running app invokes this function, what inputs it supplies, and how the result appears in the interface remain unobserved. The entry-point declaration alone does not prove runtime execution.

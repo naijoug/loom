@@ -597,6 +597,7 @@ mod tests {
             let grok = prepare_invocation(
                 &sample_agent(ADAPTER_GROK, "grok"),
                 &AdapterInvocationRequest {
+                    execution_profile: None,
                     project_path: root,
                     prompt: "hello",
                     prompt_file: None,
@@ -625,6 +626,7 @@ mod tests {
             let codex = prepare_invocation(
                 &sample_agent(ADAPTER_CODEX, "codex"),
                 &AdapterInvocationRequest {
+                    execution_profile: None,
                     project_path: root,
                     prompt: "hello",
                     prompt_file: None,
@@ -651,6 +653,7 @@ mod tests {
             let claude = prepare_invocation(
                 &sample_agent(ADAPTER_CLAUDE, "claude"),
                 &AdapterInvocationRequest {
+                    execution_profile: None,
                     project_path: root,
                     prompt: "hello",
                     prompt_file: None,

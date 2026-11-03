@@ -54,6 +54,7 @@ pub(crate) fn prepare_chat_invocation(
     let resume_binding = crate::chat::resume::binding(agent, session, stage, system_append);
     let resume_command = crate::chat::resume::resolve(session, &resume_binding)?;
     let request = AdapterInvocationRequest {
+        execution_profile: None,
         project_path: Path::new(&session.project_path),
         prompt: user_text,
         prompt_file: None,
@@ -79,6 +80,7 @@ pub(crate) fn prepare_chat_invocation(
         let invocation = agent::prepare_invocation(
             agent,
             &AdapterInvocationRequest {
+                execution_profile: None,
                 prompt: &prompt,
                 resume_command: None,
                 ..request

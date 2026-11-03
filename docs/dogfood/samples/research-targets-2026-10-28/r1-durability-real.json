@@ -1,0 +1,86 @@
+{
+  "status": "passed",
+  "scope": "R1 backend durability and controlled App model/cancel chain; not full product acceptance",
+  "testElapsedSeconds": 117.41,
+  "tools": {
+    "rea": "6.8.0",
+    "node": "26.12.1",
+    "claude": "2.1.311",
+    "model": "auto/gpt-6.1-sol[1m]"
+  },
+  "initial": {
+    "status": "completed",
+    "usage": {
+      "calls": 2,
+      "collections": 4,
+      "rounds": 1,
+      "activeMs": 71273,
+      "diskBytes": 297007,
+      "diskReservedBytes": 20946074,
+      "reservationMs": 0
+    },
+    "exchange": {
+      "calls": 2,
+      "reads": 1,
+      "corrections": 0
+    },
+    "evidenceCount": 3,
+    "snapshotCount": 1,
+    "reportCount": 1,
+    "error": null
+  },
+  "followup": {
+    "status": "completed",
+    "usage": {
+      "calls": 2,
+      "collections": 0,
+      "rounds": 1,
+      "activeMs": 45525,
+      "diskBytes": 145809,
+      "diskReservedBytes": 20954062,
+      "reservationMs": 0
+    },
+    "exchange": {
+      "calls": 2,
+      "reads": 1,
+      "corrections": 0
+    },
+    "evidenceCount": 3,
+    "snapshotCount": 1,
+    "reportCount": 1,
+    "error": null
+  },
+  "cancel": {
+    "status": "cancelled",
+    "usage": {
+      "calls": 0,
+      "collections": 1,
+      "rounds": 1,
+      "activeMs": 217,
+      "diskBytes": 4837,
+      "diskReservedBytes": 58977563,
+      "reservationMs": 0
+    },
+    "exchange": {
+      "calls": 0,
+      "reads": 0,
+      "corrections": 0
+    },
+    "evidenceCount": 0,
+    "snapshotCount": 0,
+    "reportCount": 0,
+    "error": "tool_cancelled"
+  },
+  "assertions": {
+    "followupAfterFixtureRemoval": true,
+    "followupSameSnapshots": true,
+    "followupSameEvidence": true,
+    "cancelObservedOwnedProcess": true,
+    "cancelGroupExitConfirmed": true
+  },
+  "laterFixtureChanges": [
+    "Atomic initial record publication and pending request recovery",
+    "Unreadable root/workflow consistency checks",
+    "Material nextCursor wire naming"
+  ]
+}

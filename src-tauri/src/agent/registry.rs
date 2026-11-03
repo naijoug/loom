@@ -11,7 +11,9 @@ const ADAPTER_CLI: &str = "cli";
 const ADAPTER_DUMMY: &str = "dummy";
 const RETIRED_ADAPTER_AMP: &str = "amp_cli";
 const RETIRED_AGENT_AMP_ID: &str = "agent-amp";
-pub(crate) fn load_agents(app: &AppHandle) -> Result<Vec<AgentConfig>, String> {
+pub(crate) fn load_agents<R: tauri::Runtime>(
+    app: &AppHandle<R>,
+) -> Result<Vec<AgentConfig>, String> {
     load_agents_inner(app)
 }
 pub(crate) fn redact_sensitive_text(input: &str) -> String {
@@ -166,7 +168,9 @@ fn validate_input(input: &AgentConfigInput) -> Result<(), String> {
     Ok(())
 }
 
-pub(super) fn load_agents_inner(app: &AppHandle) -> Result<Vec<AgentConfig>, String> {
+pub(super) fn load_agents_inner<R: tauri::Runtime>(
+    app: &AppHandle<R>,
+) -> Result<Vec<AgentConfig>, String> {
     let path = agents_path(app)?;
 
     if !path.exists() {
@@ -185,7 +189,10 @@ pub(super) fn load_agents_inner(app: &AppHandle) -> Result<Vec<AgentConfig>, Str
     Ok(agents)
 }
 
-pub(super) fn save_agents(app: &AppHandle, agents: &[AgentConfig]) -> Result<(), String> {
+pub(super) fn save_agents<R: tauri::Runtime>(
+    app: &AppHandle<R>,
+    agents: &[AgentConfig],
+) -> Result<(), String> {
     super::diagnostics::forget_startable(None);
     save_agent_store(&agents_path(app)?, agents)
 }
@@ -198,7 +205,9 @@ pub(super) fn save_agent_store(path: &Path, agents: &[AgentConfig]) -> Result<()
     migrations::write_versioned_json(path, AGENT_STORE_SCHEMA_VERSION, &agents)
 }
 
-pub(super) fn agents_path(app: &AppHandle) -> Result<std::path::PathBuf, String> {
+pub(super) fn agents_path<R: tauri::Runtime>(
+    app: &AppHandle<R>,
+) -> Result<std::path::PathBuf, String> {
     Ok(storage::global_config_dir(app)?.join(AGENTS_FILE))
 }
 

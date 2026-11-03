@@ -1,0 +1,35 @@
+{
+  "status": "passed",
+  "scope": "App backend + evidence-only followup; not full R1/R2 acceptance",
+  "tools": {
+    "rea": "6.8.0",
+    "node": "26.12.1",
+    "cli": "Claude Code 2.1.311",
+    "model": "auto/gpt-6.1-sol[1m]"
+  },
+  "testElapsedSeconds": 97.66,
+  "initial": {
+    "status": "completed",
+    "agentCalls": 2,
+    "collectionCalls": 4,
+    "materialReads": 1,
+    "evidenceCount": 3,
+    "snapshotCount": 1,
+    "reportCount": 1,
+    "activeMs": 66684
+  },
+  "followup": {
+    "status": "completed",
+    "agentCalls": 1,
+    "collectionCalls": 0,
+    "activeMs": 30584,
+    "sameSnapshotIds": true,
+    "sameEvidenceIds": true,
+    "selectedFixtureRemovedBeforeFollowup": true
+  },
+  "limitations": [
+    "No native desktop or target UI acceptance",
+    "GitHub and website production collectors not implemented",
+    "Export and round counter changes subsequently validated by fixtures, not another real model call"
+  ]
+}

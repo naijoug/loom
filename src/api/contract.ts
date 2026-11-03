@@ -1,3 +1,4 @@
+import type { TargetRun, TargetEvent, Material } from "./researchTargets";
 import type { Discussion, DiscussReport, DiscussEvent, CreateDiscussionInput } from "./discuss";
 import type { SkillSource, SkillsHttpRequest, TranslationProviders, TranslationResult, TranslationSummary } from "./skills";
 import type { InstructionCheck, ResourcePreview } from "./skills";
@@ -82,6 +83,22 @@ export const TAURI_COMMANDS = {
   researchListTree: "research_list_tree",
   researchReadSource: "research_read_source",
   researchDelete: "research_delete",
+  researchPreflight: "research_preflight",
+  researchStartRun: "research_start_run",
+  researchGetRun: "research_get_run",
+  researchListRuns: "research_list_runs",
+  researchCancelRun: "research_cancel_run",
+  researchReadReport: "research_read_report",
+  researchListReportTree: "research_list_report_tree",
+  researchReadReportSource: "research_read_report_source",
+  researchListEvidence: "research_list_evidence",
+  researchReadEvidence: "research_read_evidence",
+  researchAskRun: "research_ask_run",
+  researchRetryRun: "research_retry_run",
+  researchResumeRun: "research_resume_run",
+  researchExport: "research_export",
+
+
   discussList: "discuss_list",
   discussCreate: "discuss_create",
   discussGet: "discuss_get",
@@ -944,4 +961,91 @@ researchEvent: {
   "language": "en",
   "confirmedCalls": 5
 } satisfies CreateDiscussionInput,
+researchTargetRun: {
+  "spec": {
+    "schemaVersion": 2,
+    "researchId": "research-target",
+    "runId": "run-target",
+    "kind": "initial",
+    "input": {
+      "target": {
+        "kind": "app",
+        "path": "/fixture/Example.app"
+      },
+      "question": "Explain",
+      "agentId": "agent-claude",
+      "model": null,
+      "language": "en",
+      "mode": "single",
+      "budget": null,
+      "tools": {
+        "node": "/tools/node",
+        "entry": "/tools/rea/scripts/rea.mjs"
+      }
+    },
+    "budget": {
+      "maxRounds": 1,
+      "maxCalls": 12,
+      "maxCollections": 8,
+      "maxActiveMs": 1200000,
+      "maxDiskBytes": 536870912
+    },
+    "configDigest": "fixture-config",
+    "agentConfigDigest": "fixture-agent",
+    "targetIdentity": "fixture-target",
+    "parentReportId": null,
+    "sourceSnapshots": [],
+    "sourceEvidence": [],
+    "createdAtMs": 1
+  },
+  "state": {
+    "runId": "run-target",
+    "status": "queued",
+    "attempt": 1,
+    "sequence": 0,
+    "usage": {
+      "calls": 0,
+      "collections": 0,
+      "rounds": 0,
+      "activeMs": 0,
+      "diskBytes": 0,
+"diskReservedBytes": 0,
+      "reservationMs": 0
+    },
+    "snapshotIds": [],
+    "evidenceIds": [],
+    "reportIds": [],
+    "stopReason": null,
+    "error": null,
+    "updatedAtMs": 1,
+    "exchange": {
+      "calls": 0,
+      "reads": 0,
+      "corrections": 0
+    }
+  }
+} satisfies TargetRun,
+researchTargetEvent: {
+  "researchId": "research-target",
+  "runId": "run-target",
+  "stepId": null,
+  "status": "analyzing",
+  "phase": "analyzing",
+  "progress": {
+    "calls": 0,
+    "collections": 0,
+    "rounds": 0,
+    "activeMs": 0,
+    "diskBytes": 0,
+"diskReservedBytes": 0,
+    "reservationMs": 0
+  },
+  "stopReason": null,
+  "error": null
+} satisfies TargetEvent,
+researchMaterial: {
+  "text": "[{\"evidenceId\":\"evidence-fixture\"}]",
+  "nextCursor": 8,
+  "truncated": true
+} satisfies Material,
 } as const;

@@ -36,7 +36,7 @@ fn compact_version(output: &[u8]) -> Option<String> {
 
 async fn diagnose_agent(agent: crate::models::AgentConfig) -> AgentDiagnostic {
     let checked_at_ms = now_ms();
-    let capabilities = capabilities::capabilities(&agent.adapter_type);
+    let mut capabilities = capabilities::capabilities(&agent.adapter_type);
     if agent.adapter_type == "dummy" {
         return AgentDiagnostic {
             agent_id: agent.id,
@@ -91,6 +91,8 @@ async fn diagnose_agent(agent: crate::models::AgentConfig) -> AgentDiagnostic {
         Err(_) => (None, "Version probe timed out after 2 seconds.".to_string()),
     };
 
+    capabilities.evidence_only = super::evidence::supported(&agent, version.as_deref())
+        && super::verify_evidence_profile(&agent).await.is_ok();
     AgentDiagnostic {
         agent_id: agent.id,
         status: if !agent.enabled {

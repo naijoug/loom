@@ -41,6 +41,8 @@ export interface AgentCapabilities {
   inlineCards: boolean;
   /** Accepts a per-invocation model across Chat, Learn, Research and Discuss. */
   modelSelection?: boolean;
+  /** Version/configuration has passed the no-tools execution-profile probe. */
+  evidenceOnly?: boolean;
   modes: Array<{ mode: "explore" | "ask" | "auto"; policy: string }>;
 }
 

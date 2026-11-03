@@ -1,5 +1,13 @@
 # 计划文档索引
 
+## 2026-10-28
+
+- 04:41-research-targets-and-experiments.md
+  > （实施中：R0–R2 后端阶段通过；下一步 R3，本方向后续入口）v2/租约/幂等、不可变材料、磁盘与恢复、直接 Tauri invoke/退出、目录/独立 JS/ASAR 静态采集与真实 CLI 验证完成；完整检查及桌面构建通过。目标 UI 未开放，R3–R7、E0–E2 继续实施，尚未整体验收，不恢复冻结 Workbench。
+
+- 02:48-native-webview-restart.md
+  > （应用层恢复修复与验证完成）承接 P8 重启空白：新增就绪握手、启动阶段最多一次自动重载、原生提示/手动恢复与有界诊断；两类故障注入、5 次正常原生启动、桌面 smoke 正反例、合成矩阵与完整门禁 148/328 通过。原始单次 OS/绘制触发未独立复现，保留限制，不清用户数据。
+
 ## 2026-10-26
 
 - 22:42-agent-layer-and-activity-rail.md
@@ -43,10 +51,10 @@
 ## 2026-10-15
 
 - 22:06-auto-optimization-experiments.md
-  > （设计完成，待实施）借鉴 autoresearch 的基线—候选—固定评测—保留/丢弃循环，设计新内核自动优化实验；首版为 macOS 可信本地项目、单 Agent/单指标/串行 Node CPU 模板，覆盖受管快照、宿主评分、预算、暂停/停止/恢复、最佳补丁与报告。E0–E5 均未执行，不改变 Craft 重建主线状态。
+  > （历史设计，未实施；新实施入口为 2026-10-28 04:41 计划 B 线）借鉴 autoresearch 的基线—候选—固定评测—保留/丢弃循环，设计新内核自动优化实验；首版为 macOS 可信本地项目、单 Agent/单指标/串行 Node CPU 模板，覆盖受管快照、宿主评分、预算、暂停/停止/恢复、最佳补丁与报告。E0–E5 均未执行，新内核已冻结。
 
 - 10:51-rea-research-module.md
-  > （R0–R1 已通过，R2 部分实施）研究 REA 6.5.0 CLI/MCP/Evidence 契约与安全边界，规划 Loom 以固定版本本地 MCP Source 试点接入调研/逆向工具；CLI、doctor、静态 fixture、错误、SIGINT partial Evidence、MCP 握手、207 工具 availability 与风险映射 fixture 已验证。R2 已接官方包路径验证、直接 `rea mcp` 探针、会话 Source 激活、`mcp__rea__*` 生产权限策略、串行 stdio MCP supervisor、Claude/Pi worker 动态外部工具发现与审批链，以及允许后回调到 `ReaMcpClient.call_tool` 的真实执行桥；进度事件、Evidence UI 仍待实施。
+  > （冻结历史实现：R0–R1 曾通过，R2 部分实施；新实施入口为 2026-10-28 04:41 计划 A 线）研究 REA 6.5.0 CLI/MCP/Evidence 契约，保存 207 工具 fixture。包路径验证、MCP supervisor、Source 权限策略及 Claude/Pi worker 工具桥位于已冻结内核，不进入当前桌面 Research；历史通过不等于当前接入可用。进度事件与 Evidence UI 未完成，新版本及当前 CLI 架构需重新验证。
 
 - 01:16-macos-app-update.md
   > （代码实施完成，分发待验收）已完成更新按钮、Rust 全局安装准入、草稿恢复与双架构 GitHub Releases 草稿流水线；完整检查和无 bundle 构建通过，签名/公证凭据已于 10-16 复用配置，真实 CI 构建与两版升级仍待验收。

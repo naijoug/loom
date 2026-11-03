@@ -18,18 +18,30 @@ use tauri::{AppHandle, Emitter, Manager, WebviewWindow};
 const LANGUAGES: &[&str] = &["en", "zh-CN"];
 const MAX_QUESTION_CHARS: usize = 8_000;
 
-fn store(app: &AppHandle, window: &WebviewWindow) -> Result<Store, String> {
+pub(super) fn store<R: tauri::Runtime>(
+    app: &AppHandle<R>,
+    window: &WebviewWindow<R>,
+) -> Result<Store, String> {
     if window.label() != "main" {
         return Err("Research access requires the main window".into());
     }
-    let app_data = app
-        .path()
-        .app_data_dir()
-        .map_err(|_| "Application data directory unavailable".to_string())?;
+    #[cfg(test)]
+    if let Some(context) = app.try_state::<super::ipc_tests::Context>() {
+        return Ok(Store::new(&context.root));
+    }
+    // The native acceptance profile must isolate Research as well as settings/agents.
+    // Ordinary installations retain their established appData/research path.
+    let app_data = if std::env::var_os("LOOM_PROFILE_DIR").is_some() {
+        crate::storage::global_config_dir(app)?
+    } else {
+        app.path()
+            .app_data_dir()
+            .map_err(|_| "Application data directory unavailable".to_string())?
+    };
     Ok(Store::new(&app_data))
 }
 
-async fn blocking<T: Send + 'static>(
+pub(super) async fn blocking<T: Send + 'static>(
     work: impl FnOnce() -> Result<T, String> + Send + 'static,
 ) -> Result<T, String> {
     tauri::async_runtime::spawn_blocking(work)
@@ -37,7 +49,7 @@ async fn blocking<T: Send + 'static>(
         .map_err(|_| "Research worker interrupted".to_string())?
 }
 
-fn emitter(app: &AppHandle) -> Emit {
+fn emitter<R: tauri::Runtime>(app: &AppHandle<R>) -> Emit {
     let app = app.clone();
     Arc::new(move |event| {
         let _ = app.emit(RESEARCH_EVENT, event);
@@ -59,7 +71,10 @@ fn question(text: &str) -> Result<String, String> {
 
 /// Canonical path of a project the user opened in Loom; Research never reads
 /// folders outside that list.
-fn registered_project(app: &AppHandle, path: &str) -> Result<(String, String), String> {
+fn registered_project<R: tauri::Runtime>(
+    app: &AppHandle<R>,
+    path: &str,
+) -> Result<(String, String), String> {
     let project = crate::projects::canonical_project_path(path)?;
     if !crate::storage::load_recent_projects(app)?
         .iter()
@@ -76,8 +91,8 @@ fn registered_project(app: &AppHandle, path: &str) -> Result<(String, String), S
 
 /// Research runs only built-in adapters that are enabled, found on PATH and
 /// actually start, so a broken install is reported before a question is recorded.
-async fn ready_agent(
-    app: &AppHandle,
+pub(super) async fn ready_agent<R: tauri::Runtime>(
+    app: &AppHandle<R>,
     agent_id: &str,
     model: Option<&str>,
 ) -> Result<AgentConfig, String> {
@@ -106,7 +121,10 @@ async fn ready_agent(
 
 /// Re-checks what a follow-up depends on: the project is still registered and
 /// the research's agent still starts.
-async fn ready_for(app: &AppHandle, research: &Research) -> Result<AgentConfig, String> {
+async fn ready_for<R: tauri::Runtime>(
+    app: &AppHandle<R>,
+    research: &Research,
+) -> Result<AgentConfig, String> {
     if let Some(path) = &research.project_path {
         registered_project(app, path)?;
     }
@@ -114,15 +132,15 @@ async fn ready_for(app: &AppHandle, research: &Research) -> Result<AgentConfig, 
 }
 
 /// Claims the job slot, records `turn` as running via `change`, and spawns the job.
-async fn start(
-    app: &AppHandle,
+async fn start<R: tauri::Runtime>(
+    app: &AppHandle<R>,
     store: Store,
     research_id: &str,
     agent: AgentConfig,
     change: impl FnOnce(&mut Research, &str) -> Result<u32, String> + Send + 'static,
 ) -> Result<Research, String> {
     let job_id = store::next_id("job");
-    let cancel = store::claim_job(research_id, &job_id)?;
+    let cancel = store::claim_job(&store, research_id, &job_id)?;
     let updated = {
         let (store, id, job) = (store.clone(), research_id.to_string(), job_id.clone());
         blocking(move || store.update(&id, |research| change(research, &job))).await
@@ -130,7 +148,7 @@ async fn start(
     let (research, turn) = match updated {
         Ok(value) => value,
         Err(error) => {
-            store::release_job(research_id, &job_id);
+            store::release_job(&store, research_id, &job_id);
             return Err(error);
         }
     };
@@ -163,15 +181,18 @@ fn running_turn(index: u32, question: String, job_id: &str) -> Turn {
 }
 
 #[tauri::command]
-pub async fn research_list(app: AppHandle, window: WebviewWindow) -> Result<ResearchList, String> {
+pub async fn research_list<R: tauri::Runtime>(
+    app: AppHandle<R>,
+    window: WebviewWindow<R>,
+) -> Result<ResearchList, String> {
     let store = store(&app, &window)?;
     blocking(move || Ok(store.list())).await
 }
 
 #[tauri::command]
-pub async fn research_create(
-    app: AppHandle,
-    window: WebviewWindow,
+pub async fn research_create<R: tauri::Runtime>(
+    app: AppHandle<R>,
+    window: WebviewWindow<R>,
     input: CreateResearchInput,
 ) -> Result<Research, String> {
     let store = store(&app, &window)?;
@@ -193,6 +214,9 @@ pub async fn research_create(
     let agent = ready_agent(&app, &input.agent_id, model.as_deref()).await?;
     let now = now_ms();
     let research = Research {
+        active_owner: None,
+        workflow: Workflow::Legacy,
+        target: None,
         schema_version: RESEARCH_SCHEMA_VERSION,
         research_id: store::next_id("research"),
         title: prompt::title(&question),
@@ -228,9 +252,9 @@ pub async fn research_create(
 }
 
 #[tauri::command]
-pub async fn research_get(
-    app: AppHandle,
-    window: WebviewWindow,
+pub async fn research_get<R: tauri::Runtime>(
+    app: AppHandle<R>,
+    window: WebviewWindow<R>,
     research_id: String,
 ) -> Result<Research, String> {
     let store = store(&app, &window)?;
@@ -239,15 +263,15 @@ pub async fn research_get(
 
 /// Report of a finished turn with its citations re-checked against the current files.
 #[tauri::command]
-pub async fn research_read_turn(
-    app: AppHandle,
-    window: WebviewWindow,
+pub async fn research_read_turn<R: tauri::Runtime>(
+    app: AppHandle<R>,
+    window: WebviewWindow<R>,
     research_id: String,
     turn: u32,
 ) -> Result<TurnContent, String> {
     let store = store(&app, &window)?;
     blocking(move || {
-        let research = store.load(&research_id)?;
+        let research = store.require_legacy(&research_id)?;
         let markdown = store
             .read_turn(&research_id, turn)?
             .ok_or("This question has no report yet")?;
@@ -257,7 +281,7 @@ pub async fn research_read_turn(
                 Ok((path, _)) => source_files::page_refs(&markdown, Path::new(&path)),
                 Err(_) => Vec::new(),
             },
-            None => source_files::page_refs(&markdown, &store.workspace(&research_id)?),
+            None => source_files::page_refs(&markdown, &store.workspace_path(&research_id)?),
         };
         Ok(TurnContent {
             index: turn,
@@ -270,9 +294,9 @@ pub async fn research_read_turn(
 
 /// Asks a follow-up question. One question runs at a time per research.
 #[tauri::command]
-pub async fn research_ask(
-    app: AppHandle,
-    window: WebviewWindow,
+pub async fn research_ask<R: tauri::Runtime>(
+    app: AppHandle<R>,
+    window: WebviewWindow<R>,
     research_id: String,
     question: String,
 ) -> Result<Research, String> {
@@ -282,6 +306,9 @@ pub async fn research_ask(
         let (store, id) = (store.clone(), research_id.clone());
         blocking(move || store.load(&id)).await?
     };
+    if research.workflow != Workflow::Legacy {
+        return Err("workflow_mismatch".into());
+    }
     let agent = ready_for(&app, &research).await?;
     start(&app, store, &research_id, agent, move |research, job| {
         if research.running_turn().is_some() {
@@ -296,9 +323,9 @@ pub async fn research_ask(
 
 /// Re-runs the last question when it failed, was stopped or was interrupted.
 #[tauri::command]
-pub async fn research_retry(
-    app: AppHandle,
-    window: WebviewWindow,
+pub async fn research_retry<R: tauri::Runtime>(
+    app: AppHandle<R>,
+    window: WebviewWindow<R>,
     research_id: String,
 ) -> Result<Research, String> {
     let store = store(&app, &window)?;
@@ -306,6 +333,9 @@ pub async fn research_retry(
         let (store, id) = (store.clone(), research_id.clone());
         blocking(move || store.load(&id)).await?
     };
+    if research.workflow != Workflow::Legacy {
+        return Err("workflow_mismatch".into());
+    }
     let agent = ready_for(&app, &research).await?;
     start(&app, store, &research_id, agent, move |research, job| {
         let last = research.turns.last_mut().ok_or("Nothing to retry")?;
@@ -319,21 +349,19 @@ pub async fn research_retry(
 }
 
 #[tauri::command]
-pub async fn research_cancel(
-    app: AppHandle,
-    window: WebviewWindow,
+pub async fn research_cancel<R: tauri::Runtime>(
+    app: AppHandle<R>,
+    window: WebviewWindow<R>,
     research_id: String,
 ) -> Result<bool, String> {
-    store(&app, &window)?;
-    Ok(store::running_job(&research_id)
-        .map(|job| job.cancel.store(true, std::sync::atomic::Ordering::Relaxed))
-        .is_some())
+    let store = store(&app, &window)?;
+    blocking(move || store.cancel_legacy(&research_id)).await
 }
 
 #[tauri::command]
-pub async fn research_read_job_logs(
-    app: AppHandle,
-    window: WebviewWindow,
+pub async fn research_read_job_logs<R: tauri::Runtime>(
+    app: AppHandle<R>,
+    window: WebviewWindow<R>,
     research_id: String,
     job_id: String,
     stream: String,
@@ -346,21 +374,21 @@ pub async fn research_read_job_logs(
 
 /// Root a research's citations resolve against: its project while it is still
 /// registered, else its workspace.
-fn source_root(
-    app: &AppHandle,
+fn source_root<R: tauri::Runtime>(
+    app: &AppHandle<R>,
     store: &Store,
     research_id: &str,
 ) -> Result<std::path::PathBuf, String> {
-    match store.load(research_id)?.project_path {
+    match store.require_legacy(research_id)?.project_path {
         Some(path) => Ok(registered_project(app, &path)?.0.into()),
-        None => store.workspace(research_id),
+        None => store.workspace_path(research_id),
     }
 }
 
 #[tauri::command]
-pub async fn research_list_tree(
-    app: AppHandle,
-    window: WebviewWindow,
+pub async fn research_list_tree<R: tauri::Runtime>(
+    app: AppHandle<R>,
+    window: WebviewWindow<R>,
     research_id: String,
     dir: Option<String>,
 ) -> Result<Vec<TreeEntry>, String> {
@@ -375,9 +403,9 @@ pub async fn research_list_tree(
 }
 
 #[tauri::command]
-pub async fn research_read_source(
-    app: AppHandle,
-    window: WebviewWindow,
+pub async fn research_read_source<R: tauri::Runtime>(
+    app: AppHandle<R>,
+    window: WebviewWindow<R>,
     research_id: String,
     path: String,
     start_line: Option<u32>,
@@ -396,9 +424,9 @@ pub async fn research_read_source(
 }
 
 #[tauri::command]
-pub async fn research_delete(
-    app: AppHandle,
-    window: WebviewWindow,
+pub async fn research_delete<R: tauri::Runtime>(
+    app: AppHandle<R>,
+    window: WebviewWindow<R>,
     research_id: String,
 ) -> Result<(), String> {
     let store = store(&app, &window)?;

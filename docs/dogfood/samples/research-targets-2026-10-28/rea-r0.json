@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "startedAt": "2026-10-28T13:16:10.866Z",
+  "status": "passed",
+  "checks": {
+    "handshake": "passed",
+    "staticApp": "passed",
+    "invalidTarget": "passed",
+    "website": "passed",
+    "export": "passed",
+    "frameLimit": "passed",
+    "cancellation": "passed"
+  },
+  "identity": {
+    "name": "rea",
+    "version": "6.8.0"
+  },
+  "serverCatalog": {
+    "counts": {
+      "cli_commands": 175,
+      "mcp_tools": 229,
+      "mcp_prompts": 6
+    },
+    "digests": {
+      "tools_sha256": "d587269e0bd2fe7f3514568951669b6824ef5ce96fea70db2373195f97772354",
+      "prompts_sha256": "9609379442110570cd52fdea61a777242350873bc28958f54827ca3590e680b7",
+      "combined_sha256": "4748bd4d8c81aaecf7fceceecfbaf14302cab6cb99cd878c0141b30b9eb577b2"
+    }
+  },
+  "catalogCount": 229,
+  "catalogSha256": "8f5528307b2defdf237ffba64ec2c3398bedb57107ba69c1a8cadc69ce357d6e",
+  "appEvidence": [
+    "ev_42e0c6455562aac21653b054463ad825fc64a74bf3acae829b508e823706585d",
+    "ev_9b538648437bc2f1abe72f20223856ec83611b18ba67c73260dad6400f81d9cc"
+  ],
+  "websiteEvidence": "ev_52f5c693546ec650b07986af34eafa6e4e74dec58cf8c3360b9d6055fda5d736",
+  "limitExit": {
+    "code": 0,
+    "signal": null
+  },
+  "cancelElapsedMs": 1316,
+  "cancelReply": "no_reply_host_reaped",
+  "browserExit": {
+    "code": 0,
+    "signal": null
+  },
+  "exit": {
+    "code": 0,
+    "signal": null
+  },
+  "elapsedMs": 5805,
+  "stderrBytes": 1143,
+  "notifications": 0
+}

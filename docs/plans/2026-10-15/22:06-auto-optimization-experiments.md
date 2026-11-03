@@ -1,5 +1,7 @@
 # 自动优化实验实施计划
 
+> 2026-10-28 适用范围更新：本文保留旧新内核方案，E0–E5 未执行，依赖的 Workbench／SDK worker 已冻结。后续实施转 [Research 多目标研究与自动实验计划](../2026-10-28/04:41-research-targets-and-experiments.md) B 线，使用当前 CLI Agent 公共调用层；本历史设计不证明实验能力已交付。
+
 - 创建时间：2026-10-15 22:06，America/Los_Angeles。
 - 状态：**设计完成，待实施；E0–E5 均未执行**。本轮用户请求是设计与编写计划，不执行实验、不安装依赖、不启动模型调用。
 - 代码基线：分支 `codex/craft-parity-rebuild`，HEAD `32e9e829596124ca4a94e775be50aa30401c8a96`，加上本轮读取时已有的未提交改动。HEAD 不能单独代表这些在途能力；开工时重新记录 diff 摘要与相关文件 hash。

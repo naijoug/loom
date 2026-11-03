@@ -463,8 +463,10 @@ pub(crate) async fn run(
     }
     // Descendants may close the pipes while continuing to run. Clean the group
     // on every outcome, including normal parent exit, before releasing its id.
+    // The loop only exits here after wait() reaped the parent, so tolerate the
+    // brief zombie-only group macOS rejects signals for.
     if killed_at.is_none() {
-        process_supervisor::force_terminate_process_group(pid)?;
+        process_supervisor::cleanup_reaped_group(pid).await?;
     }
     if let Some(task) = input_task.take() {
         task.0.abort();

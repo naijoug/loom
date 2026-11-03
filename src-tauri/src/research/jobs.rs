@@ -118,7 +118,7 @@ impl Job {
         record.error = error.clone();
         record.finished_at_ms = Some(now_ms());
         let _ = self.store.save_job(&self.research_id, &record);
-        store::release_job(&self.research_id, &self.job_id);
+        store::release_job(&self.store, &self.research_id, &self.job_id);
         self.event(&status, error.filter(|_| status != TurnStatus::Cancelled));
     }
 
@@ -299,6 +299,7 @@ impl Job {
             &format!("{separator}{prompt}"),
         );
         let request = AdapterInvocationRequest {
+            execution_profile: None,
             project_path: cwd,
             prompt,
             prompt_file: None,
@@ -340,9 +341,17 @@ impl Job {
         let cancel = self.cancel.clone();
         let store = self.store.clone();
         let (research_id, job_id) = (self.research_id.clone(), self.job_id.clone());
+        let cancel_store = self.store.clone();
+        let cancel_research_id = self.research_id.clone();
+        let cancel_job_id = self.job_id.clone();
         let outcome = agent::run(
             spec,
-            move || cancel.load(Ordering::Relaxed).then_some(STOP_REASON_ABORT),
+            move || {
+                if cancel_store.is_cancelled(&cancel_research_id, &cancel_job_id) {
+                    cancel.store(true, Ordering::Relaxed);
+                }
+                cancel.load(Ordering::Relaxed).then_some(STOP_REASON_ABORT)
+            },
             |_| Ok(()),
             move |observation| {
                 if let Observation::Log { stderr, line } = observation {
@@ -525,7 +534,7 @@ mod tests {
                     Ok(index)
                 })
                 .unwrap();
-            let cancel = store::claim_job(id, &job_id).unwrap();
+            let cancel = store::claim_job(&self.store, id, &job_id).unwrap();
             let sink = self.events.clone();
             Job {
                 store: self.store.clone(),
@@ -595,7 +604,7 @@ mod tests {
         assert!(fs::read_to_string(job_dir.join("prompt.md"))
             .unwrap()
             .contains("Where does it start?"));
-        assert!(store::running_job("research-ja").is_none());
+        assert!(store::running_job(&setup.store, "research-ja").is_none());
         // Nothing was written into the project.
         let state = crate::projects::worktree_state(&project).unwrap();
         assert!(state.lines().skip(1).all(str::is_empty), "{state}");
@@ -786,7 +795,7 @@ mod tests {
             setup.events.lock().unwrap().last().unwrap().status,
             "cancelled"
         );
-        assert!(store::running_job("research-jd").is_none());
+        assert!(store::running_job(&setup.store, "research-jd").is_none());
         fs::remove_dir_all(&setup.root).unwrap();
     }
 

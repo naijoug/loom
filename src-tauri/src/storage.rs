@@ -103,7 +103,9 @@ fn gitignore_covers_loom_dir(content: &str) -> bool {
     })
 }
 
-pub fn load_recent_projects(app: &AppHandle) -> Result<Vec<ProjectSummary>, String> {
+pub fn load_recent_projects<R: tauri::Runtime>(
+    app: &AppHandle<R>,
+) -> Result<Vec<ProjectSummary>, String> {
     let path = recent_projects_path(app)?;
 
     if !path.exists() {
@@ -150,11 +152,11 @@ fn remove_recent_project_by_id(projects: &mut Vec<ProjectSummary>, project_id: &
     projects.len() != original_len
 }
 
-fn recent_projects_path(app: &AppHandle) -> Result<PathBuf, String> {
+fn recent_projects_path<R: tauri::Runtime>(app: &AppHandle<R>) -> Result<PathBuf, String> {
     Ok(global_config_dir(app)?.join(RECENT_PROJECTS_FILE))
 }
 
-pub fn global_config_dir(app: &AppHandle) -> Result<PathBuf, String> {
+pub fn global_config_dir<R: tauri::Runtime>(app: &AppHandle<R>) -> Result<PathBuf, String> {
     // An explicit profile lets native acceptance use disposable projects and
     // settings without replacing HOME or changing the Skills coordination domain.
     if let Some(profile) = std::env::var_os("LOOM_PROFILE_DIR") {

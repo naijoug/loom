@@ -12,11 +12,16 @@ export interface ResearchTurn {
   context?: "native" | "replay" | string;
 }
 export interface Research {
+  activeOwner?: { runId: string; workflow: string; leaseToken: string };
+  workflow?: "legacy" | "target";
+  target?: { target: import("./researchTargets").ResearchTarget; runIds: string[] };
   schemaVersion: number; researchId: string; title: string; agentId: string; agentName: string; adapterType: string;
   model?: string; projectPath?: string; projectName?: string; language: ResearchLanguage | string; promptVersion: number;
   createdAtMs: number; updatedAtMs: number; turns: ResearchTurn[]; resumeCommand?: string; resumeAgentCommand?: string;
 }
 export interface ResearchSummary {
+  activeOwner?: { runId: string; workflow: string; leaseToken: string };
+  workflow?: "legacy" | "target";
   researchId: string; title: string; agentName: string; model?: string; projectName?: string;
   status: "running" | "failed" | "ready" | string; turns: number; updatedAtMs: number;
 }
