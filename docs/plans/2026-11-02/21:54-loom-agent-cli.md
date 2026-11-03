@@ -2,7 +2,7 @@
 
 - 创建时间：2026-11-02 21:54，America/Los_Angeles；22:28 参考 magpie 修订（加入 API Key 模式，重排里程碑）。
 - 状态：**待用户确认**，未开始实施。
-- 代码基线：`main` `90cf9f9`（工作区另有 Learn 重设计的并行改动，本计划不触碰）。
+- 代码基线：`main` `93c36f9`。2026-11-03 复核：`90cf9f9..93c36f9` 只有 Learn 前端重设计（`d59679c`）、本计划入库（`e62f8fb`）和 Skills 截图（`93c36f9`），`src-tauri/src` 无改动，下文行号仍有效。复核按代码修正了 A1 的文件写入依赖、A3 的取消方式与 HTTP 流读取，并补上 `api` 执行器的配置校验与启动检查（见第 2 节新增行）。
 - 用户要求（2026-11-02）：
   1. 底层有一个 loom CLI，上层交互都能通过它与本机已安装的 Agent CLI 交互；
   2. 参考 [yetone/magpie](https://github.com/yetone/magpie) 重新思考实现；
@@ -61,6 +61,12 @@ magpie 是 Go 单二进制：本地模型网关（`127.0.0.1:3425`，在 OpenAI 
 | Discuss 无项目时、以及主持汇总轮，提示词只含主题与同伴答案，不依赖读文件 | `discuss/prompt.rs:4-40` |
 | Chat 用 `permission_to_stage` 把 explore/ask/auto 映射到 `AgentStage` | `chat/mod.rs:117` |
 | `lib.rs` 中 `mod agent` 私有；`pub mod skills` 供 `loom-skills` 使用；桌面主程序在 Windows release 下是 `windows_subsystem = "windows"`（无控制台） | `lib.rs:1, 22`、`main.rs:2` |
+| 分层门禁禁止 `agent/` 引用任何功能模块，`skills` 也算功能模块；私有文件写入（目录 0700、文件 0600、原子替换）目前只在 `skills::files` | `scripts/check-layers.mjs:17, 47-52`、`skills/files.rs:56, 117-145` |
+| Agent 配置校验要求非空 `command` 且 adapter 属于 CLI 列表；`check_startable` 先解析可执行文件路径再探测版本 | `agent/registry.rs:142-167`、`agent/diagnostics.rs:155-179` |
+| 停止不靠进程登记：功能把自己的取消标志传给 runner 的 `cancelled` 闭包（Chat 用 `lease.stop_reason()`，Discuss 用 `lease.cancel`），`request_stop` 只对已登记的进程发信号，找不到 `run_id` 时返回 `false`；关停等待 `OperationGuard` 计数归零 | `chat/service.rs:22-24`、`chat/mod.rs:393-395`、`discuss/jobs.rs:46, 94`、`process_supervisor.rs:211-223, 340-365`、`chat/shutdown.rs:116-140` |
+| reqwest 0.13.3 的 `Response::chunk()` 不需要 `stream` 特性（`bytes_stream()` 才需要） | `reqwest-0.13.3/src/async_impl/response.rs:315, 345-356` |
+| 新 Tauri 命令要同时登记到 IPC 契约清单 | `contracts.rs` 的 `COMMANDS`、`src/api/contract.ts` |
+| Discuss 参与者按 `agent_id` + `model` 去重；不同 provider 的同一 CLI 是不同 Agent 配置，不冲突 | 规则见 `docs/requirements.md:51`；字段见 `discuss/models.rs:21-24, 145-146` |
 
 假设（实施前验证）：
 - 新增 `[[bin]]` 会像 `loom-skills` 一样打进 `.app/Contents/MacOS/`。
@@ -94,10 +100,11 @@ magpie 是 Go 单二进制：本地模型网关（`127.0.0.1:3425`，在 OpenAI 
 
 ### A1 Provider 配置与密钥
 
-- 新 `agent/providers.rs`（只经 `agent/mod.rs` 再导出）：版本化 `providers.json`，原子写，私有权限；跨进程写用 Chat 仓储已用的标准库文件锁 + `revision` 乐观校验（照 Skills 翻译的 `expectedRevision`）。
+- 先把私有文件写入（`private_directory`、0600 原子写）从 `skills::files` 移到共享的 `storage`，`skills::files` 改为调用它，行为不变。原因：`agent/` 不能引用 `skills`（分层门禁），而 `storage` 已经是 `agent/registry.rs` 的依赖。
+- 新 `agent/providers.rs`（只经 `agent/mod.rs` 再导出）：版本化 `providers.json`，用上面的私有原子写；跨进程写用 `std::fs::File::try_lock`（同 `chat/repository.rs:285`、`skills/coordination.rs:174`）+ `revision` 乐观校验（照 Skills 翻译的 `expectedRevision`）。
 - 密钥规则照 Skills 翻译：`KeyChange` keep/set/clear；`KeySource` stored/environment/none；IPC 与 CLI 输出只给“有无 key、来源”；输入结构不实现 `Debug`/`Serialize`；CLI 只从 stdin 读 key，不收命令行参数里的 key（防止进 shell 历史和 `ps`）。
 - `base_url` 校验：必须 https；http 只允许 loopback / 私网 / `.local`（覆盖 magpie 网关、Ollama、LM Studio）；这类地址允许无 key。
-- Tauri 命令：`provider_list` / `provider_save` / `provider_delete` / `provider_test`（`test` 只发一次最小请求，错误按分类返回，不回显上游正文）。
+- Tauri 命令：`provider_list` / `provider_save` / `provider_delete` / `provider_test`（`test` 只发一次最小请求，错误按分类返回，不回显上游正文），同时登记到 `contracts.rs` 的 `COMMANDS` 与 `src/api/contract.ts`。
 - 测试：权限位、revision 冲突、key 不出现在任何序列化输出、URL 校验正反例。
 
 ### A2 模式 B：CLI + API Key 注入
@@ -120,13 +127,14 @@ magpie 是 Go 单二进制：本地模型网关（`127.0.0.1:3425`，在 OpenAI 
 ### A3 模式 C：直连 API runner（无工具）
 
 - `agent/api/{mod,anthropic,openai_responses,openai_chat,sse}.rs`：构建请求（system + 用户 prompt，或有界历史回放），SSE 流解析 → `AgentEvent::Text` / `Done`；错误按 HTTP 状态 / 协议错误分类为 `AgentOutcome`，不回显上游正文。
-- `RunSpec.prepared` 改为 `Invocation::{Process, Api}`；`agent::run` 分派。API 运行也登记 `run_id`，让 `request_stop`、关停准入和超时对两种 runner 一致（在 `lifecycle` 加取消令牌登记，不进 `process_supervisor` 的 PID 表）。
+- `RunSpec.prepared` 改为 `Invocation::{Process, Api}`；`agent::run` 分派。API runner 和进程 runner 一样先拿 `begin_operation` 守卫（关停会等它释放），在读取响应时用 `select!` 同时等下一个 chunk 和一个短间隔，每次检查 `cancelled()` 与 `is_shutting_down()`，停止时丢弃请求并返回对应的 `STOP_REASON_*`。不改 `process_supervisor`：功能已经通过自己的取消标志停止运行，`request_stop` 对 API 运行返回 `false` 无副作用。
+- `api` 执行器的配置与检查：`validate_input` 接受 `api` adapter，且此时不要求 `command`、改为要求 `provider_id`；`available` 和 `check_startable` 只检查 provider 存在、URL 合法、key 来源可用，不发网络请求、不解析可执行文件；`diagnose_agents` 给出同样的结果。
 - 能力声明：`api` 执行器没有 tools / write / commands / 原生续聊；续聊只走 `chat_context` 的有界历史回放。
 - 功能侧只加一个声明：调用时给出 `needs_tools`。`needs_tools = true` 时选到 `api` 执行器直接报“此功能需要本地 CLI”。首批开放：
   - `loom-agent run`；
   - Discuss：无项目讨论的参与者，以及任何讨论的主持汇总轮；
   - 其余（Chat、Learn、Research、有项目的 Discuss 参与者）首版仍要求 CLI，待确认问题 3。
-- `reqwest` 开启流式所需的特性（同一依赖，不新增 crate）；HTTP 超时、响应体上限与 `Limits` 一致。
+- 用现有 `reqwest` 的 `Response::chunk()` 逐块读取 SSE，不改 Cargo 特性、不新增 crate；HTTP 超时、响应体上限与 `Limits` 一致。
 - 测试：本地假 SSE 服务（测试内起 `127.0.0.1` 监听）覆盖文本流、停止、超时、截断、错误分类；与进程 runner 的 `AgentOutcome` 字段语义对齐。
 
 ### A4 `loom-agent` CLI
@@ -171,7 +179,8 @@ magpie 是 Go 单二进制：本地模型网关（`127.0.0.1:3425`，在 OpenAI 
 | CLI 升级后注入方式失效 | 注入方式按 adapter 能力声明并记录核对版本；`doctor` 对模式 B 做一次最小探测 |
 | 模式 C 被误用在需要读代码的功能上，给出无依据回答 | `needs_tools` 显式拒绝；UI 置灰说明 |
 | providers.json 被桌面与 CLI 并发写 | 文件锁 + revision；`agents.json` 仍只由桌面写 |
-| 直连 API 的 HTTP 取消与进程取消语义不一致 | 共用 `run_id` 登记与 `STOP_REASON_*`；测试对齐 `AgentOutcome` |
+| 直连 API 的 HTTP 取消与进程取消语义不一致 | 两种 runner 共用 `cancelled` 闭包、`OperationGuard` 与 `STOP_REASON_*`；测试对齐 `AgentOutcome`，并覆盖关停时 API 运行能在预算内结束 |
+| 移动 `skills::files` 的私有写入函数影响 Skills | 只移动实现、保留原函数签名转调；跑 Skills 现有测试 |
 | 走第三方中转时的数据去向 | Settings 与文档写明：请求直接发往用户配置的 Base URL，Loom 不做遮蔽 |
 
 回滚：A0 纯重构可单独回退；A1–A4 以新增文件与可选字段为主（`provider_id` 为 `None` 时行为与现状一致）；A5 前端改动独立。
