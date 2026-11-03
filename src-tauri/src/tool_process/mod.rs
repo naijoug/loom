@@ -357,13 +357,7 @@ impl Session {
         };
         #[cfg(unix)]
         if let Some(metadata) = registry.metadata(&self.id) {
-            let deadline = Instant::now() + Duration::from_secs(2);
-            while process_supervisor::process_group_exists(metadata.process_id)? {
-                if Instant::now() >= deadline {
-                    return Err("tool_cleanup_timeout: descendants remain".into());
-                }
-                tokio::time::sleep(Duration::from_millis(10)).await;
-            }
+            confirm_exit(metadata.process_id).await?;
         }
         self.stderr_task.abort();
         registry.complete(&self.id);

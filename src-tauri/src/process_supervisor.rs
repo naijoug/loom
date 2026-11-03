@@ -462,10 +462,13 @@ pub fn process_group_exists(process_id: u32) -> Result<bool, String> {
         }
     }
     let error = std::io::Error::last_os_error();
-    if error.raw_os_error() == Some(3) {
-        Ok(false)
-    } else {
-        Err(format!("process group probe failed: {error}"))
+    match error.raw_os_error() {
+        Some(ESRCH) => Ok(false),
+        // macOS denies the probe while a group holds only zombies, e.g. an
+        // orphan launchd has not collected yet. It still exists, so bounded
+        // waits keep polling; a live foreign member remains an error.
+        Some(EPERM) if group_members_exited(process_id) => Ok(true),
+        _ => Err(format!("process group probe failed: {error}")),
     }
 }
 
@@ -673,6 +676,7 @@ mod tests {
         leader.kill().unwrap();
         leader.wait().unwrap();
         wait_for_zombie_group(group);
+        assert!(process_group_exists(group).unwrap());
         force_terminate_process_group(group).unwrap();
         assert!(member.wait().unwrap().success());
     }
