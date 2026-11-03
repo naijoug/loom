@@ -25,6 +25,7 @@ export function draftFromAgent(agent: AgentConfig): AgentConfigInput {
     canWriteFiles: agent.canWriteFiles,
     canRunCommands: agent.canRunCommands,
     enabled: agent.enabled,
+    providerId: agent.providerId ?? null,
   };
 }
 

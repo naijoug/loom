@@ -34,6 +34,7 @@ pub fn create_agent(
     input: AgentConfigInput,
 ) -> Result<AgentConfig, String> {
     validate_input(&input)?;
+    validate_provider(&app, &input)?;
     let mut agents = load_agents(&app)?;
     let mut agent = AgentConfig {
         id: ids.next("agent"),
@@ -47,6 +48,7 @@ pub fn create_agent(
         can_run_commands: input.can_run_commands,
         enabled: input.enabled,
         available: false,
+        provider_id: input.provider_id,
     };
     agent.available = command_available(&agent);
     agents.push(agent.clone());
@@ -62,6 +64,7 @@ pub fn update_agent(
     input: AgentConfigInput,
 ) -> Result<Vec<AgentConfig>, String> {
     validate_input(&input)?;
+    validate_provider(&app, &input)?;
     let mut agents = load_agents(&app)?;
     let mut updated = AgentConfig {
         id: agent_id.clone(),
@@ -75,6 +78,7 @@ pub fn update_agent(
         can_run_commands: input.can_run_commands,
         enabled: input.enabled,
         available: false,
+        provider_id: input.provider_id,
     };
     updated.available = command_available(&updated);
     apply_agent_update(&mut agents, &agent_id, updated)?;
@@ -168,6 +172,29 @@ fn validate_input(input: &AgentConfigInput) -> Result<(), String> {
     Ok(())
 }
 
+fn validate_provider(app: &AppHandle, input: &AgentConfigInput) -> Result<(), String> {
+    let Some(id) = &input.provider_id else {
+        return Ok(());
+    };
+    let dir = storage::global_config_dir(app)?;
+    let provider = super::providers::resolve_at(&dir, id, &|_| None)?;
+    provider_supported(&input.adapter_type, provider.kind)
+}
+
+fn provider_supported(
+    adapter_type: &str,
+    kind: super::providers::ProviderKind,
+) -> Result<(), String> {
+    if super::injection::provider_kinds(adapter_type).contains(&kind) {
+        Ok(())
+    } else {
+        Err(format!(
+            "This agent cannot use a {} model provider",
+            kind.label()
+        ))
+    }
+}
+
 pub(super) fn load_agents_inner<R: tauri::Runtime>(
     app: &AppHandle<R>,
 ) -> Result<Vec<AgentConfig>, String> {
@@ -257,6 +284,7 @@ pub(super) fn discover_default_agents() -> Vec<AgentConfig> {
                 can_run_commands,
                 enabled: true,
                 available: false,
+                provider_id: None,
             };
             agent.available = command_available(&agent);
             agent
@@ -279,6 +307,7 @@ pub(super) fn discover_default_agents() -> Vec<AgentConfig> {
             can_run_commands: false,
             enabled: false,
             available: true,
+            provider_id: None,
         });
         agents
     };
@@ -574,5 +603,17 @@ mod tests {
             );
             assert_eq!(path.file_name().unwrap(), "opencode");
         }
+    }
+
+    #[test]
+    fn provider_kind_must_match_the_adapter() {
+        use crate::agent::providers::ProviderKind;
+        assert!(provider_supported(ADAPTER_CODEX, ProviderKind::OpenaiResponses).is_ok());
+        assert_eq!(
+            provider_supported(ADAPTER_CODEX, ProviderKind::OpenaiChat).unwrap_err(),
+            "This agent cannot use a openai-chat model provider"
+        );
+        assert!(provider_supported(ADAPTER_GROK, ProviderKind::Anthropic).is_err());
+        assert!(provider_supported(ADAPTER_CLI, ProviderKind::Anthropic).is_err());
     }
 }

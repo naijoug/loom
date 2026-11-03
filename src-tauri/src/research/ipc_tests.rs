@@ -334,6 +334,7 @@ printf '%s\n' '{"type":"result","is_error":false,"result":"{\"kind\":\"answer\",
         can_run_commands: false,
         enabled: true,
         available: true,
+        provider_id: None,
     }
 }
 fn terminal(main: &WebviewWindow<MockRuntime>, research: &str, run: &str) -> Value {

@@ -55,6 +55,7 @@ async fn three_turns(command: &str, adapter: &str, switch_agent: bool) {
         can_run_commands: false,
         enabled: true,
         available: true,
+        provider_id: None,
     };
     let session_id = ids.next("session");
     let marker = ids.next("LOOM-CANARY");
@@ -260,6 +261,7 @@ async fn file_permissions(command: &str, adapter: &str, switch_mode: bool) {
         can_run_commands: true,
         enabled: true,
         available: true,
+        provider_id: None,
     };
     println!("PERMISSION_CANARY project={}", project.display());
     for mode in ["explore", "ask"].into_iter().filter(|mode| {
@@ -615,6 +617,7 @@ async fn claude_inline_cards_acceptance() {
         can_run_commands: true,
         enabled: true,
         available: true,
+        provider_id: None,
     };
     for (id, text, expects_card, resumes) in cases {
         if only

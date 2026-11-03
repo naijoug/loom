@@ -36,6 +36,13 @@ pub(crate) fn binding(
         session.permission_mode,
         stage,
     ]);
+    // A provider joins only when set, so handles from CLI-login runs stay
+    // valid and switching providers requires a new session.
+    if let Some(id) = &agent.provider_id {
+        if let Some(items) = config.as_array_mut() {
+            items.push(serde_json::json!(["provider", id]));
+        }
+    }
     // Only an enabled prompt joins the fingerprint, so existing handles stay
     // valid while the experiment is off and toggling it requires a new session.
     if let Some(text) = system_append {

@@ -149,6 +149,10 @@ pub struct AgentConfig {
     pub can_run_commands: bool,
     pub enabled: bool,
     pub available: bool,
+    /// Optional model provider from `providers.json`; `None` keeps the CLI's
+    /// own login and configuration.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider_id: Option<String>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -163,4 +167,6 @@ pub struct AgentConfigInput {
     pub can_write_files: bool,
     pub can_run_commands: bool,
     pub enabled: bool,
+    #[serde(default)]
+    pub provider_id: Option<String>,
 }

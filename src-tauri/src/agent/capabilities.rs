@@ -1,3 +1,4 @@
+use super::providers::ProviderKind;
 use serde::{Deserialize, Serialize};
 
 pub const ADAPTER_CODEX: &str = "codex_cli";
@@ -19,6 +20,9 @@ pub struct AgentCapabilities {
     /// True only after diagnostics recognizes an accepted CLI version/configuration.
     #[serde(default, skip_serializing_if = "is_false")]
     pub evidence_only: bool,
+    /// Model provider kinds this CLI can run against instead of its own login.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub provider_kinds: Vec<ProviderKind>,
     pub modes: Vec<ModeCapability>,
 }
 
@@ -67,6 +71,7 @@ pub fn capabilities(adapter: &str) -> AgentCapabilities {
         inline_cards: adapter == ADAPTER_CLAUDE,
         model_selection: structured,
         evidence_only: false,
+        provider_kinds: super::injection::provider_kinds(adapter).to_vec(),
         modes: ["explore", "ask", "auto"]
             .into_iter()
             .zip(policies)

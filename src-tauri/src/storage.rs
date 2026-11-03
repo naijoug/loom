@@ -168,10 +168,6 @@ pub fn global_config_dir<R: tauri::Runtime>(app: &AppHandle<R>) -> Result<PathBu
 
 /// Same directory as `global_config_dir`, resolved without an `AppHandle` so
 /// headless entry points share the desktop's agents and settings.
-#[expect(
-    dead_code,
-    reason = "consumed by the loom-agent binary in milestone A1"
-)]
 pub fn system_config_dir() -> Result<PathBuf, String> {
     config_dir_in(system_app_data_dir)
 }

@@ -700,6 +700,7 @@ mod tests {
                 can_run_commands: false,
                 enabled: true,
                 available: true,
+                provider_id: None,
             };
             agent::verify_evidence_profile(&agent).await.unwrap();
             let input=TargetInput {target:Target::App {path:selected.to_string_lossy().into_owned()},question:"Read the saved source file before answering. What numeric value does this module export as answer? Cite the exact source line. Treat filesystem calls as static code; do not claim they executed.".into(),agent_id:agent.id.clone(),model:Some(std::env::var("LOOM_REAL_TARGET_MODEL").expect("explicit model")),language:"en".into(),mode:ResearchMode::Single,budget:None,
@@ -790,6 +791,7 @@ mod tests {
             can_run_commands: false,
             enabled: true,
             available: true,
+            provider_id: None,
         };
         agent::verify_evidence_profile(&agent).await.unwrap();
         let input = TargetInput {
@@ -883,6 +885,7 @@ mod tests {
             can_run_commands: false,
             enabled: true,
             available: true,
+            provider_id: None,
         };
         agent::verify_evidence_profile(&agent).await.unwrap();
         let tools = rea::Config {

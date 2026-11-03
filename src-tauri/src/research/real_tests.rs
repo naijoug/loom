@@ -67,6 +67,7 @@ async fn research(default_command: &str, adapter: &str) {
         can_run_commands: false,
         enabled: true,
         available: true,
+        provider_id: None,
     };
     let store = Store::new(&root);
     let now = now_ms();

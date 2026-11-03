@@ -49,6 +49,8 @@ mod tests {
             Request {
                 prepared: PreparedAgentInvocation {
                     environment: Default::default(),
+                    environment_remove_prefixes: Vec::new(),
+                    secret_environment: Default::default(),
                     program: "/bin/sh".into(),
                     args: vec![
                         format!(
@@ -489,6 +491,8 @@ mod preparing_cancellation {
                 output_mode: "codex_json".into(),
                 resumed: false,
                 environment: Default::default(),
+                environment_remove_prefixes: Vec::new(),
+                secret_environment: Default::default(),
             },
             project_key: root.to_string_lossy().into_owned(),
             session_id: "s".into(),
@@ -519,7 +523,7 @@ mod structured_failure_tests {
     #[tokio::test]
     async fn provider_error_with_zero_exit_is_not_success_or_resumable() {
         let request = Request {
-            prepared: PreparedAgentInvocation { program:"/bin/sh".into(),args:vec!["-c".into(),r#"printf '%s\n' '{"type":"error","error":{"message":"provider unavailable"}}'"#.into()],cwd:std::env::temp_dir().to_string_lossy().into_owned(),stdin_prompt:false,output_mode:"opencode_json".into(),resumed:false,environment:Default::default() },
+            prepared: PreparedAgentInvocation { program:"/bin/sh".into(),args:vec!["-c".into(),r#"printf '%s\n' '{"type":"error","error":{"message":"provider unavailable"}}'"#.into()],cwd:std::env::temp_dir().to_string_lossy().into_owned(),stdin_prompt:false,output_mode:"opencode_json".into(),resumed:false,environment:Default::default(), environment_remove_prefixes: Vec::new(), secret_environment: Default::default() },
             project_key:"/fixture".into(),session_id:"session".into(),turn_id:crate::models::IdGenerator::default().next("structured-failure"),message_id:"message".into(),stdin_text:None,limits:Default::default()
         };
         let result = run_observed(request, || None, |_| Ok(()), |_| Ok(()))
@@ -549,6 +553,8 @@ mod structured_failure_tests {
                 output_mode: output_mode.into(),
                 resumed: false,
                 environment: Default::default(),
+                environment_remove_prefixes: Vec::new(),
+                secret_environment: Default::default(),
             },
             project_key: "/fixture".into(),
             session_id: "session".into(),

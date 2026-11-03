@@ -17,6 +17,8 @@ export interface AgentConfig {
   canRunCommands: boolean;
   enabled: boolean;
   available: boolean;
+  /** Model provider the CLI runs against instead of its own login. */
+  providerId?: string | null;
 }
 
 export type AgentConfigInput = Omit<AgentConfig, "id" | "available">;
@@ -30,6 +32,8 @@ export interface AgentCapabilities {
   modelSelection?: boolean;
   /** Version/configuration has passed the no-tools execution-profile probe. */
   evidenceOnly?: boolean;
+  /** Model provider kinds this CLI can run against; absent means none. */
+  providerKinds?: ModelProviderKind[];
   modes: Array<{ mode: "explore" | "ask" | "auto"; policy: string }>;
 }
 

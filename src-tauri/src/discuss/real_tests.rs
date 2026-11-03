@@ -42,6 +42,7 @@ async fn codex_and_claude_complete_two_rounds_and_summary() {
         can_run_commands: false,
         enabled: true,
         available: true,
+        provider_id: None,
     });
     store.create(&d).unwrap();
     let (_, lease) = store.begin(&id, None).unwrap();

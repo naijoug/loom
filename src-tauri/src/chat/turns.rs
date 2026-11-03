@@ -156,6 +156,8 @@ mod tests {
             serde_json::from_value(fixture["modelSamples"]["chatSession"].clone()).unwrap();
         let prepared = PreparedAgentInvocation {
             environment: Default::default(),
+            environment_remove_prefixes: Vec::new(),
+            secret_environment: Default::default(),
             program: "agent".into(),
             args: vec![
                 "--token".into(),

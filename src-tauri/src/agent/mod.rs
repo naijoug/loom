@@ -9,6 +9,7 @@ pub(crate) mod diagnostics;
 mod error;
 mod event;
 mod evidence;
+mod injection;
 mod invocation;
 mod lifecycle;
 pub(crate) mod providers;

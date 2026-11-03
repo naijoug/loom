@@ -173,6 +173,7 @@ export const MODEL_CONTRACT_SAMPLES = {
     canRunCommands: false,
     enabled: true,
     available: true,
+    providerId: "relay",
   } satisfies AgentConfig,
   chatSession: {
     id: "chat-contract",

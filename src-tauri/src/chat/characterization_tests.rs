@@ -27,6 +27,8 @@ fn request(turn_id: &str, output_mode: &str, program: &str, args: Vec<String>) -
             output_mode: output_mode.into(),
             resumed: false,
             environment: Default::default(),
+            environment_remove_prefixes: Vec::new(),
+            secret_environment: Default::default(),
         },
         project_key: "/fixture".into(),
         session_id: "session".into(),

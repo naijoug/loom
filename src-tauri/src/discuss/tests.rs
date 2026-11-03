@@ -79,6 +79,7 @@ fn fake(root: &Path, id: &str, script: &str) -> AgentConfig {
         can_run_commands: false,
         enabled: true,
         available: true,
+        provider_id: None,
     }
 }
 fn pipeline(root: &Path, scripts: [&str; 2]) -> Pipeline {

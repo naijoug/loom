@@ -1,7 +1,7 @@
 # Agent 调用层：无窗口 CLI 与 API Key 模式计划
 
 - 创建时间：2026-11-02 21:54，America/Los_Angeles；22:28 参考 magpie 修订（加入 API Key 模式，重排里程碑）。
-- 状态：A0 已完成（2026-11-03 02:04，已提交）；A1 已完成（2026-11-03 06:34，已提交）。2026-11-03 用户接受第 6 节全部推荐答案（“Yes, do A1”），A2 起可按推荐实施。
+- 状态：A0 已完成（2026-11-03 02:04，已提交）；A1 已完成（2026-11-03 06:34，已提交）；A2 已完成（2026-11-03 07:21，已提交）。2026-11-03 用户接受第 6 节全部推荐答案（“Yes, do A1”），A2 起可按推荐实施。
 - 代码基线：`main` `93c36f9`。2026-11-03 复核：`90cf9f9..93c36f9` 只有 Learn 前端重设计（`d59679c`）、本计划入库（`e62f8fb`）和 Skills 截图（`93c36f9`），`src-tauri/src` 无改动，下文行号仍有效。复核按代码修正了 A1 的文件写入依赖、A3 的取消方式与 HTTP 流读取，并补上 `api` 执行器的配置校验与启动检查（见第 2 节新增行）。
 - 用户要求（2026-11-02）：
   1. 底层有一个 loom CLI，上层交互都能通过它与本机已安装的 Agent CLI 交互；
@@ -143,6 +143,25 @@ magpie 是 Go 单二进制：本地模型网关（`127.0.0.1:3425`，在 OpenAI 
 - 执行记录、`Observation::Log` 和错误里不出现 key；`args` 中只有 Base URL，没有 key。
 - 不改写 `~/.claude`、`~/.codex` 等任何文件。
 - 测试：每个 adapter 的注入快照；key 不在 args；`environment_remove` 生效；不支持的组合有明确错误。
+
+完成记录（2026-11-03 07:21）：
+
+- 真实核对（本机假服务 `127.0.0.1:18731`，只记录 key 是否匹配和认证方式，不记录值）：
+
+| CLI（版本） | 实际注入 | 支持的 `kind` |
+|---|---|---|
+| Claude Code 2.1.317 | 环境 `ANTHROPIC_BASE_URL`、`ANTHROPIC_API_KEY`（密钥环境）；`ANTHROPIC_DEFAULT_{OPUS,SONNET,HAIKU}_MODEL`、`ANTHROPIC_SMALL_FAST_MODEL` 设为模型；`ANTHROPIC_AUTH_TOKEN`、`ANTHROPIC_CUSTOM_HEADERS`、`CLAUDE_CODE_USE_{BEDROCK,VERTEX,FOUNDRY}` 显式设为空串；`--model` | `anthropic` |
+| Codex 0.166.0 | `exec` 后插入 `--config model_provider="loom"`、`model_providers.loom.{name,base_url,wire_api="responses",env_key="LOOM_PROVIDER_API_KEY"}`；密钥环境 `LOOM_PROVIDER_API_KEY`；`--model` | `openai-responses` |
+| OpenCode 2.1.2 | `run` 后插入 `--standalone`；环境 `OPENCODE_CONFIG_CONTENT` 内联 `provider.loom`（`@ai-sdk/anthropic` 用 `{base}/v1`，`@ai-sdk/openai`、`@ai-sdk/openai-compatible` 用原 Base URL；`apiKey` 为 `{env:LOOM_PROVIDER_API_KEY}`）；密钥环境 `LOOM_PROVIDER_API_KEY`；`--model loom/<model>` | 三种 |
+| Grok / 自定义 CLI | 拒绝：`agent '…' cannot use a … model provider` | 无 |
+
+- 与上表“待核对”版本的差异：Codex 二进制含 “`wire_api = \"chat\"` is no longer supported”，只支持 Responses；Claude 用户 `settings.json` 的 `env` 只填补未设置的变量，实测它的 `ANTHROPIC_AUTH_TOKEN` 会作为额外 Bearer 发给 provider，所以注入时显式置空而不是仅移除；OpenCode 2.x 默认连共享后台服务，进程环境不生效，必须 `--standalone`。没有 key 的本地 provider：Claude 用占位 key `loom-no-key`，避免回退到 CLI 自己的登录并把它发给 provider；Codex/OpenCode 不配 `env_key`/`apiKey`。
+- 代码：`AgentConfig`/`AgentConfigInput` 增加可选 `providerId`（`serde(default)`，为空时不序列化）；`agent/injection.rs` 生成各 adapter 的注入；`prepare_invocation` 在 `providerId` 有值时用 `system_config_dir()` + `providers::resolve_at` 解析（同时去掉 A0 的 `dead_code` 预期），先检查 `kind`，模型取“本次请求的模型 → provider 的模型”，都没有则报错。`ResolvedProvider` 增加 `model`；`ProviderKind::label`。`PreparedAgentInvocation` 增加 `environment_remove_prefixes`（序列化时为空省略）和 `secret_environment`（`serde(skip)`，`Debug` 只显示变量名）；runner 先按前缀 `env_remove` 继承变量，再应用 `environment` 与 `secret_environment`。`AgentCapabilities.providerKinds` 声明支持的 `kind`。Chat 续聊指纹在 `providerId` 有值时加入，换 provider 需开新会话，无 provider 的旧句柄不变。`create_agent`/`update_agent` 校验 provider 存在且 `kind` 受支持；`provider_delete` 拒绝删除仍被 Agent 引用的 provider。前端 `AgentConfig.providerId?`、`AgentCapabilities.providerKinds?`，`draftFromAgent` 保留 `providerId`，`agentConfig` 契约样例增加 `providerId`。
+- 与本节原文的偏差：未升级 agents schema 版本——新字段带默认值，旧文件读出为 `None`、行为不变，无需迁移；`environment_remove` 实现为前缀列表；不移除 `CODEX_*`（会丢掉用户的 `CODEX_HOME`），Codex 只移除 `OPENAI_*`，OpenCode 不移除。`check_startable` 未加 provider 检查：`prepare_invocation` 已在启动前给出明确错误。
+- 顺带修复：A1 的 `providers.lock` 在并行测试中偶发“busy”——其他测试 fork 出的子进程在 exec 前短暂继承锁描述符。写入者现在最多重试 500ms 再报忙。
+- 证据：`provider_tests` 7 项（三种 CLI 注入快照；key 不出现在 args、公开环境、`Debug` 和序列化结果；运行模型覆盖 provider 模型；不支持组合与缺模型的错误；`providerId` 往返与缺省；runner 前缀移除与两种环境生效），另加删除保护、`kind` 校验、续聊指纹各 1 项；`pnpm check` 通过（前端 150/150、Rust 405 passed / 35 ignored、clippy `-D warnings`）。
+- 未验证：没有通过 Loom 端到端跑一次真实 provider 对话（属 A7）；OpenCode 现有 adapter 传的 `--dir` 在 2.1.2 上报 “Unrecognized flag”，且未加 `--standalone` 时 `OPENCODE_PERMISSION` 同样到不了后台服务；这是 A2 之前就有的问题，本轮未改。
+- 未做：Settings 里选择 provider 属于 A5；CLI 的 `--provider` 属于 A4。
 
 ### A3 模式 C：直连 API runner（无工具）
 

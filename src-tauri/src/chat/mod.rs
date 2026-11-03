@@ -553,6 +553,7 @@ mod tests {
             can_run_commands: true,
             enabled: true,
             available: true,
+            provider_id: None,
         }
     }
 

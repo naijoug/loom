@@ -58,6 +58,7 @@ async fn study(default_command: &str, adapter: &str) {
         can_run_commands: false,
         enabled: true,
         available: true,
+        provider_id: None,
     };
     let repo = super::fetch::parse_github_url(&url).unwrap();
     let store = Store::new(&root);

@@ -1,6 +1,8 @@
 use super::capabilities::{
     capabilities, ADAPTER_CLAUDE, ADAPTER_CODEX, ADAPTER_GROK, ADAPTER_OPENCODE,
 };
+use super::injection;
+use super::providers::{self, ResolvedProvider};
 use crate::models::AgentConfig;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -69,12 +71,41 @@ impl AdapterInvocationRequest<'_> {
 pub struct PreparedAgentInvocation {
     #[serde(default)]
     pub environment: std::collections::BTreeMap<String, String>,
+    /// Inherited variables with these prefixes are removed before
+    /// `environment` applies, so a shell's own key or endpoint cannot mix
+    /// into a provider run.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub environment_remove_prefixes: Vec<String>,
+    /// Credential variables: never serialized and redacted from `Debug`.
+    #[serde(skip)]
+    pub secret_environment: SecretEnvironment,
     pub program: String,
     pub args: Vec<String>,
     pub cwd: String,
     pub stdin_prompt: bool,
     pub output_mode: String,
     pub resumed: bool,
+}
+
+#[derive(Clone, Default)]
+pub struct SecretEnvironment(std::collections::BTreeMap<String, String>);
+
+impl SecretEnvironment {
+    pub(super) fn insert(&mut self, name: &str, value: &str) {
+        self.0.insert(name.into(), value.into());
+    }
+
+    pub(super) fn iter(&self) -> impl Iterator<Item = (&String, &String)> {
+        self.0.iter()
+    }
+}
+
+impl std::fmt::Debug for SecretEnvironment {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_map()
+            .entries(self.0.keys().map(|name| (name, "[REDACTED]")))
+            .finish()
+    }
 }
 
 pub trait AgentAdapter {
@@ -92,6 +123,53 @@ struct CustomCliAdapter;
 struct OpencodeAdapter;
 
 pub fn prepare_invocation(
+    agent: &AgentConfig,
+    request: &AdapterInvocationRequest<'_>,
+) -> Result<PreparedAgentInvocation, String> {
+    let provider = agent
+        .provider_id
+        .as_deref()
+        .map(|id| {
+            let dir = crate::storage::system_config_dir()?;
+            providers::resolve_at(&dir, id, &providers::process_environment)
+        })
+        .transpose()?;
+    prepare_with_provider(agent, request, provider.as_ref())
+}
+
+/// Mode B keeps the adapter's own arguments and permissions and only adds the
+/// provider: its model becomes the default `--model`.
+fn prepare_with_provider(
+    agent: &AgentConfig,
+    request: &AdapterInvocationRequest<'_>,
+    provider: Option<&ResolvedProvider>,
+) -> Result<PreparedAgentInvocation, String> {
+    let Some(provider) = provider else {
+        return prepare_for_cli(agent, request);
+    };
+    if !injection::provider_kinds(&agent.adapter_type).contains(&provider.kind) {
+        return Err(format!(
+            "agent '{}' cannot use a {} model provider",
+            agent.name,
+            provider.kind.label()
+        ));
+    }
+    let model = request
+        .model
+        .or(provider.model.as_deref())
+        .ok_or("the model provider has no model; set one on the provider or the run")?;
+    validate_model_name(model)?;
+    let model_arg = injection::model_arg(&agent.adapter_type, model);
+    let request = AdapterInvocationRequest {
+        model: Some(&model_arg),
+        ..request.clone()
+    };
+    let mut prepared = prepare_for_cli(agent, &request)?;
+    injection::apply(&agent.adapter_type, &mut prepared, provider, model)?;
+    Ok(prepared)
+}
+
+fn prepare_for_cli(
     agent: &AgentConfig,
     request: &AdapterInvocationRequest<'_>,
 ) -> Result<PreparedAgentInvocation, String> {
@@ -483,6 +561,8 @@ fn prepared(
 ) -> PreparedAgentInvocation {
     PreparedAgentInvocation {
         environment: Default::default(),
+        environment_remove_prefixes: Vec::new(),
+        secret_environment: Default::default(),
         program: agent.command.trim().to_string(),
         args,
         cwd: project_path.display().to_string(),
@@ -560,6 +640,7 @@ mod tests {
             can_run_commands: true,
             enabled: true,
             available: true,
+            provider_id: None,
         }
     }
 
@@ -1014,5 +1095,284 @@ mod opencode_tests {
             "/tools/opencode --session ses_123 --auto"
         )
         .is_err());
+    }
+}
+
+#[cfg(test)]
+mod provider_tests {
+    use super::*;
+    use crate::agent::providers::ProviderKind;
+    use crate::agent::{run, Limits, RunSpec};
+    use crate::process_supervisor::{ProcessKind, ProcessOwner};
+    use std::time::Duration;
+
+    const KEY: &str = "sk-fixture-provider-0123456789";
+
+    fn agent(adapter: &str) -> AgentConfig {
+        serde_json::from_value(serde_json::json!({
+            "id":"agent","name":"Agent","command":"/tools/cli","args":[],"workingDirectoryPolicy":"project_root","capabilities":["planning"],"adapterType":adapter,"canWriteFiles":true,"canRunCommands":true,"enabled":true,"available":true,"providerId":"fixture"
+        }))
+        .unwrap()
+    }
+
+    fn provider(kind: ProviderKind, key: Option<&str>) -> ResolvedProvider {
+        ResolvedProvider {
+            kind,
+            base_url: "https://provider.example/v1".into(),
+            model: Some("provider-model".into()),
+            api_key: key.map(str::to_owned),
+        }
+    }
+
+    fn request(model: Option<&str>) -> AdapterInvocationRequest<'_> {
+        AdapterInvocationRequest {
+            execution_profile: None,
+            project_path: Path::new("/project"),
+            prompt: "hello",
+            prompt_file: None,
+            stage: AgentStage::Planning,
+            resume_command: None,
+            chat_permission_mode: Some("explore"),
+            embed_prompt: false,
+            system_append: None,
+            model,
+        }
+    }
+
+    fn prepare(adapter: &str, provider: &ResolvedProvider) -> PreparedAgentInvocation {
+        prepare_with_provider(&agent(adapter), &request(None), Some(provider)).unwrap()
+    }
+
+    fn assert_key_hidden(prepared: &PreparedAgentInvocation) {
+        assert!(!prepared.args.iter().any(|arg| arg.contains(KEY)));
+        assert!(!prepared
+            .environment
+            .values()
+            .any(|value| value.contains(KEY)));
+        assert!(!format!("{prepared:?}").contains(KEY));
+        assert!(!serde_json::to_string(prepared).unwrap().contains(KEY));
+    }
+
+    fn secret(prepared: &PreparedAgentInvocation, name: &str) -> Option<String> {
+        prepared
+            .secret_environment
+            .iter()
+            .find(|(key, _)| *key == name)
+            .map(|(_, value)| value.clone())
+    }
+
+    #[test]
+    fn claude_gets_endpoint_model_and_key_without_settings_credentials() {
+        let prepared = prepare(
+            ADAPTER_CLAUDE,
+            &provider(ProviderKind::Anthropic, Some(KEY)),
+        );
+        assert!(prepared
+            .args
+            .windows(2)
+            .any(|pair| pair == ["--model", "provider-model"]));
+        let env = &prepared.environment;
+        assert_eq!(env["ANTHROPIC_BASE_URL"], "https://provider.example/v1");
+        assert_eq!(env["ANTHROPIC_SMALL_FAST_MODEL"], "provider-model");
+        assert_eq!(env["ANTHROPIC_AUTH_TOKEN"], "");
+        assert_eq!(env["CLAUDE_CODE_USE_BEDROCK"], "");
+        assert_eq!(
+            prepared.environment_remove_prefixes,
+            ["ANTHROPIC_", "CLAUDE_CODE_USE_"]
+        );
+        assert_eq!(secret(&prepared, "ANTHROPIC_API_KEY").as_deref(), Some(KEY));
+        assert_key_hidden(&prepared);
+
+        // A keyless local provider must not fall back to the CLI's own login.
+        let keyless = prepare(ADAPTER_CLAUDE, &provider(ProviderKind::Anthropic, None));
+        assert_eq!(
+            secret(&keyless, "ANTHROPIC_API_KEY").as_deref(),
+            Some("loom-no-key")
+        );
+    }
+
+    #[test]
+    fn codex_defines_a_responses_provider_before_the_prompt() {
+        let prepared = prepare(
+            ADAPTER_CODEX,
+            &provider(ProviderKind::OpenaiResponses, Some(KEY)),
+        );
+        assert_eq!(prepared.args[0], "exec");
+        let configs: Vec<_> = prepared
+            .args
+            .windows(2)
+            .filter(|pair| pair[0] == "--config")
+            .map(|pair| pair[1].as_str())
+            .collect();
+        assert_eq!(
+            &configs[..5],
+            [
+                "model_provider=\"loom\"",
+                "model_providers.loom.name=\"Loom\"",
+                "model_providers.loom.base_url=\"https://provider.example/v1\"",
+                "model_providers.loom.wire_api=\"responses\"",
+                "model_providers.loom.env_key=\"LOOM_PROVIDER_API_KEY\"",
+            ]
+        );
+        let position = |arg: &str| prepared.args.iter().position(|item| item == arg).unwrap();
+        assert!(position("model_provider=\"loom\"") < position("--"));
+        assert!(prepared
+            .args
+            .windows(2)
+            .any(|pair| pair == ["--model", "provider-model"]));
+        assert_eq!(
+            secret(&prepared, "LOOM_PROVIDER_API_KEY").as_deref(),
+            Some(KEY)
+        );
+        assert_key_hidden(&prepared);
+
+        let keyless = prepare(
+            ADAPTER_CODEX,
+            &provider(ProviderKind::OpenaiResponses, None),
+        );
+        assert!(!keyless.args.iter().any(|arg| arg.contains("env_key")));
+        assert!(secret(&keyless, "LOOM_PROVIDER_API_KEY").is_none());
+    }
+
+    #[test]
+    fn opencode_runs_standalone_with_an_inline_provider() {
+        for (kind, package, base_url) in [
+            (
+                ProviderKind::Anthropic,
+                "@ai-sdk/anthropic",
+                "https://provider.example/v1/v1",
+            ),
+            (
+                ProviderKind::OpenaiResponses,
+                "@ai-sdk/openai",
+                "https://provider.example/v1",
+            ),
+            (
+                ProviderKind::OpenaiChat,
+                "@ai-sdk/openai-compatible",
+                "https://provider.example/v1",
+            ),
+        ] {
+            let prepared = prepare(ADAPTER_OPENCODE, &provider(kind, Some(KEY)));
+            assert_eq!(&prepared.args[..2], ["run", "--standalone"]);
+            assert!(prepared
+                .args
+                .windows(2)
+                .any(|pair| pair == ["--model", "loom/provider-model"]));
+            let config: serde_json::Value =
+                serde_json::from_str(&prepared.environment["OPENCODE_CONFIG_CONTENT"]).unwrap();
+            let loom = &config["provider"]["loom"];
+            assert_eq!(loom["npm"], package);
+            assert_eq!(loom["options"]["baseURL"], base_url);
+            assert_eq!(loom["options"]["apiKey"], "{env:LOOM_PROVIDER_API_KEY}");
+            assert!(loom["models"]["provider-model"].is_object());
+            assert!(prepared.environment.contains_key("OPENCODE_PERMISSION"));
+            assert_key_hidden(&prepared);
+        }
+    }
+
+    #[test]
+    fn run_model_overrides_the_provider_model() {
+        let prepared = prepare_with_provider(
+            &agent(ADAPTER_CLAUDE),
+            &request(Some("run-model")),
+            Some(&provider(ProviderKind::Anthropic, Some(KEY))),
+        )
+        .unwrap();
+        assert!(prepared
+            .args
+            .windows(2)
+            .any(|pair| pair == ["--model", "run-model"]));
+        assert_eq!(
+            prepared.environment["ANTHROPIC_DEFAULT_OPUS_MODEL"],
+            "run-model"
+        );
+    }
+
+    #[test]
+    fn unsupported_combinations_are_rejected_clearly() {
+        let error = |adapter: &str, kind: ProviderKind| {
+            prepare_with_provider(
+                &agent(adapter),
+                &request(None),
+                Some(&provider(kind, Some(KEY))),
+            )
+            .err()
+            .unwrap()
+        };
+        assert_eq!(
+            error(ADAPTER_CODEX, ProviderKind::OpenaiChat),
+            "agent 'Agent' cannot use a openai-chat model provider"
+        );
+        assert!(error(ADAPTER_CODEX, ProviderKind::Anthropic).contains("anthropic"));
+        assert!(error(ADAPTER_CLAUDE, ProviderKind::OpenaiResponses).contains("openai-responses"));
+        assert!(error(ADAPTER_GROK, ProviderKind::Anthropic).contains("cannot use"));
+        assert!(error("cli", ProviderKind::OpenaiChat).contains("cannot use"));
+
+        let mut modelless = provider(ProviderKind::Anthropic, Some(KEY));
+        modelless.model = None;
+        let message =
+            prepare_with_provider(&agent(ADAPTER_CLAUDE), &request(None), Some(&modelless))
+                .err()
+                .unwrap();
+        assert!(message.contains("no model"));
+        assert!(!message.contains(KEY));
+    }
+
+    #[test]
+    fn provider_id_round_trips_and_old_configs_load_without_one() {
+        let mut config = agent(ADAPTER_CLAUDE);
+        assert_eq!(config.provider_id.as_deref(), Some("fixture"));
+        config.provider_id = None;
+        let value = serde_json::to_value(&config).unwrap();
+        assert!(value.get("providerId").is_none());
+        let reloaded: AgentConfig = serde_json::from_value(value).unwrap();
+        assert!(reloaded.provider_id.is_none());
+    }
+
+    #[tokio::test]
+    async fn runner_removes_inherited_prefixes_then_applies_both_environments() {
+        assert!(std::env::var_os("HOME").is_some());
+        let mut secret_environment = SecretEnvironment::default();
+        secret_environment.insert("LOOM_FIXTURE_HIDDEN", "two");
+        let prepared = PreparedAgentInvocation {
+            environment: [("LOOM_FIXTURE_PUBLIC".to_string(), "one".to_string())].into(),
+            environment_remove_prefixes: vec!["HOME".into()],
+            secret_environment,
+            program: "/bin/sh".into(),
+            args: vec![
+                "-c".into(),
+                r#"printf '%s|%s|%s' "${HOME-unset}" "$LOOM_FIXTURE_PUBLIC" "$LOOM_FIXTURE_HIDDEN""#
+                    .into(),
+            ],
+            cwd: std::env::temp_dir().to_string_lossy().into_owned(),
+            stdin_prompt: false,
+            output_mode: "plain".into(),
+            resumed: false,
+        };
+        let outcome = run(
+            RunSpec {
+                prepared,
+                run_id: format!("provider-env-{}", crate::models::now_ms()),
+                owner: ProcessOwner::Feature {
+                    feature: "fixture".into(),
+                    scope_id: "provider".into(),
+                    run_id: "env".into(),
+                },
+                kind: ProcessKind::Feature,
+                stdin_text: None,
+                limits: Limits {
+                    timeout: Duration::from_secs(5),
+                    ..Default::default()
+                },
+                enrich: None,
+            },
+            || None,
+            |_| Ok(()),
+            |_| Ok(()),
+        )
+        .await
+        .unwrap();
+        assert_eq!(outcome.content.trim(), "unset|one|two");
     }
 }

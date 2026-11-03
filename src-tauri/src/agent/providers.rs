@@ -19,6 +19,7 @@ const PROVIDERS_LOCK: &str = "providers.lock";
 const SCHEMA_VERSION: u32 = 1;
 const MAX_STORE_BYTES: u64 = 1024 * 1024;
 const MAX_TEST_RESPONSE_BYTES: usize = 1024 * 1024;
+const LOCK_WAIT: Duration = Duration::from_millis(500);
 
 /// Wire protocol of a provider. Base URLs follow each CLI's own convention:
 /// Anthropic's excludes `/v1`, OpenAI's includes it.
@@ -28,6 +29,16 @@ pub enum ProviderKind {
     Anthropic,
     OpenaiResponses,
     OpenaiChat,
+}
+
+impl ProviderKind {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Anthropic => "anthropic",
+            Self::OpenaiResponses => "openai-responses",
+            Self::OpenaiChat => "openai-chat",
+        }
+    }
 }
 
 // Deliberately no Serialize/Debug for input that can carry a key.
@@ -164,6 +175,7 @@ pub(crate) fn process_environment(name: &str) -> Option<String> {
 pub(crate) struct ResolvedProvider {
     pub kind: ProviderKind,
     pub base_url: String,
+    pub model: Option<String>,
     pub api_key: Option<String>,
 }
 
@@ -269,6 +281,7 @@ pub(crate) fn resolve_at(
     Ok(ResolvedProvider {
         kind: provider.kind,
         base_url: provider.base_url.clone(),
+        model: provider.model.clone(),
         api_key,
     })
 }
@@ -311,13 +324,22 @@ fn lock(dir: &Path) -> Result<File, String> {
     let file = options
         .open(&path)
         .map_err(|error| format!("failed to open provider settings lock: {error}"))?;
-    file.try_lock().map_err(|error| match error {
-        fs::TryLockError::WouldBlock => {
-            "Another Loom process is saving provider settings; retry".to_string()
+    // A child spawned elsewhere in this process can hold an inherited copy of
+    // the descriptor until its exec closes it, so a busy lock is retried
+    // briefly before it is reported.
+    let deadline = std::time::Instant::now() + LOCK_WAIT;
+    loop {
+        match file.try_lock() {
+            Ok(()) => return Ok(file),
+            Err(fs::TryLockError::WouldBlock) if std::time::Instant::now() < deadline => {
+                std::thread::sleep(Duration::from_millis(20));
+            }
+            Err(fs::TryLockError::WouldBlock) => {
+                return Err("Another Loom process is saving provider settings; retry".into())
+            }
+            Err(other) => return Err(format!("failed to lock provider settings: {other}")),
         }
-        other => format!("failed to lock provider settings: {other}"),
-    })?;
-    Ok(file)
+    }
 }
 
 fn load(dir: &Path) -> Result<Store, String> {
@@ -586,6 +608,20 @@ fn outcome(outcome: ProviderTestOutcome, http_status: Option<u16>) -> ProviderTe
     }
 }
 
+/// Deleting a provider an agent still uses would make that agent's runs fail.
+fn ensure_unused(agents: &[crate::models::AgentConfig], id: &str) -> Result<(), String> {
+    match agents
+        .iter()
+        .find(|agent| agent.provider_id.as_deref() == Some(id))
+    {
+        Some(agent) => Err(format!(
+            "Provider is used by agent '{}'; remove it there first",
+            agent.name
+        )),
+        None => Ok(()),
+    }
+}
+
 fn config_dir<R: tauri::Runtime>(app: &AppHandle<R>) -> Result<PathBuf, String> {
     storage::global_config_dir(app)
 }
@@ -606,6 +642,7 @@ pub fn provider_delete(
     provider_id: String,
     expected_revision: u64,
 ) -> Result<ProviderList, String> {
+    ensure_unused(&super::registry::load_agents(&app)?, &provider_id)?;
     delete_at(
         &config_dir(&app)?,
         &provider_id,
@@ -902,6 +939,7 @@ mod tests {
         ResolvedProvider {
             kind,
             base_url,
+            model: None,
             api_key: api_key.map(str::to_owned),
         }
     }
@@ -992,5 +1030,20 @@ mod tests {
         let result =
             test_with_client(&resolved(ProviderKind::OpenaiChat, url, None), &client()).await;
         assert_eq!(result.outcome, ProviderTestOutcome::Unreachable);
+    }
+
+    #[test]
+    fn providers_used_by_an_agent_cannot_be_deleted() {
+        let mut agent: crate::models::AgentConfig = serde_json::from_value(serde_json::json!({
+            "id":"agent","name":"Claude","command":"claude","args":[],"workingDirectoryPolicy":"project_root","capabilities":[],"adapterType":"claude_code_cli","canWriteFiles":false,"canRunCommands":false,"enabled":true,"available":true,"providerId":"relay"
+        }))
+        .unwrap();
+        assert_eq!(
+            ensure_unused(std::slice::from_ref(&agent), "relay").unwrap_err(),
+            "Provider is used by agent 'Claude'; remove it there first"
+        );
+        assert!(ensure_unused(std::slice::from_ref(&agent), "other").is_ok());
+        agent.provider_id = None;
+        assert!(ensure_unused(&[agent], "relay").is_ok());
     }
 }

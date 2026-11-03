@@ -195,6 +195,7 @@ mod tests {
             can_run_commands: false,
             enabled: true,
             available: true,
+            provider_id: None,
         }
     }
 
@@ -494,6 +495,24 @@ mod tests {
             session.resume_command.as_deref(),
             Some("codex resume running")
         );
+    }
+
+    #[test]
+    fn a_provider_rebinds_resume_and_none_keeps_the_fingerprint() {
+        use crate::chat::resume;
+        let mut claude = agent(ADAPTER_CLAUDE, "claude");
+        let session = session();
+        let fingerprint = |agent: &AgentConfig| {
+            resume::binding(agent, &session, AgentStage::Planning, None).config_fingerprint
+        };
+        let login = fingerprint(&claude);
+        claude.provider_id = Some("relay".into());
+        let relay = fingerprint(&claude);
+        claude.provider_id = Some("other".into());
+        assert_ne!(login, relay);
+        assert_ne!(relay, fingerprint(&claude));
+        claude.provider_id = None;
+        assert_eq!(login, fingerprint(&claude));
     }
 
     #[test]

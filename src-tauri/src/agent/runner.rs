@@ -314,9 +314,20 @@ pub(crate) async fn run(
         return Ok(stop_outcome(Some(reason), String::new(), Vec::new()));
     }
     let mut command = Command::new(&spec.prepared.program);
+    let prefixes = &spec.prepared.environment_remove_prefixes;
+    for (name, _) in std::env::vars_os() {
+        if name.to_str().is_some_and(|name| {
+            prefixes
+                .iter()
+                .any(|prefix| name.starts_with(prefix.as_str()))
+        }) {
+            command.env_remove(name);
+        }
+    }
     command
         .args(&spec.prepared.args)
         .envs(&spec.prepared.environment)
+        .envs(spec.prepared.secret_environment.iter())
         .current_dir(&spec.prepared.cwd)
         .kill_on_drop(true)
         .stdout(Stdio::piped())

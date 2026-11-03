@@ -184,6 +184,8 @@ pub(super) mod tests {
             repo.create(&session).unwrap();
             let prepared = PreparedAgentInvocation {
                 environment: Default::default(),
+                environment_remove_prefixes: Vec::new(),
+                secret_environment: Default::default(),
                 program: "sh".into(),
                 args: vec![
                     format!(

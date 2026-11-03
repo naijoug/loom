@@ -204,6 +204,8 @@ impl EvidenceProfile {
             output_mode: "claude_stream_json".into(),
             resumed: false,
             environment: Default::default(),
+            environment_remove_prefixes: Vec::new(),
+            secret_environment: Default::default(),
         })
     }
 }
@@ -225,6 +227,7 @@ mod tests {
             can_run_commands: false,
             enabled: true,
             available: true,
+            provider_id: None,
         }
     }
     #[tokio::test]

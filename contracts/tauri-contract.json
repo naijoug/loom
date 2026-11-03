@@ -142,7 +142,8 @@
       "canWriteFiles": false,
       "canRunCommands": false,
       "enabled": true,
-      "available": true
+      "available": true,
+      "providerId": "relay"
     },
     "chatSession": {
       "id": "chat-contract",

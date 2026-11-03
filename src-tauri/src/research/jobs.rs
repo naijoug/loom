@@ -448,6 +448,7 @@ mod tests {
             can_run_commands: false,
             enabled: true,
             available: true,
+            provider_id: None,
         }
     }
 
