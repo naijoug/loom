@@ -1,15 +1,13 @@
 //! Private, durable metadata files. Refuse symlinks rather than following them.
 use super::error::{Result, SkillsError};
+use crate::storage::private as storage;
 use serde::{de::DeserializeOwned, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
-    fs::{self, File, OpenOptions},
-    io::{Read, Write},
-    path::{Component, Path, PathBuf},
-    sync::atomic::{AtomicU64, Ordering},
+    fs::File,
+    io::Read,
+    path::{Path, PathBuf},
 };
-
-static SEQUENCE: AtomicU64 = AtomicU64::new(0);
 pub const MAX_METADATA_BYTES: u64 = 8 * 1024 * 1024;
 
 pub fn validate_id(id: &str) -> Result<()> {
@@ -26,75 +24,16 @@ pub fn validate_id(id: &str) -> Result<()> {
     Ok(())
 }
 
-/// Canonicalize an existing ancestor and append only normal, absent components.
-/// Existing final symlinks are rejected: callers must explicitly authorize a
-/// canonical resource before requesting a write, not swap its link silently.
 pub fn resource_path(path: &Path) -> Result<PathBuf> {
-    if !path.is_absolute() || path.components().any(|c| matches!(c, Component::ParentDir)) {
-        return Err(SkillsError::invalid(
-            "Resource paths must be absolute without parent traversal",
-        ));
-    }
-    match fs::symlink_metadata(path) {
-        Ok(meta) if meta.file_type().is_symlink() => Err(SkillsError::invalid(
-            "Managed resource must not be a symlink",
-        )),
-        Ok(_) => Ok(path.canonicalize()?),
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-            let parent = path
-                .parent()
-                .ok_or_else(|| SkillsError::invalid("Missing parent"))?;
-            let name = path
-                .file_name()
-                .ok_or_else(|| SkillsError::invalid("Missing filename"))?;
-            Ok(resource_path(parent)?.join(name))
-        }
-        Err(e) => Err(e.into()),
-    }
+    storage::resource_path(path).map_err(skills_error)
 }
 
 pub fn private_directory(path: &Path) -> Result<PathBuf> {
-    let path = resource_path(path)?;
-    if !path.exists() {
-        let parent = path
-            .parent()
-            .ok_or_else(|| SkillsError::invalid("Missing directory parent"))?;
-        if !parent.is_dir() {
-            private_directory(parent)?;
-        }
-        let mut builder = fs::DirBuilder::new();
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::DirBuilderExt;
-            builder.mode(0o700);
-        }
-        match builder.create(&path) {
-            Ok(()) => (),
-            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => (),
-            Err(e) => return Err(e.into()),
-        }
-    }
-    let meta = fs::symlink_metadata(&path)?;
-    if !meta.is_dir() || meta.file_type().is_symlink() {
-        return Err(SkillsError::invalid(
-            "Private metadata path must be a directory",
-        ));
-    }
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        fs::set_permissions(&path, fs::Permissions::from_mode(0o700))?;
-    }
-    Ok(path)
+    storage::private_directory(path).map_err(skills_error)
 }
 
 pub fn regular_file(path: &Path) -> Result<()> {
-    match fs::symlink_metadata(path) {
-        Ok(meta) if meta.is_file() && !meta.file_type().is_symlink() => Ok(()),
-        Ok(_) => Err(SkillsError::invalid("Metadata must be a regular file")),
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
-        Err(e) => Err(e.into()),
-    }
+    storage::regular_file(path).map_err(skills_error)
 }
 
 pub fn read_json<T: DeserializeOwned>(path: &Path) -> Result<T> {
@@ -124,50 +63,19 @@ pub fn atomic_json<T: Serialize>(path: &Path, value: &T) -> Result<()> {
 }
 
 pub fn atomic_bytes(path: &Path, bytes: &[u8]) -> Result<()> {
-    regular_file(path)?;
-    let parent = path
-        .parent()
-        .ok_or_else(|| SkillsError::invalid("Missing metadata parent"))?;
-    let parent = resource_path(parent)?;
-    if !parent.is_dir() {
-        return Err(SkillsError::invalid("Metadata parent must already exist"));
-    }
-    let temp = parent.join(format!(
-        ".write-{}-{}",
-        std::process::id(),
-        SEQUENCE.fetch_add(1, Ordering::Relaxed)
-    ));
-    let mut options = OpenOptions::new();
-    options.write(true).create_new(true);
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::OpenOptionsExt;
-        options.mode(0o600);
-    }
-    let result = (|| -> Result<()> {
-        let mut file = options.open(&temp)?;
-        file.write_all(bytes)?;
-        file.sync_all()?;
-        regular_file(path)?;
-        fs::rename(&temp, path)?;
-        sync_directory(&parent)
-    })();
-    if result.is_err() {
-        let _ = fs::remove_file(&temp);
-    }
-    result
+    storage::atomic_bytes(path, bytes).map_err(skills_error)
 }
 
 pub fn sync_directory(path: &Path) -> Result<()> {
-    #[cfg(unix)]
-    {
-        File::open(path)?.sync_all()?;
+    storage::sync_directory(path).map_err(skills_error)
+}
+
+/// Shared refusals keep the invalid-input code; OS failures map as before.
+fn skills_error(error: std::io::Error) -> SkillsError {
+    match storage::refusal(&error) {
+        Some(message) => SkillsError::invalid(message),
+        None => error.into(),
     }
-    #[cfg(not(unix))]
-    {
-        let _ = path;
-    }
-    Ok(())
 }
 
 pub fn digest(bytes: &[u8]) -> String {

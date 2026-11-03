@@ -33,6 +33,53 @@ export interface AgentCapabilities {
   modes: Array<{ mode: "explore" | "ask" | "auto"; policy: string }>;
 }
 
+export type ModelProviderKind = "anthropic" | "openai-responses" | "openai-chat";
+
+/** A provider as the backend shows it: whether a key exists and its source, never the key. */
+export interface ModelProvider {
+  id: string;
+  name: string;
+  kind: ModelProviderKind;
+  baseUrl: string;
+  model: string | null;
+  storedKey: boolean;
+  keyEnv: string | null;
+  keySource: "environment" | "stored" | "none";
+  /** A key is available, or the base URL is local and may not need one. */
+  configured: boolean;
+}
+
+export interface ModelProviderList {
+  revision: number;
+  providers: ModelProvider[];
+}
+
+/** `key` keeps, replaces or clears the stored key; the backend never sends it back. */
+export interface ModelProviderInput {
+  id: string;
+  expectedRevision: number;
+  name: string;
+  kind: ModelProviderKind;
+  baseUrl: string;
+  model: string | null;
+  key: { action: "keep" } | { action: "set"; value: string } | { action: "clear" };
+  keyEnv: string | null;
+}
+
+export interface ModelProviderTestResult {
+  outcome:
+    | "ok"
+    | "key_missing"
+    | "auth_failed"
+    | "not_found"
+    | "rate_limited"
+    | "http_error"
+    | "invalid_response"
+    | "timeout"
+    | "unreachable";
+  httpStatus: number | null;
+}
+
 export interface AgentDiagnostic {
   capabilities?: AgentCapabilities;
   agentId: string;

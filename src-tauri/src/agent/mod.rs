@@ -3,7 +3,7 @@
 //! them and parses their output into `AgentEvent`s.
 //! Feature modules (Chat, Learn, …) use the re-exports below rather than the
 //! submodules; only the Tauri command registration in `lib.rs` reaches into
-//! `registry` and `diagnostics`.
+//! `registry`, `providers` and `diagnostics`.
 mod capabilities;
 pub(crate) mod diagnostics;
 mod error;
@@ -11,6 +11,7 @@ mod event;
 mod evidence;
 mod invocation;
 mod lifecycle;
+pub(crate) mod providers;
 pub(crate) mod registry;
 mod runner;
 mod stream;

@@ -1,4 +1,11 @@
-import type { AgentConfig, AgentConfigInput, AgentDiagnostic } from "../domain";
+import type {
+  AgentConfig,
+  AgentConfigInput,
+  AgentDiagnostic,
+  ModelProviderInput,
+  ModelProviderList,
+  ModelProviderTestResult,
+} from "../domain";
 import { TAURI_COMMANDS } from "./contract";
 import { invokeCommand } from "./tauriClient";
 
@@ -19,3 +26,13 @@ export const agentsApi = {
 export function agentCapabilities(diagnostics: AgentDiagnostic[], agentId: string) {
   return diagnostics.find((item) => item.agentId === agentId)?.capabilities;
 }
+
+/** API-key model providers shared by every executor; keys go in through `save` and never come back. */
+export const providersApi = {
+  list: () => invokeCommand<ModelProviderList>(TAURI_COMMANDS.providerList),
+  save: (input: ModelProviderInput) => invokeCommand<ModelProviderList>(TAURI_COMMANDS.providerSave, { input }),
+  remove: (providerId: string, expectedRevision: number) =>
+    invokeCommand<ModelProviderList>(TAURI_COMMANDS.providerDelete, { providerId, expectedRevision }),
+  /** One model-list request; the result is classified and never includes the upstream body. */
+  test: (providerId: string) => invokeCommand<ModelProviderTestResult>(TAURI_COMMANDS.providerTest, { providerId }),
+};

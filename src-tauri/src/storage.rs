@@ -8,6 +8,8 @@ use std::{
 };
 use tauri::{AppHandle, Manager};
 
+pub mod private;
+
 const RECENT_PROJECTS_FILE: &str = "recent-projects.json";
 const LOOM_GITIGNORE_PATTERN: &str = "/.loom/";
 static TEMP_FILE_SEQUENCE: AtomicU64 = AtomicU64::new(1);
@@ -197,7 +199,7 @@ fn config_dir_in(
         if !profile.is_absolute() {
             return Err("LOOM_PROFILE_DIR must be an absolute path".into());
         }
-        return crate::skills::files::private_directory(&profile).map_err(|error| error.message);
+        return private::private_directory(&profile).map_err(|error| error.to_string());
     }
     let dir = app_data_dir()?.join("loom");
     fs::create_dir_all(&dir)

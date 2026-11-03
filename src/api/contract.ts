@@ -21,6 +21,7 @@ import type {
 import type {
   AgentConfig,
   AgentDiagnostic,
+  ModelProviderList,
   AppSettings,
   ChatSession,
   ChatEvent,
@@ -62,6 +63,10 @@ export const TAURI_COMMANDS = {
   chatAbort: "chat_abort",
   setAgentEnabled: "set_agent_enabled",
   updateAgent: "update_agent",
+  providerList: "provider_list",
+  providerSave: "provider_save",
+  providerDelete: "provider_delete",
+  providerTest: "provider_test",
   exportDiagnosticBundle: "export_diagnostic_bundle",
   loadAppSettings: "load_app_settings",
   saveAppSettings: "save_app_settings",
@@ -361,6 +366,22 @@ export const MODEL_CONTRACT_SAMPLES = {
       ],
     },
   } satisfies AgentDiagnostic,
+  agentProviderList: {
+    revision: 1,
+    providers: [
+      {
+        id: "magpie",
+        name: "Magpie gateway",
+        kind: "openai-responses",
+        baseUrl: "http://127.0.0.1:8317/v1",
+        model: "gpt-5",
+        storedKey: false,
+        keyEnv: "MAGPIE_API_KEY",
+        keySource: "none",
+        configured: true,
+      },
+    ],
+  } satisfies ModelProviderList,
   skillsLibrary: {
     sources: [
       {

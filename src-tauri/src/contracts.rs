@@ -33,6 +33,10 @@ const COMMANDS: &[&str] = &[
     "chat_abort",
     "set_agent_enabled",
     "update_agent",
+    "provider_list",
+    "provider_save",
+    "provider_delete",
+    "provider_test",
     "export_diagnostic_bundle",
     "load_app_settings",
     "save_app_settings",
@@ -178,6 +182,7 @@ fn persisted_model_samples_round_trip_through_rust_types() {
     assert_model_sample::<crate::chat::ChatExportResult>(samples, "chatExportResult");
     assert_model_sample::<crate::chat::ChatMessagePart>(samples, "chatToolPart");
     assert_model_sample::<crate::agent::diagnostics::AgentDiagnostic>(samples, "agentDiagnostic");
+    assert_model_sample::<crate::agent::providers::ProviderList>(samples, "agentProviderList");
     assert_model_sample::<crate::learn::models::Study>(samples, "learnStudy");
     assert_model_sample::<crate::learn::models::Architecture>(samples, "learnArchitecture");
     assert_model_sample::<crate::learn::models::PageContent>(samples, "learnPageContent");

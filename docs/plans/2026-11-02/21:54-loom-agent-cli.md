@@ -1,7 +1,7 @@
 # Agent 调用层：无窗口 CLI 与 API Key 模式计划
 
 - 创建时间：2026-11-02 21:54，America/Los_Angeles；22:28 参考 magpie 修订（加入 API Key 模式，重排里程碑）。
-- 状态：A0 已完成（2026-11-03 02:04，已提交）；A1 起**待用户确认**（第 6 节开放问题未答）。
+- 状态：A0 已完成（2026-11-03 02:04，已提交）；A1 已完成（2026-11-03 06:34，已提交）。2026-11-03 用户接受第 6 节全部推荐答案（“Yes, do A1”），A2 起可按推荐实施。
 - 代码基线：`main` `93c36f9`。2026-11-03 复核：`90cf9f9..93c36f9` 只有 Learn 前端重设计（`d59679c`）、本计划入库（`e62f8fb`）和 Skills 截图（`93c36f9`），`src-tauri/src` 无改动，下文行号仍有效。复核按代码修正了 A1 的文件写入依赖、A3 的取消方式与 HTTP 流读取，并补上 `api` 执行器的配置校验与启动检查（见第 2 节新增行）。
 - 用户要求（2026-11-02）：
   1. 底层有一个 loom CLI，上层交互都能通过它与本机已安装的 Agent CLI 交互；
@@ -115,6 +115,17 @@ magpie 是 Go 单二进制：本地模型网关（`127.0.0.1:3425`，在 OpenAI 
 - `base_url` 校验：必须 https；http 只允许 loopback / 私网 / `.local`（覆盖 magpie 网关、Ollama、LM Studio）；这类地址允许无 key。
 - Tauri 命令：`provider_list` / `provider_save` / `provider_delete` / `provider_test`（`test` 只发一次最小请求，错误按分类返回，不回显上游正文），同时登记到 `contracts.rs` 的 `COMMANDS` 与 `src/api/contract.ts`。
 - 测试：权限位、revision 冲突、key 不出现在任何序列化输出、URL 校验正反例。
+
+完成记录（2026-11-03 06:34）：
+
+- 私有文件：新增 `storage/private.rs`（`resource_path`、`private_directory`、`regular_file`、0600 `atomic_bytes`、`sync_directory`，拒绝错误用 `Refusal` 标记）。`skills::files` 的同名函数改为包装它，`Refusal` 仍映射为 `InvalidInput`、系统错误映射不变；`storage::config_dir_in` 不再引用 `skills`。
+- `agent/providers.rs`：`providers.json`（`schemaVersion`/`revision`/`providers[]`，每项 `id`、`name`、`kind`、`baseUrl`、`model`、`apiKey`、`keyEnv`），放在 `global_config_dir` 下，与 `agents.json` 同目录。写入持 `providers.lock`（0600，`File::try_lock`）完成“读取 → revision 校验 → 原子写”；读取不加锁。`list_at`/`save_at`/`delete_at`/`resolve_at` 以配置目录为参数，A4 的 CLI 可直接用 `system_config_dir()`。
+- 密钥：`KeyChange` keep/set/clear；`KeySource` environment/stored/none。与第 3 节的“存储的 key，或环境变量名”二选一不同：两者可以同时配置，`keyEnv` 指向的变量有值时优先，否则回退到存储的 key（与 Skills 翻译的优先级一致）。`ProviderInput`、`KeyChange`、`ResolvedProvider` 不实现 `Debug`/`Serialize`；`Store` 的 `Debug` 只输出版本与 revision；存储解析失败只报“malformed”，不带 serde 原文。
+- `baseUrl`：https；http 只允许 `localhost`/`*.localhost`/`*.local`、IPv4 回环/私网/链路本地、IPv6 回环/ULA/链路本地；拒绝凭据、query、fragment；保存时去掉末尾 `/`。本地地址无 key 也算 `configured`。约定：Anthropic 的 Base URL 不含 `/v1`，OpenAI 两种协议含 `/v1`（与各 CLI 的环境变量约定一致，A2 注入时直接使用）。
+- `provider_test`：与计划“最小请求”的具体做法——发 `GET {base}/v1/models`（Anthropic，`x-api-key` + `anthropic-version`）或 `GET {base}/models`（OpenAI，Bearer），不消耗 token、不需要模型名；因此不验证所选模型是否存在。不跟随重定向，连接 10s、总 20s，响应上限 1 MiB；本地地址绕过 shell 代理。结果只有分类（ok / key_missing / auth_failed / not_found / rate_limited / http_error / invalid_response / timeout / unreachable）和 HTTP 状态码。
+- 契约：`provider_list`/`provider_save`/`provider_delete`/`provider_test` 登记到 `lib.rs`、`contracts.rs` `COMMANDS`、`contracts/tauri-contract.json`、`src/api/contract.ts`；新增 `agentProviderList` 线上样例（Rust 往返 + 前端深比较）；`src/domain/agent.ts` 增加 `ModelProvider*` 类型，`src/api/agents.ts` 增加 `providersApi`（A5 的 Settings 使用，本轮无 UI）。
+- 证据：`agent::providers` 9 项（权限位 0600、key 不出现在列表 JSON/`Debug`/错误、环境变量优先与回退、revision 冲突、持锁时写入被拒、非法输入不落盘、URL 正反例、本地 HTTP 假服务验证两种协议的请求头与失败分类）；`pnpm check` 通过（layer、Prettier、release docs、前端 150/150、build、fmt、clippy、Rust 395 passed / 35 ignored）。
+- 未做：CLI 从 stdin 读 key 属于 A4；Settings UI 属于 A5；provider 被 Agent 引用时的删除保护等 A2 加 `provider_id` 后再补。
 
 ### A2 模式 B：CLI + API Key 注入
 

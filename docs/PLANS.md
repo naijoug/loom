@@ -3,7 +3,7 @@
 ## 2026-11-02
 
 - 21:54-loom-agent-cli.md
-  > （A0 已完成（11-03 02:04，已提交）：无窗口配置目录与只读 Agent 加载；A1 起待用户确认。22:28 参考 magpie 修订；11-03 按 `93c36f9` 复核：私有文件写入先移到 `storage`、API 运行沿用取消闭包与操作守卫、用 `chunk()` 读流不改依赖、补 `api` 执行器校验与启动检查）`crate::agent` 拆成“执行器 × 模型来源”两维，支持三种模式：本地 CLI 自带登录（现状）、本地 CLI + API Key（按单次调用注入 Base URL/Key/模型，不改 CLI 全局配置、清理继承的同族环境变量）、直连 API（Anthropic / OpenAI Responses / OpenAI 兼容，首版无工具，先开放给 CLI 与 Discuss 纯文本轮次）。新增私有 `providers.json`（沿用 Skills 翻译的密钥约定，允许本机/内网 http 以接 magpie 网关）和无窗口 `loom-agent`（list/doctor/provider/run，NDJSON）；桌面继续走 Tauri IPC。A0 只读配置 → A1 provider/密钥 → A2∥A3 两种新模式 → A4 CLI → A5 Settings 设计与实现 → A6 门禁文档 → A7 真实验收。不做网关/failover，不读 CLI 订阅凭据。
+  > （A0 已完成（11-03 02:04，已提交）：无窗口配置目录与只读 Agent 加载；A1 已完成（11-03 06:34，已提交）：私有 `providers.json`、key 来源与 revision/锁、Base URL 规则、`provider_*` 四个命令与契约；用户已接受第 6 节推荐答案。22:28 参考 magpie 修订；11-03 按 `93c36f9` 复核：私有文件写入先移到 `storage`、API 运行沿用取消闭包与操作守卫、用 `chunk()` 读流不改依赖、补 `api` 执行器校验与启动检查）`crate::agent` 拆成“执行器 × 模型来源”两维，支持三种模式：本地 CLI 自带登录（现状）、本地 CLI + API Key（按单次调用注入 Base URL/Key/模型，不改 CLI 全局配置、清理继承的同族环境变量）、直连 API（Anthropic / OpenAI Responses / OpenAI 兼容，首版无工具，先开放给 CLI 与 Discuss 纯文本轮次）。新增私有 `providers.json`（沿用 Skills 翻译的密钥约定，允许本机/内网 http 以接 magpie 网关）和无窗口 `loom-agent`（list/doctor/provider/run，NDJSON）；桌面继续走 Tauri IPC。A0 只读配置 → A1 provider/密钥 → A2∥A3 两种新模式 → A4 CLI → A5 Settings 设计与实现 → A6 门禁文档 → A7 真实验收。不做网关/failover，不读 CLI 订阅凭据。
 
 - 21:36-learn-ui-redesign.md
   > （U1 两栏布局 / 切换器 / 进度弹层 / 更多菜单 / 窄窗口抽屉、U2 学习入口 / 已读状态 / 翻页 / 按页生成、U3 架构图层名上置 / 全名 / 悬停聚焦显示依赖 / 正文去重、U4 键盘 / 视觉矩阵 / 完整检查 / 真实学习资料只读渲染已完成；桌面端目视查看待用户确认）按用户桌面实测要求重设计 Learn：两栏布局（学习切换器 + 页面目录）、精简头部与进度弹层、Overview 学习入口与上一页/下一页、按页生成、架构图全名显示与悬停高亮依赖；只改前端与设计稿，不改 Rust、IPC 与已有学习资料，不新增依赖。U0 设计稿确认后再实施 U1–U4。
