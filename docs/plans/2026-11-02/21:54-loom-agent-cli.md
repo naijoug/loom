@@ -1,7 +1,7 @@
 # Agent 调用层：无窗口 CLI 与 API Key 模式计划
 
 - 创建时间：2026-11-02 21:54，America/Los_Angeles；22:28 参考 magpie 修订（加入 API Key 模式，重排里程碑）。
-- 状态：**待用户确认**，未开始实施。
+- 状态：A0 已完成（2026-11-03 02:04，已提交）；A1 起**待用户确认**（第 6 节开放问题未答）。
 - 代码基线：`main` `93c36f9`。2026-11-03 复核：`90cf9f9..93c36f9` 只有 Learn 前端重设计（`d59679c`）、本计划入库（`e62f8fb`）和 Skills 截图（`93c36f9`），`src-tauri/src` 无改动，下文行号仍有效。复核按代码修正了 A1 的文件写入依赖、A3 的取消方式与 HTTP 流读取，并补上 `api` 执行器的配置校验与启动检查（见第 2 节新增行）。
 - 用户要求（2026-11-02）：
   1. 底层有一个 loom CLI，上层交互都能通过它与本机已安装的 Agent CLI 交互；
@@ -96,7 +96,16 @@ magpie 是 Go 单二进制：本地模型网关（`127.0.0.1:3425`，在 OpenAI 
 - `storage.rs`：抽出 `system_config_dir()`（`LOOM_PROFILE_DIR` → `dirs::data_dir()/<tauri.conf identifier>/loom`），`global_config_dir(app)` 复用同一实现。
 - `agent/registry.rs`：新增 `read_agents_at(path)`：文件不存在时返回内存中的默认项；存在时读取、合并默认项、刷新 `available`，**不回写**。`load_agents(app)` 行为不变。
 - 测试：`system_config_dir()` 与 Tauri 路径相等；`read_agents_at` 不改文件、不创建文件。
-- 验证：`cargo test --manifest-path src-tauri/Cargo.toml agent::registry storage`。
+- 验证：`cargo test --manifest-path src-tauri/Cargo.toml --lib agent::registry`，再跑 `--lib storage::`（`cargo test` 只接受一个过滤词，原写法会报用法错误）。
+
+完成记录（2026-11-03 02:04）：
+
+- `storage.rs`：`global_config_dir(app)` 与新增 `system_config_dir()` 共用 `config_dir_in`（`LOOM_PROFILE_DIR` 分支不变）；无窗口路径由 `system_app_data_dir()` 按 `tauri.conf.json` 的 `identifier` 拼 `dirs::data_dir()`。`system_config_dir()` 暂无调用方，用 `#[expect(dead_code)]` 标注，A1 接入后编译器会要求删除。
+- `migrations.rs`：与计划的差异——`read_versioned_json` 遇到旧格式（裸数组或无 `schemaVersion`）会就地升级回写，只读读取做不到“不回写”。拆出 `decode_versioned_json`，新增 `read_versioned_json_without_upgrade`（只在内存中升级），原函数行为不变。
+- `agent/registry.rs`：新增 `read_agents_at(path)`；`load_agents_inner` 改为 `read_agents_at` + `save_agents`，行为与原来一致（旧格式升级仍由随后的 `save_agents` 落盘）。删除已无调用方的 `load_agent_store`。
+- 测试：`storage::tests::system_app_data_dir_matches_tauri_resolution`（mock app 设成本仓库 identifier，比对 `app_data_dir()`；不调用会创建目录的 `system_config_dir()`，以免测试写真实数据目录）；`agent::registry::tests::read_agents_at_returns_defaults_without_creating_the_store`、`read_agents_at_merges_defaults_without_rewriting_a_legacy_store`（字节、mtime、目录内文件数均不变）。
+- 证据：layer check、`cargo fmt --check`、`cargo clippy --all-targets --all-features -D warnings` 通过；`--lib` 下 registry 4 项、storage 6 项、migrations 4 项通过。全量 `cargo test` 两次各有 1 项 `tool_process::tests` 失败（不同用例），基线 `d1f700b` 全量两次中也有一次失败于 `tool_process::tests::deadlines_and_stderr_flood_are_bounded`，属既有负载下不稳定，与本次改动无关；单独重复运行均通过。
+- 已知限制：存储文件损坏或版本过新时，`incompatible_store_error` 仍会在旁边复制一份备份，只读读取也会触发这一写入；A1 实现 CLI 时再决定是否需要完全无写入的报错路径。
 
 ### A1 Provider 配置与密钥
 

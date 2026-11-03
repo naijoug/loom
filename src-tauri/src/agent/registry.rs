@@ -171,21 +171,28 @@ fn validate_input(input: &AgentConfigInput) -> Result<(), String> {
 pub(super) fn load_agents_inner<R: tauri::Runtime>(
     app: &AppHandle<R>,
 ) -> Result<Vec<AgentConfig>, String> {
-    let path = agents_path(app)?;
+    let agents = read_agents_at(&agents_path(app)?)?;
+    save_agents(app, &agents)?;
 
+    Ok(agents)
+}
+
+/// Returns what `load_agents` would return without writing the store, so a
+/// headless reader cannot race or rewrite the desktop app's agents file.
+pub(crate) fn read_agents_at(path: &Path) -> Result<Vec<AgentConfig>, String> {
     if !path.exists() {
-        let agents = discover_default_agents();
-        save_agents(app, &agents)?;
-        return Ok(agents);
+        return Ok(discover_default_agents());
     }
 
-    let mut agents = load_agent_store(&path)?;
+    let mut agents: Vec<AgentConfig> = migrations::read_versioned_json_without_upgrade(
+        path,
+        "agents",
+        AGENT_STORE_SCHEMA_VERSION,
+    )?;
     merge_missing_default_agents(&mut agents);
     for agent in &mut agents {
         agent.available = command_available(agent);
     }
-    save_agents(app, &agents)?;
-
     Ok(agents)
 }
 
@@ -195,10 +202,6 @@ pub(super) fn save_agents<R: tauri::Runtime>(
 ) -> Result<(), String> {
     super::diagnostics::forget_startable(None);
     save_agent_store(&agents_path(app)?, agents)
-}
-
-pub(super) fn load_agent_store(path: &Path) -> Result<Vec<AgentConfig>, String> {
-    migrations::read_versioned_json(path, "agents", AGENT_STORE_SCHEMA_VERSION)
 }
 
 pub(super) fn save_agent_store(path: &Path, agents: &[AgentConfig]) -> Result<(), String> {
@@ -487,6 +490,57 @@ pub(super) fn redact_bearer_tokens(input: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::now_ms;
+    use std::fs;
+
+    fn test_root(label: &str) -> PathBuf {
+        let root = std::env::temp_dir().join(format!("loom-registry-{label}-{}", now_ms()));
+        fs::create_dir_all(&root).unwrap();
+        root
+    }
+    #[test]
+    fn read_agents_at_returns_defaults_without_creating_the_store() {
+        let root = test_root("missing");
+        let path = root.join("config").join(AGENTS_FILE);
+
+        let agents = read_agents_at(&path).unwrap();
+
+        let ids = |agents: &[AgentConfig]| -> Vec<String> {
+            agents.iter().map(|agent| agent.id.clone()).collect()
+        };
+        assert_eq!(ids(&agents), ids(&discover_default_agents()));
+        assert!(!root.join("config").exists());
+        fs::remove_dir_all(root).unwrap();
+    }
+    #[test]
+    fn read_agents_at_merges_defaults_without_rewriting_a_legacy_store() {
+        let root = test_root("legacy");
+        let path = root.join(AGENTS_FILE);
+        let mut claude = discover_default_agents()
+            .into_iter()
+            .find(|agent| agent.id == "agent-claude")
+            .unwrap();
+        claude.command = "/custom/claude".into();
+        claude.available = true;
+        // A bare array is the pre-versioning layout that `load_agents` upgrades in place.
+        let original = serde_json::to_string(&vec![claude]).unwrap();
+        fs::write(&path, &original).unwrap();
+        let modified = fs::metadata(&path).unwrap().modified().unwrap();
+
+        let agents = read_agents_at(&path).unwrap();
+
+        let claude = agents
+            .iter()
+            .find(|agent| agent.id == "agent-claude")
+            .unwrap();
+        assert_eq!(claude.command, "/custom/claude");
+        assert!(!claude.available);
+        assert!(agents.iter().any(|agent| agent.id == "agent-codex"));
+        assert_eq!(fs::read_to_string(&path).unwrap(), original);
+        assert_eq!(fs::metadata(&path).unwrap().modified().unwrap(), modified);
+        assert_eq!(fs::read_dir(&root).unwrap().count(), 1);
+        fs::remove_dir_all(root).unwrap();
+    }
     #[test]
     fn defaults_include_opencode_and_preserve_command_overrides() {
         let mut agents = discover_default_agents();

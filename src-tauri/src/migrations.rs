@@ -17,6 +17,34 @@ pub fn read_versioned_json<T>(path: &Path, kind: &str, current_version: u32) -> 
 where
     T: DeserializeOwned + Serialize,
 {
+    let (data, needs_upgrade) = decode_versioned_json(path, kind, current_version)?;
+    if needs_upgrade {
+        write_versioned_json(path, current_version, &data)?;
+    }
+    Ok(data)
+}
+
+/// Readers outside the desktop app must not rewrite stores the app owns,
+/// so a legacy document is upgraded in memory only.
+pub fn read_versioned_json_without_upgrade<T>(
+    path: &Path,
+    kind: &str,
+    current_version: u32,
+) -> Result<T, String>
+where
+    T: DeserializeOwned,
+{
+    decode_versioned_json(path, kind, current_version).map(|(data, _)| data)
+}
+
+fn decode_versioned_json<T>(
+    path: &Path,
+    kind: &str,
+    current_version: u32,
+) -> Result<(T, bool), String>
+where
+    T: DeserializeOwned,
+{
     let content = fs::read_to_string(path)
         .map_err(|error| format!("failed to read {}: {error}", path.display()))?;
     let document = serde_json::from_str::<Value>(&content)
@@ -43,10 +71,7 @@ where
     let data = serde_json::from_value::<T>(payload).map_err(|error| {
         incompatible_store_error(path, kind, format!("invalid payload: {error}"))
     })?;
-    if needs_upgrade {
-        write_versioned_json(path, current_version, &data)?;
-    }
-    Ok(data)
+    Ok((data, needs_upgrade))
 }
 
 pub fn write_versioned_json<T>(path: &Path, current_version: u32, data: &T) -> Result<(), String>

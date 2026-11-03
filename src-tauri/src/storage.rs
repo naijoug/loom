@@ -157,6 +157,39 @@ fn recent_projects_path<R: tauri::Runtime>(app: &AppHandle<R>) -> Result<PathBuf
 }
 
 pub fn global_config_dir<R: tauri::Runtime>(app: &AppHandle<R>) -> Result<PathBuf, String> {
+    config_dir_in(|| {
+        app.path()
+            .app_data_dir()
+            .map_err(|error| format!("failed to resolve app data directory: {error}"))
+    })
+}
+
+/// Same directory as `global_config_dir`, resolved without an `AppHandle` so
+/// headless entry points share the desktop's agents and settings.
+#[expect(
+    dead_code,
+    reason = "consumed by the loom-agent binary in milestone A1"
+)]
+pub fn system_config_dir() -> Result<PathBuf, String> {
+    config_dir_in(system_app_data_dir)
+}
+
+/// Mirrors Tauri's `app_data_dir()`: the platform data directory joined with
+/// the bundle identifier.
+fn system_app_data_dir() -> Result<PathBuf, String> {
+    let config: Value = serde_json::from_str(include_str!("../tauri.conf.json"))
+        .map_err(|error| format!("invalid bundled application configuration: {error}"))?;
+    let identifier = config["identifier"]
+        .as_str()
+        .ok_or("bundled application configuration has no identifier")?;
+    Ok(dirs::data_dir()
+        .ok_or("failed to resolve app data directory")?
+        .join(identifier))
+}
+
+fn config_dir_in(
+    app_data_dir: impl FnOnce() -> Result<PathBuf, String>,
+) -> Result<PathBuf, String> {
     // An explicit profile lets native acceptance use disposable projects and
     // settings without replacing HOME or changing the Skills coordination domain.
     if let Some(profile) = std::env::var_os("LOOM_PROFILE_DIR") {
@@ -166,11 +199,7 @@ pub fn global_config_dir<R: tauri::Runtime>(app: &AppHandle<R>) -> Result<PathBu
         }
         return crate::skills::files::private_directory(&profile).map_err(|error| error.message);
     }
-    let dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|error| format!("failed to resolve app data directory: {error}"))?
-        .join("loom");
+    let dir = app_data_dir()?.join("loom");
     fs::create_dir_all(&dir)
         .map_err(|error| format!("failed to create app data directory: {error}"))?;
     Ok(dir)
@@ -217,6 +246,19 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn system_app_data_dir_matches_tauri_resolution() {
+        let mut context = tauri::test::mock_context(tauri::test::noop_assets());
+        let config: Value = serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
+        context.config_mut().identifier = config["identifier"].as_str().unwrap().to_string();
+        let app = tauri::test::mock_builder().build(context).unwrap();
+
+        assert_eq!(
+            app.path().app_data_dir().unwrap(),
+            system_app_data_dir().unwrap()
+        );
+    }
 
     fn project_summary(id: &str, path: &str) -> ProjectSummary {
         ProjectSummary {
