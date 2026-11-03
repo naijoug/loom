@@ -16,15 +16,16 @@ global.IS_REACT_ACT_ENVIRONMENT=true;
 const key=(k,mods={})=>({key:k,metaKey:false,ctrlKey:false,altKey:false,shiftKey:false,isComposing:false,...mods});
 
 test('the registry lists only delivered features, Chat first and mounted from startup',()=>{
- assert.deepEqual(FEATURES.map(feature=>feature.id),['chat','learn','research']);
- assert.deepEqual(FEATURES.map(feature=>feature.keepMounted),[true,false,false]);
+ assert.deepEqual(FEATURES.map(feature=>feature.id),['chat','learn','research','discuss']);
+ assert.deepEqual(FEATURES.map(feature=>feature.keepMounted),[true,false,false,false]);
 });
 
 test('Cmd+1…4 follow rail order and Cmd+, opens Settings; other chords are ignored',()=>{
  assert.equal(shortcutView(key('1',{metaKey:true}),true),'chat');
  assert.equal(shortcutView(key('2',{metaKey:true}),true),'learn');
  assert.equal(shortcutView(key('3',{metaKey:true}),true),'research');
- assert.equal(shortcutView(key('4',{metaKey:true}),true),null);
+ assert.equal(shortcutView(key('4',{metaKey:true}),true),'discuss');
+ assert.equal(shortcutView(key('5',{metaKey:true}),true),null);
  assert.equal(shortcutView(key(',',{metaKey:true}),true),'settings');
  assert.equal(shortcutView(key('2',{ctrlKey:true}),true),null);
  assert.equal(shortcutView(key('2',{ctrlKey:true}),false),'learn');
@@ -61,7 +62,7 @@ test('the rail switches features without remounting Chat or losing its draft',as
  await act(async()=>root.render(React.createElement(ThemeProvider,null,React.createElement(AppStateProvider,{initialStateOverride:{...initialAppState,projects:{current:project,recent:[project]},app:{...initialAppState.app,activeProjectId:'p'}}},React.createElement(AppContent)))));
  await settle();
  const rail=document.querySelector('[data-testid="activity-rail"]');
- assert.deepEqual([...rail.querySelectorAll('.activity-rail-item')].map(item=>item.getAttribute('aria-label')),['Chat (Ctrl+1)','Learn (Ctrl+2)','Research (Ctrl+3)','Settings (Ctrl+,)']);
+ assert.deepEqual([...rail.querySelectorAll('.activity-rail-item')].map(item=>item.getAttribute('aria-label')),['Chat (Ctrl+1)','Learn (Ctrl+2)','Research (Ctrl+3)','Discuss (Ctrl+4)','Settings (Ctrl+,)']);
  const current=()=>rail.querySelector('[aria-current="page"]').getAttribute('aria-label');
  assert.equal(current(),'Chat (Ctrl+1)');
  // The Chat sidebar keeps only the project and session tree.

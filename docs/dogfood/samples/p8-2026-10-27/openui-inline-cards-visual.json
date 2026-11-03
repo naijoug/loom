@@ -1,0 +1,17 @@
+{
+  "status": "passed",
+  "kind": "synthetic-web-only",
+  "externalRequests": 0,
+  "checks": [
+    "off by default: openui-lang stays a code block",
+    "Settings > Experiments switch enables cards",
+    "valid card renders",
+    "invalid card falls back to source with notice",
+    "insert fills the draft without sending",
+    "source/card toggle",
+    "dark theme and zh-CN",
+    "700px narrow window",
+    "no horizontal overflow",
+    "no external network requests"
+  ]
+}

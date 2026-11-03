@@ -1,0 +1,11 @@
+{
+  "status": "passed",
+  "kind": "synthetic-web-only",
+  "checks": [
+    "en-light: rail 52px, current item marked, Cmd/Ctrl+2, Cmd/Ctrl+3, Cmd/Ctrl+4 and Cmd/Ctrl+, switch, no horizontal overflow",
+    "en-dark: rail 52px, current item marked, Cmd/Ctrl+2, Cmd/Ctrl+3, Cmd/Ctrl+4 and Cmd/Ctrl+, switch, no horizontal overflow",
+    "zh-light: rail 52px, current item marked, Cmd/Ctrl+2, Cmd/Ctrl+3, Cmd/Ctrl+4 and Cmd/Ctrl+, switch, no horizontal overflow",
+    "zh-dark: rail 52px, current item marked, Cmd/Ctrl+2, Cmd/Ctrl+3, Cmd/Ctrl+4 and Cmd/Ctrl+, switch, no horizontal overflow",
+    "S6: open session and unsent draft survive Learn and back"
+  ]
+}

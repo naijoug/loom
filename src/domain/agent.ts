@@ -39,7 +39,7 @@ export interface AgentCapabilities {
   toolEvents: boolean;
   nativeResume: boolean;
   inlineCards: boolean;
-  /** Accepts a per-invocation `--model`; only Learn exposes it today. */
+  /** Accepts a per-invocation model across Chat, Learn, Research and Discuss. */
   modelSelection?: boolean;
   modes: Array<{ mode: "explore" | "ask" | "auto"; policy: string }>;
 }

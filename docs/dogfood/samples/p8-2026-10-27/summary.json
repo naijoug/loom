@@ -1,0 +1,79 @@
+{
+  "startedDate": "2026-10-27",
+  "completedDate": "2026-10-28",
+  "baseline": "1ff6e6bf5ce3c531f7a3ca7271e8e01832d0770b",
+  "worktree": "P7 + P8; uncommitted",
+  "checks": {
+    "pnpm check": {
+      "status": "passed",
+      "exitCode": 0,
+      "frontend": 145,
+      "rust": 322,
+      "ignored": 30
+    },
+    "pnpm tauri build --bundles app": {
+      "status": "passed",
+      "exitCode": 0
+    },
+    "pnpm tauri build --no-bundle": {
+      "status": "passed",
+      "exitCode": 0
+    },
+    "pnpm smoke:visual": {
+      "status": "passed",
+      "exitCode": 0,
+      "kind": "synthetic-web-only"
+    }
+  },
+  "native": "see native-observations.json; real CLI plus native GUI",
+  "remainingRisk": "One blank WebView on restart, root cause unknown; subsequent restarts succeeded without data/code changes",
+  "notPerformed": [
+    "distribution signing/notarization/upgrade",
+    "forced crash/power-loss GUI test",
+    "new full Learn generation",
+    "permanent UI deletion"
+  ],
+  "cleanup": "debug.sh stop completed after smoke",
+  "artifactSha256": "90763587adf7b84e2831641e77c57024ade5cc7c0d3964303ac4accf687bd618",
+  "files": {
+    "native-chat.json": "a0a5dd20c945bfff08532cef4d510d424d6edd2e00f1f54eaa0e105fec44f0bd",
+    "simple-chat-visual.json": "ad7a348fa3335f3bc241588aac6586ca50a8b35bba42a687977780a20c5e4756",
+    "bundle.txt": "27f3d8292fedfafa01677a0c61451219b3898487701ee55603d37b8d238e871f",
+    "chat-restart-native.txt": "17d84c986efff453028a9655491586566f1a98e9c4efc2c9a582921d1cc83fd5",
+    "native-research-jobs.json": "961f7e51228e1d41f02a0cedf2097520251a7c394b3110096676f46a46d80fb5",
+    "check.txt": "096e80bb35b23f23b329fd767f64ff39b170056ecb39340fbb6c0322400cefd3",
+    "chat-after-switch.txt": "9db1af3357aaa37c5cab7510d8ba74498ec1a4827f40974f2b14949e0409c288",
+    "native-observations.json": "39e77afef1e156939631c6ea44d9eaa8af6f16dd0c49f54687eaf0ce18f5f1a1",
+    "activity-rail-visual.json": "dfe0943aab8e42889e3d7a476d49aafdf0a38f6aebc114103bfc59444e4b5737",
+    "desktop-launch.txt": "621ce9a7ae3ca8600b9e133a2af7ac4da855ce16ab8023449ffabe191106bdcc",
+    "skills-visual.json": "4170f9c2abc45e5431eebb95bccfb65f525363e6411bc3c9a6faadd2a304679f",
+    "starting-worktree.json": "07550fd0faef4591ac9d00a87175fc7587f13f9e1864b635211a69dada3122a6",
+    "research-interrupted-native.txt": "15347babb1785eb939e417c2560e9ce7691fc2ef7e4c33ab709f777a6f3f360b",
+    "build.txt": "37b5eefe7871c24dc6ff13a6e0c5087d84a899d86d7237b1e2e9e761b1f95cf1",
+    "research-recovered-native.txt": "97910929747cc8e77c362b28f3690cfee1f31f5352351af6cdc8faf3d417a4bf",
+    "native-discussion.json": "4c8ea1bd50bb1abff7e98624cf13f86beb3150f1de0988082c691ffe51efcb38",
+    "learn-visual.json": "c001cc7af1ab2fba399872fcac90270e06d818884ade727b4e6e3ff7d6a53b36",
+    "discuss-restart-old-attempt.txt": "ef82b6088ee07687fe38e6d96312953157aee1b39fb5bbfeeca470b825bd6995",
+    "research-visual.json": "adc4ad88c3ad9786cb5721bb20c4b413796e8c333e1a3ca5157fb17db41b740b",
+    "learn-source-native.txt": "6856f92fcdb3642b1218c712be428c86aa14cadf798191cfeb08beb291dba9af",
+    "discuss-visual.json": "2c4fde3f4af33cddb5e7521c1c116bbe3dd207162367a80ff05c6ee57ea12fad",
+    "visual.txt": "666375c669c1b48cce19ae0461d3e4945916d325889a0ff2ea6b8161f92f3cb2",
+    "native-research.json": "266b91b64bf110d71eeefb2900f37c6953c2daa492e0af108c9433229beb0348",
+    "native-discuss-jobs.json": "cc6a95c9dcffbee835757b3425a969fb8c2a2cd34a12d2c7e76e20fa4372fdc0",
+    "openui-inline-cards-visual.json": "8d53d59252cf71cae44f54ad04e9ac04da8cb52da6f7bb912f9722bcb1d5df66"
+  },
+  "implementationSha256": {
+    "src-tauri/src/agent/lifecycle.rs": "093e49de3d335f8cd18b493a22235ef001d3f1d795c9aac015bba9273ccdc667",
+    "src-tauri/src/agent/mod.rs": "102f98e552bb2423716b45381e77eeb42c52ec3263f74ae545f4be27c4e0dcaf",
+    "src-tauri/src/chat/mod.rs": "e68658447d49fa4886876321e393b56966d79678845ad257d6ef5a80d8ff0857",
+    "src-tauri/src/chat/shutdown.rs": "aa461791088ab0f3e0b32efa1df54897750d3cefceb708918f6d35e56ea08e14",
+    "src-tauri/src/chat/runtime.rs": "d0b359d51bb3d2b69199e4e1018f64f0119e5fd174a7257fb36aa798bb2c2c72",
+    "src-tauri/src/chat/service.rs": "64522dd879c0eca5d2a963dda93297622eacbb54884108d433d32ed7d092b4fd",
+    "src-tauri/src/chat/repository.rs": "7e4ad3dda236195cf9cddc00d4a45621b586fe5fe3dda3b91308c001cccc931f",
+    "src-tauri/src/learn/jobs.rs": "eaa00e4ffb572c11554cab44a50a192f0e6e493f5ce309b46b92f4f92d40d570",
+    "src-tauri/src/research/jobs.rs": "31ca8c4b783e285b5422b5ae641db52d917cf8ef1f71b933def7c5757917549d",
+    "scripts/check-layers.mjs": "8f202891f7b967abd09e8982c6b09d2b758692d674d98c759ff3ae631f373e88",
+    "scripts/lib/rust-production.mjs": "ff43acfbf0f406b30acfa3eeead724be6b0cdccfdbd6728984765f55930487c6",
+    "tests/unit/layerCheck.test.cjs": "e2b61a6fe6d47cbba5ad517f8c8e87c3eb166f6c376d621f62243e11d3f9efa7"
+  }
+}

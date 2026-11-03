@@ -5,7 +5,7 @@ use super::{ChatMessagePart, ChatStreamEvent, ChatTurnOutcome};
 pub(crate) use crate::agent::{Limits, Observation};
 use crate::{
     agent::{self, AgentEvent, PreparedAgentInvocation, RunSpec},
-    process_supervisor::{ProcessKind, ProcessOwner},
+    agent::{ProcessKind, ProcessOwner},
 };
 
 pub(crate) struct Request {

@@ -1,0 +1,165 @@
+Window: "Loom", App: Loom.
+0 standard window Loom, Secondary Actions: Raise
+	1 scroll area
+		2 HTML content Description: Loom, URL: tauri://localhost
+			3 container Features
+				4 button Chat (⌘1)
+				5 button Learn (⌘2)
+				6 button Research (⌘3)
+				7 button Discuss (⌘4)
+				8 button Settings (⌘,)
+			9 container
+				10 text Studies
+				11 toggle button New study, Value: off
+				12 container Studies
+					13 content list
+						14 button SWE-agent/mini-swe-agent 2/13
+			15 container
+				16 heading SWE-agent/mini-swe-agent, Value: 1
+					17 text SWE-agent / mini-swe-agent
+				18 text 04d809ceab  ·  Codex
+				19 button Generate remaining (11)
+				20 toggle button Browse source, Value: on
+				21 toggle button Run logs, Value: off
+				22 button Open on GitHub
+				23 button Delete study
+				24 container Progress
+					25 container
+						26 text Download Done
+					27 container
+						28 text Inventory Done
+					29 container
+						30 text Architecture Done
+					31 text 2/13 pages
+					32 text Covers 115/115 source files
+				33 container Inventory 2 binary, vendored or oversized file(s) excluded
+				34 container Wiki
+					35 content list
+						36 button Overview
+						37 button Architecture
+					38 heading Level 1 · Basics, Value: 3
+						39 text Level 1 · Basics
+					40 content list
+						41 button Application composition and command dispatch Not generated
+						42 button Component contracts and shared support Not generated
+					43 heading Level 2 · Core, Value: 3
+						44 text Level 2 · Core
+					45 content list
+						46 button Configuration resolution and prompt templates Not generated
+						47 button Agent lifecycle and interactive control Not generated
+						48 button Language model adapters and accounting Not generated
+						49 button Command execution backends Not generated
+					50 heading Level 3 · Deep dive, Value: 3
+						51 text Level 3 · Deep dive
+					52 content list
+						53 button Action parsing and message conversion Not generated
+						54 button Benchmark orchestration and result collection Not generated
+						55 button Trajectory browsing interface Not generated
+						56 button Tests, documentation, and project tooling Not generated
+					57 content list
+						58 button Glossary Not generated
+				59 container mini-swe-agent — Overview
+					60 heading mini-swe-agent — Overview, Value: 1
+						61 text mini-swe-agent — Overview
+					62 text mini-swe-agent is a Python software engineering agent that uses language models and shell commands to solve programming tasks. Its architecture separates agent control flow, model communication, and command execution through small protocols. It provides an interactive CLI, benchmark runners, configurable prompts, and a terminal viewer for saved trajectories.
+					63 text A run script combines configuration with command-line options and constructs a model, an execution environment, and an agent. The agent renders initial prompts, queries the model, executes the returned actions, and adds formatted observations to the conversation. This loop continues until submission, a configured limit, or an error ends execution. When an output path is configured, the agent saves conversation messages, component settings, costs, and exit information as a JSON trajectory after each iteratio
+					64 text The implementation lives under src/minisweagent/. The agents/ directory owns orchestration and interactive behavior, models/ contains provider adapters and message conversion utilities, and environments/ supplies local, container, and remote execution backends. The config/ directory holds configuration resolution and prompt presets. The run/ directory contains application composition, benchmark orchestration, configuration commands, and trajectory inspection. Tests mirror these responsibilities, while docs/
+					65 heading Tech stack, Value: 2
+						66 text Tech stack
+					67 text Python 3.10+ and typing protocols · Pydantic 2 configuration models · Typer command-line interfaces · Rich, Textual, and prompt_toolkit terminal interfaces · YAML and Jinja2 templates · LiteLLM, OpenAI SDK, Requests, and optional Portkey SDK · Tenacity retries · Local subprocesses, Docker, Singularity, Bubblewrap, SWE-ReX, Modal, and Contree execution backends · Hugging Face Datasets and concurrent.futures · pytest, setuptools, and MkDocs Material
+					68 heading Entry points, Value: 2
+						69 text Entry points
+					70 content list
+						71 container — Invokes the primary Typer application for python -m minisweagent.
+							72 list marker •
+							73 button main.py:7, Help: src/minisweagent/__main__.py#L7-L7
+							74 text  — Invokes the primary Typer application for python -m minisweagent.
+						75 container — Defines the command callback used by the mini and mini-swe-agent console applications to assemble components and run a task.
+							76 list marker •
+							77 button mini.py:55, Help: src/minisweagent/run/mini.py#L55-L55
+							78 text  — Defines the command callback used by the mini and mini-swe-agent console applications to assemble components and run a task.
+						79 container — Defines the minimal example command that directly combines DefaultAgent, LitellmModel, and LocalEnvironment.
+							80 list marker •
+							81 button hello_world.py:21, Help: src/minisweagent/run/hello_world.py#L21-L21
+							82 text  — Defines the minimal example command that directly combines DefaultAgent, LitellmModel, and LocalEnvironment.
+						83 container — Implements the installed mini-extra and mini-e entry function and dispatches utility and benchmark subcommands.
+							84 list marker •
+							85 button mini_extra.py:35, Help: src/minisweagent/run/utilities/mini_extra.py#L35-L35
+							86 text  — Implements the installed mini-extra and mini-e entry function and dispatches utility and benchmark subcommands.
+						87 container — Defines the SWE-bench batch command that selects dataset instances and schedules concurrent runs.
+							88 list marker •
+							89 button swebench.py:202, Help: src/minisweagent/run/benchmarks/swebench.py#L202-L202
+							90 text  — Defines the SWE-bench batch command that selects dataset instances and schedules concurrent runs.
+						91 container — Defines the ProgramBench batch command for running tasks and collecting submissions.
+							92 list marker •
+							93 button programbench.py:122, Help: src/minisweagent/run/benchmarks/programbench.py#L122-L122
+							94 text  — Defines the ProgramBench batch command for running tasks and collecting submissions.
+						95 container — Defines the inspection command that discovers trajectory files and launches the Textual interface.
+							96 list marker •
+							97 button inspector.py:296, Help: src/minisweagent/run/utilities/inspector.py#L296-L296
+							98 text  — Defines the inspection command that discovers trajectory files and launches the Textual interface.
+					99 heading Learning path, Value: 2
+						100 text Learning path
+					101 heading L1 Big picture：Understand the composition, Value: 3
+						102 text L1 Big picture：Understand the composition
+					103 text Follow the smallest runnable example and identify the agent, model, and environment contracts.
+					104 content list
+						105 container
+							106 list marker 1
+							107 link Application composition and command dispatch, Value: tauri://localhost#
+						108 container
+							109 list marker 2
+							110 link Component contracts and shared support, Value: tauri://localhost#
+					111 heading L2 Core modules：Trace a complete task, Value: 3
+						112 text L2 Core modules：Trace a complete task
+					113 text Follow configuration into the agent loop, through a model query and command execution, and back into observations and saved trajectory state.
+					114 content list
+						115 container
+							116 list marker 1
+							117 link Configuration resolution and prompt templates, Value: tauri://localhost#
+						118 container
+							119 list marker 2
+							120 link Agent lifecycle and interactive control, Value: tauri://localhost#
+						121 container
+							122 list marker 3
+							123 link Language model adapters and accounting, Value: tauri://localhost#
+						124 container
+							125 list marker 4
+							126 link Command execution backends, Value: tauri://localhost#
+					127 heading L3 Internals：Explore adaptations and verification, Value: 3
+						128 text L3 Internals：Explore adaptations and verification
+					129 text Understand message conversion, benchmark orchestration, trajectory inspection, and the tests that establish expected behavior.
+					130 content list
+						131 container
+							132 list marker 1
+							133 link Action parsing and message conversion, Value: tauri://localhost#
+						134 container
+							135 list marker 2
+							136 link Benchmark orchestration and result collection, Value: tauri://localhost#
+						137 container
+							138 list marker 3
+							139 link Trajectory browsing interface, Value: tauri://localhost#
+						140 container
+							141 list marker 4
+							142 link Tests, documentation, and project tooling, Value: tauri://localhost#
+				143 container Source
+					144 container
+						145 toggle button Browse source, Value: off
+						146 container src/minisweagent/__main__.py
+							147 text src/minisweagent/__main__.py:7
+						148 button Close
+					149 container src/minisweagent/__main__.py
+						150 container
+							151 text #!/usr/bin/env python3 """This is what happens when you do `python -m minisweagent` or `pipx run mini-swe-agent`.""" from minisweagent.run.mini import app if __name__ == "__main__":     app()
+	152 close button
+	153 full screen button Help: this button also has an action to zoom the window, Secondary Actions: zoom the window
+	154 minimize button
+155 menu bar
+	156 Loom
+	157 File
+	158 Edit
+	159 View
+	160 Window
+	161 Help
+
+The focused UI element is 2 HTML content Description: Loom, URL: tauri://localhost

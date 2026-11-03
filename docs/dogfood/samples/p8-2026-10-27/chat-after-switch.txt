@@ -1,0 +1,86 @@
+Window: "Loom", App: Loom.
+0 standard window Loom, Secondary Actions: Raise
+	1 scroll area
+		2 HTML content Description: Loom, URL: tauri://localhost
+			3 container Features
+				4 button Chat (⌘1)
+				5 button Learn (⌘2)
+				6 button Research (⌘3)
+				7 button Discuss (⌘4)
+				8 button Settings (⌘,)
+			9 container Projects
+				10 button Collapse sidebar
+				11 search text field (settable) Search chats…
+					12 text Search chats…
+				13 text Projects
+				14 button Add project
+				15 container
+					16 button (expanded) project, Help: /private/var/folders/wh/8gkvgk297s392p974p39b0s40000gp/T/loom-p8-desktop-n4rw2_aq/project, Secondary Actions: Collapse
+					17 button New chat · project, Help: New chat
+					18 content list
+						19 button Read-only P8 native acceptance: explain bounded queues in… Codex, Help: P8 native acceptance: explain bounded queues in…
+					20 button (collapsed) P8 acceptance, Help: /var/folders/wh/8gkvgk297s392p974p39b0s40000gp/T/loom-p8-desktop-n4rw2_aq/project, Secondary Actions: Expand
+					21 button New chat · P8 acceptance, Help: New chat
+				22 toggle button Archived, Value: off
+			23 container
+				24 heading P8 native acceptance: explain bounded queues in…, Value: 1
+					25 text P8 native acceptance: explain bounded queues in…
+				26 button Export chat
+				27 summary More actions, Value: off
+				28 text P8 native acceptance: explain bounded queues in twelve short numbered points. Do not use tools, read files, or change anything. End with P8-CHAT-DONE.
+				29 content list
+					30 container A bounded queue holds a fixed maximum number of items.
+						31 list marker 1
+						32 text A bounded queue holds a fixed maximum number of items.
+					33 container Producers add items; consumers remove them.
+						34 list marker 2
+						35 text Producers add items; consumers remove them.
+					36 container Its capacity limits how many items can wait.
+						37 list marker 3
+						38 text Its capacity limits how many items can wait.
+					39 container When full, it cannot accept items normally.
+						40 list marker 4
+						41 text When full, it cannot accept items normally.
+					42 container Producers may block until space becomes available.
+						43 list marker 5
+						44 text Producers may block until space becomes available.
+					45 container Alternatively, additions may fail or time out.
+						46 list marker 6
+						47 text Alternatively, additions may fail or time out.
+					48 container Some queues drop items according to a defined policy.
+						49 list marker 7
+						50 text Some queues drop items according to a defined policy.
+					51 container These limits help prevent uncontrolled memory growth.
+						52 list marker 8
+						53 text These limits help prevent uncontrolled memory growth.
+					54 container Blocking creates backpressure, slowing producers.
+						55 list marker 9
+						56 text Blocking creates backpressure, slowing producers.
+					57 container Larger queues absorb bursts but can increase waiting time.
+						58 list marker 10
+						59 text Larger queues absorb bursts but can increase waiting time.
+					60 container Thread-safe queues coordinate concurrent producers and consumers.
+						61 list marker 11
+						62 text Thread-safe queues coordinate concurrent producers and consumers.
+					63 container Monitor queue depth, wait times, and dropped items.
+						64 list marker 12
+						65 text Monitor queue depth, wait times, and dropped items.
+				66 text P8-CHAT-DONE
+				67 button (collapsed) Completed · Execution logs · 32.9s, Secondary Actions: Expand
+				68 text entry area (settable) Message, Value: [text entry area: Message], Placeholder: Ask about this project…
+					69 text Ask about this project…
+				70 pop up button Select Agent
+				71 pop up button Permissions: Read-only, Help: Reads and explores without changing files
+				72 button (disabled) Send message, Help: Send message (Enter)
+	73 close button
+	74 full screen button Help: this button also has an action to zoom the window, Secondary Actions: zoom the window
+	75 minimize button
+76 menu bar
+	77 Loom
+	78 File
+	79 Edit
+	80 View
+	81 Window
+	82 Help
+
+The focused UI element is 2 HTML content Description: Loom, URL: tauri://localhost

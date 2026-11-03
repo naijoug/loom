@@ -1,6 +1,6 @@
 //! Graceful application exit. Only current in-memory ownership may be signalled.
 use super::repository::ChatRepository;
-use crate::process_supervisor::supervisor;
+use crate::agent;
 use std::{
     collections::{HashMap, HashSet},
     path::PathBuf,
@@ -112,23 +112,23 @@ fn flush_recovery() -> Result<(), String> {
 }
 
 pub(crate) async fn drain(budget: Budget) -> Result<(), String> {
-    supervisor().begin_shutdown()?;
+    agent::begin_shutdown()?;
     let started = tokio::time::Instant::now();
     let mut signalled = HashSet::new();
     loop {
         let active_chats = capture_and_cancel()?;
-        let (operations, processes) = supervisor().shutdown_snapshot()?;
+        let (operations, processes) = agent::shutdown_snapshot()?;
         let mut failures = Vec::new();
         for process in &processes {
             if signalled.insert(process.run_id.clone()) {
                 if let Err(error) =
-                    supervisor().request_stop(&process.run_id, super::STOP_REASON_SHUTDOWN)
+                    agent::request_stop(&process.run_id, super::STOP_REASON_SHUTDOWN)
                 {
                     failures.push(error);
                 }
             }
             if started.elapsed() >= budget.force_after {
-                if let Err(error) = supervisor().force_stop(&process.run_id) {
+                if let Err(error) = agent::force_stop(&process.run_id) {
                     failures.push(error);
                 }
             }
@@ -154,10 +154,10 @@ pub(crate) async fn drain(budget: Budget) -> Result<(), String> {
 }
 
 fn emergency_stop() {
-    let _ = supervisor().begin_shutdown();
-    if let Ok((_, processes)) = supervisor().shutdown_snapshot() {
+    let _ = agent::begin_shutdown();
+    if let Ok((_, processes)) = agent::shutdown_snapshot() {
         for process in processes {
-            let _ = supervisor().force_stop(&process.run_id);
+            let _ = agent::force_stop(&process.run_id);
         }
     }
 }
@@ -224,7 +224,7 @@ pub(crate) fn handle_event(app: &tauri::AppHandle, event: tauri::RunEvent) {
                 ExitAction::Start => {
                     api.prevent_exit();
                     // Close admission synchronously, before scheduling cleanup.
-                    let admission = supervisor().begin_shutdown();
+                    let admission = agent::begin_shutdown();
                     let app = app.clone();
                     tauri::async_runtime::spawn(async move {
                         let result = match admission {
@@ -254,6 +254,7 @@ pub(crate) fn handle_event(app: &tauri::AppHandle, event: tauri::RunEvent) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::process_supervisor::supervisor;
     use crate::{
         chat::{
             service::{self, tests::Fixture},

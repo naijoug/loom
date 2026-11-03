@@ -12,8 +12,8 @@ use crate::{
         self, AdapterInvocationRequest, AgentStage, Limits, MessagePart, Observation, RunSpec,
         STOP_REASON_ABORT, STOP_REASON_TIMEOUT,
     },
+    agent::{ProcessKind, ProcessOwner},
     models::{now_ms, AgentConfig},
-    process_supervisor::{ProcessKind, ProcessOwner},
 };
 use std::{
     sync::{
@@ -175,7 +175,7 @@ impl Job {
                     }
                 }
                 Err(error) => {
-                    let shutting_down = crate::process_supervisor::supervisor().is_shutting_down();
+                    let shutting_down = crate::agent::is_shutting_down();
                     let status = if shutting_down {
                         StageStatus::Interrupted
                     } else if error == CANCELLED || self.cancel.load(Ordering::Relaxed) {

@@ -1,0 +1,110 @@
+{
+  "date": "2026-10-27",
+  "baseline": "1ff6e6bf5ce3c531f7a3ca7271e8e01832d0770b",
+  "scope": "P7 worktree changes; not committed",
+  "real": {
+    "status": "passed",
+    "kind": "real-cli-process-not-native-desktop",
+    "project": null,
+    "codexVersion": "0.164.0",
+    "claudeVersion": "2.1.311",
+    "calls": 5,
+    "seconds": 136.69,
+    "toolCalls": 0,
+    "sourceDirectory": "/var/folders/wh/8gkvgk297s392p974p39b0s40000gp/T/loom-discuss-real-20261027-z6z81p5j/discuss/discussion-1793161712602-28980-0",
+    "runtime": {
+      "r1-p1": {
+        "status": "done",
+        "seconds": 47.346,
+        "exitCode": 0
+      },
+      "r1-p2": {
+        "status": "done",
+        "seconds": 29.351,
+        "exitCode": 0
+      },
+      "r2-p1": {
+        "status": "done",
+        "seconds": 37.064,
+        "exitCode": 0
+      },
+      "r2-p2": {
+        "status": "done",
+        "seconds": 44.393,
+        "exitCode": 0
+      },
+      "summary": {
+        "status": "done",
+        "seconds": 44.32,
+        "exitCode": 0
+      }
+    },
+    "round1Overlap": true,
+    "round2Overlap": true,
+    "roundBarrier": true,
+    "summaryBarrier": true
+  },
+  "visual": {
+    "status": "passed",
+    "kind": "synthetic-web-only"
+  },
+  "nativeDesktop": "not-tested",
+  "check": {
+    "status": "passed",
+    "command": "pnpm check",
+    "exitCode": 0,
+    "frontendPassed": 143,
+    "rustPassed": 322,
+    "rustIgnored": 30,
+    "failed": 0
+  },
+  "build": {
+    "status": "passed",
+    "command": "pnpm tauri build --no-bundle",
+    "exitCode": 0,
+    "artifact": "src-tauri/target/release/loom",
+    "notarized": false
+  },
+  "previewCleanup": "smoke EXIT trap ran debug.sh stop; log confirms stopped",
+  "files": {
+    "build.txt": "d5d77b4781c3d493be06f024cf6784ee359b861b3bb9f4ba2bdf8bcc7bb91c60",
+    "check-retry1.txt": "744862564032b5cb251ff437f85785fbcf2d2462af3304ad64d6360d8fcf3e00",
+    "check-sandbox.txt": "1703ea0eea2cb7b99b74f0918d6a0a1bfc018e33cd8024ba46efe38f9e8585ae",
+    "check.txt": "20c8bebed090322ecda104e4c4f5e7b3a74a07490b59a8e0bc214d3f0fc1f583",
+    "frontend-targeted.txt": "a632a9fee2730b460e9e481dd16ff32c7d7fb85ead679eeb34b6666675fced70",
+    "r1-p1.md": "45639b3ce3b7e8a4d9e04c2eafbdf5dee4a165a2980f8d2276f71ed6ba739dbc",
+    "r1-p2.md": "3cde675fd1ba0830895c70bcbb0568548960f2146433db9cee87befe6c8ff678",
+    "r2-p1.md": "8693c926febfbdc96dbaf762043d7499b5104bbadc1d499e9668682bd9966d5f",
+    "r2-p2.md": "3d1f285daacd86cc1382d97c0411be0f0cf20341a583aec85ac0ff728309f755",
+    "real-discussion.json": "0cd60c63860f58436fe57ea934fe28ca0aee485d5ca07308a1ce2d943b688ac1",
+    "real-jobs.json": "591ee73724911506d2c27baed292ee43c00b4f74607de4705572d4771f522c6d",
+    "real.txt": "1ffcb0d24b9650a6bc243812b3dd53563c513093b0226a4dee5ad4e4420b0fbf",
+    "summary.md": "57283ce0973f888bccf6fb9a7618afa91d4bc2f11685794b83a719c77e453e8a",
+    "visual.json": "2c4fde3f4af33cddb5e7521c1c116bbe3dd207162367a80ff05c6ee57ea12fad",
+    "visual.txt": "771b1b499771388bfc3516601fb83500bedfe46cb02adc94f2767f653fb04191",
+    "path-final.txt": "02c6a3c92419af36528a383d2e0341051704e07937bef206834464687ff8610f"
+  },
+  "implementationSha256": {
+    "scripts/discuss-smoke.mjs": "d5d3876c0789afa65a255bb54fc8e9d09cbaf0ffa7cf439b6c35f5747fc9db5a",
+    "src/api/discuss.ts": "2feee3573f713cdb56870524fc294ab869919d99f7c3def01f33585a884e50f8",
+    "src/features/discuss/DiscussPage.tsx": "12360189e28a04983df5506c2ea4829e693298ca3fcd9611469ae8158458a2f5",
+    "src/features/discuss/DiscussView.tsx": "0f0a3577d9106d9380e23a59d2e67ccb57c1cad3cfb8b80d106dddcacfd49653",
+    "src/features/discuss/NewDiscussForm.tsx": "c09feab3073dd01b77c93ac4d1205cfadf10e41e425bacf8580a5b8c03ed723e",
+    "src/features/discuss/discuss.css": "c2db7f3792d7fb5386e292e145a849205676e87770ad7dd53d3f95b2ba1fde73",
+    "src/features/discuss/index.ts": "38bc80db4ec7dc061c90cdfbf7c0618f63025b515c0c8b82ac1586a23942996f",
+    "src/features/discuss/preview.ts": "83af93bab802c38e8f85beb9b27160f8ff7331bfdbebea87547612a1c1b7fbdd",
+    "src/features/discuss/previewContext.ts": "81e2f370969de926e65c4a4d588fff2c57b52ef3ac6936eae4b4380984c5d2f2",
+    "src-tauri/src/discuss/commands.rs": "c83fe1d245a96fbbd756e128de35b5cbba6b68f08f3d0e046e13a27647f0e5c1",
+    "src-tauri/src/discuss/jobs.rs": "8da46bd102436a459e9a503ee0667f7e2c3bf8eb67164e5d4e389a4d98f6b9c3",
+    "src-tauri/src/discuss/mod.rs": "968a49972c0736e40a293aa72576d8d5cec25b2016937de30749bfa43f133b45",
+    "src-tauri/src/discuss/models.rs": "f6216869a36677e1cb62e0503634de20b843bdc6066ab6bc1e907b7d1e88b73f",
+    "src-tauri/src/discuss/prompt.rs": "92dea52edf9a4beb44372c5bfbfe6998aab4fcaffc720d7bbd055ecde88774b9",
+    "src-tauri/src/discuss/real_tests.rs": "bcd605dbe2c05646ab0e9d528f900e4a53a0cce68ec99cc152f8147a7e0ab5db",
+    "src-tauri/src/discuss/store.rs": "88c038fe8eae282c1a70a38fd2a1e60102d9822331586bed3c48bcd6957f41ee",
+    "src-tauri/src/discuss/tests.rs": "12a1b979a479eecb696c252a8e9eb30c0a11c0e2747a5198a474249677f64bfe"
+  },
+  "finalPathAssertion": {
+    "status": "passed",
+    "note": "Strengthened the symlink test to check the path guard directly; product code unchanged after the final check/build."
+  }
+}

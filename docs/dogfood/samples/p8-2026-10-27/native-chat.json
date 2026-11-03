@@ -1,0 +1,277 @@
+{
+  "id": "chat-1793170293796-2",
+  "projectPath": "/private/var/folders/wh/8gkvgk297s392p974p39b0s40000gp/T/loom-p8-desktop-n4rw2_aq/project",
+  "agentId": "agent-codex",
+  "title": "P8 native acceptance: explain bounded queues in…",
+  "permissionMode": "explore",
+  "messages": [
+    {
+      "id": "msg-1793170293972-5",
+      "role": "user",
+      "content": "P8 native acceptance: explain bounded queues in twelve short numbered points. Do not use tools, read files, or change anything. End with P8-CHAT-DONE.",
+      "status": "complete",
+      "createdAtMs": 1793170293972
+    },
+    {
+      "id": "msg-1793170293969-4",
+      "role": "assistant",
+      "content": "1. A bounded queue holds a fixed maximum number of items.\n2. Producers add items; consumers remove them.\n3. Its capacity limits how many items can wait.\n4. When full, it cannot accept items normally.\n5. Producers may block until space becomes available.\n6. Alternatively, additions may fail or time out.\n7. Some queues drop items according to a defined policy.\n8. These limits help prevent uncontrolled memory growth.\n9. Blocking creates backpressure, slowing producers.\n10. Larger queues absorb bursts but can increase waiting time.\n11. Thread-safe queues coordinate concurrent producers and consumers.\n12. Monitor queue depth, wait times, and dropped items.\n\nP8-CHAT-DONE",
+      "status": "complete",
+      "createdAtMs": 1793170293973
+    },
+    {
+      "id": "msg-1793170411172-8",
+      "role": "user",
+      "content": "P8 native stop test: write a detailed 100-point explanation of bounded queues. Do not use tools.",
+      "status": "complete",
+      "createdAtMs": 1793170411172
+    },
+    {
+      "id": "msg-1793170411138-7",
+      "role": "assistant",
+      "content": "（已停止）",
+      "status": "aborted",
+      "createdAtMs": 1793170411173
+    },
+    {
+      "id": "msg-1793170455881-11",
+      "role": "user",
+      "content": "Reply only P8-STOP-RECOVERED. Do not use tools.",
+      "status": "complete",
+      "createdAtMs": 1793170455881
+    },
+    {
+      "id": "msg-1793170455880-10",
+      "role": "assistant",
+      "content": "P8-STOP-RECOVERED",
+      "status": "complete",
+      "createdAtMs": 1793170455882
+    },
+    {
+      "id": "msg-1793171099254-3",
+      "role": "user",
+      "content": "After restarting Loom, reply only P8-RESTART-OK. Do not use tools.",
+      "status": "complete",
+      "createdAtMs": 1793171099254
+    },
+    {
+      "id": "msg-1793171099247-2",
+      "role": "assistant",
+      "content": "P8-RESTART-OK",
+      "status": "complete",
+      "createdAtMs": 1793171099255
+    }
+  ],
+  "sendReceipts": [
+    {
+      "clientRequestId": "9f846dec-79f0-433e-b63f-8f1b31cc14fa",
+      "turnId": "turn-1793170293969-3",
+      "userMessageId": "msg-1793170293972-5",
+      "assistantMessageId": "msg-1793170293969-4",
+      "requestedPermissionMode": "explore"
+    },
+    {
+      "clientRequestId": "9150c916-b3cc-4231-b4e7-a06686689902",
+      "turnId": "turn-1793170411138-6",
+      "userMessageId": "msg-1793170411172-8",
+      "assistantMessageId": "msg-1793170411138-7",
+      "requestedPermissionMode": "explore"
+    },
+    {
+      "clientRequestId": "698b02fb-1268-49c7-afaa-4ce95bb1b821",
+      "turnId": "turn-1793170455880-9",
+      "userMessageId": "msg-1793170455881-11",
+      "assistantMessageId": "msg-1793170455880-10",
+      "requestedPermissionMode": "explore"
+    },
+    {
+      "clientRequestId": "27b5f840-56e5-4d13-bc4f-6e921b853e2b",
+      "turnId": "turn-1793171099247-1",
+      "userMessageId": "msg-1793171099254-3",
+      "assistantMessageId": "msg-1793171099247-2",
+      "requestedPermissionMode": "explore"
+    }
+  ],
+  "turns": [
+    {
+      "id": "turn-1793170293969-3",
+      "clientRequestId": "9f846dec-79f0-433e-b63f-8f1b31cc14fa",
+      "userMessageId": "msg-1793170293972-5",
+      "assistantMessageId": "msg-1793170293969-4",
+      "invocation": {
+        "agentId": "agent-codex",
+        "adapterType": "codex_cli",
+        "program": "/Users/guojian/.npm-global/bin/codex",
+        "args": [
+          "exec",
+          "--json",
+          "--skip-git-repo-check",
+          "--cd",
+          "/private/var/folders/wh/8gkvgk297s392p974p39b0s40000gp/T/loom-p8-desktop-n4rw2_aq/project",
+          "--sandbox",
+          "read-only",
+          "--config",
+          "approval_policy=\"never\"",
+          "--",
+          "-"
+        ],
+        "cwd": "/private/var/folders/wh/8gkvgk297s392p974p39b0s40000gp/T/loom-p8-desktop-n4rw2_aq/project",
+        "permissionMode": "explore",
+        "stdinPrompt": true,
+        "outputMode": "codex_json",
+        "configFingerprint": "710b804da86be4ad271846c3772165d578857d60674e10de56f5da511ac35a89"
+      },
+      "status": "completed",
+      "acceptedAtMs": 1793170293972,
+      "startedAtMs": 1793170293981,
+      "finishedAtMs": 1793170326918,
+      "processId": 82558,
+      "exitCode": 0,
+      "terminationReason": null,
+      "errorSummary": null,
+      "stdoutLogRef": "runs/turn-1793170293969-3/stdout.log",
+      "stderrLogRef": "runs/turn-1793170293969-3/stderr.log"
+    },
+    {
+      "id": "turn-1793170411138-6",
+      "clientRequestId": "9150c916-b3cc-4231-b4e7-a06686689902",
+      "userMessageId": "msg-1793170411172-8",
+      "assistantMessageId": "msg-1793170411138-7",
+      "invocation": {
+        "agentId": "agent-codex",
+        "adapterType": "codex_cli",
+        "program": "/Users/guojian/.npm-global/bin/codex",
+        "args": [
+          "exec",
+          "--json",
+          "--skip-git-repo-check",
+          "--cd",
+          "/private/var/folders/wh/8gkvgk297s392p974p39b0s40000gp/T/loom-p8-desktop-n4rw2_aq/project",
+          "--sandbox",
+          "read-only",
+          "--config",
+          "approval_policy=\"never\"",
+          "resume",
+          "--json",
+          "--",
+          "01a18147-4794-7232-840d-42ecc4cb7db9",
+          "-"
+        ],
+        "cwd": "/private/var/folders/wh/8gkvgk297s392p974p39b0s40000gp/T/loom-p8-desktop-n4rw2_aq/project",
+        "permissionMode": "explore",
+        "stdinPrompt": true,
+        "outputMode": "codex_json",
+        "configFingerprint": "710b804da86be4ad271846c3772165d578857d60674e10de56f5da511ac35a89"
+      },
+      "status": "cancelled",
+      "acceptedAtMs": 1793170411172,
+      "startedAtMs": 1793170411192,
+      "finishedAtMs": 1793170427405,
+      "processId": 83331,
+      "exitCode": 0,
+      "terminationReason": "chat_abort",
+      "errorSummary": null,
+      "stdoutLogRef": "runs/turn-1793170411138-6/stdout.log",
+      "stderrLogRef": "runs/turn-1793170411138-6/stderr.log"
+    },
+    {
+      "id": "turn-1793170455880-9",
+      "clientRequestId": "698b02fb-1268-49c7-afaa-4ce95bb1b821",
+      "userMessageId": "msg-1793170455881-11",
+      "assistantMessageId": "msg-1793170455880-10",
+      "invocation": {
+        "agentId": "agent-codex",
+        "adapterType": "codex_cli",
+        "program": "/Users/guojian/.npm-global/bin/codex",
+        "args": [
+          "exec",
+          "--json",
+          "--skip-git-repo-check",
+          "--cd",
+          "/private/var/folders/wh/8gkvgk297s392p974p39b0s40000gp/T/loom-p8-desktop-n4rw2_aq/project",
+          "--sandbox",
+          "read-only",
+          "--config",
+          "approval_policy=\"never\"",
+          "resume",
+          "--json",
+          "--",
+          "01a18147-4794-7232-840d-42ecc4cb7db9",
+          "-"
+        ],
+        "cwd": "/private/var/folders/wh/8gkvgk297s392p974p39b0s40000gp/T/loom-p8-desktop-n4rw2_aq/project",
+        "permissionMode": "explore",
+        "stdinPrompt": true,
+        "outputMode": "codex_json",
+        "configFingerprint": "710b804da86be4ad271846c3772165d578857d60674e10de56f5da511ac35a89"
+      },
+      "status": "completed",
+      "acceptedAtMs": 1793170455881,
+      "startedAtMs": 1793170455887,
+      "finishedAtMs": 1793170483279,
+      "processId": 84074,
+      "exitCode": 0,
+      "terminationReason": null,
+      "errorSummary": null,
+      "stdoutLogRef": "runs/turn-1793170455880-9/stdout.log",
+      "stderrLogRef": "runs/turn-1793170455880-9/stderr.log"
+    },
+    {
+      "id": "turn-1793171099247-1",
+      "clientRequestId": "27b5f840-56e5-4d13-bc4f-6e921b853e2b",
+      "userMessageId": "msg-1793171099254-3",
+      "assistantMessageId": "msg-1793171099247-2",
+      "invocation": {
+        "agentId": "agent-codex",
+        "adapterType": "codex_cli",
+        "program": "/Users/guojian/.npm-global/bin/codex",
+        "args": [
+          "exec",
+          "--json",
+          "--skip-git-repo-check",
+          "--cd",
+          "/private/var/folders/wh/8gkvgk297s392p974p39b0s40000gp/T/loom-p8-desktop-n4rw2_aq/project",
+          "--sandbox",
+          "read-only",
+          "--config",
+          "approval_policy=\"never\"",
+          "resume",
+          "--json",
+          "--",
+          "01a18147-4794-7232-840d-42ecc4cb7db9",
+          "-"
+        ],
+        "cwd": "/private/var/folders/wh/8gkvgk297s392p974p39b0s40000gp/T/loom-p8-desktop-n4rw2_aq/project",
+        "permissionMode": "explore",
+        "stdinPrompt": true,
+        "outputMode": "codex_json",
+        "configFingerprint": "710b804da86be4ad271846c3772165d578857d60674e10de56f5da511ac35a89"
+      },
+      "status": "completed",
+      "acceptedAtMs": 1793171099254,
+      "startedAtMs": 1793171099284,
+      "finishedAtMs": 1793171128938,
+      "processId": 88418,
+      "exitCode": 0,
+      "terminationReason": null,
+      "errorSummary": null,
+      "stdoutLogRef": "runs/turn-1793171099247-1/stdout.log",
+      "stderrLogRef": "runs/turn-1793171099247-1/stderr.log"
+    }
+  ],
+  "createdAtMs": 1793170293796,
+  "updatedAtMs": 1793171128938,
+  "resumeCommand": "/Users/guojian/.npm-global/bin/codex resume 01a18147-4794-7232-840d-42ecc4cb7db9",
+  "resumeHandle": {
+    "version": 1,
+    "adapterType": "codex_cli",
+    "nativeSessionId": "01a18147-4794-7232-840d-42ecc4cb7db9",
+    "configFingerprint": "710b804da86be4ad271846c3772165d578857d60674e10de56f5da511ac35a89"
+  },
+  "turnStatus": "idle",
+  "status": "active",
+  "flagged": false,
+  "schemaVersion": 2,
+  "lastSeq": 21,
+  "revision": 21
+}

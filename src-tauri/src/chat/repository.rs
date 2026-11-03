@@ -726,7 +726,7 @@ impl ChatRepository {
         if active.contains_key(id) {
             return Err("a chat turn is already running for this session".into());
         }
-        if crate::process_supervisor::supervisor().is_shutting_down() {
+        if crate::agent::is_shutting_down() {
             return Err("Loom 正在退出，不能开始新回合。".into());
         }
         if session.status == "archived" {

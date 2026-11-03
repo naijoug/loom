@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "discussionId": "discussion-1793170642363-80554-0",
+  "title": "P8 native acceptance: compare bounded and unbounded queues for a small desktop app. No tools, browsi",
+  "topic": "P8 native acceptance: compare bounded and unbounded queues for a small desktop app. No tools, browsing, file reading or changes. Keep each answer under 80 words. Clearly attribute disagreements.",
+  "language": "en",
+  "projectPath": null,
+  "projectName": null,
+  "participants": [
+    {
+      "id": "p1",
+      "agentId": "agent-codex",
+      "name": "Codex",
+      "adapterType": "codex_cli",
+      "model": null
+    },
+    {
+      "id": "p2",
+      "agentId": "agent-claude",
+      "name": "Claude Code",
+      "adapterType": "claude_code_cli",
+      "model": null
+    }
+  ],
+  "tasks": [
+    {
+      "id": "r1-p1",
+      "participantId": "p1",
+      "round": 1,
+      "status": "done",
+      "stale": false,
+      "attempts": [
+        "job-1793170642373-80554-3"
+      ],
+      "error": null,
+      "warnings": [],
+      "refs": {
+        "valid": 0,
+        "invalid": 0
+      }
+    },
+    {
+      "id": "r1-p2",
+      "participantId": "p2",
+      "round": 1,
+      "status": "done",
+      "stale": false,
+      "attempts": [
+        "job-1793170642373-80554-2"
+      ],
+      "error": null,
+      "warnings": [],
+      "refs": {
+        "valid": 0,
+        "invalid": 0
+      }
+    },
+    {
+      "id": "r2-p1",
+      "participantId": "p1",
+      "round": 2,
+      "status": "done",
+      "stale": false,
+      "attempts": [
+        "job-1793170677087-80554-15"
+      ],
+      "error": null,
+      "warnings": [],
+      "refs": {
+        "valid": 0,
+        "invalid": 0
+      }
+    },
+    {
+      "id": "r2-p2",
+      "participantId": "p2",
+      "round": 2,
+      "status": "done",
+      "stale": false,
+      "attempts": [
+        "job-1793170677087-80554-14"
+      ],
+      "error": null,
+      "warnings": [],
+      "refs": {
+        "valid": 0,
+        "invalid": 0
+      }
+    },
+    {
+      "id": "summary",
+      "participantId": "p1",
+      "round": 3,
+      "status": "done",
+      "stale": false,
+      "attempts": [
+        "job-1793170708446-80554-26",
+        "job-1793170740857-80554-31"
+      ],
+      "error": null,
+      "warnings": [],
+      "refs": {
+        "valid": 0,
+        "invalid": 0
+      }
+    }
+  ],
+  "status": "ready",
+  "activeRunId": null,
+  "createdAtMs": 1793170642363,
+  "updatedAtMs": 1793170775595,
+  "promptVersion": 1
+}

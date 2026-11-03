@@ -1,0 +1,96 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.05s
+     Running unittests src/lib.rs (src-tauri/target/debug/deps/loom_lib-d29bd1656c194ecb)
+
+running 1 test
+Discussion evidence: /var/folders/wh/8gkvgk297s392p974p39b0s40000gp/T/loom-discuss-real-20261027-z6z81p5j/discuss/discussion-1793161712602-28980-0
+{"discussionId":"discussion-1793161712602-28980-0","taskId":null,"status":"running"}
+{"discussionId":"discussion-1793161712602-28980-0","taskId":"r1-p1","status":"running"}
+{"discussionId":"discussion-1793161712602-28980-0","taskId":"r1-p2","status":"running"}
+{"discussionId":"discussion-1793161712602-28980-0","taskId":"r1-p2","status":"updated"}
+{"discussionId":"discussion-1793161712602-28980-0","taskId":"r1-p1","status":"updated"}
+{"discussionId":"discussion-1793161712602-28980-0","taskId":"r2-p1","status":"running"}
+{"discussionId":"discussion-1793161712602-28980-0","taskId":"r2-p2","status":"running"}
+test discuss::real_tests::codex_and_claude_complete_two_rounds_and_summary has been running for over 60 seconds
+{"discussionId":"discussion-1793161712602-28980-0","taskId":"r2-p1","status":"updated"}
+{"discussionId":"discussion-1793161712602-28980-0","taskId":"r2-p2","status":"updated"}
+{"discussionId":"discussion-1793161712602-28980-0","taskId":"summary","status":"running"}
+{"discussionId":"discussion-1793161712602-28980-0","taskId":"summary","status":"updated"}
+{"discussionId":"discussion-1793161712602-28980-0","taskId":null,"status":"ready"}
+Final status: ready
+r1-p1 Done, attempts=1, error=None
+---- r1-p1 ----
+**假设**：工具之间无依赖；桌面资源有限；用户更重视等待时间与可比较观点。
+
+**证据边界**：没有项目数据或实测；以下属于推断。
+
+- **并行轮次**：通常缩短等待时间，首轮独立作答可减少相互锚定；代价是资源峰值、限流风险，以及观点重复。
+- **顺序轮次**：后者可针对前者纠错，资源压力较低；但耗时累加，容易跟随早期错误。
+
+**建议**：首轮独立作答，默认最多 **2 个工具并发**；资源和配额经验证后可升至 4。第二轮提供首轮结果进行互评，最多两轮，避免无休止讨论。
+
+**部分失败策略**：设单工具超时和整轮截止时间。成功结果保留，失败明确标注；仅对暂时性错误重试一次，且不延长总预算。至少两份有效回答才作比较；仅一份时标为单一意见，全部失败则停止。
+
+**风险与不确定性**：模型可能共享偏差，多数意见不等于正确；最佳并发度仍取决于设备、工具延迟和服务配额。
+r1-p2 Done, attempts=1, error=None
+---- r1-p2 ----
+**假设**(均为推断,无项目证据):① 本机 4–8 核桌面机,工具为 API 型 CLI(网络/IO 为主);② 各工具回答相互独立,无共享写冲突;③ 目标是低延迟与稳定,而非最大吞吐。
+
+**并行 vs 串行**
+- 并行:整轮延迟≈最慢者,吞吐高;代价是[REDACTED sensitive line] 突发、速率限制风险、输出交错难归因。
+- 串行:轮间可见前序结论(便于反驳/收敛)、失败隔离最好;代价是延迟累加,独立子问题被无谓排队。
+
+**建议**:轮内并行、轮间串行(barrier 汇总)。并发上界取 `min(工具数, 3)`,留 1 核给 UI 与汇总;若发现是本地模型(CPU 主导)降到 2。
+
+**部分失败策略**:fail-open——单个工具失败或超时(建议 ~120s)不取消整轮;记录失败原因,允许有界重试一次(短退避);仍失败则在汇总中标记“缺失”并降权,不阻塞其余结论。仅当 ≥半数工具失败才判整轮无效。
+
+**风险**:若各工具共享速率配额,并发 3 可能触发限流;CLI 崩溃语义(退出码非零 vs 挂起)需分别设超时与失败判定。
+r2-p1 Done, attempts=1, error=None
+---- r2-p1 ----
+**假设与证据**：工具独立、资源及共享配额未知；无实测，以下为推断。仅见 p1、p2；其他同伴材料缺失，不能视为同意。
+
+- **同意 p2**：轮内独立并行、轮间汇总互评，可兼顾等待时间与纠错；顺序作答便于追问，但耗时累加且易锚定。
+- **不同意 p2**：并发 3 不能保证“留一核”；CLI 数与 CPU 占用不直接对应。有排队时，整轮耗时也不等于最慢单项。
+- **修订 p1 建议**：默认并发 **2**，上限 **4**；仅在资源、配额验证后提高。最多两轮，互评只引用实际收到的回答。
+- **失败政策**：保留成功结果；单工具超时、整轮截止、总预算共同约束，暂时性错误最多重试一次。不同意 p2 按失败比例直接判无效：两份有效回答可比较，一份标为单一意见，零份停止。缺失不算反对，也不算赞成。
+<<<
+r2-p2 Done, attempts=1, error=None
+---- r2-p2 ----
+**缺失说明**：本轮仅收到 p1 与我(p2)的回答；如有其他注册参与者未提交，缺失不视为同意，也不计入共识。
+
+**假设**(均为推断，无实测数据)：各工具回答相互独立；桌面资源有限；目标是低延迟且观点可比较。
+
+**与 p1 的共识**：①首轮独立作答可减少锚定；②单工具失败不应拖垮整轮，允许有界重试一次；③多数意见≠正确(共享偏差风险)。
+
+**分歧与修正**：
+- **并发上界**：p1 默认 2、验证后可至 4；我原提 `min(工具数, 3)`。修正：采纳 p1 的保守起步 2，API 型稳定后升 3，4 仅在配额验证后——递增而非固定。
+- **整轮无效判定**：p1 的“至少 2 份有效才比较”优于我的“≥半数失败即无效”(4 工具坏 2 时仍可比较)；采纳之，仅 1 份标单一意见，全败则停。
+- **轮数上限**：采纳 p1 的最多两轮，与我“轮间串行 + barrier 汇总”兼容。
+
+**维持原立场**：fail-open、~120s 单工具超时、区分超时与崩溃(退出码)两种失败语义。
+
+**证据边界**：以上均为推断，最佳并发度需实测设备与配额。
+summary Done, attempts=1, error=None
+---- summary ----
+**假设与证据**：假设工具可独立作答、桌面资源有限；仅依据当前成功的 p1、p2 第二轮回答，无实测。
+
+- **共识（Consensus）**：轮内独立并行、轮间串行互评，最多两轮；默认并发 2，验证资源与配额后递增。保留成功结果，暂时性失败最多重试一次；两份有效回答可比较，一份标注单一意见，全败停止。
+- **分歧（Disagreements）**：并发与有效性门槛已收敛。p2 提议约 120 秒单工具超时；p1 未确认该数值，不能列为共识。
+- **风险（Risks）**：并行可能争抢资源、触发限流；顺序便于追问，但等待累加、易锚定。多数一致仍可能源于共享偏差。
+- **建议（Recommendations）**：采用并发 2→3→4 的验证式提升；同时限定单工具时间、整轮截止及总预算。比较时明确缺失观点。
+- **缺失参与者（Missing participants）**：仅有 p1、p2；其他注册情况未知，不能推断其同意。
+test discuss::real_tests::codex_and_claude_complete_two_rounds_and_summary ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 349 filtered out; finished in 136.69s
+
+     Running unittests src/main.rs (src-tauri/target/debug/deps/loom-6e70af2b9f42cf46)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/bin/loom-skills.rs (src-tauri/target/debug/deps/loom_skills-b9b2bb0344a1eecd)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

@@ -1,0 +1,39 @@
+{
+  "startedDate": "2026-10-27",
+  "completedDate": "2026-10-28",
+  "kind": "native-tauri-ui-and-real-cli",
+  "profile": "/var/folders/wh/8gkvgk297s392p974p39b0s40000gp/T/loom-p8-desktop-n4rw2_aq/profile",
+  "project": "/private/var/folders/wh/8gkvgk297s392p974p39b0s40000gp/T/loom-p8-desktop-n4rw2_aq/project",
+  "chatSession": "chat-1793170293796-2",
+  "researchId": "research-1793171223305-0",
+  "discussionId": "discussion-1793170642363-80554-0",
+  "chat": [
+    "running-switch-all-features-and-settings-completed",
+    "stop-then-send-completed",
+    "draft-survives-feature-switch",
+    "history-after-restart-readable",
+    "send-after-restart-completed"
+  ],
+  "discuss": [
+    "native-cost-confirmation",
+    "two-rounds-completed",
+    "summary-stopped",
+    "confirmed-summary-retry-completed",
+    "reports-and-old-attempt-after-restart-readable"
+  ],
+  "research": [
+    "native-first-question-completed",
+    "quit-while-running-recorded-interrupted",
+    "restart-shows-interrupted-no-auto-retry",
+    "explicit-retry-started",
+    "long-retry-stopped-by-test",
+    "short-followup-completed-with-replay"
+  ],
+  "learn": "existing public repository read-only overview and source line opened; no new generation",
+  "knownIssue": {
+    "kind": "blank-webview-on-one-restart",
+    "rootCause": "unknown",
+    "followup": "same binary/data relaunched successfully, later restart also succeeded; not claimed fixed"
+  },
+  "profileScope": "settings/agents/recent-projects/default skills only; feature data and WebView storage are not isolated"
+}

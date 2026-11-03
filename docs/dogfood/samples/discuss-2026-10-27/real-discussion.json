@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "discussionId": "discussion-1793161712602-28980-0",
+  "title": "Bounded multi-agent discussion",
+  "topic": "For a small local desktop app running 2–4 AI command-line tools, compare parallel and sequential discussion rounds. Recommend a bounded concurrency and partial-failure policy. Do not browse or read files. Limit each answer to 150 words; label assumptions. Discuss tradeoffs, not implementation work.",
+  "language": "zh-CN",
+  "projectPath": null,
+  "projectName": null,
+  "participants": [
+    {
+      "id": "p1",
+      "agentId": "a",
+      "name": "Codex",
+      "adapterType": "codex_cli",
+      "model": null
+    },
+    {
+      "id": "p2",
+      "agentId": "b",
+      "name": "Claude Code",
+      "adapterType": "claude_code_cli",
+      "model": null
+    }
+  ],
+  "tasks": [
+    {
+      "id": "r1-p1",
+      "participantId": "p1",
+      "round": 1,
+      "status": "done",
+      "stale": false,
+      "attempts": [
+        "job-1793161712762-28980-2"
+      ],
+      "error": null,
+      "warnings": [],
+      "refs": {
+        "valid": 0,
+        "invalid": 0
+      }
+    },
+    {
+      "id": "r1-p2",
+      "participantId": "p2",
+      "round": 1,
+      "status": "done",
+      "stale": false,
+      "attempts": [
+        "job-1793161713003-28980-5"
+      ],
+      "error": null,
+      "warnings": [],
+      "refs": {
+        "valid": 0,
+        "invalid": 0
+      }
+    },
+    {
+      "id": "r2-p1",
+      "participantId": "p1",
+      "round": 2,
+      "status": "done",
+      "stale": false,
+      "attempts": [
+        "job-1793161760376-28980-14"
+      ],
+      "error": null,
+      "warnings": [],
+      "refs": {
+        "valid": 0,
+        "invalid": 0
+      }
+    },
+    {
+      "id": "r2-p2",
+      "participantId": "p2",
+      "round": 2,
+      "status": "done",
+      "stale": false,
+      "attempts": [
+        "job-1793161760463-28980-18"
+      ],
+      "error": null,
+      "warnings": [],
+      "refs": {
+        "valid": 0,
+        "invalid": 0
+      }
+    },
+    {
+      "id": "summary",
+      "participantId": "p1",
+      "round": 3,
+      "status": "done",
+      "stale": false,
+      "attempts": [
+        "job-1793161804857-28980-26"
+      ],
+      "error": null,
+      "warnings": [],
+      "refs": {
+        "valid": 0,
+        "invalid": 0
+      }
+    }
+  ],
+  "status": "ready",
+  "activeRunId": null,
+  "createdAtMs": 1793161712602,
+  "updatedAtMs": 1793161849275,
+  "promptVersion": 1
+}

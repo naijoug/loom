@@ -17,11 +17,11 @@ pub(crate) mod runtime;
 mod service;
 pub(crate) mod shutdown;
 pub(crate) mod turns;
+use crate::agent;
 use crate::agent::load_agents;
 use crate::agent::AgentStage;
 use crate::chat_context::{prepare_chat_invocation, update_execution_config};
 use crate::models::{now_ms, IdGenerator};
-use crate::process_supervisor;
 use repository::ChatRepository;
 use service::{finish_chat_turn, require_idle};
 use std::path::Path;
@@ -155,7 +155,7 @@ pub async fn chat_export(
     ids: State<'_, IdGenerator>,
     input: ChatExportInput,
 ) -> Result<ChatExportResult, String> {
-    let operation = process_supervisor::supervisor().begin_operation()?;
+    let operation = agent::begin_operation()?;
     let repository = open_chat_repository(&app, &input.project_path)?;
     // A broken install is rejected before the turn is accepted; the check is
     // cached, so a healthy agent adds no probe to each send.
@@ -269,7 +269,7 @@ pub fn chat_create(
     ids: State<'_, IdGenerator>,
     input: ChatCreateInput,
 ) -> Result<ChatSession, String> {
-    let _operation = process_supervisor::supervisor().begin_operation()?;
+    let _operation = agent::begin_operation()?;
     let repository = open_chat_repository(&app, &input.project_path)?;
     let created_at_ms = now_ms();
     let session = ChatSession {
@@ -322,7 +322,7 @@ pub fn chat_set_agent(
     session_id: String,
     agent_id: String,
 ) -> Result<ChatSession, String> {
-    let _operation = process_supervisor::supervisor().begin_operation()?;
+    let _operation = agent::begin_operation()?;
     let repository = open_chat_repository(&app, &project_path)?;
     let session = repository.update(&session_id, |session| {
         update_execution_config(session, Some(&agent_id), None)
@@ -332,7 +332,7 @@ pub fn chat_set_agent(
 
 #[tauri::command]
 pub fn chat_update_meta(app: AppHandle, input: ChatUpdateMetaInput) -> Result<ChatSession, String> {
-    let _operation = process_supervisor::supervisor().begin_operation()?;
+    let _operation = agent::begin_operation()?;
     let repository = open_chat_repository(&app, &input.project_path)?;
     let session = repository.update(&input.session_id, |session| {
         if let Some(title) = input.title {
@@ -374,7 +374,7 @@ pub fn chat_clear_resume(
     project_path: String,
     session_id: String,
 ) -> Result<ChatSession, String> {
-    let _operation = process_supervisor::supervisor().begin_operation()?;
+    let _operation = agent::begin_operation()?;
     let repository = open_chat_repository(&app, &project_path)?;
     let session = repository.update(&session_id, |session| {
         require_idle(session)?;
@@ -392,7 +392,7 @@ pub async fn chat_abort(app: AppHandle, input: ChatAbortInput) -> Result<(), Str
     let repository = open_chat_repository(&app, &input.project_path)?;
     if let Some(turn_id) = repository.cancel(&input.session_id, Some(&input.turn_id))? {
         // Starting turns remember cancellation in the lease, before a PID exists.
-        process_supervisor::supervisor().request_stop(&turn_id, STOP_REASON_ABORT)?;
+        agent::request_stop(&turn_id, STOP_REASON_ABORT)?;
         if let Ok(session) = repository.load(&input.session_id) {
             let _ = publish_chat_session(&app, &repository, session);
         }
@@ -406,7 +406,7 @@ pub async fn chat_send(
     ids: State<'_, IdGenerator>,
     input: ChatSendInput,
 ) -> Result<ChatSendResult, String> {
-    let operation = process_supervisor::supervisor().begin_operation()?;
+    let operation = agent::begin_operation()?;
     let repository = open_chat_repository(&app, &input.project_path)?;
     // A broken install is rejected before the turn is accepted; the check is
     // cached, so a healthy agent adds no probe to each send.

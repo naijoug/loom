@@ -2,6 +2,8 @@
 
 Loom 通过 Rust Agent 调用层 `src-tauri/src/agent/`（参数在 `invocation.rs`，能力在 `capabilities.rs`）生成可执行文件、参数、cwd、stdin 方式、输出协议和必要的单次环境配置。React 只传会话、消息、Agent ID 和模式，不拼接命令。
 
+通用运行与生命周期契约见 [Agent 调用层](architecture/agent-layer.md)；本页说明 CLI 参数与协议。
+
 ## 探测与配置
 
 `agent/registry.rs` 先查 `$PATH`，再查当前 `$HOME` 下的 `.local/bin`、`.npm-global/bin`、`.opencode/bin`、`.grok/bin`，以及 `/opt/homebrew/bin`、`/usr/local/bin`。检查可执行位，不使用 shell，不包含写死的用户名目录。
@@ -12,8 +14,8 @@ Loom 通过 Rust Agent 调用层 `src-tauri/src/agent/`（参数在 `invocation.
 
 ## 启动前检查与错误格式
 
-- `agent::check_startable` 在运行前确认 CLI 能启动：内建适配器执行 `<command> --version`（15 秒上限），自定义 CLI 只要求命令可解析（`--version` 不属于它们的约定）。Learn 开始研究前、Chat 每次发送前都会调用；Chat 在接受回合前拒绝，不留下失败回合。
-- 通过的结果按 Agent id 缓存，键为解析后的可执行文件路径与修改时间，应用会话内有效；失败不缓存。保存 Agent 配置、Settings 重新检测，以及 Chat 回合或 Learn 作业失败时清除缓存。
+- `agent::check_startable` 在运行前确认 CLI 能启动：内建适配器执行 `<command> --version`（15 秒上限），自定义 CLI 只要求命令可解析（`--version` 不属于它们的约定）。Learn / Research 开始前、Chat 每次发送前、Discuss 每项调用前都会调用；Chat 在接受回合前拒绝，不留下失败回合。
+- 通过的结果按 Agent id 缓存，键为解析后的可执行文件路径与修改时间，应用会话内有效；失败不缓存。当前 `load_agents` 会保存合并后的配置并清空缓存，不能保证跨每次功能请求复用缓存。保存 Agent 配置、Settings 重新检测，以及 Chat / Learn / Research / Discuss 运行失败时清除缓存。
 - 面向用户的错误统一为“一行摘要 + 空行 + 原始详情”（`agent::AgentError`），IPC 仍传字符串。Agent 非零退出写作 `agent exited with code <n>`，详情为 stderr 最后 2,000 字符。前端共享的 `ErrorText`（`src/components/common/`）显示摘要并把详情收进折叠区，兼容旧会话中的 `agent exited with status …; stderr: …` 格式；Chat 的错误片段、回合详情和发送错误与 Learn 共用它。
 - 例外：Skills 本地翻译（`skills/translation/local.rs`）仍自行启动 Codex / Claude。它需要原始 stdout（Claude 的单个 JSON 结果），而 `agent::run` 在解析前逐行脱敏，可能改写译文里形似密钥的示例；翻译也不走 Agent 配置，按命令名解析。它同样经 `process_supervisor` 登记进程组、限时和取消。
 

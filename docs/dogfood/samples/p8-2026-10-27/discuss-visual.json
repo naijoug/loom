@@ -1,0 +1,12 @@
+{
+  "status": "passed",
+  "kind": "synthetic-web-only",
+  "checks": [
+    "two independent answers, peer review, moderator summary, source range, execution logs",
+    "partial result preserved; one-call retry confirmation; downstream summary explicitly outdated",
+    "stop marks active and queued calls stopped",
+    "en/zh-CN × light/dark; 700px without horizontal overflow",
+    "storage error; new discussion confirms five calls; delete confirmation can be cancelled",
+    "Chat draft preserved across Discuss"
+  ]
+}

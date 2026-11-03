@@ -64,3 +64,27 @@ Research 证据与限制见 [Research 验收记录](dogfood/2026-10-27-research-
 附 Loom 版本、CLI 版本、项目/会话/回合 ID、模式、复现步骤和期望结果。工具卡片或错误信息可打开执行日志；也可导出会话或设置中的诊断包。分享前检查并脱敏，不上传凭据、`.env` 或无关私人转录。
 
 发布候选仍需针对具体 artifact 完成签名、公证、安装与升级验证，见 [发布入口](release/README.md)。
+
+## Discuss（P7）
+
+- `cargo test --manifest-path src-tauri/Cargo.toml discuss::`：伪 CLI 的实际并发/轮次屏障、部分失败、坏安装、取消、单项重试与过时传播、重启恢复、参数确认和路径保护；不调用模型。
+- `pnpm test -- tests/unit/discuss.test.cjs tests/unit/activityRail.test.cjs tests/unit/contract.test.cjs`：参与者和模型、创建/重试调用确认、成功报告保留、过时汇总、删除确认、功能栏与 IPC 契约。
+- `pnpm smoke:visual` 同轮运行 `scripts/discuss-smoke.mjs`：轮次、源码引用、日志、部分失败/停止/重试、过时汇总、创建确认、存储失败、en/zh-CN × 深浅、700px，以及 Chat 草稿切页保持；功能栏矩阵补 ⌘/Ctrl+4。截图在 `designs/exports/discuss/`，是合成网页证据。
+- 真实用例：`LOOM_REAL_DISCUSS=1 LOOM_REAL_DISCUSS_ROOT=<dir> cargo test --manifest-path src-tauri/Cargo.toml discuss::real_tests::codex_and_claude_complete_two_rounds_and_summary -- --ignored --nocapture`。默认无项目、两个真实 CLI、预计 5 次调用，消耗额度。可指定 `LOOM_REAL_DISCUSS_CODEX` / `_CLAUDE` 二进制和 `_CODEX_MODEL` / `_CLAUDE_MODEL`。必须同时记录两家成功或具体阻塞，不以单家或 fixture 冒充完整真实通过。
+
+桌面人工验收：进入第 4 项、新建 2–4 人讨论、核对模型与调用次数确认；真实进行中切到 Chat 再回来、停止全部、逐项重试、读取旧尝试；退出重启后检查报告与中断项；检查源码引用及删除确认。真实桌面未运行不得以 smoke 代替。
+
+## P8 总体验收（2026-10-28）
+
+公共 Agent 生命周期与错误/缓存契约见 [Agent 层](architecture/agent-layer.md)，按 S1–S8 的证据与例外汇总见 [P8 验收记录](dogfood/2026-10-28-p8-acceptance.md)。完整门禁为 `pnpm check`、`pnpm tauri build --no-bundle`、`pnpm smoke:visual`；真实模型和原生 GUI 的基线/日期单列，历史通过不自动覆盖改过的行为。
+
+原生验收通过 `pnpm tauri build --bundles app` 生成本仓库的准确产物，再使用 `LOOM_PREVIEW_BINARY` 与 `scripts/debug.sh desktop` 启动；前后都 `debug.sh stop`。使用临时 `LOOM_PROFILE_DIR` 仅隔离设置、Agent 配置、最近项目和默认 Skills 库，**不隔离 WebView localStorage 或 Learn/Research/Discuss 应用数据**。功能测试只新建带 P8 前缀的记录；已有学习资料仅阅读，不生成、不删除。临时项目必须通过项目注册得到 canonical 路径；不要直接把 `/var` 非规范路径写入项目列表冒充已登记项目。
+
+运行中切换所有功能再回 Chat，观察真实完成；测试 Chat 停止后再发、重启后读取与续聊；Discuss 验证调用确认、轮次、停止/单项重试、重启报告和旧尝试日志；Research 验证正常退出的 interrupted 状态、重启不自动调用、显式重试与停止后短追问。原生删除只检查确认/取消，永久删除不作为自动化收尾。保留一次空白 WebView 等异常观察，不把后续成功解释为根因已解决。
+
+## 原生启动就绪与恢复（2026-10-28）
+
+- `pnpm smoke:desktop` 必须等当前启动的 `interface_ready`，不再只以进程存活四秒判通过。通过 debug.sh 启停，失败/恢复耗尽会退出非零；它验证原生 IPC 就绪，像素与可访问性内容仍需原生观察。
+- `cargo test --manifest-path src-tauri/Cargo.toml webview_startup::`、`pnpm test -- tests/unit/appStartup.test.cjs` 覆盖启动重试/代际隔离/已就绪不自动刷新/可见兜底。
+- 故障注入：先 `pnpm build`，再 `node scripts/webview-startup-fixture.mjs once` 或 `always`，按脚本输出构建测试包；前者只跳过第一次入口，后者一直跳过。不得把故障包当交付产物，结束后 `pnpm tauri build --bundles app` 恢复正常包。
+- 证据和已知限制见 [重启恢复验收](dogfood/2026-10-28-webview-restart.md)。五次正常观察不代表已经确认原始偶发底层原因。

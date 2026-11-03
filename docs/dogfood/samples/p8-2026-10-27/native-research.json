@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "researchId": "research-1793171223305-0",
+  "title": "P8 native Research acceptance. Explain one benefit and one risk of bounded queu…",
+  "agentId": "agent-codex",
+  "agentName": "Codex",
+  "adapterType": "codex_cli",
+  "language": "en",
+  "promptVersion": 1,
+  "createdAtMs": 1793171223305,
+  "updatedAtMs": 1793171794491,
+  "turns": [
+    {
+      "index": 1,
+      "question": "P8 native Research acceptance. Explain one benefit and one risk of bounded queues in under 80 words. Do not use tools, browse, read files or change anything. End with P8-RESEARCH-DONE.",
+      "status": "done",
+      "jobId": "job-1793171223307-1",
+      "startedAtMs": 1793171223307,
+      "finishedAtMs": 1793171264316,
+      "warnings": [],
+      "refs": {
+        "valid": 0,
+        "invalid": 0
+      }
+    },
+    {
+      "index": 2,
+      "question": "P8 shutdown acceptance: expand the previous answer into 200 detailed points. Do not use tools or read files.",
+      "status": "cancelled",
+      "jobId": "job-1793171479604-0",
+      "startedAtMs": 1793171479604,
+      "finishedAtMs": 1793171730610,
+      "warnings": []
+    },
+    {
+      "index": 3,
+      "question": "The long generation was deliberately stopped for a lifecycle test. Give one sentence, under 20 words, confirming bounded queues provide backpressure. Include P8-RESEARCH-RECOVERED. Do not use tools.",
+      "status": "done",
+      "jobId": "job-1793171742409-1",
+      "startedAtMs": 1793171742409,
+      "finishedAtMs": 1793171794491,
+      "warnings": [],
+      "refs": {
+        "valid": 0,
+        "invalid": 0
+      },
+      "context": "replay"
+    }
+  ],
+  "resumeCommand": "/Users/guojian/.npm-global/bin/codex resume 01a1815d-6119-7772-8fb3-6413cf9e1c36",
+  "resumeAgentCommand": "/Users/guojian/.npm-global/bin/codex"
+}

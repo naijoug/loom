@@ -1,6 +1,6 @@
 # Learn 契约
 
-状态：2026-10-26 实现（L1–L5、L7；L6 深入追问未做）。计划见 [Learn 实施计划](../plans/2026-10-26/19:26-learn-repo-study-module.md)，安全边界见 [安全策略](../security-policy.md#learn)。命令、事件与模型样本由 `contracts/tauri-contract.json` 两端共同校验。
+状态：2026-10-26 实现（L1–L5、L7；L6 深入追问未做）。计划见 [Learn 实施计划](../plans/2026-10-26/19:26-learn-repo-study-module.md)，安全边界见 [安全策略](../security-policy.md#learn)，公共运行/生命周期接口见 [Agent 层契约](agent-layer.md)。命令、事件与模型样本由 `contracts/tauri-contract.json` 两端共同校验。
 
 ## 存储
 
@@ -40,8 +40,8 @@
 
 - Wiki Markdown 使用 `[label](loom-src:<path>#L<start>-L<end>)` 引用源码，`[title](loom-wiki:module/<id>)` 链接模块页。
 - `learn_read_page` 返回逐条校验结果：`valid` / `missing`（文件不存在）/ `range`（行越界）/ `outside`（路径逃逸或 symlink）。前端把无效引用渲染为带警告样式的按钮，不静默丢弃。
-- Chat 的 Markdown 不接受 `loom-src:` / `loom-wiki:` 链接；只有 Learn 页面传入链接处理器时才渲染为操作。
-- `learn_read_source` 拒绝路径逃逸与任何 symlink；> 512 KiB 的文件按 2,000 行窗口读取，> 16 MiB 拒绝。引用校验与源码读取自 P6 起在共享的 `src-tauri/src/source_files.rs`（原 `learn/source.rs`），Research 同用。
+- Chat 的 Markdown 不接受 `loom-src:` / `loom-wiki:` 链接；Learn、Research、Discuss 按各自契约传入链接处理器后才渲染为操作。
+- `learn_read_source` 拒绝路径逃逸与任何 symlink；> 512 KiB 的文件按 2,000 行窗口读取，> 16 MiB 拒绝。引用校验与源码读取自 P6 起在共享的 `src-tauri/src/source_files.rs`（原 `learn/source.rs`），Research / Discuss 同用。
 
 ## IPC
 
@@ -67,5 +67,5 @@ Agent 解析：必须已启用、可用，且适配器声明 `modelSelection`（
 ## 前端
 
 - 入口：左侧功能栏 Learn（⌘2，`src/shell/ActivityRail.tsx`，2026-10-27 P5 起）。Learn 首次访问后保持挂载，显示期间 Chat 容器保持挂载（隐藏），会话、草稿和活动回合不受影响。
-- `src/features/learn/`：研究列表、新建表单、阶段与问题列表、作业日志、Wiki 目录（Overview / Architecture / Level 1–3 / Glossary）、架构图（SVG，节点可点击打开模块页）；源码查看器（目录浏览、行号、范围高亮）自 P6 起为共享 `components/SourceViewer`，Research 同用。
+- `src/features/learn/`：研究列表、新建表单、阶段与问题列表、作业日志、Wiki 目录（Overview / Architecture / Level 1–3 / Glossary）、架构图（SVG，节点可点击打开模块页）；源码查看器（目录浏览、行号、范围高亮）自 P6 起为共享 `components/SourceViewer`，Research / Discuss 同用。
 - 非 Tauri 环境显示“仅桌面可用”。DEV 专用 `?fixture=simple-chat&learnFixture=ready|empty|running|failed|error` 注入合成 API，生产构建不包含。

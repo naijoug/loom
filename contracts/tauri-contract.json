@@ -73,7 +73,17 @@
     "research_read_job_logs",
     "research_list_tree",
     "research_read_source",
-    "research_delete"
+    "research_delete",
+    "discuss_list",
+    "discuss_create",
+    "discuss_get",
+    "discuss_read_report",
+    "discuss_retry",
+    "discuss_cancel",
+    "discuss_read_job_logs",
+    "discuss_read_source",
+    "discuss_list_tree",
+    "discuss_delete"
   ],
   "events": [
     "loom-update-state",
@@ -81,7 +91,8 @@
     "loom://chat-error",
     "loom://skills-operation",
     "loom://learn-event",
-    "loom://research-event"
+    "loom://research-event",
+    "loom://discuss-event"
   ],
   "storeSchemaVersions": {
     "agents": 1,
@@ -801,6 +812,144 @@
       "jobId": "job-2-0",
       "turn": 2,
       "status": "running"
+    },
+    "discussion": {
+      "schemaVersion": 1,
+      "discussionId": "discussion-1",
+      "title": "Compare queues",
+      "topic": "Compare bounded and unbounded queues",
+      "language": "en",
+      "projectPath": "/project",
+      "projectName": "Project",
+      "participants": [
+        {
+          "id": "p1",
+          "agentId": "agent-codex",
+          "name": "Codex",
+          "adapterType": "codex_cli",
+          "model": null
+        },
+        {
+          "id": "p2",
+          "agentId": "agent-claude",
+          "name": "Claude Code",
+          "adapterType": "claude_code_cli",
+          "model": null
+        }
+      ],
+      "tasks": [
+        {
+          "id": "r1-p1",
+          "participantId": "p1",
+          "round": 1,
+          "status": "done",
+          "stale": false,
+          "attempts": [
+            "job-1-p1"
+          ],
+          "error": null,
+          "warnings": [],
+          "refs": {
+            "valid": 1,
+            "invalid": 0
+          }
+        },
+        {
+          "id": "r1-p2",
+          "participantId": "p2",
+          "round": 1,
+          "status": "done",
+          "stale": false,
+          "attempts": [
+            "job-1-p2"
+          ],
+          "error": null,
+          "warnings": [],
+          "refs": {
+            "valid": 1,
+            "invalid": 0
+          }
+        },
+        {
+          "id": "r2-p1",
+          "participantId": "p1",
+          "round": 2,
+          "status": "done",
+          "stale": false,
+          "attempts": [
+            "job-2-p1"
+          ],
+          "error": null,
+          "warnings": [],
+          "refs": {
+            "valid": 1,
+            "invalid": 0
+          }
+        },
+        {
+          "id": "r2-p2",
+          "participantId": "p2",
+          "round": 2,
+          "status": "done",
+          "stale": false,
+          "attempts": [
+            "job-2-p2"
+          ],
+          "error": null,
+          "warnings": [],
+          "refs": {
+            "valid": 1,
+            "invalid": 0
+          }
+        },
+        {
+          "id": "summary",
+          "participantId": "p1",
+          "round": 3,
+          "status": "done",
+          "stale": false,
+          "attempts": [
+            "job-summary"
+          ],
+          "error": null,
+          "warnings": [],
+          "refs": {
+            "valid": 1,
+            "invalid": 0
+          }
+        }
+      ],
+      "status": "ready",
+      "activeRunId": null,
+      "createdAtMs": 1,
+      "updatedAtMs": 2,
+      "promptVersion": 1
+    },
+    "discussReport": {
+      "taskId": "r1-p1",
+      "markdown": "# Answer\n\nBound the queue.",
+      "refs": []
+    },
+    "discussEvent": {
+      "discussionId": "discussion-1",
+      "taskId": "r1-p1",
+      "status": "running"
+    },
+    "createDiscussionInput": {
+      "topic": "Compare queues",
+      "participants": [
+        {
+          "agentId": "agent-codex",
+          "model": "model-a"
+        },
+        {
+          "agentId": "agent-claude",
+          "model": "model-b"
+        }
+      ],
+      "projectPath": "/project",
+      "language": "en",
+      "confirmedCalls": 5
     }
   }
 }

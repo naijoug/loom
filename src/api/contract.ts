@@ -1,3 +1,4 @@
+import type { Discussion, DiscussReport, DiscussEvent, CreateDiscussionInput } from "./discuss";
 import type { SkillSource, SkillsHttpRequest, TranslationProviders, TranslationResult, TranslationSummary } from "./skills";
 import type { InstructionCheck, ResourcePreview } from "./skills";
 import type { LearnArchitecture, LearnEvent, LearnPageContent, LearnStudy } from "./learn";
@@ -79,6 +80,16 @@ export const TAURI_COMMANDS = {
   researchListTree: "research_list_tree",
   researchReadSource: "research_read_source",
   researchDelete: "research_delete",
+  discussList: "discuss_list",
+  discussCreate: "discuss_create",
+  discussGet: "discuss_get",
+  discussReadReport: "discuss_read_report",
+  discussRetry: "discuss_retry",
+  discussCancel: "discuss_cancel",
+  discussReadJobLogs: "discuss_read_job_logs",
+  discussReadSource: "discuss_read_source",
+  discussListTree: "discuss_list_tree",
+  discussDelete: "discuss_delete",
 } as const;
 export const TAURI_EVENTS = {
   updateState: "loom-update-state",
@@ -87,6 +98,7 @@ export const TAURI_EVENTS = {
   skillsOperation: "loom://skills-operation",
   learnEvent: "loom://learn-event",
   researchEvent: "loom://research-event",
+  discussEvent: "loom://discuss-event",
 } as const;
 export const STORE_SCHEMA_VERSIONS = {"agents": 1, "settings": 1, "chat": 2} as const;
 export type TauriCommand = (typeof TAURI_COMMANDS)[keyof typeof TAURI_COMMANDS];
@@ -792,4 +804,142 @@ researchEvent: {
   "turn": 2,
   "status": "running"
 } satisfies ResearchEvent,
+  discussion: {
+  "schemaVersion": 1,
+  "discussionId": "discussion-1",
+  "title": "Compare queues",
+  "topic": "Compare bounded and unbounded queues",
+  "language": "en",
+  "projectPath": "/project",
+  "projectName": "Project",
+  "participants": [
+    {
+      "id": "p1",
+      "agentId": "agent-codex",
+      "name": "Codex",
+      "adapterType": "codex_cli",
+      "model": null
+    },
+    {
+      "id": "p2",
+      "agentId": "agent-claude",
+      "name": "Claude Code",
+      "adapterType": "claude_code_cli",
+      "model": null
+    }
+  ],
+  "tasks": [
+    {
+      "id": "r1-p1",
+      "participantId": "p1",
+      "round": 1,
+      "status": "done",
+      "stale": false,
+      "attempts": [
+        "job-1-p1"
+      ],
+      "error": null,
+      "warnings": [],
+      "refs": {
+        "valid": 1,
+        "invalid": 0
+      }
+    },
+    {
+      "id": "r1-p2",
+      "participantId": "p2",
+      "round": 1,
+      "status": "done",
+      "stale": false,
+      "attempts": [
+        "job-1-p2"
+      ],
+      "error": null,
+      "warnings": [],
+      "refs": {
+        "valid": 1,
+        "invalid": 0
+      }
+    },
+    {
+      "id": "r2-p1",
+      "participantId": "p1",
+      "round": 2,
+      "status": "done",
+      "stale": false,
+      "attempts": [
+        "job-2-p1"
+      ],
+      "error": null,
+      "warnings": [],
+      "refs": {
+        "valid": 1,
+        "invalid": 0
+      }
+    },
+    {
+      "id": "r2-p2",
+      "participantId": "p2",
+      "round": 2,
+      "status": "done",
+      "stale": false,
+      "attempts": [
+        "job-2-p2"
+      ],
+      "error": null,
+      "warnings": [],
+      "refs": {
+        "valid": 1,
+        "invalid": 0
+      }
+    },
+    {
+      "id": "summary",
+      "participantId": "p1",
+      "round": 3,
+      "status": "done",
+      "stale": false,
+      "attempts": [
+        "job-summary"
+      ],
+      "error": null,
+      "warnings": [],
+      "refs": {
+        "valid": 1,
+        "invalid": 0
+      }
+    }
+  ],
+  "status": "ready",
+  "activeRunId": null,
+  "createdAtMs": 1,
+  "updatedAtMs": 2,
+  "promptVersion": 1
+} satisfies Discussion,
+  discussReport: {
+  "taskId": "r1-p1",
+  "markdown": "# Answer\n\nBound the queue.",
+  "refs": []
+} satisfies DiscussReport,
+  discussEvent: {
+  "discussionId": "discussion-1",
+  "taskId": "r1-p1",
+  "status": "running"
+} satisfies DiscussEvent,
+  createDiscussionInput: {
+  "topic": "Compare queues",
+  "participants": [
+    {
+      "agentId": "agent-codex",
+      "model": "model-a"
+    },
+    {
+      "agentId": "agent-claude",
+      "model": "model-b"
+    }
+  ],
+  "projectPath": "/project",
+  "language": "en",
+  "confirmedCalls": 5
+} satisfies CreateDiscussionInput,
 } as const;

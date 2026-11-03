@@ -1,0 +1,52 @@
+[
+  {
+    "jobId": "job-1793171223307-1",
+    "turn": 1,
+    "status": "done",
+    "startedAtMs": 1793171223308,
+    "finishedAtMs": 1793171264316,
+    "invocations": [
+      "/Users/guojian/.npm-global/bin/codex exec --json --skip-git-repo-check --cd /Users/guojian/Library/Application Support/com.naijoug.loom/research/research-1793171223305-0/workspace --sandbox read-only --config approval_policy=\"never\" -- -"
+    ],
+    "toolCalls": 0,
+    "exitCode": 0
+  },
+  {
+    "jobId": "job-1793171310333-3",
+    "turn": 2,
+    "status": "interrupted",
+    "startedAtMs": 1793171310334,
+    "finishedAtMs": 1793171310692,
+    "invocations": [
+      "/Users/guojian/.npm-global/bin/codex exec --json --skip-git-repo-check --cd /Users/guojian/Library/Application Support/com.naijoug.loom/research/research-1793171223305-0/workspace --sandbox read-only --config approval_policy=\"never\" resume --json -- 01a18155-754d-7623-8aa1-ba48f9938347 -"
+    ],
+    "toolCalls": 0,
+    "exitCode": 0,
+    "error": "The agent was stopped"
+  },
+  {
+    "jobId": "job-1793171479604-0",
+    "turn": 2,
+    "status": "cancelled",
+    "startedAtMs": 1793171479605,
+    "finishedAtMs": 1793171730610,
+    "invocations": [
+      "/Users/guojian/.npm-global/bin/codex exec --json --skip-git-repo-check --cd /Users/guojian/Library/Application Support/com.naijoug.loom/research/research-1793171223305-0/workspace --sandbox read-only --config approval_policy=\"never\" resume --json -- 01a18155-754d-7623-8aa1-ba48f9938347 -"
+    ],
+    "toolCalls": 0,
+    "exitCode": 0,
+    "error": "Cancelled"
+  },
+  {
+    "jobId": "job-1793171742409-1",
+    "turn": 3,
+    "status": "done",
+    "startedAtMs": 1793171742410,
+    "finishedAtMs": 1793171794491,
+    "invocations": [
+      "/Users/guojian/.npm-global/bin/codex exec --json --skip-git-repo-check --cd /Users/guojian/Library/Application Support/com.naijoug.loom/research/research-1793171223305-0/workspace --sandbox read-only --config approval_policy=\"never\" -- -"
+    ],
+    "toolCalls": 0,
+    "exitCode": 0
+  }
+]

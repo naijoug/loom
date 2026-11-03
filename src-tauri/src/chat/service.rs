@@ -127,7 +127,7 @@ pub(super) fn finish_chat_turn(
     let journal_event = match saved_event {
         Ok(event) => Some(event),
         Err(error) => {
-            if crate::process_supervisor::supervisor().is_shutting_down() {
+            if crate::agent::is_shutting_down() {
                 super::shutdown::remember(repository.clone(), lease.session_id.clone());
             }
             event_status = "error".into();

@@ -11,8 +11,8 @@ use crate::{
         self, AdapterInvocationRequest, AgentStage, Limits, MessagePart, Observation, RunSpec,
         STOP_REASON_ABORT, STOP_REASON_TIMEOUT,
     },
+    agent::{ProcessKind, ProcessOwner},
     models::{now_ms, AgentConfig},
-    process_supervisor::{ProcessKind, ProcessOwner},
     source_files,
 };
 use std::{
@@ -91,7 +91,7 @@ impl Job {
                 Err(error) => (TurnStatus::Failed, Some(error)),
             },
             Err(error) => {
-                let status = if crate::process_supervisor::supervisor().is_shutting_down() {
+                let status = if crate::agent::is_shutting_down() {
                     TurnStatus::Interrupted
                 } else if error == CANCELLED || self.cancel.load(Ordering::Relaxed) {
                     TurnStatus::Cancelled
@@ -257,7 +257,7 @@ impl Job {
     fn stopped(&self, error: &str) -> bool {
         error == CANCELLED
             || self.cancel.load(Ordering::Relaxed)
-            || crate::process_supervisor::supervisor().is_shutting_down()
+            || crate::agent::is_shutting_down()
     }
 
     fn history(&self, earlier: &[&Turn]) -> Result<Vec<PastTurn>, String> {

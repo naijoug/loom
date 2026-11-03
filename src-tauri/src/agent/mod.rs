@@ -9,6 +9,7 @@ pub(crate) mod diagnostics;
 mod error;
 mod event;
 mod invocation;
+mod lifecycle;
 pub(crate) mod registry;
 mod runner;
 mod stream;
@@ -34,3 +35,9 @@ pub(crate) use runner::{
 pub(crate) use stream::parse_line;
 pub(crate) use stream::redact_stream_line;
 pub(crate) use tools::merge_part;
+
+// Generic process ownership and shutdown state for independent feature runners.
+pub(crate) use crate::process_supervisor::{ProcessKind, ProcessOwner};
+pub(crate) use lifecycle::{
+    begin_operation, begin_shutdown, force_stop, is_shutting_down, request_stop, shutdown_snapshot,
+};

@@ -79,6 +79,16 @@ const COMMANDS: &[&str] = &[
     "research_list_tree",
     "research_read_source",
     "research_delete",
+    "discuss_list",
+    "discuss_create",
+    "discuss_get",
+    "discuss_read_report",
+    "discuss_retry",
+    "discuss_cancel",
+    "discuss_read_job_logs",
+    "discuss_read_source",
+    "discuss_list_tree",
+    "discuss_delete",
 ];
 const EVENTS: &[&str] = &[
     "loom-update-state",
@@ -87,6 +97,7 @@ const EVENTS: &[&str] = &[
     "loom://skills-operation",
     "loom://learn-event",
     "loom://research-event",
+    "loom://discuss-event",
 ];
 fn manifest() -> Value {
     json!({"schemaVersion":1,"commands":COMMANDS,"events":EVENTS,"storeSchemaVersions":{"agents":AGENT_STORE_SCHEMA_VERSION,"settings":SETTINGS_SCHEMA_VERSION,"chat":crate::chat::CHAT_SCHEMA_VERSION}})
@@ -156,6 +167,14 @@ fn persisted_model_samples_round_trip_through_rust_types() {
     assert_model_sample::<crate::learn::models::PageContent>(samples, "learnPageContent");
     assert_model_sample::<crate::learn::models::LearnEvent>(samples, "learnEvent");
     assert_model_sample::<crate::research::models::Research>(samples, "research");
+    assert_model_sample::<crate::discuss::models::Discussion>(samples, "discussion");
+    assert_model_sample::<crate::discuss::models::Report>(samples, "discussReport");
+    assert_model_sample::<crate::discuss::models::DiscussEvent>(samples, "discussEvent");
+    assert_model_sample::<crate::discuss::models::CreateDiscussionInput>(
+        samples,
+        "createDiscussionInput",
+    );
+
     assert_model_sample::<crate::research::models::TurnContent>(samples, "researchTurnContent");
     assert_model_sample::<crate::research::models::ResearchEvent>(samples, "researchEvent");
     assert_model_sample::<crate::skills::translation::TranslationResult>(
@@ -226,6 +245,7 @@ fn event_manifest_matches_backend_emitters() {
         include_str!("skills/commands.rs"),
         include_str!("learn/mod.rs"),
         include_str!("research/mod.rs"),
+        include_str!("discuss/mod.rs"),
     ]
     .join("\n");
     for event in EVENTS {

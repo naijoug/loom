@@ -1,16 +1,16 @@
 # 编程开发助手桌面端需求文档
 
-## 当前目标（2026-10-20）
+## 当前目标（2026-10-27）
 
 用户已授权按 [简化 CLI Chat 重构计划](plans/2026-10-20/00:44-simple-cli-chat-refactor.md) 和 [实施计划](plans/2026-10-20/01:01-simple-chat-implementation.md) 重构，保留 Tauri + React + Rust，收敛为按项目组织的本机 CLI Chat。
 
-- 当前应用顶层入口为 Chat、Learn、Research 和 Settings，位于 Codex 风格的左侧功能栏（Chat 为默认首页，Settings 在底部；2026-10-26 按用户要求改版，见 [Agent 调用层与左侧功能栏计划](plans/2026-10-26/22:42-agent-layer-and-activity-rail.md)；Learn 于 2026-10-26 按用户要求新增，见下文“Learn 范围”；Research 于 2026-10-27 按该计划 P6 新增，见下文“Research 范围”）；2026-10-21 用户授权按 [Skills 迁移计划](plans/2026-10-21/06:12-skills-module-migration.md) 迁入 Skills，并在实施中明确它位于设置侧边栏。管理功能已分项迁入；2026-10-25 用户明确只保留功能迁移并退役源管理代码，取消旧数据迁移。真实验证限制单独记录。Task/Board/Planning 不再属于产品。旧 Task 数据原样保留。
+- 当前应用顶层入口为 Chat、Learn、Research、Discuss 和 Settings，位于 Codex 风格的左侧功能栏（Chat 为默认首页，Settings 在底部；2026-10-26 按用户要求改版，见 [Agent 调用层与左侧功能栏计划](plans/2026-10-26/22:42-agent-layer-and-activity-rail.md)；Learn 于 2026-10-26 按用户要求新增，见下文“Learn 范围”；Research 于 2026-10-27 按该计划 P6 新增，见下文“Research 范围”）；2026-10-21 用户授权按 [Skills 迁移计划](plans/2026-10-21/06:12-skills-module-migration.md) 迁入 Skills，并在实施中明确它位于设置侧边栏。管理功能已分项迁入；2026-10-25 用户明确只保留功能迁移并退役源管理代码，取消旧数据迁移。真实验证限制单独记录。Task/Board/Planning 不再属于产品。旧 Task 数据原样保留。
 - 输入框只提供一个权限选择器：Read-only / Ask / Auto，对应 `explore` / `ask` / `auto`（2026-10-21 由 Research / Code / Auto-run 改名，工作类型与权限不再混在一层）。权限由 CLI 执行；Ask 的发送确认是回合授权，非逐工具审批。
 - 本机探测 Claude Code、Codex、OpenCode、Grok；支持自定义 CLI。原生续聊、工具事件等按适配器能力与真实证据展示。
 - 新会话只选择权限；Agent 选择器固定在输入框左下，新旧会话一致。流式回复、停止、恢复、工具卡片、Markdown（GFM：标题、加粗、链接、表格、任务列表等）、导出和执行日志保留；原始 HTML 按字面显示，`http(s)`/`mailto` 链接在系统浏览器打开。
 - 会话保持项目本地 `.loom/chat/v2`；按项目聚合列表，不跨项目移动会话。
 - 默认英文，Settings → Appearance 支持简体中文和主题，立即生效并持久化。
-- Craft 全功能重建暂停，Workbench / SDK worker 源码冻结并移出默认构建与主门禁；除独立 Skills 迁移、Learn 和 Research 外，不扩展 Sources/MCP、Browser、Pages、DAG、远程和分享。
+- Craft 全功能重建暂停，Workbench / SDK worker 源码冻结并移出默认构建与主门禁；除独立 Skills 迁移、Learn、Research 和 Discuss 外，不扩展 Sources/MCP、Browser、Pages、DAG、远程和分享。
 
 ### Skills 范围（2026-10-25，按用户要求调整）
 

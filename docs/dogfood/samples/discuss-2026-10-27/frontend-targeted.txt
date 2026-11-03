@@ -1,0 +1,21 @@
+
+> loom@0.1.0 test /Users/guojian/Workspace/naijoug/loom
+> node scripts/run-tests.mjs -- tests/unit/discuss.test.cjs tests/unit/activityRail.test.cjs tests/unit/contract.test.cjs
+
+✔ the registry lists only delivered features, Chat first and mounted from startup (0.563708ms)
+✔ Cmd+1…4 follow rail order and Cmd+, opens Settings; other chords are ignored (0.146792ms)
+✔ the rail switches features without remounting Chat or losing its draft (202.147208ms)
+✔ frontend command event and schema contract matches the canonical fixture (0.87375ms)
+✔ Tauri core and event access stays behind the typed client (6.591791ms)
+✔ typed Tauri client forwards invoke payloads and unwraps event payloads (0.190834ms)
+✔ starting a discussion requires reviewing and confirming the exact call count (51.525334ms)
+✔ partial results remain readable and only the confirmed failed task is retried (51.013042ms)
+✔ outdated summary is clearly marked and delete requires a separate confirmation (70.6255ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 749.952167

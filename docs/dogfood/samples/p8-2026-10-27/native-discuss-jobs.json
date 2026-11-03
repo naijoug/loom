@@ -1,0 +1,80 @@
+[
+  {
+    "jobId": "job-1793170642373-80554-2",
+    "taskId": "r1-p2",
+    "runId": "run-1793170642369-80554-1",
+    "status": "done",
+    "startedAtMs": 1793170642373,
+    "finishedAtMs": 1793170675904,
+    "invocation": "/Users/guojian/.local/bin/claude -p --verbose --output-format stream-json --include-partial-messages --permission-mode plan",
+    "model": null,
+    "exitCode": 0,
+    "toolCalls": 0,
+    "error": null
+  },
+  {
+    "jobId": "job-1793170642373-80554-3",
+    "taskId": "r1-p1",
+    "runId": "run-1793170642369-80554-1",
+    "status": "done",
+    "startedAtMs": 1793170642373,
+    "finishedAtMs": 1793170677086,
+    "invocation": "/Users/guojian/.npm-global/bin/codex exec --json --skip-git-repo-check --cd /Users/guojian/Library/Application Support/com.naijoug.loom/discuss/discussion-1793170642363-80554-0/workspace --sandbox read-only --config approval_policy=\"never\" -- -",
+    "model": null,
+    "exitCode": 0,
+    "toolCalls": 0,
+    "error": null
+  },
+  {
+    "jobId": "job-1793170677087-80554-14",
+    "taskId": "r2-p2",
+    "runId": "run-1793170642369-80554-1",
+    "status": "done",
+    "startedAtMs": 1793170677087,
+    "finishedAtMs": 1793170706311,
+    "invocation": "/Users/guojian/.local/bin/claude -p --verbose --output-format stream-json --include-partial-messages --permission-mode plan",
+    "model": null,
+    "exitCode": 0,
+    "toolCalls": 0,
+    "error": null
+  },
+  {
+    "jobId": "job-1793170677087-80554-15",
+    "taskId": "r2-p1",
+    "runId": "run-1793170642369-80554-1",
+    "status": "done",
+    "startedAtMs": 1793170677087,
+    "finishedAtMs": 1793170708446,
+    "invocation": "/Users/guojian/.npm-global/bin/codex exec --json --skip-git-repo-check --cd /Users/guojian/Library/Application Support/com.naijoug.loom/discuss/discussion-1793170642363-80554-0/workspace --sandbox read-only --config approval_policy=\"never\" -- -",
+    "model": null,
+    "exitCode": 0,
+    "toolCalls": 0,
+    "error": null
+  },
+  {
+    "jobId": "job-1793170708446-80554-26",
+    "taskId": "summary",
+    "runId": "run-1793170642369-80554-1",
+    "status": "cancelled",
+    "startedAtMs": 1793170708446,
+    "finishedAtMs": 1793170711138,
+    "invocation": "/Users/guojian/.npm-global/bin/codex exec --json --skip-git-repo-check --cd /Users/guojian/Library/Application Support/com.naijoug.loom/discuss/discussion-1793170642363-80554-0/workspace --sandbox read-only --config approval_policy=\"never\" -- -",
+    "model": null,
+    "exitCode": 0,
+    "toolCalls": 0,
+    "error": "Agent stopped: chat_abort"
+  },
+  {
+    "jobId": "job-1793170740857-80554-31",
+    "taskId": "summary",
+    "runId": "run-1793170740857-80554-30",
+    "status": "done",
+    "startedAtMs": 1793170740857,
+    "finishedAtMs": 1793170775594,
+    "invocation": "/Users/guojian/.npm-global/bin/codex exec --json --skip-git-repo-check --cd /Users/guojian/Library/Application Support/com.naijoug.loom/discuss/discussion-1793170642363-80554-0/workspace --sandbox read-only --config approval_policy=\"never\" -- -",
+    "model": null,
+    "exitCode": 0,
+    "toolCalls": 0,
+    "error": null
+  }
+]

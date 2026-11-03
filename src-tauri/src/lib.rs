@@ -7,6 +7,7 @@ mod contracts;
 #[cfg(target_os = "macos")]
 mod desktop_menu;
 mod diagnostics;
+mod discuss;
 mod git_fetch;
 mod learn;
 mod migrations;
@@ -133,6 +134,16 @@ pub fn run() {
             research::commands::research_list_tree,
             research::commands::research_read_source,
             research::commands::research_delete,
+            discuss::commands::discuss_list,
+            discuss::commands::discuss_create,
+            discuss::commands::discuss_get,
+            discuss::commands::discuss_read_report,
+            discuss::commands::discuss_retry,
+            discuss::commands::discuss_cancel,
+            discuss::commands::discuss_read_job_logs,
+            discuss::commands::discuss_read_source,
+            discuss::commands::discuss_list_tree,
+            discuss::commands::discuss_delete,
         ]);
     #[cfg(target_os = "macos")]
     let builder = builder

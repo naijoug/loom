@@ -25,6 +25,8 @@
 - 本地翻译使用独立私有临时目录、只读/禁用工具的 CLI 参数和进程组监督，stdin 传输正文；结果按 operationId 保存，日志仅记录脱敏元数据。实际工具隔离保障仍需对应 CLI 真实版本验收，不能用提示词代替边界。
 - 分享动作仅复制文本；剪贴板失败显示可选文本，不上传 Gist。网页合成 Skills API 仅由 main 的显式 DEV fixture 分支注入，生产默认不使用 mock。
 
+Agent 层与明确的非 Agent 进程例外见 [Agent 层契约](architecture/agent-layer.md)。Chat/Learn/Research/Discuss 的生产 Agent 生命周期只通过公共接口；退出信号实现仍由同一 supervisor 管理。
+
 ## CLI 执行
 
 - `chat_send` 只访问已登记的 canonical 项目；存储会话路径必须匹配项目，准备后的 cwd 必须位于该项目内。
@@ -51,6 +53,13 @@
 - Agent 只以 `explore`（只读 / plan）权限运行，不接受自定义 CLI。选了项目时运行前后比对 `git status --porcelain` 与 HEAD，变化只记警告：用户可能同时在改项目，且这是检测而非 OS 沙箱，实际只读保障取决于各 CLI 的策略实现。Loom 不运行项目代码。
 - 报告引用经 `source_files.rs` 校验（拒绝逃逸与 symlink），无效引用以警告样式显示；外部链接只接受 `http(s)` 并在系统浏览器打开。
 - 作业日志沿用 CLI 执行的输出限额和脱敏；`research_*` 命令仅接受主窗口调用。
+
+## Discuss
+
+- 只允许 main 窗口调用，选择已登记项目；创建/重试/源码读取重新验证项目归属。任务始终经 Agent 层以 `explore` 执行，最多 4 并发、每次 15 分钟，沿用 runner 的输出限额、日志脱敏和进程组停止。
+- UI 在开始前确认 `2N+1` 次调用，单项重试确认 1 次；后端验证计数与参与者，确认字段不是不可伪造的授权凭证，也不是逐工具审批。失败项不会导致整批自动重试。
+- 议题与同伴回答是非可信资料，提示词明确隔离；不把它们当作权限控制。共享 Markdown 不执行 HTML。引用读取通过 `source_files`，不允许路径逃逸或 symlink。
+- 讨论/作业 ID 与内部参与者路径键受控；仅写 `<appData>/discuss/`。任务重试保留旧尝试日志，后续结果标为过时。无活动 lease 的未完成任务标中断，不自动调用模型。详见 [Discuss 契约](architecture/discuss-contracts.md)。
 
 ## 存储和输出
 

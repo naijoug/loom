@@ -1,0 +1,67 @@
+[
+  {
+    "jobId": "job-1793161712762-28980-2",
+    "taskId": "r1-p1",
+    "runId": "run-1793161712662-28980-1",
+    "status": "done",
+    "startedAtMs": 1793161712762,
+    "finishedAtMs": 1793161760108,
+    "invocation": "codex exec --json --skip-git-repo-check --cd /var/folders/wh/8gkvgk297s392p974p39b0s40000gp/T/loom-discuss-real-20261027-z6z81p5j/discuss/discussion-1793161712602-28980-0/workspace --sandbox read-only --config approval_policy=\"never\" -- -",
+    "model": null,
+    "exitCode": 0,
+    "toolCalls": 0,
+    "error": null
+  },
+  {
+    "jobId": "job-1793161713003-28980-5",
+    "taskId": "r1-p2",
+    "runId": "run-1793161712662-28980-1",
+    "status": "done",
+    "startedAtMs": 1793161713003,
+    "finishedAtMs": 1793161742354,
+    "invocation": "claude -p --verbose --output-format stream-json --include-partial-messages --permission-mode plan",
+    "model": null,
+    "exitCode": 0,
+    "toolCalls": 0,
+    "error": null
+  },
+  {
+    "jobId": "job-1793161760376-28980-14",
+    "taskId": "r2-p1",
+    "runId": "run-1793161712662-28980-1",
+    "status": "done",
+    "startedAtMs": 1793161760376,
+    "finishedAtMs": 1793161797440,
+    "invocation": "codex exec --json --skip-git-repo-check --cd /var/folders/wh/8gkvgk297s392p974p39b0s40000gp/T/loom-discuss-real-20261027-z6z81p5j/discuss/discussion-1793161712602-28980-0/workspace --sandbox read-only --config approval_policy=\"never\" -- -",
+    "model": null,
+    "exitCode": 0,
+    "toolCalls": 0,
+    "error": null
+  },
+  {
+    "jobId": "job-1793161760463-28980-18",
+    "taskId": "r2-p2",
+    "runId": "run-1793161712662-28980-1",
+    "status": "done",
+    "startedAtMs": 1793161760463,
+    "finishedAtMs": 1793161804856,
+    "invocation": "claude -p --verbose --output-format stream-json --include-partial-messages --permission-mode plan",
+    "model": null,
+    "exitCode": 0,
+    "toolCalls": 0,
+    "error": null
+  },
+  {
+    "jobId": "job-1793161804857-28980-26",
+    "taskId": "summary",
+    "runId": "run-1793161712662-28980-1",
+    "status": "done",
+    "startedAtMs": 1793161804857,
+    "finishedAtMs": 1793161849177,
+    "invocation": "codex exec --json --skip-git-repo-check --cd /var/folders/wh/8gkvgk297s392p974p39b0s40000gp/T/loom-discuss-real-20261027-z6z81p5j/discuss/discussion-1793161712602-28980-0/workspace --sandbox read-only --config approval_policy=\"never\" -- -",
+    "model": null,
+    "exitCode": 0,
+    "toolCalls": 0,
+    "error": null
+  }
+]

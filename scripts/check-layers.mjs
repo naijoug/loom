@@ -5,64 +5,75 @@
 // 3. Feature modules never spawn processes outside test code; agent CLIs start only through agent::run.
 // 4. Frontend: src/features/<x> never imports src/features/<y> (code or CSS); shared UI lives in src/components,
 //    and src/components, src/hooks and src/api never import features. Only src/shell and the entry wire features together.
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { productionCode, rustCodeMask } from "./lib/rust-production.mjs";
+import { moduleReferences, spawnsProcess } from "./lib/rust-layer-rules.mjs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(fileURLToPath(new URL(".", import.meta.url)), "..");
 const src = join(root, "src-tauri", "src");
 
-const FEATURE_MODULES = ["chat", "chat_context", "learn", "research", "skills", "workbench"];
+const FEATURE_MODULES = ["chat", "chat_context", "learn", "research", "discuss", "experiments", "skills", "workbench"];
 const CHAT_MODULES = ["chat", "chat_context"];
-const SPAWNING_FEATURES = ["chat", "chat_context.rs", "learn", "research"];
+const SPAWNING_FEATURES = ["chat", "chat_context.rs", "learn", "research", "discuss", "experiments", "research_sources", "rea", "browser_host", "repository_sources"];
 // Non-agent processes a feature may start itself.
 const SPAWN_ALLOWLIST = new Map([["learn/fetch.rs", "git clone/fetch for study sources"]]);
 
 function rustFiles(path) {
+  if (!existsSync(path)) return [];
   if (statSync(path).isFile()) return path.endsWith(".rs") ? [path] : [];
   return readdirSync(path).flatMap((name) => rustFiles(join(path, name)));
 }
 
 function referencesModule(text, modules) {
-  return modules.filter((name) => new RegExp(`\\bcrate::${name}\\b`).test(text));
-}
-
-// Drop `#[cfg(test)] mod … {` / `#[cfg(all(test, …))] mod … {` blocks and whole *_tests.rs files.
-function productionCode(file, text) {
-  if (/(^|_)tests?\.rs$/.test(file)) return "";
-  const testModule = text.search(/#\[cfg\((all\()?test\b[^\]]*\]\s*(pub(\([a-z]+\))?\s+)?mod\s+\w+\s*\{/);
-  return testModule === -1 ? text : text.slice(0, testModule);
+  return moduleReferences(text, modules);
 }
 
 const violations = [];
 const report = (file, message) => violations.push(`${relative(root, file)}: ${message}`);
 
-for (const file of rustFiles(join(src, "agent"))) {
-  const hits = referencesModule(readFileSync(file, "utf8"), FEATURE_MODULES);
-  if (hits.length) report(file, `agent/ must not import feature modules (${hits.join(", ")})`);
+for (const shared of ["agent", "tool_process", "research_sources", "rea", "browser_host", "repository_sources"]) {
+  for (const file of rustFiles(join(src, shared))) {
+    const hits = referencesModule(productionCode(file, readFileSync(file, "utf8")), FEATURE_MODULES);
+    if (hits.length) report(file, `${shared}/ must not import feature modules (${hits.join(", ")})`);
+  }
 }
 
 for (const file of rustFiles(join(src, "learn"))) {
-  const hits = referencesModule(readFileSync(file, "utf8"), [...CHAT_MODULES, "research"]);
+  const hits = referencesModule(readFileSync(file, "utf8"), [...CHAT_MODULES, "research", "discuss", "experiments"]);
   if (hits.length) report(file, `learn/ must not import other features (${hits.join(", ")}); use crate::agent`);
 }
 
 for (const file of rustFiles(join(src, "research"))) {
-  const hits = referencesModule(readFileSync(file, "utf8"), [...CHAT_MODULES, "learn"]);
+  const hits = referencesModule(readFileSync(file, "utf8"), [...CHAT_MODULES, "learn", "discuss", "experiments"]);
   if (hits.length) report(file, `research/ must not import other features (${hits.join(", ")}); use crate::agent`);
 }
 
+for (const file of rustFiles(join(src, "experiments"))) {
+  const hits = referencesModule(productionCode(file, readFileSync(file, "utf8")), [...CHAT_MODULES, "learn", "research", "discuss"]);
+  if (hits.length) report(file, `experiments/ must not import other features (${hits.join(", ")})`);
+}
+
 for (const file of [...rustFiles(join(src, "chat")), join(src, "chat_context.rs")]) {
-  const hits = referencesModule(readFileSync(file, "utf8"), ["learn", "research"]);
+  const hits = referencesModule(readFileSync(file, "utf8"), ["learn", "research", "discuss"]);
   if (hits.length) report(file, `Chat must not import other features (${hits.join(", ")})`);
+}
+
+for (const file of rustFiles(join(src, "discuss"))) {
+  const code = productionCode(file, readFileSync(file, "utf8"));
+  const hits = referencesModule(code, [...CHAT_MODULES, "learn", "research", "skills", "process_supervisor"]);
+  if (hits.length) report(file, `discuss/ must use shared agent and component APIs (${hits.join(", ")})`);
 }
 
 for (const entry of SPAWNING_FEATURES) {
   for (const file of rustFiles(join(src, entry))) {
     const path = relative(src, file);
     if (SPAWN_ALLOWLIST.has(path)) continue;
-    const code = productionCode(path, readFileSync(file, "utf8"));
-    if (/\btokio::process\b|\bstd::process::Command\b|\bCommand::new\(/.test(code)) {
+    const code = rustCodeMask(productionCode(path, readFileSync(file, "utf8")));
+    if (/\bprocess_supervisor\b/.test(code)) report(file, "feature lifecycle must use the agent public API, not process_supervisor");
+    if (/\bagent::(?:registry|diagnostics|runner|invocation|lifecycle|stream|tools|event|capabilities)::/.test(code)) report(file, "feature modules must use agent re-exports, not private submodules");
+    if (spawnsProcess(code)) {
       report(file, "feature modules must start agent CLIs through agent::run, not spawn processes");
     }
   }
