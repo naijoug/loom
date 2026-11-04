@@ -1,6 +1,6 @@
 # Agent 命令行（`loom-agent`）
 
-状态：A4 已实现并通过合成测试（参数表、桩 CLI、假 SSE 服务）；尚未用真实 CLI 或真实 provider 跑提示词，也未复核 `.app` 是否随包带有 `loom-agent`（A7）。计划见 [Agent 调用层计划](plans/2026-11-02/21:54-loom-agent-cli.md)。
+状态：A4 已实现并通过合成测试（参数表、桩 CLI、假 SSE 服务）；A7 已用真实 CLI 与 provider 跑通三种模式，记录见 [2026-11-03 验收](dogfood/2026-11-03-agent-modes.md)。尚未复核 `.app` 是否随包带有 `loom-agent`。计划见 [Agent 调用层计划](plans/2026-11-02/21:54-loom-agent-cli.md)。
 
 `loom-agent` 是 `crate::agent` 的无窗口入口：读取与桌面相同的 `agents.json` / `providers.json`，按与 Chat 一回合相同的方式准备调用，再经 `agent::run` 执行。它不启动 Tauri，也不经 IPC。
 
@@ -23,7 +23,7 @@ src-tauri/target/debug/loom-agent --help
 | `provider add ID --kind KIND --base-url URL [--name NAME] [--model MODEL] [--key-env VAR]` | 新建 provider；KIND 为 `anthropic`、`openai-responses`、`openai-chat`。只新建，修改已有项用 Settings 或删除后重建 |
 | `provider set-key ID [--clear]` | 从管道或文件形式的 stdin 读 key（≤16 KiB）并保存；`--clear` 删除已保存的 key。stdin 是终端时拒绝 |
 | `provider remove ID` | 删除未被任何 Agent 引用的 provider |
-| `provider test ID` | 一次最小请求（列模型，不消耗 token）；只报告分类结果与 HTTP 状态 |
+| `provider test ID` | 一次最小请求（列模型，不消耗 token）；只报告分类结果与 HTTP 状态。没有模型列表的兼容端点（如 DeepSeek `/anthropic`）会报 `not_found`，但对话可用 |
 | `run [options]` | 跑一个提示词 |
 
 没有 `--key` 参数；key 只能经 stdin 进入，避免出现在 argv、shell 历史和 `ps` 中：

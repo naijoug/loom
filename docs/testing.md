@@ -10,7 +10,7 @@
 | 前端局部逻辑/样式 | `pnpm format`、相关 `pnpm test -- tests/unit/<file>.test.cjs`、`pnpm build`；视觉变化查看页面 | 共享状态扩大前端回归 |
 | Rust 局部逻辑 | fmt、相关 cargo test、适用 Clippy | 共享模块扩大 Rust 回归 |
 | IPC/权限/持久化/进程 | 两端契约、失败与恢复、进程 fixture | CLI/OS 保证必须补真实运行 |
-| Agent 调用层 / 模型来源 / `loom-agent` | `node scripts/check-layers.mjs`、`cargo test --manifest-path src-tauri/Cargo.toml agent`（含 `agent_cli`、providers、injection、api 的桩进程与假 SSE 服务）、`node --test tests/unit/agentProviders.test.cjs tests/unit/agentPicker.test.cjs` | 改 CLI 注入或协议时用临时 `LOOM_PROFILE_DIR` 跑真实 CLI/provider，检查 `ps` 参数、执行记录、日志无 key；花费额度，缺 key 记 blocked |
+| Agent 调用层 / 模型来源 / `loom-agent` | `node scripts/check-layers.mjs`、`cargo test --manifest-path src-tauri/Cargo.toml agent`（含 `agent_cli`、providers、injection、api 的桩进程与假 SSE 服务）、`node --test tests/unit/agentProviders.test.cjs tests/unit/agentPicker.test.cjs` | 改 CLI 注入或协议时用临时 `LOOM_PROFILE_DIR` 跑真实 CLI/provider，检查 `ps` 参数、执行记录、日志无 key；花费额度，缺 key 记 blocked；首轮记录见 [2026-11-03 三种模式验收](dogfood/2026-11-03-agent-modes.md) |
 | 里程碑 | `pnpm check`、`pnpm tauri build --no-bundle` | 按目标补真实桌面验收 |
 | 冻结内核 | 手动选择 `pnpm check:core` | 不属于默认 Chat 门禁 |
 
@@ -71,7 +71,7 @@ Research 证据与限制见 [Research 验收记录](dogfood/2026-10-27-research-
 - `cargo test --manifest-path src-tauri/Cargo.toml discuss::`：伪 CLI 的实际并发/轮次屏障、部分失败、坏安装、取消、单项重试与过时传播、重启恢复、参数确认和路径保护；不调用模型。
 - `pnpm test -- tests/unit/discuss.test.cjs tests/unit/activityRail.test.cjs tests/unit/contract.test.cjs`：参与者和模型、创建/重试调用确认、成功报告保留、过时汇总、删除确认、功能栏与 IPC 契约。
 - `pnpm smoke:visual` 同轮运行 `scripts/discuss-smoke.mjs`：轮次、源码引用、日志、部分失败/停止/重试、过时汇总、创建确认、存储失败、en/zh-CN × 深浅、700px，以及 Chat 草稿切页保持；功能栏矩阵补 ⌘/Ctrl+4。截图在 `.designs/exports/discuss/`，是合成网页证据。
-- 真实用例：`LOOM_REAL_DISCUSS=1 LOOM_REAL_DISCUSS_ROOT=<dir> cargo test --manifest-path src-tauri/Cargo.toml discuss::real_tests::codex_and_claude_complete_two_rounds_and_summary -- --ignored --nocapture`。默认无项目、两个真实 CLI、预计 5 次调用，消耗额度。可指定 `LOOM_REAL_DISCUSS_CODEX` / `_CLAUDE` 二进制和 `_CODEX_MODEL` / `_CLAUDE_MODEL`。必须同时记录两家成功或具体阻塞，不以单家或 fixture 冒充完整真实通过。
+- 真实用例：`LOOM_REAL_DISCUSS=1 LOOM_REAL_DISCUSS_ROOT=<dir> cargo test --manifest-path src-tauri/Cargo.toml discuss::real_tests::codex_and_claude_complete_two_rounds_and_summary -- --ignored --nocapture`。默认无项目、两个真实 CLI、预计 5 次调用，消耗额度。可指定 `LOOM_REAL_DISCUSS_CODEX` / `_CLAUDE` 二进制和 `_CODEX_MODEL` / `_CLAUDE_MODEL`。必须同时记录两家成功或具体阻塞，不以单家或 fixture 冒充完整真实通过。模式 C（无项目、两位 `api` 参与者）：设 `LOOM_PROFILE_DIR` 指向含 provider 的 profile，再加 `LOOM_REAL_DISCUSS_API_A` / `_API_B`（provider id）运行 `discuss::real_tests::api_participants_complete_without_project`。
 
 桌面人工验收：进入第 4 项、新建 2–4 人讨论、核对模型与调用次数确认；真实进行中切到 Chat 再回来、停止全部、逐项重试、读取旧尝试；退出重启后检查报告与中断项；检查源码引用及删除确认。真实桌面未运行不得以 smoke 代替。
 

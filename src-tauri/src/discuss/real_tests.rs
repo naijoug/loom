@@ -79,3 +79,71 @@ async fn codex_and_claude_complete_two_rounds_and_summary() {
     assert_eq!(d.status, "ready");
     assert!(d.tasks.iter().all(|t| t.attempts.len() == 1));
 }
+
+/// Opt-in mode C: two `api` participants (direct model calls), no project.
+/// Providers resolve from the config dir, so point `LOOM_PROFILE_DIR` at a
+/// profile whose `providers.json` holds `LOOM_REAL_DISCUSS_API_A` / `_API_B`.
+#[tokio::test]
+#[ignore = "requires LOOM_REAL_DISCUSS=1, LOOM_REAL_DISCUSS_API_A/B provider ids and their keys; consumes model usage"]
+async fn api_participants_complete_without_project() {
+    assert_eq!(std::env::var("LOOM_REAL_DISCUSS").as_deref(), Ok("1"));
+    let env = |s: &str| std::env::var(format!("LOOM_REAL_DISCUSS_{s}")).ok();
+    let root = env("ROOT")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| std::env::temp_dir().join(store::next_id("loom-real-discuss")));
+    let store = Store::new(&root);
+    let id = store::next_id("discussion");
+    let mut d = sample(&id);
+    d.topic = "Should a small local desktop app retry a failed model call automatically? Limit each answer to 80 words.".into();
+    d.title = "Retry policy".into();
+    assert!(d.project_path.is_none());
+    let providers = [
+        ("a", env("API_A").expect("LOOM_REAL_DISCUSS_API_A")),
+        ("b", env("API_B").expect("LOOM_REAL_DISCUSS_API_B")),
+    ];
+    for (participant, (_, provider)) in d.participants.iter_mut().zip(&providers) {
+        participant.name = provider.clone();
+        participant.adapter_type = agent::ADAPTER_API.into();
+        participant.model = None;
+    }
+    let configs = providers.map(|(id, provider)| AgentConfig {
+        id: id.into(),
+        name: provider.clone(),
+        command: String::new(),
+        args: vec![],
+        working_directory_policy: "project_root".into(),
+        capabilities: vec!["planning".into()],
+        adapter_type: agent::ADAPTER_API.into(),
+        can_write_files: false,
+        can_run_commands: false,
+        enabled: true,
+        available: true,
+        provider_id: Some(provider),
+    });
+    store.create(&d).unwrap();
+    let (_, lease) = store.begin(&id, None).unwrap();
+    println!(
+        "Discussion evidence: {}",
+        store.path(&id, &[]).unwrap().display()
+    );
+    let pipeline = Pipeline {
+        store: store.clone(),
+        id: id.clone(),
+        agents: configs.into_iter().map(|a| (a.id.clone(), a)).collect(),
+        emit: Arc::new(|_| {}),
+    };
+    pipeline.run(lease, None).await;
+    let d = store.load(&id).unwrap();
+    println!("Final status: {}", d.status);
+    for task in &d.tasks {
+        println!(
+            "{} {:?}, attempts={}, error={:?}",
+            task.id,
+            task.status,
+            task.attempts.len(),
+            task.error
+        );
+    }
+    assert!(d.tasks.iter().all(|t| t.status == Status::Done));
+    assert_eq!(d.status, "ready");
+}
