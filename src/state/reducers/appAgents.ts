@@ -31,6 +31,8 @@ export function reduceAppAndAgents(state: AppState, action: AppAction): AppState
         agentDiagnostics: [...state.agentDiagnostics.filter((item) => !fresh.has(item.agentId)), ...action.diagnostics],
       };
     }
+    case "providers/loaded":
+      return { ...state, providers: action.providers };
     default:
       return state;
   }

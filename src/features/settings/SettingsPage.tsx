@@ -6,6 +6,7 @@ import {
   Bot,
   FlaskConical,
   Info,
+  KeyRound,
   Monitor,
   Moon,
   Palette,
@@ -21,18 +22,21 @@ import { useAgentCatalog } from "../../hooks/useAgentCatalog";
 import { hasTauriRuntime } from "../../hooks/runtime";
 import { useAppState } from "../../state/AppStateContext";
 import { UpdateButton } from "../../components/app-update/UpdateProvider";
-import { defaultAgentDraft, draftFromAgent, isBuiltInAgent } from "./agentDraft";
-import { agentHealth, agentStatusKey } from "../../components/AgentPicker";
+import { apiAgentDraft, defaultAgentDraft, draftFromAgent, isBuiltInAgent } from "./agentDraft";
+import { agentHealth, agentProvider, agentStatusKey } from "../../components/AgentPicker";
+import { PROVIDER_KINDS, providerHost, providerKindKey } from "./providerDraft";
+import { ProvidersPanel } from "./ProvidersPanel";
 import { setInlineCardsEnabled, useInlineCardsEnabled } from "../../hooks/inlineCardsSetting";
 import "./settings.css";
 import { SkillsPreviewContext } from "../skills/previewContext";
 
 const SkillsPanel = lazy(() => import("../skills/SkillsPanel").then((module) => ({ default: module.SkillsPanel })));
 
-type SettingsTab = "skills" | "agents" | "appearance" | "experiments" | "diagnostics" | "about";
+type SettingsTab = "skills" | "agents" | "providers" | "appearance" | "experiments" | "diagnostics" | "about";
 const tabIcons = {
   skills: BookOpen,
   agents: Bot,
+  providers: KeyRound,
   appearance: Palette,
   experiments: FlaskConical,
   diagnostics: Activity,
@@ -57,6 +61,8 @@ export function SettingsPage() {
   const [draft, setDraft] = useState(defaultAgentDraft);
   const [args, setArgs] = useState("");
   const [includeLogs, setIncludeLogs] = useState(false);
+  const [addingProvider, setAddingProvider] = useState(false);
+  const providers = state.providers.providers;
   const inlineCards = useInlineCardsEnabled();
   useEffect(() => {
     void loadAgents();
@@ -89,9 +95,9 @@ export function SettingsPage() {
       setBusy(false);
     }
   }
-  function edit(agent?: AgentConfig) {
+  function edit(agent?: AgentConfig, api = false) {
     setEditing(agent?.id ?? null);
-    setDraft(agent ? draftFromAgent(agent) : defaultAgentDraft());
+    setDraft(agent ? draftFromAgent(agent) : api ? apiAgentDraft(providers[0]) : defaultAgentDraft());
     setArgs(agent?.args.join("\n") ?? "");
     setFormOpen(true);
   }
@@ -142,27 +148,36 @@ export function SettingsPage() {
       ? t("skillsSettingsDesc")
       : tab === "agents"
         ? t("agentsDesc")
-        : tab === "appearance"
-          ? t("appearanceDesc")
-          : tab === "experiments"
-            ? t("experimentsDesc")
-            : tab === "diagnostics"
-              ? t("diagnosticsHint")
-              : t("aboutHint");
+        : tab === "providers"
+          ? t("providersDesc")
+          : tab === "appearance"
+            ? t("appearanceDesc")
+            : tab === "experiments"
+              ? t("experimentsDesc")
+              : tab === "diagnostics"
+                ? t("diagnosticsHint")
+                : t("aboutHint");
   return (
     <div className="chat-settings">
       <aside data-tauri-drag-region>
         <h1>{t("settings")}</h1>
         <nav>
-          {(["agents", "skills", "appearance", "experiments", "diagnostics", "about"] as const).map((id) => {
-            const Icon = tabIcons[id];
-            return (
-              <button type="button" key={id} aria-current={tab === id ? "page" : undefined} onClick={() => setTab(id)}>
-                <Icon size={15} aria-hidden="true" />
-                {t(id)}
-              </button>
-            );
-          })}
+          {(["agents", "providers", "skills", "appearance", "experiments", "diagnostics", "about"] as const).map(
+            (id) => {
+              const Icon = tabIcons[id];
+              return (
+                <button
+                  type="button"
+                  key={id}
+                  aria-current={tab === id ? "page" : undefined}
+                  onClick={() => setTab(id)}
+                >
+                  <Icon size={15} aria-hidden="true" />
+                  {t(id)}
+                </button>
+              );
+            },
+          )}
         </nav>
       </aside>
       <main className={tab === "skills" ? "settings-skills-main" : undefined}>
@@ -182,6 +197,18 @@ export function SettingsPage() {
                   <Plus size={14} aria-hidden="true" />
                   {t("customCli")}
                 </button>
+                <button type="button" onClick={() => edit(undefined, true)}>
+                  <Plus size={14} aria-hidden="true" />
+                  {t("directApi")}
+                </button>
+              </div>
+            )}
+            {tab === "providers" && (
+              <div className="settings-actions">
+                <button type="button" className="settings-primary" onClick={() => setAddingProvider(true)}>
+                  <Plus size={14} aria-hidden="true" />
+                  {t("addProvider")}
+                </button>
               </div>
             )}
           </header>
@@ -200,6 +227,7 @@ export function SettingsPage() {
               />
             </Suspense>
           )}
+          {tab === "providers" && <ProvidersPanel adding={addingProvider} onAddingChange={setAddingProvider} />}
           {tab === "agents" && (
             <>
               <div className="settings-table-wrap">
@@ -208,6 +236,7 @@ export function SettingsPage() {
                     <tr>
                       <th>{t("agents")}</th>
                       <th>{t("status")}</th>
+                      <th>{t("modelSource")}</th>
                       <th>{t("path")}</th>
                       <th>{t("capabilities")}</th>
                       <th>{t("enabled")}</th>
@@ -219,35 +248,42 @@ export function SettingsPage() {
                       .filter((agent) => agent.adapterType !== "dummy")
                       .map((agent) => {
                         const diag = diagnostics.find((item) => item.agentId === agent.id);
+                        const provider = agentProvider(agent, providers);
+                        const api = agent.adapterType === "api";
                         return (
                           <tr key={agent.id}>
                             <td>
                               <strong>{agent.name}</strong>
                               <small>
-                                <code>{diag?.version ?? t("unknown")}</code>
+                                <code>{api ? t("directApi") : (diag?.version ?? t("unknown"))}</code>
                               </small>
                             </td>
                             <td title={diag?.detail}>
                               <span className="settings-status">
                                 <span
                                   className="chat-health-dot"
-                                  data-health={agentHealth(agent, diag)}
+                                  data-health={agentHealth(agent, diag, provider)}
                                   aria-hidden="true"
                                 />
                                 {t(agentStatusKey(agent, diag) ?? "installed")}
                               </span>
                             </td>
+                            <td>{provider?.name ?? agent.providerId ?? t("ownLogin")}</td>
                             <td>
-                              <code>{diag?.resolvedPath ?? agent.command}</code>
+                              <code title={api ? provider?.baseUrl : undefined}>
+                                {api ? providerHost(provider?.baseUrl) : (diag?.resolvedPath ?? agent.command)}
+                              </code>
                             </td>
                             <td>
-                              {[
-                                diag?.capabilities?.structuredStream && t("structuredStream"),
-                                diag?.capabilities?.toolEvents && t("toolEvents"),
-                                diag?.capabilities?.nativeResume && t("nativeResume"),
-                              ]
-                                .filter(Boolean)
-                                .join(", ") || t("historyReplay")}
+                              {api
+                                ? t("textOnly")
+                                : [
+                                    diag?.capabilities?.structuredStream && t("structuredStream"),
+                                    diag?.capabilities?.toolEvents && t("toolEvents"),
+                                    diag?.capabilities?.nativeResume && t("nativeResume"),
+                                  ]
+                                    .filter(Boolean)
+                                    .join(", ") || t("historyReplay")}
                             </td>
                             <td>
                               <label className="settings-switch">
@@ -288,7 +324,7 @@ export function SettingsPage() {
               </div>
               {formOpen && (
                 <form onSubmit={(event) => void submit(event)} className="settings-card settings-agent-form">
-                  <h3>{editing ? t("edit") : t("customCli")}</h3>
+                  <h3>{editing ? t("edit") : draft.adapterType === "api" ? t("directApi") : t("customCli")}</h3>
                   <label>
                     {t("name")}
                     <input
@@ -297,14 +333,91 @@ export function SettingsPage() {
                       onChange={(event) => setDraft({ ...draft, name: event.target.value })}
                     />
                   </label>
-                  <label>
-                    {t("executable")}
-                    <input
-                      required
-                      value={draft.command}
-                      onChange={(event) => setDraft({ ...draft, command: event.target.value })}
-                    />
-                  </label>
+                  {draft.adapterType !== "api" && (
+                    <label>
+                      {t("executable")}
+                      <input
+                        required
+                        value={draft.command}
+                        onChange={(event) => setDraft({ ...draft, command: event.target.value })}
+                      />
+                    </label>
+                  )}
+                  {draft.adapterType === "api" ? (
+                    <>
+                      <label>
+                        {t("modelSource")}
+                        <select
+                          required
+                          value={draft.providerId ?? ""}
+                          onChange={(event) => {
+                            const next = providers.find((item) => item.id === event.target.value);
+                            const auto = apiAgentDraft(providers.find((item) => item.id === draft.providerId));
+                            // Keep a name the user typed; follow the provider while it is still the default.
+                            setDraft({
+                              ...draft,
+                              providerId: next?.id ?? null,
+                              name: draft.name === auto.name ? apiAgentDraft(next).name : draft.name,
+                            });
+                          }}
+                        >
+                          {!providers.length && <option value="">{t("directApiNeedsProvider")}</option>}
+                          {providers.map((item) => (
+                            <option key={item.id} value={item.id}>
+                              {item.name} · {t(providerKindKey(item.kind))}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <p>{t("directApiHint")}</p>
+                    </>
+                  ) : (
+                    (() => {
+                      const diag = diagnostics.find((item) => item.agentId === editing);
+                      // Custom CLIs take no provider; an undiagnosed built-in lists every kind and the backend checks.
+                      const kinds =
+                        draft.adapterType === "cli" ? [] : (diag?.capabilities?.providerKinds ?? PROVIDER_KINDS);
+                      const compatible = providers.filter((item) => kinds.includes(item.kind));
+                      const incompatible = providers.filter((item) => !kinds.includes(item.kind));
+                      return (
+                        <>
+                          <div className="settings-field">
+                            <span>{t("modelSource")}</span>
+                            <span className="settings-inline-field">
+                              <select
+                                aria-label={t("modelSource")}
+                                value={draft.providerId ?? ""}
+                                disabled={!kinds.length}
+                                onChange={(event) => setDraft({ ...draft, providerId: event.target.value || null })}
+                              >
+                                <option value="">
+                                  {t("ownLoginOption", { command: draft.command.trim() || draft.name })}
+                                </option>
+                                {compatible.map((item) => (
+                                  <option key={item.id} value={item.id}>
+                                    {item.name} · {t(providerKindKey(item.kind))}
+                                  </option>
+                                ))}
+                                {incompatible.length > 0 && (
+                                  <optgroup label={t("providerIncompatible")}>
+                                    {incompatible.map((item) => (
+                                      <option key={item.id} value={item.id} disabled>
+                                        {item.name} · {t(providerKindKey(item.kind))}
+                                      </option>
+                                    ))}
+                                  </optgroup>
+                                )}
+                              </select>
+                              <button type="button" onClick={() => setTab("providers")}>
+                                {t("manageProviders")}
+                              </button>
+                            </span>
+                          </div>
+                          <p>{kinds.length ? t("providerInjectHint") : t("providerNotSupported")}</p>
+                        </>
+                      );
+                    })()
+                  )}
                   {draft.adapterType === "cli" && (
                     <>
                       <label>
@@ -329,7 +442,11 @@ export function SettingsPage() {
                     <button type="button" onClick={() => setFormOpen(false)}>
                       {t("cancel")}
                     </button>
-                    <button type="submit" className="settings-primary" disabled={busy}>
+                    <button
+                      type="submit"
+                      className="settings-primary"
+                      disabled={busy || (draft.adapterType === "api" && !draft.providerId)}
+                    >
                       {t("save")}
                     </button>
                   </div>

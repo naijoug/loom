@@ -1,6 +1,6 @@
 import { useCallback } from "react";
-import { agentsApi } from "../api/agents";
-import type { AgentDiagnostic, AgentConfigInput } from "../domain";
+import { agentsApi, providersApi } from "../api/agents";
+import type { AgentDiagnostic, AgentConfigInput, ModelProviderInput } from "../domain";
 import { useAppState } from "../state/AppStateContext";
 import { hasTauriRuntime } from "./runtime";
 
@@ -20,6 +20,11 @@ export function useAgentCatalog() {
     }
 
     dispatch({ type: "agents/loadStarted" });
+    // A broken providers file must not hide the Agents; Settings shows its error on its own page.
+    providersApi
+      .list()
+      .then((providers) => dispatch({ type: "providers/loaded", providers }))
+      .catch(() => undefined);
     try {
       dispatch({
         type: "agents/loaded",
@@ -29,6 +34,39 @@ export function useAgentCatalog() {
       dispatch({ type: "agents/loadFailed", error: toErrorMessage(error) });
     }
   }, [dispatch]);
+
+  // Provider calls throw, so the Providers page can show the error (or a revision conflict) next to the form.
+  const loadProviders = useCallback(async () => {
+    assertTauriRuntime("Loading model providers");
+    const providers = await providersApi.list();
+    dispatch({ type: "providers/loaded", providers });
+    return providers;
+  }, [dispatch]);
+
+  const saveProvider = useCallback(
+    async (input: ModelProviderInput) => {
+      assertTauriRuntime("Saving a model provider");
+      const providers = await providersApi.save(input);
+      dispatch({ type: "providers/loaded", providers });
+      return providers;
+    },
+    [dispatch],
+  );
+
+  const deleteProvider = useCallback(
+    async (providerId: string, expectedRevision: number) => {
+      assertTauriRuntime("Removing a model provider");
+      const providers = await providersApi.remove(providerId, expectedRevision);
+      dispatch({ type: "providers/loaded", providers });
+      return providers;
+    },
+    [dispatch],
+  );
+
+  const testProvider = useCallback(async (providerId: string) => {
+    assertTauriRuntime("Testing a model provider");
+    return providersApi.test(providerId);
+  }, []);
 
   const createAgent = useCallback(
     async (input: AgentConfigInput) => {
@@ -110,5 +148,16 @@ export function useAgentCatalog() {
     [dispatch],
   );
 
-  return { loadAgents, createAgent, setAgentEnabled, updateAgent, deleteAgent, diagnoseAgents };
+  return {
+    loadAgents,
+    createAgent,
+    setAgentEnabled,
+    updateAgent,
+    deleteAgent,
+    diagnoseAgents,
+    loadProviders,
+    saveProvider,
+    deleteProvider,
+    testProvider,
+  };
 }

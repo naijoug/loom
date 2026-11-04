@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, ChevronDown } from "lucide-react";
-import type { AgentConfig, AgentDiagnostic } from "../domain";
+import type { AgentConfig, AgentDiagnostic, ModelProvider } from "../domain";
 import { useT } from "../i18n";
 import "./AgentPicker.css";
 
+/** Direct-API agents are never picked by default: most features need tools they lack. */
 export function defaultAgentId(agents: AgentConfig[], previous?: string | null): string {
-  const available = agents.filter((agent) => agent.enabled && agent.available && agent.adapterType !== "dummy");
+  const available = agents.filter(
+    (agent) => agent.enabled && agent.available && agent.adapterType !== "dummy" && agent.adapterType !== "api",
+  );
   return (
     available.find((agent) => agent.id === previous)?.id ??
     available.find((agent) => ["claude_code_cli", "codex_cli"].includes(agent.adapterType))?.id ??
@@ -27,9 +30,26 @@ export function agentStatusKey(
   if (diagnostic?.status === "broken") return "brokenInstall";
   return agent.available ? undefined : "unavailable";
 }
-export function agentHealth(agent: AgentConfig | undefined, diagnostic?: AgentDiagnostic): "ok" | "unknown" | "down" {
-  if (!agent?.available || isAgentUnusable(diagnostic?.status)) return "down";
+/** A provider without a usable key makes its Agent unusable even when the CLI itself is fine. */
+export function agentHealth(
+  agent: AgentConfig | undefined,
+  diagnostic?: AgentDiagnostic,
+  provider?: ModelProvider,
+): "ok" | "unknown" | "down" {
+  if (!agent?.available || isAgentUnusable(diagnostic?.status) || provider?.configured === false) return "down";
   return diagnostic ? "ok" : "unknown";
+}
+export function agentProvider(agent: AgentConfig | undefined, providers: ModelProvider[]): ModelProvider | undefined {
+  return agent?.providerId ? providers.find((provider) => provider.id === agent.providerId) : undefined;
+}
+/** Button label: "Executor · Source" for a CLI on a provider; direct-API names already say their source. */
+export function agentButtonLabel(agent: AgentConfig, providers: ModelProvider[]): string {
+  if (agent.adapterType === "api" || !agent.providerId) return agent.name;
+  return `${agent.name} · ${agentProvider(agent, providers)?.name ?? agent.providerId}`;
+}
+/** A feature's eligible Agents plus the direct-API ones, which the picker lists greyed out when tools are needed. */
+export function pickerAgents(eligible: AgentConfig[], all: AgentConfig[]): AgentConfig[] {
+  return [...eligible, ...all.filter((agent) => agent.adapterType === "api" && !eligible.includes(agent))];
 }
 /** Model override for one run; the UI passes only the name, the backend builds the CLI arguments. */
 export interface AgentModelInput {
@@ -45,6 +65,7 @@ export function agentSupportsModel(diagnostics: AgentDiagnostic[], agentId: stri
  * Shared Agent menu: availability and diagnosis per Agent; unusable ones are listed with the reason but cannot be picked.
  * `model` adds a model field, shown only for Agents with `modelSelection` (Chat leaves it out).
  * `placement="down"` opens the menu below the button (forms); the default opens upward (composer).
+ * `providers` names each Agent's model source; `needsTools` greys out direct-API Agents (the backend refuses them too).
  */
 export function AgentPicker({
   agents,
@@ -55,6 +76,8 @@ export function AgentPicker({
   model,
   placement = "up",
   note,
+  providers = [],
+  needsTools = false,
 }: {
   agents: AgentConfig[];
   diagnostics: AgentDiagnostic[];
@@ -64,12 +87,15 @@ export function AgentPicker({
   model?: AgentModelInput;
   placement?: "up" | "down";
   /** Footer line in the menu, e.g. what switching does in this feature. */ note?: string;
+  providers?: ModelProvider[];
+  needsTools?: boolean;
 }) {
   const t = useT();
   const showModel = !!model && agentSupportsModel(diagnostics, value);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const current = agents.find((agent) => agent.id === value);
+  const defaultModel = agentProvider(current, providers)?.model;
   useEffect(() => {
     if (!open) return;
     const close = (event: MouseEvent) => {
@@ -115,10 +141,11 @@ export function AgentPicker({
             data-health={agentHealth(
               current,
               diagnostics.find((item) => item.agentId === value),
+              agentProvider(current, providers),
             )}
             aria-hidden="true"
           />
-          <span className="chat-agent-name">{current?.name ?? t("selectAgent")}</span>
+          <span className="chat-agent-name">{current ? agentButtonLabel(current, providers) : t("selectAgent")}</span>
           <ChevronDown size={13} aria-hidden="true" />
         </button>
         {open && (
@@ -128,7 +155,11 @@ export function AgentPicker({
               .map((agent) => {
                 const diagnostic = diagnostics.find((item) => item.agentId === agent.id);
                 const caps = diagnostic?.capabilities;
-                const health = agentHealth(agent, diagnostic);
+                const provider = agentProvider(agent, providers);
+                const api = agent.adapterType === "api";
+                const health = agentHealth(agent, diagnostic, provider);
+                const blocked = api && needsTools;
+                const sourceName = provider?.name ?? agent.providerId;
                 const capabilities = [
                   caps?.structuredStream && t("structuredStream"),
                   caps?.toolEvents && t("toolEvents"),
@@ -136,13 +167,22 @@ export function AgentPicker({
                 ]
                   .filter(Boolean)
                   .join(", ");
+                // Second line: why it cannot be picked, else its model source then its capabilities.
+                const detail = blocked
+                  ? t("agentNeedsTools")
+                  : provider && !provider.configured
+                    ? t("providerMissingKey", { name: provider.name })
+                    : api
+                      ? [sourceName, t("textOnly")].filter(Boolean).join(" · ")
+                      : [sourceName ?? t("ownLogin"), capabilities].filter(Boolean).join(" · ");
                 return (
                   <button
                     type="button"
                     role="menuitemradio"
                     aria-checked={value === agent.id}
                     key={agent.id}
-                    disabled={health === "down"}
+                    disabled={health === "down" || blocked}
+                    data-blocked={blocked || undefined}
                     onClick={() => {
                       onChange(agent.id);
                       setOpen(false);
@@ -158,11 +198,11 @@ export function AgentPicker({
                         <code>
                           {(() => {
                             const key = agentStatusKey(agent, diagnostic);
-                            return key ? t(key) : (diagnostic?.version ?? t("unknown"));
+                            return key ? t(key) : api ? t("directApi") : (diagnostic?.version ?? t("unknown"));
                           })()}
                         </code>
                       </span>
-                      {capabilities && <small>{capabilities}</small>}
+                      {detail && <small>{detail}</small>}
                     </span>
                   </button>
                 );
@@ -175,7 +215,7 @@ export function AgentPicker({
         <input
           className="agent-model-input"
           value={model.value}
-          placeholder={t("agentModelPlaceholder")}
+          placeholder={defaultModel ? t("agentModelDefault", { model: defaultModel }) : t("agentModelPlaceholder")}
           aria-label={t("agentModel")}
           spellCheck={false}
           aria-invalid={model.invalid || undefined}

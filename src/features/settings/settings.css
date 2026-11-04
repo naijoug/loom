@@ -260,6 +260,103 @@
 .settings-agent-form select {
   padding: 8px 10px;
 }
+.settings-agent-form small,
+.settings-field > span {
+  color: var(--chat-muted);
+  font-size: 12px;
+}
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 14px 0;
+}
+.settings-field > span {
+  color: var(--chat-text-2);
+  font-size: 13px;
+}
+.settings-inline-field,
+.settings-key-input,
+.settings-key-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.settings-inline-field select,
+.settings-key-input input {
+  flex: 1;
+  min-width: 0;
+}
+.settings-key-state > span {
+  color: var(--chat-text-2);
+  margin-right: 4px;
+}
+.settings-inline-field button,
+.settings-key-input button,
+.settings-key-state button {
+  border-color: var(--chat-border-strong);
+  background: var(--chat-surface);
+  padding: 6px 10px;
+  font-size: 12px;
+}
+.settings-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+.settings-presets button {
+  padding: 5px 11px;
+  border-color: var(--chat-border-strong);
+  border-radius: 99px;
+  background: var(--chat-surface);
+  color: var(--chat-text-2);
+  font-size: 12.5px;
+}
+.settings-presets [aria-checked="true"] {
+  border-color: var(--chat-accent);
+  color: var(--chat-text);
+  background: color-mix(in srgb, var(--chat-accent) 8%, transparent);
+}
+.settings-kinds {
+  margin-top: 0;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+.settings-kinds button {
+  padding: 9px 12px;
+}
+.settings-banner {
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border: 1px solid color-mix(in srgb, var(--chat-warn) 45%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--chat-warn) 8%, transparent);
+  color: var(--chat-text-2);
+}
+.settings-key-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  flex-shrink: 0;
+}
+.settings-status[data-tone="ok"] .settings-key-dot {
+  background: var(--chat-ok);
+  border-color: var(--chat-ok);
+}
+.settings-status[data-tone="none"] {
+  color: var(--chat-muted);
+}
+.settings-status[data-tone="warn"] {
+  color: var(--chat-warn);
+}
+.settings-provider-key small[data-outcome="ok"] {
+  color: var(--chat-ok);
+}
+.settings-provider-key small:not([data-outcome="ok"], [data-outcome="running"]) {
+  color: var(--chat-warn);
+}
 .settings-form-actions {
   display: flex;
   justify-content: flex-end;
@@ -330,6 +427,42 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 14px;
+  }
+  /* Providers become cards: name and type, then the URL, then key source and actions. */
+  .settings-providers table {
+    min-width: 0;
+  }
+  .settings-providers thead {
+    display: none;
+  }
+  .settings-providers tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 12px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--chat-border);
+  }
+  .settings-providers tbody tr:last-child {
+    border-bottom: 0;
+  }
+  .settings-providers td {
+    display: block;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+  }
+  .settings-providers .settings-provider-name,
+  .settings-providers .settings-provider-url {
+    grid-column: 1 / -1;
+  }
+  .settings-providers .settings-provider-model {
+    display: none;
+  }
+  .settings-providers .settings-row-actions {
+    align-self: center;
+  }
+  .settings-providers .settings-row-actions button:first-child {
+    margin-left: 0;
   }
 }
 @media (prefers-reduced-motion: reduce) {

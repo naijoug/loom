@@ -28,6 +28,60 @@ export function createPreviewState(): AppState {
     canWriteFiles: true,
     canRunCommands: true,
   }));
+  // A direct-API agent and three providers fill the Model sources page; the CLI agents stay on their own login,
+  // so the Chat composer and its smoke checks are unchanged (the API agent shows greyed out in the menu).
+  agents.push({
+    id: "agent-api-deepseek",
+    name: "API · DeepSeek",
+    command: "",
+    adapterType: "api",
+    available: true,
+    enabled: true,
+    args: [],
+    capabilities: [],
+    workingDirectoryPolicy: "project_root",
+    canWriteFiles: false,
+    canRunCommands: false,
+    providerId: "deepseek",
+  });
+  const providers: AppState["providers"] = {
+    revision: 3,
+    providers: [
+      {
+        id: "deepseek",
+        name: "DeepSeek",
+        kind: "anthropic",
+        baseUrl: "https://api.deepseek.com/anthropic",
+        model: "deepseek-chat",
+        storedKey: true,
+        keyEnv: null,
+        keySource: "stored",
+        configured: true,
+      },
+      {
+        id: "local-gateway",
+        name: "Local gateway",
+        kind: "openai-chat",
+        baseUrl: "http://127.0.0.1:8080/v1",
+        model: null,
+        storedKey: false,
+        keyEnv: null,
+        keySource: "none",
+        configured: true,
+      },
+      {
+        id: "openai",
+        name: "OpenAI",
+        kind: "openai-responses",
+        baseUrl: "https://api.openai.com/v1",
+        model: "gpt-5.1",
+        storedKey: false,
+        keyEnv: "OPENAI_API_KEY",
+        keySource: "none",
+        configured: false,
+      },
+    ],
+  };
   const chat = mockChatStore.create({
     projectPath: projects[0].path,
     agentId: "agent-claude",
@@ -100,6 +154,7 @@ export function createPreviewState(): AppState {
     ...initialAppState,
     projects: { current: projects[0], recent: projects },
     agents,
+    providers,
     app: { ...initialAppState.app, activeProjectId: projects[0].id },
   };
 }

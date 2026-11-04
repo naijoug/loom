@@ -1,7 +1,7 @@
 # Agent 调用层：无窗口 CLI 与 API Key 模式计划
 
 - 创建时间：2026-11-02 21:54，America/Los_Angeles；22:28 参考 magpie 修订（加入 API Key 模式，重排里程碑）。
-- 状态：A0 已完成（2026-11-03 02:04，已提交）；A1 已完成（2026-11-03 06:34，已提交）；A2 已完成（2026-11-03 07:21，已提交）。2026-11-03 用户接受第 6 节全部推荐答案（“Yes, do A1”），A2 起可按推荐实施。
+- 状态：A0 已完成（2026-11-03 02:04，已提交）；A1 已完成（2026-11-03 06:34，已提交）；A2 已完成（2026-11-03 07:21，已提交）；A3 已完成（2026-11-03 08:28，未提交）；A4 已完成（2026-11-03 08:47，未提交）；A5 已完成（2026-11-03 15:15，未提交；设计稿 `designs/agent-providers/README.md` 08:49 提交确认，用户回复“Approve, build it”，第 7 节按本稿默认）。2026-11-03 用户接受第 6 节全部推荐答案（“Yes, do A1”），A2 起可按推荐实施。
 - 代码基线：`main` `93c36f9`。2026-11-03 复核：`90cf9f9..93c36f9` 只有 Learn 前端重设计（`d59679c`）、本计划入库（`e62f8fb`）和 Skills 截图（`93c36f9`），`src-tauri/src` 无改动，下文行号仍有效。复核按代码修正了 A1 的文件写入依赖、A3 的取消方式与 HTTP 流读取，并补上 `api` 执行器的配置校验与启动检查（见第 2 节新增行）。
 - 用户要求（2026-11-02）：
   1. 底层有一个 loom CLI，上层交互都能通过它与本机已安装的 Agent CLI 交互；
@@ -152,7 +152,7 @@ magpie 是 Go 单二进制：本地模型网关（`127.0.0.1:3425`，在 OpenAI 
 |---|---|---|
 | Claude Code 2.1.317 | 环境 `ANTHROPIC_BASE_URL`、`ANTHROPIC_API_KEY`（密钥环境）；`ANTHROPIC_DEFAULT_{OPUS,SONNET,HAIKU}_MODEL`、`ANTHROPIC_SMALL_FAST_MODEL` 设为模型；`ANTHROPIC_AUTH_TOKEN`、`ANTHROPIC_CUSTOM_HEADERS`、`CLAUDE_CODE_USE_{BEDROCK,VERTEX,FOUNDRY}` 显式设为空串；`--model` | `anthropic` |
 | Codex 0.166.0 | `exec` 后插入 `--config model_provider="loom"`、`model_providers.loom.{name,base_url,wire_api="responses",env_key="LOOM_PROVIDER_API_KEY"}`；密钥环境 `LOOM_PROVIDER_API_KEY`；`--model` | `openai-responses` |
-| OpenCode 2.1.2 | `run` 后插入 `--standalone`；环境 `OPENCODE_CONFIG_CONTENT` 内联 `provider.loom`（`@ai-sdk/anthropic` 用 `{base}/v1`，`@ai-sdk/openai`、`@ai-sdk/openai-compatible` 用原 Base URL；`apiKey` 为 `{env:LOOM_PROVIDER_API_KEY}`）；密钥环境 `LOOM_PROVIDER_API_KEY`；`--model loom/<model>` | 三种 |
+| OpenCode 2.1.2 | adapter 已固定 `run --standalone`；在 adapter 的 `OPENCODE_CONFIG_CONTENT` 中加入 `provider.loom`（`@ai-sdk/anthropic` 用 `{base}/v1`，`@ai-sdk/openai`、`@ai-sdk/openai-compatible` 用原 Base URL；`apiKey` 为 `{env:LOOM_PROVIDER_API_KEY}`）；密钥环境 `LOOM_PROVIDER_API_KEY`；`--model loom/<model>` | 三种 |
 | Grok / 自定义 CLI | 拒绝：`agent '…' cannot use a … model provider` | 无 |
 
 - 与上表“待核对”版本的差异：Codex 二进制含 “`wire_api = \"chat\"` is no longer supported”，只支持 Responses；Claude 用户 `settings.json` 的 `env` 只填补未设置的变量，实测它的 `ANTHROPIC_AUTH_TOKEN` 会作为额外 Bearer 发给 provider，所以注入时显式置空而不是仅移除；OpenCode 2.x 默认连共享后台服务，进程环境不生效，必须 `--standalone`。没有 key 的本地 provider：Claude 用占位 key `loom-no-key`，避免回退到 CLI 自己的登录并把它发给 provider；Codex/OpenCode 不配 `env_key`/`apiKey`。
@@ -160,7 +160,7 @@ magpie 是 Go 单二进制：本地模型网关（`127.0.0.1:3425`，在 OpenAI 
 - 与本节原文的偏差：未升级 agents schema 版本——新字段带默认值，旧文件读出为 `None`、行为不变，无需迁移；`environment_remove` 实现为前缀列表；不移除 `CODEX_*`（会丢掉用户的 `CODEX_HOME`），Codex 只移除 `OPENAI_*`，OpenCode 不移除。`check_startable` 未加 provider 检查：`prepare_invocation` 已在启动前给出明确错误。
 - 顺带修复：A1 的 `providers.lock` 在并行测试中偶发“busy”——其他测试 fork 出的子进程在 exec 前短暂继承锁描述符。写入者现在最多重试 500ms 再报忙。
 - 证据：`provider_tests` 7 项（三种 CLI 注入快照；key 不出现在 args、公开环境、`Debug` 和序列化结果；运行模型覆盖 provider 模型；不支持组合与缺模型的错误；`providerId` 往返与缺省；runner 前缀移除与两种环境生效），另加删除保护、`kind` 校验、续聊指纹各 1 项；`pnpm check` 通过（前端 150/150、Rust 405 passed / 35 ignored、clippy `-D warnings`）。
-- 未验证：没有通过 Loom 端到端跑一次真实 provider 对话（属 A7）；OpenCode 现有 adapter 传的 `--dir` 在 2.1.2 上报 “Unrecognized flag”，且未加 `--standalone` 时 `OPENCODE_PERMISSION` 同样到不了后台服务；这是 A2 之前就有的问题，本轮未改。
+- 未验证：没有通过 Loom 端到端跑一次真实 provider 对话（属 A7）；OpenCode 现有 adapter 传的 `--dir` 在 2.1.2 上报 “Unrecognized flag”，这是 A2 之前就有的问题。A2 提交后单独修复：2.1.2 还会忽略 `OPENCODE_PERMISSION`、从 `PWD` 取项目目录，adapter 现在固定 `--standalone`、设置 `PWD`、权限写入 `OPENCODE_CONFIG_CONTENT`，provider 注入合并进同一份配置（见 `docs/agent-adapter.md`）。
 - 未做：Settings 里选择 provider 属于 A5；CLI 的 `--provider` 属于 A4。
 
 ### A3 模式 C：直连 API runner（无工具）
@@ -176,6 +176,17 @@ magpie 是 Go 单二进制：本地模型网关（`127.0.0.1:3425`，在 OpenAI 
 - 用现有 `reqwest` 的 `Response::chunk()` 逐块读取 SSE，不改 Cargo 特性、不新增 crate；HTTP 超时、响应体上限与 `Limits` 一致。
 - 测试：本地假 SSE 服务（测试内起 `127.0.0.1` 监听）覆盖文本流、停止、超时、截断、错误分类；与进程 runner 的 `AgentOutcome` 字段语义对齐。
 
+完成记录（2026-11-03 08:28）：
+
+- 代码：新增 `agent/api/{mod,sse,anthropic,openai_responses,openai_chat}.rs` 与测试 `agent/api/tests.rs`。请求只有 system（`system_append`）+ 一条用户 prompt：Anthropic `POST {base}/v1/messages`（`x-api-key`、`anthropic-version: 2023-06-01`、`max_tokens` 8192）；Responses `POST {base}/responses`（`instructions`、`input`、`store: false`）；Chat `POST {base}/chat/completions`。key 只在 `sensitive` 请求头里；不跟随重定向；本地/内网地址不走 shell 代理（与连接测试共用 `providers::http_client`）。SSE 解码器容忍任意分块边界与 `\r\n`，单行受 `max_line_bytes` 限制；总字节 `max_bytes`、事件数 `max_lines`。
+- 运行：`PreparedAgentInvocation` 增加 `api: Option<ApiCall>`（`serde(skip)`，`Debug` 隐藏 key 与 prompt 正文），`agent::run` 见到它就交给 API runner。runner 先取 `begin_operation` 守卫；发送与读流都在 `select!` 里和 25ms 间隔竞争，每次检查 `cancelled()`、`is_shutting_down()` 和总超时，停止时丢弃请求，用 `stop_outcome` 返回 `chat_abort` / `chat_timeout` / `app_shutdown` 并保留已收到的正文。不注册进程、不改 `process_supervisor`。
+- 结果分类（`status = error`，`termination_reason` 为下列代码，不读取非 2xx 响应体）：`api_bad_request`(400/422)、`api_auth_failed`(401/403)、`api_not_found`(404)、`api_request_too_large`(413)、`api_rate_limited`(429)、`api_server_error`(5xx)、`api_http_error`、`api_unreachable`、`api_stream_interrupted`、`api_invalid_stream`、`api_incomplete_stream`（没有收到结束事件）、`api_provider_error`（流内错误，只保留形如 `overloaded_error` 的短代码）；超出预算为 `chat_runtime_error` + `output_limit:`，与进程 runner 一致。模型因输出上限停止时 `status = complete`，另加 `api_output_truncated` 错误片段。成功结束和 provider 失败都会发 `AgentEvent::Done`，运行时错误不发，与进程 runner 一致。
+- 配置与检查：`ADAPTER_API = "api"`。`validate_input` 对它只要求名称和 `providerId`；保存时清空 `command`/`args` 并强制 `canWriteFiles`/`canRunCommands = false`。`available`、`check_startable`、`diagnose_agents` 只检查 provider 存在且有 key（本地/内网地址可无 key），不发网络请求、不缓存。能力声明：无 tools / 原生续聊，支持模型选择，`providerKinds` 为三种，只有 `explore` 模式。
+- 功能声明：`AdapterInvocationRequest` 增加 `needs_tools`。Chat、Learn、Research 和测试一律为 `true`；Discuss 为 `有项目 && 不是汇总轮`。`needs_tools`、写权限、`resume_command` 或执行档案任一出现时，`api` 执行器报 “… has no tools; this feature needs a local CLI agent” 等明确错误。Discuss 现在接受 `api` 参与者，但讨论带项目时拒绝它们。前端 `AgentAdapterType` 增加 `"api"`。
+- 与本节原文的偏差：没有把 `RunSpec.prepared` 改成 `Invocation::{Process, Api}` 枚举，而是在 `PreparedAgentInvocation` 上加可选 `api`，这样 10 处功能调用和它们写执行记录用的 `program`/`args` 不用改——API 运行的 `program` 为 `api`、`args` 为 `POST <endpoint> --model <model>`，只含 Base URL。“任何讨论的主持汇总轮”在请求层已声明 `needs_tools = false`，但 Discuss 的主持人就是第一位参与者，还要答前两轮，所以带项目的讨论目前不能用 `api` 参与者；单独选主持人留到以后。“有界历史回放”没有做：首批开放的 Discuss 与 `loom-agent run` 都是单轮，Chat 仍要求 CLI。
+- 证据：`agent::api` 12 项测试（本地假 SSE 服务：三种协议的路径、认证头、请求体与流式文本；本地网关无 key 不发认证头；需要工具/写权限/续聊被拒；停止保留部分正文且 2 秒内返回；总超时覆盖不应答的服务；模型截断与输出预算；401/404/429/503、流内错误、半截流、非 JSON 流和连不上的分类且不含上游正文；SSE 任意切分），另加 registry 1 项；`pnpm check` 通过（前端 150/150、Rust 418 passed / 35 ignored、clippy `-D warnings`）。
+- 未验证：没有调用真实模型 provider（需要 key，并花费额度；属 A7）；协议事件形状按各家公开流式格式编写，未与真实响应逐字比对。
+
 ### A4 `loom-agent` CLI
 
 - `src-tauri/src/agent_cli.rs` + `src-tauri/src/bin/loom-agent.rs`（照搬 `loom-skills` 的输出与退出码处理），`[[bin]] name = "loom-agent"`。
@@ -189,12 +200,37 @@ magpie 是 Go 单二进制：本地模型网关（`127.0.0.1:3425`，在 OpenAI 
 - 每次 `run` 写脱敏执行记录 `<config_dir>/cli/runs/<run_id>.json`：时间、Agent / provider id、模式、cwd、model、脱敏 args（长 prompt 省略）、结束状态与 stderr 尾部；不存 prompt 正文、环境变量和 key。
 - 测试：参数表驱动；同参数下 CLI 与 Chat 生成的调用一致；子进程桩与假 SSE 服务覆盖三种模式的 NDJSON 形状。
 
+
+完成记录（2026-11-03 08:47）：
+
+- 代码：新增 `src-tauri/src/agent_cli.rs`（测试 `agent_cli_tests.rs`）与 `src/bin/loom-agent.rs`，`Cargo.toml` 增加 `[[bin]] loom-agent`；可测核心是 `run_with(args, config_dir, Io, Interrupt)`，二进制只解析 `storage::system_config_dir()`（尊重 `LOOM_PROFILE_DIR`）、接真实 stdio 和 Ctrl-C。
+- agent 层出口：`agent/mod.rs` 再导出 `read_agents_at`、新增的 `agents_file(dir)`、provider 的 `list/save/delete/resolve_at`、`ensure_unused`、`test_provider`、新增的 `diagnose(agent, dir)`（`api` 执行器从给定目录读 provider，`provider_ready_at`）、`prepare_invocation_with`、`resume_command`、`permission_to_stage`、`embeds_prompt`。Chat 的 `permission_to_stage` 改为委托 agent 层（ask/auto → `Debugging`，与原来一致）；Chat 与 Discuss 的 “prompt 走 argv 还是 stdin” 改用 `agent::embeds_prompt`。
+- 子命令：`list`、`doctor [AGENT]`、`provider list|add|set-key|remove|test`、`run`，均有 `--json`。`run` 的请求与 Chat 一回合相同（`chat_permission_mode = mode`、stage 由 `permission_to_stage`、`embed_prompt` 由 `embeds_prompt`），只是 `needs_tools = false`、不包 Chat 的提示词外壳、不加内联卡片；`--provider` 与 `--agent` 同给时替换该 Agent 的 provider（模式 B），只给 `--provider` 时合成一个 `api` Agent（模式 C）。provider 从 CLI 自己的配置目录解析后交给 `prepare_invocation_with`；非 `api` Agent 先过 `check_startable`。读取 `agents.json` 后按本机 `PATH` 重算 `available`。
+- 输出与退出码：人读模式正文到 stdout，工具/错误片段、状态和续聊 id 到 stderr；`--json` 为 NDJSON `started`（模式 A/B 带 `pid`；模式 C 在请求前发出，`pid: null`）、`text`、`part`（现有 `MessagePart` 序列化）、`log`（仅 `--verbose`，已脱敏）、`done`（`status`/`exitCode`/`errorSummary`/`terminationReason`/`resumeSessionId`）。退出码 0 完成、1 失败、2 用法、124 超时、130 中断。第一次 Ctrl-C 置取消标志（runner 走正常停止），第二次对本进程的运行 `force_stop`。
+- 密钥与提示词：`provider set-key` 只从管道/文件形式的 stdin 读 key（≤16 KiB），stdin 是终端时拒绝并提示用管道；没有任何 `--key` 参数。prompt 来自 `--prompt`、`--prompt-file`（≤1 MiB）或非终端 stdin。
+- 执行记录：每次 `run` 写 `<config>/cli/runs/<runId>.json`（目录 0700、文件 0600，原子写）：Agent / provider id、适配器、模式、model、program、cwd、是否续聊、prompt 字数、起止时间、结束状态、退出码、终止原因、错误摘要、最后 40 行 stderr（脱敏）。args 中含 prompt 的项记为 `<prompt>`、超过 256 字符的记为 `<N chars>`，其余经 `redact_sensitive_text`；不存 prompt 正文、环境变量和 key。runId 为 `cli-<ms>-<pid>-<序号>`。
+- 门禁：`scripts/check-layers.mjs` 先加一条——`agent_cli.rs` 生产代码不得引用功能模块（A6 其余规则未做）。
+- 与本节原文的偏差：`provider add` 只新建，修改已有 provider 的名称/URL/模型需在 Settings 或删除后重建；超时的 `errorSummary` 由 CLI 改写为实际秒数，因为 runner 的 `timeout_summary()` 固定按 10 分钟描述；“三种模式的 NDJSON 形状”中模式 B 没有单独的 CLI 测试（CLI 只把 provider 交给 A2 已测的注入，输出路径与模式 A 相同）。
+- 证据：`agent_cli` 11 项测试（参数表与用法错误；explore/ask/auto 下 CLI 与 Chat 式请求生成的调用逐字段一致；只读 Agent 拒绝 `auto`；桩 CLI 的 NDJSON 含 pid、正文、stderr 日志与 `done`，执行记录 args 为 `<prompt>` 且不含 prompt；人读模式 stdout 只有正文；终端 stdin 不读 key/prompt；假 Chat Completions 服务上的模式 C：认证头带 key、模型与 prompt 在请求体、输出/错误流/记录/provider 列表都不含 key；被 Agent 引用的 provider 不能删；退出码映射；记录参数脱敏）。同一进程内连续运行曾因同毫秒 runId 冲突失败一次，已加序号修复并重复 6 次通过。`pnpm check` 通过（前端 150/150、Rust 429 passed / 35 ignored、clippy `-D warnings`、层检查）。二进制冒烟（临时 `LOOM_PROFILE_DIR`）：`list`/`doctor` 识别本机 codex-cli 0.166.0、Claude Code 2.1.317、opencode 2.1.2、grok 1.0.70；睡眠桩 Agent 上 SIGINT 后退出 130、`done.terminationReason = chat_abort`、无残留进程；`--timeout-secs 1` 退出 124；记录文件 0600。
+- 未验证：没有用真实 CLI 或真实 provider 跑提示词（花费额度，属 A7）；没有执行 `tauri build` 确认 `.app` 内含 `loom-agent`（`docs/skills-cli.md` 写明 Tauri 打包全部 `[[bin]]`，本次未复核）。
+
 ### A5 桌面 Settings 与选择器
 
 - 先在 `designs/` 出设计稿：Settings → Providers 列表与编辑（预设：Anthropic、OpenAI、OpenRouter、OpenAI 兼容、Anthropic 兼容、本机网关），Agent 编辑里增加“模型来源”下拉。
 - `AgentPicker` 显示“执行器 · 模型来源”（如 `Codex · DeepSeek`、`API · Anthropic`）；`needs_tools` 的功能里 `api` 项置灰并说明原因。
 - 视觉矩阵补 Providers 页（中英文 × 深浅 × 700px）。
 - 依赖：A1–A3；设计稿经用户确认后再写代码。
+
+完成记录（2026-11-03 15:15，未提交）：
+
+- 设计：按 `designs/agent-providers/README.md` 实施，第 7 节三项取本稿默认（独立页签；自带登录只显示执行器名；预设即表中六项）。设计稿状态改为“已确认并实现”。
+- 状态与接口：`AppState.providers`（`ModelProviderList`，只含 key 来源，不含 key）与 `providers/loaded`；`useAgentCatalog.loadAgents` 顺带拉 `provider_list`（失败不影响 Agent 加载），新增 `loadProviders`/`saveProvider`/`deleteProvider`/`testProvider`，provider 调用直接抛错交给页面显示。
+- Settings → 模型来源（`ProvidersPanel.tsx`、`providerDraft.ts`）：列表显示名称、协议 · 地址、默认模型、key 来源（已保存 / `$变量` / 本机无需 / 缺少 key 或“未设置 $变量”）与被引用的 Agent；“测试”结果就地显示，只映射 `outcome` 与 HTTP 状态；被引用时删除禁用并说明。添加表单含六个预设、协议单选、Base URL、默认模型、`type=password` 的 key（不回填，编辑时默认保留，“替换”才出现输入框，“清除”需确认）、环境变量；保存/删除后关闭表单丢弃 key，并刷新 Agents 与诊断；revision 冲突时重新加载并显示横幅，表单输入保留。新 provider 的 id 由名称生成（ASCII slug，重名加序号，非 ASCII 名称为 `provider`）。
+- Settings → Agents：新增“模型来源”列；直连 API 的路径列显示 provider 主机（悬停为完整 URL）、能力列“仅文本回答”、版本位“直连 API”；页头加“+ 直连 API”，表单只有名称和必选 provider（默认名 `API · <provider>`，改 provider 时若名称未改则跟随）；CLI Agent 表单加模型来源下拉，兼容性取诊断里的 `providerKinds`（未诊断时列出全部，由后端校验），不兼容项放在“不兼容”分组并禁用，自定义 CLI 与不支持注入的执行器整个下拉禁用，旁边“管理模型来源”跳到页签。
+- `AgentPicker`：新增 `providers`、`needsTools`；按钮为“执行器 · 来源”（自带登录与直连 API 只显示名称）；菜单第二行写来源与能力，provider 缺 key 时为 `down` 并写“模型来源 X 缺少 key”，`needsTools` 时 `api` 项禁用并说明原因；provider 有默认模型时占位符为“默认：<model>”；`defaultAgentId` 不再选 `api`；导出 `pickerAgents`、`agentProvider`、`agentButtonLabel`。Chat、Learn、Research 传 `needsTools`（Learn/Research 通过 `pickerAgents` 把 `api` Agent 列出但置灰），Discuss 的 `DISCUSS_ADAPTERS` 加入 `api`、`needsTools` 取“是否选了项目”，选了项目又选了 `api` 参与者时不能提交并提示；各功能的提交校验同样排除缺 key 的 provider。
+- 窄窗口：700px 时 Providers 表格变卡片（名称、协议与地址、key 来源与操作），表单单列，预设换行；只用现有 `--chat-*` 令牌。
+- 证据：新增 `tests/unit/agentProviders.test.cjs`（jsdom：菜单在 `needsTools` 下禁用 `api` 并给原因、缺 key 的 CLI 禁用；Providers 列表只显示 key 来源、被引用时删除禁用及提示、编辑默认不出现 key 框、“替换”后 key 框为空；draft → input：空 key 不发送、去空白、id 生成、预设表）与 `agentPicker.test.cjs` 三项（按钮标签、默认不选 `api` 与默认模型占位符、缺 key 为 `down`）。`pnpm check` 通过（前端 156/156、Rust 429 passed / 35 ignored、clippy `-D warnings`、层检查）。`pnpm smoke:visual` 通过：活动栏矩阵新增 Providers 列表与添加表单截图（en / zh-CN × light / dark × 700px，`designs/exports/agent-providers/`），断言卡片布局、无横向滚动、列表页没有 password 输入、添加表单的 key 框为空；首次运行时预览服务被外部 SIGTERM（Vite 退出 143），重跑通过。
+- 未验证：没有在桌面 Tauri 窗口里真实保存/测试/删除 provider（预览模式无后端，只用夹具渲染）；没有用真实 provider 发请求（A7）。
 
 ### A6 门禁与文档
 

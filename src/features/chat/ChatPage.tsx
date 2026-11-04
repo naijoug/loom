@@ -14,7 +14,7 @@ import { useChatBridge } from "./useChatBridge";
 import { useChatExport } from "./useChatExport";
 import { mockChatStore } from "./mockStore";
 import { chatSendController } from "./state/ChatSendController";
-import { defaultAgentId, isAgentUnusable } from "../../components/AgentPicker";
+import { agentProvider, defaultAgentId, isAgentUnusable } from "../../components/AgentPicker";
 import { ProjectTree } from "./ProjectTree";
 import { ProjectPicker } from "./ProjectPicker";
 import { ChatSessionHeader } from "./ChatSessionHeader";
@@ -61,7 +61,8 @@ export function ChatPage() {
   const diagnostics = state.agentDiagnostics;
   const draftAgent = defaultAgentId(
     agents.map((agent) =>
-      diagnostics.some((diagnostic) => diagnostic.agentId === agent.id && isAgentUnusable(diagnostic.status))
+      diagnostics.some((diagnostic) => diagnostic.agentId === agent.id && isAgentUnusable(diagnostic.status)) ||
+      agentProvider(agent, state.providers.providers)?.configured === false
         ? { ...agent, available: false }
         : agent,
     ),
@@ -435,6 +436,7 @@ export function ChatPage() {
                 agents={agents}
                 permissionMode={session?.permissionMode ?? newMode}
                 diagnostics={diagnostics}
+                providers={state.providers.providers}
                 onDraftChange={setDraft}
                 onSend={() => void (session ? send() : createAndSend())}
                 onAbort={() => void abort()}

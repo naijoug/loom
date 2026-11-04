@@ -7,8 +7,14 @@ import {
   type LearnDepth,
   type LearnLanguage,
 } from "../../api/learn";
-import type { AgentConfig, AgentDiagnostic } from "../../domain";
-import { AgentPicker, agentSupportsModel, isAgentUnusable } from "../../components/AgentPicker";
+import type { AgentConfig, AgentDiagnostic, ModelProvider } from "../../domain";
+import {
+  AgentPicker,
+  agentProvider,
+  agentSupportsModel,
+  isAgentUnusable,
+  pickerAgents,
+} from "../../components/AgentPicker";
 import { useLocale, useT } from "../../i18n";
 import { ErrorText } from "../../components/common/ErrorText";
 
@@ -22,11 +28,13 @@ export function NewStudyForm({
   api,
   agents,
   diagnostics,
+  providers = [],
   onCreated,
 }: {
   api: LearnApi;
   agents: AgentConfig[];
   diagnostics: AgentDiagnostic[];
+  providers?: ModelProvider[];
   onCreated: (studyId: string) => void;
 }) {
   const t = useT();
@@ -51,7 +59,9 @@ export function NewStudyForm({
     model.trim() !== "" && (/\s/.test(model.trim()) || model.trim().startsWith("-") || model.trim().length > 128);
   const selected = eligible.find((agent) => agent.id === agentId);
   const usable =
-    !!selected?.available && !isAgentUnusable(diagnostics.find((item) => item.agentId === agentId)?.status);
+    !!selected?.available &&
+    !isAgentUnusable(diagnostics.find((item) => item.agentId === agentId)?.status) &&
+    agentProvider(selected, providers)?.configured !== false;
   // The model field shows only for agents that accept one; a value typed for another agent is not sent.
   const modelShown = agentSupportsModel(diagnostics, agentId);
   const canSubmit = !busy && trimmed !== "" && !urlInvalid && !(modelShown && modelInvalid) && usable;
@@ -100,8 +110,10 @@ export function NewStudyForm({
         <span>{t("learnAgent")}</span>
         <div className="learn-new-agent-controls">
           <AgentPicker
-            agents={eligible}
+            agents={pickerAgents(eligible, agents)}
             diagnostics={diagnostics}
+            providers={providers}
+            needsTools
             value={agentId}
             onChange={setAgentId}
             disabled={busy}

@@ -141,6 +141,7 @@ export function DiscussPage() {
             api={api}
             agents={state.agents}
             diagnostics={state.agentDiagnostics}
+            providers={state.providers.providers}
             projects={state.projects.recent}
             onCreated={(id) => {
               setCreating(false);

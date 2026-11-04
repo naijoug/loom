@@ -6,8 +6,15 @@ import {
   type ResearchApi,
   type ResearchLanguage,
 } from "../../api/research";
-import type { AgentConfig, AgentDiagnostic, ProjectSummary } from "../../domain";
-import { AgentPicker, agentSupportsModel, defaultAgentId, isAgentUnusable } from "../../components/AgentPicker";
+import type { AgentConfig, AgentDiagnostic, ModelProvider, ProjectSummary } from "../../domain";
+import {
+  AgentPicker,
+  agentProvider,
+  agentSupportsModel,
+  defaultAgentId,
+  isAgentUnusable,
+  pickerAgents,
+} from "../../components/AgentPicker";
 import { useLocale, useT } from "../../i18n";
 import { ErrorText } from "../../components/common/ErrorText";
 
@@ -19,12 +26,14 @@ export function NewResearchForm({
   api,
   agents,
   diagnostics,
+  providers = [],
   projects,
   onCreated,
 }: {
   api: ResearchApi;
   agents: AgentConfig[];
   diagnostics: AgentDiagnostic[];
+  providers?: ModelProvider[];
   projects: ProjectSummary[];
   onCreated: (researchId: string) => void;
 }) {
@@ -42,7 +51,9 @@ export function NewResearchForm({
     model.trim() !== "" && (/\s/.test(model.trim()) || model.trim().startsWith("-") || model.trim().length > 128);
   const selected = eligible.find((agent) => agent.id === agentId);
   const usable =
-    !!selected?.available && !isAgentUnusable(diagnostics.find((item) => item.agentId === agentId)?.status);
+    !!selected?.available &&
+    !isAgentUnusable(diagnostics.find((item) => item.agentId === agentId)?.status) &&
+    agentProvider(selected, providers)?.configured !== false;
   // The model field shows only for agents that accept one; a value typed for another agent is not sent.
   const modelShown = agentSupportsModel(diagnostics, agentId);
   const canSubmit = !busy && question.trim() !== "" && !(modelShown && modelInvalid) && usable;
@@ -92,8 +103,10 @@ export function NewResearchForm({
         <span>{t("researchAgent")}</span>
         <div className="research-new-agent-controls">
           <AgentPicker
-            agents={eligible}
+            agents={pickerAgents(eligible, agents)}
             diagnostics={diagnostics}
+            providers={providers}
+            needsTools
             value={agentId}
             onChange={setAgentId}
             disabled={busy}

@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { ArrowUp, Square } from "lucide-react";
-import type { AgentConfig, AgentDiagnostic, ChatPermissionMode } from "../../domain";
+import type { AgentConfig, AgentDiagnostic, ChatPermissionMode, ModelProvider } from "../../domain";
 import { useT } from "../../i18n";
 import { AgentPicker, isAgentUnusable } from "../../components/AgentPicker";
 import { ErrorText } from "../../components/common/ErrorText";
@@ -20,6 +20,7 @@ export interface ChatComposerProps {
   agents: AgentConfig[];
   permissionMode: ChatPermissionMode;
   diagnostics: AgentDiagnostic[];
+  providers?: ModelProvider[];
   onDraftChange: (value: string) => void;
   onSend: () => void;
   onAbort: () => void;
@@ -42,6 +43,7 @@ export function ChatComposer(props: ChatComposerProps) {
     agents,
     permissionMode,
     diagnostics,
+    providers,
     onDraftChange,
     onSend,
     onAbort,
@@ -148,6 +150,8 @@ export function ChatComposer(props: ChatComposerProps) {
           <AgentPicker
             agents={agents}
             diagnostics={diagnostics}
+            providers={providers}
+            needsTools
             value={agentId}
             onChange={onAgentChange}
             disabled={sending}

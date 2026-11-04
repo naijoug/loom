@@ -96,5 +96,6 @@ export const tauriDiscussApi: DiscussApi = {
   remove: (discussionId) => invokeCommand(TAURI_COMMANDS.discussDelete, { discussionId }),
   subscribe: (fn) => listenToEvent<DiscussEvent>(TAURI_EVENTS.discussEvent, fn),
 };
-export const DISCUSS_ADAPTERS = ["claude_code_cli", "codex_cli", "opencode_cli", "grok_cli"];
+/** `api` agents can join only discussions without a project; the backend refuses them otherwise. */
+export const DISCUSS_ADAPTERS = ["claude_code_cli", "codex_cli", "opencode_cli", "grok_cli", "api"];
 export const retryable = (task: DiscussTask) => task.status !== "running" && (task.status !== "done" || task.stale);

@@ -14,6 +14,7 @@ const port = 9331;
 const output = join(process.cwd(), "designs/exports/simple-chat");
 const cardsOutput = join(process.cwd(), "designs/exports/openui-inline-cards");
 const railOutput = join(process.cwd(), "designs/exports/activity-rail");
+const providersOutput = join(process.cwd(), "designs/exports/agent-providers");
 const userDataDir = join(tmpdir(), `loom-chat-smoke-${process.pid}`);
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -159,6 +160,7 @@ async function waitFor(client, expression, label, attempts = 200) {
 // marks the current feature, Cmd/Ctrl+number switches features, and switching keeps the open Chat session.
 async function railMatrixSmoke(client, { screenshot }) {
   mkdirSync(railOutput, { recursive: true });
+  mkdirSync(providersOutput, { recursive: true });
   const checks = [];
   const railState = `({ width: Math.round(document.querySelector('.activity-rail')?.getBoundingClientRect().width ?? 0), current: document.querySelector('.activity-rail-item[aria-current=page]')?.getAttribute('aria-label') ?? '', labels: Array.from(document.querySelectorAll('.activity-rail-item')).map(item => item.getAttribute('aria-label')) })`;
   const pressShortcut = (key) =>
@@ -227,6 +229,29 @@ async function railMatrixSmoke(client, { screenshot }) {
       if ((await evaluate(client, railState)).current !== settingsLabel)
         throw Error(`Rail did not mark Settings (${name})`);
       await screenshot(`settings-${name}`, railOutput);
+      // Model sources (designs/agent-providers/README.md): cards at 700px, key sources only, never a key.
+      await evaluate(client, `document.querySelectorAll('.chat-settings nav button')[1].click()`);
+      await waitFor(
+        client,
+        'document.querySelectorAll(".settings-providers tbody tr").length === 3',
+        `${name} model sources`,
+      );
+      const providers = await evaluate(
+        client,
+        `({ display: getComputedStyle(document.querySelector('.settings-providers tr')).display, passwords: document.querySelectorAll('input[type=password]').length })`,
+      );
+      if (providers.display !== "grid" || providers.passwords !== 0)
+        throw Error(`Model sources at 700px (${name}): ${JSON.stringify(providers)}`);
+      await screenshot(`providers-${name}`, providersOutput);
+      await evaluate(client, `document.querySelector('.settings-actions .settings-primary').click()`);
+      await waitFor(
+        client,
+        'Boolean(document.querySelector(".settings-provider-form input[type=password]"))',
+        `${name} provider form`,
+      );
+      if (await evaluate(client, 'document.querySelector(".settings-provider-form input[type=password]").value !== ""'))
+        throw Error(`Provider key field was prefilled (${name})`);
+      await screenshot(`provider-form-${name}`, providersOutput);
       await evaluate(client, `document.querySelector('.activity-rail-item[data-view=chat]').click()`);
       await waitFor(
         client,
@@ -234,7 +259,7 @@ async function railMatrixSmoke(client, { screenshot }) {
         `${name} back to Chat`,
       );
       checks.push(
-        `${name}: rail 52px, current item marked, Cmd/Ctrl+2, Cmd/Ctrl+3, Cmd/Ctrl+4 and Cmd/Ctrl+, switch, no horizontal overflow`,
+        `${name}: rail 52px, current item marked, Cmd/Ctrl+2, Cmd/Ctrl+3, Cmd/Ctrl+4 and Cmd/Ctrl+, switch, model sources as cards with an empty key field, no horizontal overflow`,
       );
     }
   }

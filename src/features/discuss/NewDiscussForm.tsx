@@ -1,24 +1,28 @@
 import { useState, type FormEvent } from "react";
 import { MessagesSquare, Plus, X } from "lucide-react";
 import { DISCUSS_ADAPTERS, type DiscussApi, type CreateDiscussionInput } from "../../api/discuss";
-import type { AgentConfig, AgentDiagnostic, ProjectSummary } from "../../domain";
-import { AgentPicker, agentSupportsModel, isAgentUnusable } from "../../components/AgentPicker";
+import type { AgentConfig, AgentDiagnostic, ModelProvider, ProjectSummary } from "../../domain";
+import { AgentPicker, agentProvider, agentSupportsModel, isAgentUnusable } from "../../components/AgentPicker";
 import { ErrorText } from "../../components/common/ErrorText";
 import { useLocale, useT } from "../../i18n";
+/** CLI agents first, so the default participants are ones that also work with a project. */
 export function discussAgents(agents: AgentConfig[]) {
-  return agents.filter((a) => a.enabled && DISCUSS_ADAPTERS.includes(a.adapterType));
+  const eligible = agents.filter((a) => a.enabled && DISCUSS_ADAPTERS.includes(a.adapterType));
+  return [...eligible.filter((a) => a.adapterType !== "api"), ...eligible.filter((a) => a.adapterType === "api")];
 }
 export function NewDiscussForm({
   api,
   agents,
   diagnostics,
   projects,
+  providers = [],
   onCreated,
 }: {
   api: DiscussApi;
   agents: AgentConfig[];
   diagnostics: AgentDiagnostic[];
   projects: ProjectSummary[];
+  providers?: ModelProvider[];
   onCreated: (id: string) => void;
 }) {
   const t = useT(),
@@ -38,13 +42,20 @@ export function NewDiscussForm({
     model: agentSupportsModel(diagnostics, p.agentId) ? p.model.trim() || undefined : undefined,
   }));
   const duplicate = new Set(choices.map((p) => JSON.stringify(p))).size !== choices.length;
+  const apiWithProject =
+    !!projectPath && participants.some((p) => eligible.find((a) => a.id === p.agentId)?.adapterType === "api");
   const valid =
     topic.trim().length > 0 &&
     !duplicate &&
+    !apiWithProject &&
     choices.every(
       (p) =>
         eligible.some((a) => a.id === p.agentId && a.available) &&
         !isAgentUnusable(diagnostics.find((d) => d.agentId === p.agentId)?.status) &&
+        agentProvider(
+          eligible.find((a) => a.id === p.agentId),
+          providers,
+        )?.configured !== false &&
         (!p.model || (!/\s/.test(p.model) && !p.model.startsWith("-") && p.model.length <= 128)),
     );
   const update = (index: number, patch: Partial<(typeof participants)[number]>) => {
@@ -121,6 +132,8 @@ export function NewDiscussForm({
               <AgentPicker
                 agents={eligible}
                 diagnostics={diagnostics}
+                providers={providers}
+                needsTools={!!projectPath}
                 value={p.agentId}
                 onChange={(agentId) => update(i, { agentId, model: "" })}
                 placement="down"
@@ -148,6 +161,7 @@ export function NewDiscussForm({
           {t("discussAddParticipant")}
         </button>
         {duplicate && <p className="discuss-note">{t("discussDuplicate")}</p>}
+        {apiWithProject && <p className="discuss-note">{t("discussApiNeedsNoProject")}</p>}
         <div className="discuss-form-row">
           <label>
             {t("discussProject")}

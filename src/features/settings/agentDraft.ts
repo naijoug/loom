@@ -1,4 +1,4 @@
-import type { AgentConfig, AgentConfigInput } from "../../domain";
+import type { AgentConfig, AgentConfigInput, ModelProvider } from "../../domain";
 
 export function defaultAgentDraft(): AgentConfigInput {
   return {
@@ -11,6 +11,22 @@ export function defaultAgentDraft(): AgentConfigInput {
     canWriteFiles: true,
     canRunCommands: true,
     enabled: true,
+  };
+}
+
+/** A direct-API executor: no executable, no tools; the backend clears both again on save. */
+export function apiAgentDraft(provider?: ModelProvider): AgentConfigInput {
+  return {
+    name: provider ? `API · ${provider.name}` : "API",
+    command: "",
+    args: [],
+    workingDirectoryPolicy: "project_root",
+    capabilities: ["planning", "review", "documentation"],
+    adapterType: "api",
+    canWriteFiles: false,
+    canRunCommands: false,
+    enabled: true,
+    providerId: provider?.id ?? null,
   };
 }
 

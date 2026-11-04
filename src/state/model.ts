@@ -1,4 +1,4 @@
-import type { AgentConfig, AgentDiagnostic, ProjectSummary } from "../domain";
+import type { AgentConfig, AgentDiagnostic, ModelProviderList, ProjectSummary } from "../domain";
 import type { FeatureId } from "../shell/features";
 /** Registered features plus Settings, which lives at the bottom of the activity rail. */
 export type AppView = FeatureId | "settings";
@@ -14,12 +14,16 @@ export interface ProjectsSlice {
   recent: ProjectSummary[];
   current: ProjectSummary | null;
 }
-/** `agentDiagnostics`: latest `diagnose_agents` result per agent, shared so every feature's AgentPicker shows the same status. */
+/**
+ * `agentDiagnostics`: latest `diagnose_agents` result per agent, shared so every feature's AgentPicker shows the same status.
+ * `providers`: model providers (never their keys), so pickers can name an Agent's source and Settings can edit them.
+ */
 export interface AppState {
   app: AppSlice;
   projects: ProjectsSlice;
   agents: AgentConfig[];
   agentDiagnostics: AgentDiagnostic[];
+  providers: ModelProviderList;
 }
 export type AppAction =
   | { type: "app/viewSelected"; view: AppView }
@@ -33,7 +37,8 @@ export type AppAction =
   | { type: "agents/loadFailed"; error: string }
   | { type: "agents/loaded"; agents: AgentConfig[] }
   | { type: "agents/created"; agent: AgentConfig }
-  | { type: "agents/diagnosed"; diagnostics: AgentDiagnostic[] };
+  | { type: "agents/diagnosed"; diagnostics: AgentDiagnostic[] }
+  | { type: "providers/loaded"; providers: ModelProviderList };
 export const initialAppState: AppState = {
   app: {
     currentView: "chat",
@@ -46,4 +51,5 @@ export const initialAppState: AppState = {
   projects: { recent: [], current: null },
   agents: [],
   agentDiagnostics: [],
+  providers: { revision: 0, providers: [] },
 };

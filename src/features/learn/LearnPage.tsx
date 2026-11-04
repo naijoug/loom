@@ -113,6 +113,7 @@ export function LearnPage() {
           api={api}
           agents={state.agents}
           diagnostics={state.agentDiagnostics}
+          providers={state.providers.providers}
           onCreated={(id) => {
             select(id);
             setRevision((value) => value + 1);
