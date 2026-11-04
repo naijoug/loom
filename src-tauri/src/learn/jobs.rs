@@ -503,6 +503,7 @@ impl Job {
             ),
             system_append: None,
             model: study.model.as_deref(),
+            needs_tools: true,
         };
         let prepared = agent::prepare_invocation(agent, &request)?;
         record

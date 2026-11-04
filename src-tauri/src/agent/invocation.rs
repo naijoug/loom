@@ -1,5 +1,5 @@
 use super::capabilities::{
-    capabilities, ADAPTER_CLAUDE, ADAPTER_CODEX, ADAPTER_GROK, ADAPTER_OPENCODE,
+    capabilities, ADAPTER_API, ADAPTER_CLAUDE, ADAPTER_CODEX, ADAPTER_GROK, ADAPTER_OPENCODE,
 };
 use super::injection;
 use super::providers::{self, ResolvedProvider};
@@ -55,10 +55,13 @@ pub struct AdapterInvocationRequest<'a> {
     /// Model name passed to the CLI; `None` keeps the CLI default. Rejected
     /// for adapters without `model_selection` instead of being ignored.
     pub model: Option<&'a str>,
+    /// The feature relies on tools (reading the project, editing, running
+    /// commands), so an `api` agent is refused instead of answering blind.
+    pub needs_tools: bool,
 }
 
 impl AdapterInvocationRequest<'_> {
-    fn needs_write_access(&self) -> bool {
+    pub(super) fn needs_write_access(&self) -> bool {
         self.chat_permission_mode.map_or_else(
             || self.stage.needs_write_access(),
             |mode| matches!(mode, "ask" | "auto"),
@@ -85,6 +88,10 @@ pub struct PreparedAgentInvocation {
     pub stdin_prompt: bool,
     pub output_mode: String,
     pub resumed: bool,
+    /// Set for an `api` agent: the runner sends this request instead of
+    /// starting `program`.
+    #[serde(skip)]
+    pub api: Option<super::api::ApiCall>,
 }
 
 #[derive(Clone, Default)]
@@ -122,6 +129,9 @@ struct GrokAdapter;
 struct CustomCliAdapter;
 struct OpencodeAdapter;
 
+/// OpenCode's inline configuration; provider injection adds to it.
+pub(super) const OPENCODE_CONFIG: &str = "OPENCODE_CONFIG_CONTENT";
+
 pub fn prepare_invocation(
     agent: &AgentConfig,
     request: &AdapterInvocationRequest<'_>,
@@ -137,6 +147,43 @@ pub fn prepare_invocation(
     prepare_with_provider(agent, request, provider.as_ref())
 }
 
+/// Interactive permission mode → stage: `explore` reads, `ask`/`auto` write.
+pub fn permission_to_stage(mode: &str) -> AgentStage {
+    match mode {
+        "ask" | "auto" => AgentStage::Debugging,
+        _ => AgentStage::Planning,
+    }
+}
+
+/// Codex and Claude Code read the prompt from stdin; other adapters take it
+/// in argv.
+pub fn embeds_prompt(adapter: &str) -> bool {
+    !matches!(adapter, ADAPTER_CODEX | ADAPTER_CLAUDE)
+}
+
+/// The resume handle an adapter accepts for a native session id.
+pub(crate) fn resume_command(agent: &AgentConfig, session_id: &str) -> Result<String, String> {
+    if !valid_session_id(session_id) {
+        return Err("session id must be letters, digits, '-' or '_'".into());
+    }
+    crate::session_capture::resume_command_for_adapter(
+        &agent.adapter_type,
+        &agent.command,
+        session_id,
+    )
+    .ok_or_else(|| format!("{} cannot resume a session", agent.name))
+}
+
+/// Like [`prepare_invocation`] with a provider the caller already resolved,
+/// for a headless entry point that reads its own configuration directory.
+pub(crate) fn prepare_invocation_with(
+    agent: &AgentConfig,
+    request: &AdapterInvocationRequest<'_>,
+    provider: Option<&ResolvedProvider>,
+) -> Result<PreparedAgentInvocation, String> {
+    prepare_with_provider(agent, request, provider)
+}
+
 /// Mode B keeps the adapter's own arguments and permissions and only adds the
 /// provider: its model becomes the default `--model`.
 fn prepare_with_provider(
@@ -144,6 +191,9 @@ fn prepare_with_provider(
     request: &AdapterInvocationRequest<'_>,
     provider: Option<&ResolvedProvider>,
 ) -> Result<PreparedAgentInvocation, String> {
+    if agent.adapter_type == ADAPTER_API {
+        return super::api::prepare(agent, request, provider);
+    }
     let Some(provider) = provider else {
         return prepare_for_cli(agent, request);
     };
@@ -449,12 +499,13 @@ impl AgentAdapter for OpencodeAdapter {
             .resume_command
             .map(|value| parse_resume_session_id(ADAPTER_OPENCODE, &agent.command, value))
             .transpose()?;
+        // OpenCode 2.x reads per-run configuration only in a private server;
+        // the shared background service ignores this process's environment.
         let mut args: Vec<String> = vec![
             "run".into(),
+            "--standalone".into(),
             "--format".into(),
             "json".into(),
-            "--dir".into(),
-            request.project_path.display().to_string(),
             "--agent".into(),
             if request.needs_write_access() {
                 "build"
@@ -485,9 +536,16 @@ impl AgentAdapter for OpencodeAdapter {
         } else {
             serde_json::json!({"*":"ask", "read":"allow", "glob":"allow", "grep":"allow", "edit":"allow", "external_directory":"deny"})
         };
+        // OpenCode takes its project from `PWD`, which the process would
+        // otherwise inherit from Loom.
         invocation
             .environment
-            .insert("OPENCODE_PERMISSION".into(), permissions.to_string());
+            .insert("PWD".into(), request.project_path.display().to_string());
+        // 2.x ignores `OPENCODE_PERMISSION`; inline configuration is honored.
+        invocation.environment.insert(
+            OPENCODE_CONFIG.into(),
+            serde_json::json!({ "permission": permissions }).to_string(),
+        );
         Ok(invocation)
     }
 }
@@ -569,6 +627,7 @@ fn prepared(
         stdin_prompt,
         output_mode: output_mode.to_string(),
         resumed,
+        api: None,
     }
 }
 
@@ -661,6 +720,7 @@ mod tests {
                 embed_prompt: true,
                 system_append: None,
                 model: None,
+                needs_tools: true,
             },
         )
         .expect("review invocation");
@@ -682,6 +742,7 @@ mod tests {
                 embed_prompt: true,
                 system_append: None,
                 model: None,
+                needs_tools: true,
             },
         )
         .expect("implementation invocation");
@@ -729,6 +790,7 @@ mod tests {
                 embed_prompt: true,
                 system_append: None,
                 model: None,
+                needs_tools: true,
             },
         )
         .expect("custom invocation");
@@ -755,6 +817,7 @@ mod tests {
                 embed_prompt: true,
                 system_append: None,
                 model: None,
+                needs_tools: true,
             },
         )
         .expect_err("shell wrappers should be rejected");
@@ -782,6 +845,7 @@ mod tests {
                 embed_prompt: adapter == ADAPTER_GROK || adapter == ADAPTER_OPENCODE,
                 system_append: None,
                 model: Some(model),
+                needs_tools: true,
             };
             let prepared = prepare_invocation(&agent(adapter), &request).unwrap();
             let at = prepared
@@ -833,6 +897,7 @@ mod tests {
                 embed_prompt: true,
                 system_append: None,
                 model: Some("any"),
+                needs_tools: true,
             },
         )
         .unwrap_err();
@@ -856,6 +921,7 @@ mod tests {
                 embed_prompt: true,
                 system_append: None,
                 model: None,
+                needs_tools: true,
             },
         )
         .expect("grok prepare");
@@ -902,6 +968,7 @@ mod tests {
             embed_prompt: false,
             system_append: Some("CARDS"),
             model: None,
+            needs_tools: true,
         };
         let args = prepare_invocation(&agent, &request).unwrap().args;
         let at = args
@@ -943,6 +1010,7 @@ mod tests {
                         embed_prompt,
                         system_append: None,
                         model: None,
+                        needs_tools: true,
                     };
                     let invocation = prepare_invocation(&agent, &request).unwrap();
                     assert!(invocation.resumed);
@@ -1037,6 +1105,7 @@ mod tests {
                             embed_prompt: true,
                             system_append: None,
                             model: None,
+                            needs_tools: true,
                         }
                     )
                     .is_err(),
@@ -1067,6 +1136,7 @@ mod opencode_tests {
                 embed_prompt: true,
                 system_append: None,
                 model: None,
+                needs_tools: true,
             };
             let invocation = prepare_invocation(&agent, &request).unwrap();
             assert_eq!(invocation.output_mode, "opencode_json");
@@ -1079,8 +1149,13 @@ mod opencode_tests {
                 &invocation.args[invocation.args.len() - 2..],
                 &["--", "--prompt-looking-text"]
             );
-            let policy: serde_json::Value =
-                serde_json::from_str(&invocation.environment["OPENCODE_PERMISSION"]).unwrap();
+            assert_eq!(&invocation.args[..2], ["run", "--standalone"]);
+            assert!(!invocation.args.iter().any(|arg| arg == "--dir"));
+            assert_eq!(invocation.cwd, "/project");
+            assert_eq!(invocation.environment["PWD"], "/project");
+            let config: serde_json::Value =
+                serde_json::from_str(&invocation.environment[OPENCODE_CONFIG]).unwrap();
+            let policy = &config["permission"];
             if mode == "explore" {
                 assert_eq!(policy["*"], "deny");
                 assert_eq!(policy["read"], "allow");
@@ -1136,6 +1211,7 @@ mod provider_tests {
             embed_prompt: false,
             system_append: None,
             model,
+            needs_tools: true,
         }
     }
 
@@ -1266,7 +1342,7 @@ mod provider_tests {
             assert_eq!(loom["options"]["baseURL"], base_url);
             assert_eq!(loom["options"]["apiKey"], "{env:LOOM_PROVIDER_API_KEY}");
             assert!(loom["models"]["provider-model"].is_object());
-            assert!(prepared.environment.contains_key("OPENCODE_PERMISSION"));
+            assert_eq!(config["permission"]["*"], "deny");
             assert_key_hidden(&prepared);
         }
     }
@@ -1349,6 +1425,7 @@ mod provider_tests {
             stdin_prompt: false,
             output_mode: "plain".into(),
             resumed: false,
+            api: None,
         };
         let outcome = run(
             RunSpec {

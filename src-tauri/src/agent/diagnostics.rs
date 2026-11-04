@@ -35,6 +35,15 @@ fn compact_version(output: &[u8]) -> Option<String> {
 }
 
 async fn diagnose_agent(agent: crate::models::AgentConfig) -> AgentDiagnostic {
+    diagnose_in(agent, None).await
+}
+
+/// `config_dir` names the directory an `api` agent's provider is read from;
+/// `None` is the desktop's.
+async fn diagnose_in(
+    agent: crate::models::AgentConfig,
+    config_dir: Option<&std::path::Path>,
+) -> AgentDiagnostic {
     let checked_at_ms = now_ms();
     let mut capabilities = capabilities::capabilities(&agent.adapter_type);
     if agent.adapter_type == "dummy" {
@@ -45,6 +54,33 @@ async fn diagnose_agent(agent: crate::models::AgentConfig) -> AgentDiagnostic {
             version: Some("built-in test adapter".to_string()),
             auth_status: "not_applicable".to_string(),
             detail: "No external process is used.".to_string(),
+            checked_at_ms,
+            capabilities,
+        };
+    }
+    if agent.adapter_type == capabilities::ADAPTER_API {
+        // No network request: Settings tests the provider connection itself.
+        let ready = match config_dir {
+            Some(dir) => super::api::provider_ready_at(dir, &agent),
+            None => super::api::provider_ready(&agent),
+        };
+        return AgentDiagnostic {
+            agent_id: agent.id,
+            status: if !agent.enabled {
+                "disabled"
+            } else if ready.is_ok() {
+                "ready"
+            } else {
+                "unavailable"
+            }
+            .to_string(),
+            resolved_path: None,
+            version: None,
+            auth_status: "unknown".to_string(),
+            detail: match ready {
+                Ok(()) => "Calls the model provider directly; no executable is used.".into(),
+                Err(error) => error,
+            },
             checked_at_ms,
             capabilities,
         };
@@ -114,6 +150,15 @@ async fn diagnose_agent(agent: crate::models::AgentConfig) -> AgentDiagnostic {
     }
 }
 
+/// One agent's diagnostic, for a headless caller that loaded the agent from
+/// `config_dir` itself.
+pub(crate) async fn diagnose(
+    agent: crate::models::AgentConfig,
+    config_dir: &std::path::Path,
+) -> AgentDiagnostic {
+    diagnose_in(agent, Some(config_dir)).await
+}
+
 const STARTUP_PROBE_TIMEOUT: Duration = Duration::from_secs(15);
 const STARTUP_DETAIL_LIMIT: usize = 4000;
 
@@ -155,6 +200,15 @@ pub fn forget_startable(agent_id: Option<&str>) {
 pub async fn check_startable(agent: &crate::models::AgentConfig) -> Result<(), AgentError> {
     if agent.adapter_type == "dummy" {
         return Ok(());
+    }
+    if agent.adapter_type == capabilities::ADAPTER_API {
+        return super::api::provider_ready(agent).map_err(|error| {
+            AgentError::new(format!(
+                "{} cannot call its model provider; check it in Settings",
+                agent.name
+            ))
+            .with_details(error)
+        });
     }
     let path = resolve_command_path(&agent.command)
         .ok_or_else(|| AgentError::new(format!("{} was not found on this machine", agent.name)))?;

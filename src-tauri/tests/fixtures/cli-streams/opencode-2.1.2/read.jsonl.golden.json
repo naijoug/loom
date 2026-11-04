@@ -1,0 +1,52 @@
+{
+  "events": [
+    {
+      "delta": "",
+      "done": false,
+      "part": {
+        "callId": "call_1",
+        "inputSummary": "{\"path\":\"note.txt\"}",
+        "kind": "read",
+        "name": "read",
+        "outputSummary": "Read file note.txt, lines 1-1\n1: LOOM_MARKER_42",
+        "status": "done",
+        "target": "note.txt",
+        "type": "tool"
+      }
+    },
+    {
+      "delta": "LOOM_DONE",
+      "done": false
+    },
+    {
+      "delta": "",
+      "done": true
+    }
+  ],
+  "logs": {
+    "fnv1a": "d5db693aec53ddef",
+    "lines": 4,
+    "stderrLines": 0
+  },
+  "outcome": {
+    "content": "LOOM_DONE",
+    "errorSummary": null,
+    "exitCode": 0,
+    "parts": [
+      {
+        "callId": "call_1",
+        "inputSummary": "{\"path\":\"note.txt\"}",
+        "kind": "read",
+        "name": "read",
+        "outputSummary": "Read file note.txt, lines 1-1\n1: LOOM_MARKER_42",
+        "status": "done",
+        "target": "note.txt",
+        "type": "tool"
+      }
+    ],
+    "resumeCommand": "/bin/cat --session fixture-session",
+    "status": "complete",
+    "terminationReason": null
+  },
+  "started": 1
+}

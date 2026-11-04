@@ -63,12 +63,10 @@ pub(crate) fn prepare_chat_invocation(
         // These existing adapters explicitly support stdin transport. Custom
         // positional templates and Grok retain their configured argv transport.
         chat_permission_mode: Some(&session.permission_mode),
-        embed_prompt: !matches!(
-            agent.adapter_type.as_str(),
-            agent::ADAPTER_CODEX | agent::ADAPTER_CLAUDE
-        ),
+        embed_prompt: agent::embeds_prompt(&agent.adapter_type),
         system_append,
         model: None,
+        needs_tools: true,
     };
     // Preparing arguments has no side effects. Let the adapter decide whether
     // this handle is actually usable; an arbitrary stored string is not proof.

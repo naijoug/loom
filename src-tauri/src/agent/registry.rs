@@ -1,4 +1,6 @@
-use super::capabilities::{ADAPTER_CLAUDE as ADAPTER_CLAUDE_CODE, ADAPTER_CODEX, ADAPTER_GROK};
+use super::capabilities::{
+    ADAPTER_API, ADAPTER_CLAUDE as ADAPTER_CLAUDE_CODE, ADAPTER_CODEX, ADAPTER_GROK,
+};
 use crate::{
     migrations::{self, AGENT_STORE_SCHEMA_VERSION},
     models::{AgentConfig, AgentConfigInput, IdGenerator},
@@ -50,6 +52,7 @@ pub fn create_agent(
         available: false,
         provider_id: input.provider_id,
     };
+    restrict_api_agent(&mut agent);
     agent.available = command_available(&agent);
     agents.push(agent.clone());
     save_agents(&app, &agents)?;
@@ -80,6 +83,7 @@ pub fn update_agent(
         available: false,
         provider_id: input.provider_id,
     };
+    restrict_api_agent(&mut updated);
     updated.available = command_available(&updated);
     apply_agent_update(&mut agents, &agent_id, updated)?;
     save_agents(&app, &agents)?;
@@ -143,7 +147,26 @@ fn delete_agent_config(agents: &mut Vec<AgentConfig>, agent_id: &str) -> Result<
     Ok(())
 }
 
+/// An `api` agent has no executable and no tools, whatever the form sent.
+fn restrict_api_agent(agent: &mut AgentConfig) {
+    if agent.adapter_type == ADAPTER_API {
+        agent.command.clear();
+        agent.args.clear();
+        agent.can_write_files = false;
+        agent.can_run_commands = false;
+    }
+}
+
 fn validate_input(input: &AgentConfigInput) -> Result<(), String> {
+    if input.adapter_type == ADAPTER_API {
+        if input.name.trim().is_empty() {
+            return Err("Agent name is required".into());
+        }
+        if input.provider_id.is_none() {
+            return Err("An API agent needs a model provider".into());
+        }
+        return Ok(());
+    }
     if input.name.trim().is_empty() || input.command.trim().is_empty() {
         return Err("Agent name and executable are required".into());
     }
@@ -185,7 +208,10 @@ fn provider_supported(
     adapter_type: &str,
     kind: super::providers::ProviderKind,
 ) -> Result<(), String> {
-    if super::injection::provider_kinds(adapter_type).contains(&kind) {
+    if super::capabilities(adapter_type)
+        .provider_kinds
+        .contains(&kind)
+    {
         Ok(())
     } else {
         Err(format!(
@@ -233,6 +259,11 @@ pub(super) fn save_agents<R: tauri::Runtime>(
 
 pub(super) fn save_agent_store(path: &Path, agents: &[AgentConfig]) -> Result<(), String> {
     migrations::write_versioned_json(path, AGENT_STORE_SCHEMA_VERSION, &agents)
+}
+
+/// The agents store inside a configuration directory.
+pub(crate) fn agents_file(dir: &Path) -> PathBuf {
+    dir.join(AGENTS_FILE)
 }
 
 pub(super) fn agents_path<R: tauri::Runtime>(
@@ -451,7 +482,11 @@ pub(crate) fn resolve_executable(command: &str) -> Option<String> {
 }
 
 pub(super) fn command_available(agent: &AgentConfig) -> bool {
-    agent.adapter_type == ADAPTER_DUMMY || resolve_executable(&agent.command).is_some()
+    match agent.adapter_type.as_str() {
+        ADAPTER_DUMMY => true,
+        ADAPTER_API => super::api::provider_ready(agent).is_ok(),
+        _ => resolve_executable(&agent.command).is_some(),
+    }
 }
 
 pub(super) fn redact_sensitive_text_inner(input: &str) -> String {
@@ -615,5 +650,43 @@ mod tests {
         );
         assert!(provider_supported(ADAPTER_GROK, ProviderKind::Anthropic).is_err());
         assert!(provider_supported(ADAPTER_CLI, ProviderKind::Anthropic).is_err());
+        assert!(provider_supported(ADAPTER_API, ProviderKind::OpenaiChat).is_ok());
+    }
+
+    #[test]
+    fn an_api_agent_needs_a_provider_and_gets_no_executable_or_tools() {
+        let input = |provider_id: Option<&str>| AgentConfigInput {
+            name: "Relay".into(),
+            command: "/bin/sh".into(),
+            args: vec!["-c".into()],
+            working_directory_policy: "project_root".into(),
+            capabilities: vec!["planning".into()],
+            adapter_type: ADAPTER_API.into(),
+            can_write_files: true,
+            can_run_commands: true,
+            enabled: true,
+            provider_id: provider_id.map(str::to_owned),
+        };
+        assert!(validate_input(&input(None)).is_err());
+        // The shell-wrapper rule guards executables; an API agent runs none.
+        validate_input(&input(Some("relay"))).unwrap();
+        let input = input(Some("relay"));
+        let mut agent = AgentConfig {
+            id: "agent-relay".into(),
+            name: input.name,
+            command: input.command,
+            args: input.args,
+            working_directory_policy: input.working_directory_policy,
+            capabilities: input.capabilities,
+            adapter_type: input.adapter_type,
+            can_write_files: input.can_write_files,
+            can_run_commands: input.can_run_commands,
+            enabled: input.enabled,
+            available: false,
+            provider_id: input.provider_id,
+        };
+        restrict_api_agent(&mut agent);
+        assert!(agent.command.is_empty() && agent.args.is_empty());
+        assert!(!agent.can_write_files && !agent.can_run_commands);
     }
 }

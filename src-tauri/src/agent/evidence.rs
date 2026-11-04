@@ -206,6 +206,7 @@ impl EvidenceProfile {
             environment: Default::default(),
             environment_remove_prefixes: Vec::new(),
             secret_environment: Default::default(),
+            api: None,
         })
     }
 }
@@ -254,6 +255,7 @@ mod tests {
             embed_prompt: false,
             system_append: None,
             model: Some("model"),
+            needs_tools: true,
         };
         let prepared = super::super::prepare_invocation(&agent, &request).unwrap();
         assert!(prepared.args.windows(2).any(|p| p == ["--tools", ""]));
@@ -316,6 +318,7 @@ printf '%s\n' '{"type":"result","is_error":false,"result":"LOOM_FIXTURE_RESULT"}
                 embed_prompt: false,
                 system_append: None,
                 model: Some("fixture-model"),
+                needs_tools: true,
             };
             let mut prepared = super::super::prepare_invocation(&agent, &request).unwrap();
             let expected = prepared.args.clone();
@@ -408,6 +411,7 @@ printf '%s\n' '{"type":"result","is_error":false,"result":"LOOM_FIXTURE_RESULT"}
             embed_prompt: false,
             system_append: None,
             model: Some(&model),
+            needs_tools: true,
         };
         let prepared = super::super::prepare_invocation(&agent, &request).unwrap();
         let mut initialized = false;

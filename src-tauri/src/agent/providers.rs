@@ -476,7 +476,7 @@ fn validate_base_url(raw: &str) -> Result<String, String> {
     Ok(url.as_str().trim_end_matches('/').to_owned())
 }
 
-fn local_base_url(raw: &str) -> bool {
+pub(super) fn local_base_url(raw: &str) -> bool {
     reqwest::Url::parse(raw).is_ok_and(|url| local_url(&url))
 }
 
@@ -497,18 +497,29 @@ fn local_url(url: &reqwest::Url) -> bool {
     }
 }
 
-/// Lists models: no tokens are spent and no model name is needed.
-async fn test_provider(provider: &ResolvedProvider) -> ProviderTestResult {
+/// Client for one provider. Redirects are refused so a key is never sent to
+/// another host, and a shell proxy must not intercept a gateway on this
+/// machine or network.
+pub(super) fn http_client(
+    base_url: &str,
+    timeout: Option<Duration>,
+) -> reqwest::Result<reqwest::Client> {
     let _ = rustls::crypto::ring::default_provider().install_default();
     let mut builder = reqwest::Client::builder()
         .redirect(reqwest::redirect::Policy::none())
-        .connect_timeout(Duration::from_secs(10))
-        .timeout(Duration::from_secs(20));
-    // A shell proxy must not intercept a gateway on this machine or network.
-    if local_base_url(&provider.base_url) {
+        .connect_timeout(Duration::from_secs(10));
+    if let Some(timeout) = timeout {
+        builder = builder.timeout(timeout);
+    }
+    if local_base_url(base_url) {
         builder = builder.no_proxy();
     }
-    let client = match builder.build() {
+    builder.build()
+}
+
+/// Lists models: no tokens are spent and no model name is needed.
+pub(crate) async fn test_provider(provider: &ResolvedProvider) -> ProviderTestResult {
+    let client = match http_client(&provider.base_url, Some(Duration::from_secs(20))) {
         Ok(client) => client,
         Err(_) => return outcome(ProviderTestOutcome::Unreachable, None),
     };
@@ -587,7 +598,7 @@ async fn test_with_client(
     outcome(result, Some(status))
 }
 
-fn sensitive(value: &str) -> Option<reqwest::header::HeaderValue> {
+pub(super) fn sensitive(value: &str) -> Option<reqwest::header::HeaderValue> {
     let mut header = reqwest::header::HeaderValue::from_str(value).ok()?;
     header.set_sensitive(true);
     Some(header)
@@ -609,7 +620,7 @@ fn outcome(outcome: ProviderTestOutcome, http_status: Option<u16>) -> ProviderTe
 }
 
 /// Deleting a provider an agent still uses would make that agent's runs fail.
-fn ensure_unused(agents: &[crate::models::AgentConfig], id: &str) -> Result<(), String> {
+pub(crate) fn ensure_unused(agents: &[crate::models::AgentConfig], id: &str) -> Result<(), String> {
     match agents
         .iter()
         .find(|agent| agent.provider_id.as_deref() == Some(id))

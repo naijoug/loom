@@ -5,6 +5,7 @@
 //! agent configuration file is written.
 use super::{
     capabilities::{ADAPTER_CLAUDE, ADAPTER_CODEX, ADAPTER_OPENCODE},
+    invocation::OPENCODE_CONFIG,
     providers::{ProviderKind, ResolvedProvider},
     PreparedAgentInvocation,
 };
@@ -126,11 +127,10 @@ fn opencode(
     provider: &ResolvedProvider,
     model: &str,
 ) -> Result<(), String> {
-    if prepared.args.first().map(String::as_str) != Some("run") {
-        return Err("OpenCode invocation has no run subcommand".into());
+    if !matches!(prepared.args.as_slice(), [run, standalone, ..] if run == "run" && standalone == "--standalone")
+    {
+        return Err("OpenCode invocation is not a standalone run".into());
     }
-    // The shared background service would ignore this process's environment.
-    prepared.args.insert(1, "--standalone".into());
     let (package, base_url) = match provider.kind {
         ProviderKind::Anthropic => ("@ai-sdk/anthropic", format!("{}/v1", provider.base_url)),
         ProviderKind::OpenaiResponses => ("@ai-sdk/openai", provider.base_url.clone()),
@@ -141,16 +141,22 @@ fn opencode(
         options["apiKey"] = format!("{{env:{KEY_ENV}}}").into();
         prepared.secret_environment.insert(KEY_ENV, key);
     }
-    let config = serde_json::json!({
-        "provider": { PROVIDER_ID: {
-            "npm": package,
-            "name": "Loom",
-            "options": options,
-            "models": { model: { "name": model } },
-        }},
-    });
+    // Added to the adapter's inline configuration, which holds the permissions.
+    let mut config: serde_json::Value = prepared
+        .environment
+        .get(OPENCODE_CONFIG)
+        .map(|text| serde_json::from_str(text))
+        .transpose()
+        .map_err(|_| "OpenCode inline configuration is invalid")?
+        .unwrap_or_else(|| serde_json::json!({}));
+    config["provider"] = serde_json::json!({ PROVIDER_ID: {
+        "npm": package,
+        "name": "Loom",
+        "options": options,
+        "models": { model: { "name": model } },
+    }});
     prepared
         .environment
-        .insert("OPENCODE_CONFIG_CONTENT".into(), config.to_string());
+        .insert(OPENCODE_CONFIG.into(), config.to_string());
     Ok(())
 }

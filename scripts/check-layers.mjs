@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Layer rules for the agent invocation layer (docs/plans/2026-10-26/22:42-agent-layer-and-activity-rail.md).
-// 1. src-tauri/src/agent/ never imports feature modules.
+// 1. src-tauri/src/agent/ and the loom-agent entry (agent_cli.rs) never import feature modules.
 // 2. Learn, Research and Chat never import each other.
 // 3. Feature modules never spawn processes outside test code; agent CLIs start only through agent::run.
 // 4. Frontend: src/features/<x> never imports src/features/<y> (code or CSS); shared UI lives in src/components,
@@ -49,6 +49,12 @@ for (const shared of ["agent", "tool_process", "research_sources", "rea", "brows
     const hits = referencesModule(productionCode(file, readFileSync(file, "utf8")), FEATURE_MODULES);
     if (hits.length) report(file, `${shared}/ must not import feature modules (${hits.join(", ")})`);
   }
+}
+
+// The headless `loom-agent` entry reaches the agent layer only, like a feature would.
+for (const file of rustFiles(join(src, "agent_cli.rs"))) {
+  const hits = referencesModule(productionCode(file, readFileSync(file, "utf8")), FEATURE_MODULES);
+  if (hits.length) report(file, `agent_cli must not import feature modules (${hits.join(", ")}); use crate::agent`);
 }
 
 for (const file of rustFiles(join(src, "learn"))) {

@@ -427,6 +427,7 @@ impl Runtime {
                     embed_prompt: false,
                     system_append: None,
                     model: self.spec.input.model.as_deref(),
+                    needs_tools: true,
                 },
             )?;
             let operation_id = next_id("model");

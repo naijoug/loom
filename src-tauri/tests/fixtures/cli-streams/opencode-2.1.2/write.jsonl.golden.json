@@ -1,0 +1,62 @@
+{
+  "events": [
+    {
+      "delta": "",
+      "done": false,
+      "part": {
+        "callId": "call_1",
+        "diffPreview": "+hi\n",
+        "diffStats": {
+          "added": 1,
+          "removed": 0
+        },
+        "inputSummary": "{\"content\":\"hi\",\"path\":\"out.txt\"}",
+        "kind": "write",
+        "name": "write",
+        "outputSummary": "Created file successfully: out.txt",
+        "status": "done",
+        "target": "out.txt",
+        "type": "tool"
+      }
+    },
+    {
+      "delta": "LOOM_DONE",
+      "done": false
+    },
+    {
+      "delta": "",
+      "done": true
+    }
+  ],
+  "logs": {
+    "fnv1a": "d9f15fc2bcbd8721",
+    "lines": 4,
+    "stderrLines": 0
+  },
+  "outcome": {
+    "content": "LOOM_DONE",
+    "errorSummary": null,
+    "exitCode": 0,
+    "parts": [
+      {
+        "callId": "call_1",
+        "diffPreview": "+hi\n",
+        "diffStats": {
+          "added": 1,
+          "removed": 0
+        },
+        "inputSummary": "{\"content\":\"hi\",\"path\":\"out.txt\"}",
+        "kind": "write",
+        "name": "write",
+        "outputSummary": "Created file successfully: out.txt",
+        "status": "done",
+        "target": "out.txt",
+        "type": "tool"
+      }
+    ],
+    "resumeCommand": "/bin/cat --session fixture-session",
+    "status": "complete",
+    "terminationReason": null
+  },
+  "started": 1
+}

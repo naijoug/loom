@@ -85,6 +85,7 @@ fn supported(adapter: &str) -> bool {
             | agent::ADAPTER_CLAUDE
             | agent::ADAPTER_OPENCODE
             | agent::ADAPTER_GROK
+            | agent::ADAPTER_API
     )
 }
 async fn start(
@@ -137,6 +138,10 @@ pub async fn discuss_create(
     let s = store(&app, &window)?;
     validate(&mut input)?;
     let agents = agent::load_agents(&app)?;
+    let has_project = input
+        .project_path
+        .as_ref()
+        .is_some_and(|p| !p.trim().is_empty());
     let participants = input
         .participants
         .iter()
@@ -147,7 +152,14 @@ pub async fn discuss_create(
                 .find(|a| a.id == p.agent_id)
                 .ok_or("Agent not found")?;
             if !supported(&a.adapter_type) {
-                return Err("Discuss requires built-in CLI adapters".into());
+                return Err("Discuss requires built-in CLI adapters or API agents".into());
+            }
+            // The moderator also answers rounds 1 and 2, which read the project.
+            if a.adapter_type == agent::ADAPTER_API && has_project {
+                return Err(format!(
+                    "{} calls a model API directly and cannot read a project; remove the project or choose a CLI agent",
+                    a.name
+                ));
             }
             // Availability and startup checks run per call, so a broken participant cannot discard its peers.
             Ok(Participant {

@@ -293,6 +293,9 @@ pub(crate) async fn run(
     mut emit: impl FnMut(AgentEvent) -> Result<(), String>,
     mut observe: impl FnMut(Observation) -> Result<(), String>,
 ) -> Result<AgentOutcome, String> {
+    if let Some(call) = spec.prepared.api.take() {
+        return super::api::run(spec, call, cancelled, emit, observe).await;
+    }
     if let Some(reason) = cancelled() {
         return Ok(stop_outcome(Some(reason), String::new(), Vec::new()));
     }

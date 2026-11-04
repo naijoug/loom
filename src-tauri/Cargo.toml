@@ -29,6 +29,10 @@ path = "src/main.rs"
 name = "loom-skills"
 path = "src/bin/loom-skills.rs"
 
+[[bin]]
+name = "loom-agent"
+path = "src/bin/loom-agent.rs"
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 

@@ -263,12 +263,12 @@ impl Pipeline {
                 stage: AgentStage::Planning,
                 resume_command: None,
                 chat_permission_mode: Some("explore"),
-                embed_prompt: !matches!(
-                    a.adapter_type.as_str(),
-                    agent::ADAPTER_CODEX | agent::ADAPTER_CLAUDE
-                ),
+                embed_prompt: agent::embeds_prompt(&a.adapter_type),
                 system_append: None,
                 model: p.model.as_deref(),
+                // An `api` agent can answer without a project and summarize
+                // any discussion; reading a project needs a CLI's tools.
+                needs_tools: d.project_path.is_some() && t.round != 3,
             },
         )?;
         let args: Vec<String> = prepared

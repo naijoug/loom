@@ -28,7 +28,7 @@ Loom 通过 Rust Agent 调用层 `src-tauri/src/agent/`（参数在 `invocation.
 | Claude Code | `--permission-mode plan` | `acceptEdits` | `auto` | `stream-json` + partial messages |
 | Codex | `--sandbox read-only` | `workspace-write` | `workspace-write` | `exec --json` |
 | Grok | `--permission-mode plan` | `acceptEdits` | `auto` | `streaming-messages-json` |
-| OpenCode | `plan`，单次权限配置默认拒绝，仅允许读取/搜索/网页读取 | `build`，编辑可用，其余遵守 CLI 确认 | `build`，自动权限，禁止 external_directory | `run --format json` |
+| OpenCode | `plan`，单次权限配置默认拒绝，仅允许读取/搜索/网页读取 | `build`，编辑可用，其余需确认（无窗口运行时被拒绝） | `build`，自动权限，禁止 external_directory | `run --standalone --format json` |
 | 自定义 CLI | 执行自身策略，Loom 不提供额外沙箱 | 同左 | 同左 | 纯文本 |
 
 Codex 每轮显式设置 `approval_policy="never"`、cwd 和 sandbox，包括 resume；支持无 Git 的项目目录。Claude/Grok 每轮重申权限。Code 的发送确认是 Loom 的回合授权，不是逐工具审批；CLI 非交互模式可能拒绝需要额外审批的工具。
@@ -36,6 +36,8 @@ Codex 每轮显式设置 `approval_policy="never"`、cwd 和 sandbox，包括 re
 Claude 使用 `--resume <id>`，Codex 使用 `exec … resume --json -- <id> -`，Grok 使用 `--resume <id>`。成功后保存绑定 Agent/命令/项目/权限/参数的原生句柄；换 Agent 或模式清除句柄，保留转录并在下一轮有界重放。OpenCode 使用 `run --session <id>`，从事件的 `sessionID` 捕获原生句柄；官方 1.19.3 临时副本已通过三轮原生续聊、仓储重开和停止后再发，因此能力中启用 nativeResume。
 
 OpenCode 的参数与权限配置依据 [官方 CLI 文档](https://opencode.ai/docs/cli/) 和 [权限文档](https://opencode.ai/docs/permissions/)；本机旧安装无法启动；另用官方验签的 1.19.3 临时副本完成 runtime 验收。模型调用仍使用 CLI 自身的账户配置，不在 Loom 管理凭据。
+
+OpenCode 2.x（本机 2.1.2，2026-11-03 核对）与 1.19.3 不同：`run` 没有 `--dir`，项目目录取自 `PWD` 环境变量（只设进程 cwd 时会落到 Loom 继承的目录）；`OPENCODE_PERMISSION` 被忽略；默认连接共享后台服务，本进程的环境变量不生效。因此 adapter 固定传 `--standalone`，设置 `PWD` 为项目目录，并把单次权限写进 `OPENCODE_CONFIG_CONTENT` 的 `permission`（API Key 模式再在同一份配置里加 `provider.loom`）。2.x 工具名为 `read`/`write`/`edit`/`shell` 等，参数用 `path`；解析器已兼容。
 
 自定义 CLI 使用专用可执行文件，拒绝 `sh/bash/zsh/fish/cmd/powershell/pwsh` 包装；参数按数组传递，支持 `{prompt}`、`{projectPath}` 等已有模板。不承诺自定义工具卡片或原生续聊。
 
@@ -46,6 +48,7 @@ OpenCode 的参数与权限配置依据 [官方 CLI 文档](https://opencode.ai/
 | Claude Code 2.1.304 | 问答、读文件、pwd、Research 禁写、Code 编辑已测 | `tool_use.id` 与 `tool_result.tool_use_id`；Read/Bash/Edit/Write 输入输出；部分正文 + assistant 最终消息 | 三轮与每轮磁盘仓储重开通过 |
 | Codex 0.163.0 | 问答、读取命令、pwd、Research 禁写、Code 编辑已测 | `thread.started.thread_id`；`item.started/completed`，命令 item id / aggregated_output / exit_code；file_change | 三轮与每轮磁盘仓储重开通过 |
 | Grok 1.0.62 | blocked：返回 402，使用额度耗尽；同时报告刷新登录异常 | 真实 system/result 错误样本已保存 | 本轮未通过，保留既有适配能力，不将历史结果计为本轮通过 |
+| OpenCode 2.1.2（本机安装，脚本化本地模型） | 用 Loom 生成的三种模式调用核对：explore 只能读，write/shell 工具不可用；ask 可写、shell 在无窗口运行时被拒、写项目外被拒；auto 可写可执行、写项目外被拒；真实模型未测（本机默认模型的网关/MCP 未响应） | `step_start/tool_use/text/step_finish`；`part.id` 作为调用 id，`state.input.path`、`state.output`、`sessionID` | `--session` 在 `--standalone` 下续上同一会话并回放上一轮工具结果 |
 | OpenCode 1.19.3（官方临时副本） | 读取、Research 禁写、Code 编辑、停止后再发通过；本机原安装仍因无效代码签名 blocked | `step_start/tool_use/text/step_finish`；`part.callID`、`state.input.filePath`、`state.output`、`sessionID` | 三轮原生续聊与仓储重开通过 |
 | 自定义 CLI | 本地 fixture 进程回归 | 纯文本 / 有界历史 | 不提供原生续聊 |
 

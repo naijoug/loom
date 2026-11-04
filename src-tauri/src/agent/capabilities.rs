@@ -5,6 +5,8 @@ pub const ADAPTER_CODEX: &str = "codex_cli";
 pub const ADAPTER_CLAUDE: &str = "claude_code_cli";
 pub const ADAPTER_OPENCODE: &str = "opencode_cli";
 pub const ADAPTER_GROK: &str = "grok_cli";
+/// Mode C: no executable; the prompt goes straight to a model provider.
+pub const ADAPTER_API: &str = "api";
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -38,6 +40,25 @@ fn is_false(value: &bool) -> bool {
 }
 
 pub fn capabilities(adapter: &str) -> AgentCapabilities {
+    if adapter == ADAPTER_API {
+        return AgentCapabilities {
+            structured_stream: false,
+            tool_events: false,
+            native_resume: false,
+            inline_cards: false,
+            model_selection: true,
+            evidence_only: false,
+            provider_kinds: vec![
+                ProviderKind::Anthropic,
+                ProviderKind::OpenaiResponses,
+                ProviderKind::OpenaiChat,
+            ],
+            modes: vec![ModeCapability {
+                mode: "explore".into(),
+                policy: "no tools; text answers only".into(),
+            }],
+        };
+    }
     let policies = match adapter {
         ADAPTER_CODEX => [
             "--sandbox read-only; approval_policy=never",

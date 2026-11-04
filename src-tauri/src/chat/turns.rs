@@ -170,6 +170,7 @@ mod tests {
             stdin_prompt: false,
             output_mode: "plain".into(),
             resumed: false,
+            api: None,
         };
         let audit = snapshot(&agent, &session, &prepared, "USER PROMPT", "fingerprint");
         let encoded = serde_json::to_string(&audit).unwrap();

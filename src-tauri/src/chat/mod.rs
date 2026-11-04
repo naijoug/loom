@@ -114,16 +114,13 @@ fn reconcile_interrupted_session(session: &mut ChatSession) -> bool {
     changed
 }
 
-fn permission_to_stage(mode: &str) -> AgentStage {
+pub(crate) fn permission_to_stage(mode: &str) -> AgentStage {
     // Phase 2:
     // - explore (+ legacy read_only) → Planning (conservative CLI)
     // - ask (+ legacy read_write→ask) → Debugging (writable CLI); UI requires
     //   per-turn confirm before send (Composer gate — not enforced here)
     // - auto → Debugging without UI confirm
-    match normalize_permission_mode(mode).as_str() {
-        "ask" | "auto" => AgentStage::Debugging,
-        _ => AgentStage::Planning,
-    }
+    crate::agent::permission_to_stage(&normalize_permission_mode(mode))
 }
 
 fn open_chat_repository(app: &AppHandle, project_path: &str) -> Result<ChatRepository, String> {
@@ -608,6 +605,7 @@ mod tests {
                     embed_prompt: true,
                     system_append: None,
                     model: None,
+                    needs_tools: true,
                 },
             )
             .expect("grok");
@@ -637,6 +635,7 @@ mod tests {
                     embed_prompt: true,
                     system_append: None,
                     model: None,
+                    needs_tools: true,
                 },
             )
             .expect("codex");
@@ -664,6 +663,7 @@ mod tests {
                     embed_prompt: true,
                     system_append: None,
                     model: None,
+                    needs_tools: true,
                 },
             )
             .expect("claude");

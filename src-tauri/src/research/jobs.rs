@@ -313,6 +313,7 @@ impl Job {
             ),
             system_append: None,
             model: research.model.as_deref(),
+            needs_tools: true,
         };
         let prepared = agent::prepare_invocation(agent, &request)?;
         record

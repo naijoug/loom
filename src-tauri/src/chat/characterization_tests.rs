@@ -29,6 +29,7 @@ fn request(turn_id: &str, output_mode: &str, program: &str, args: Vec<String>) -
             environment: Default::default(),
             environment_remove_prefixes: Vec::new(),
             secret_environment: Default::default(),
+            api: None,
         },
         project_key: "/fixture".into(),
         session_id: "session".into(),
@@ -133,6 +134,8 @@ async fn recorded_cli_streams_replay_to_the_same_events_and_outcome() {
         ("claude-2.1.304", "read-command.jsonl", "claude_stream_json"),
         ("codex-0.163.0", "read-command.jsonl", "codex_json"),
         ("opencode-1.19.3", "read.jsonl", "opencode_json"),
+        ("opencode-2.1.2", "read.jsonl", "opencode_json"),
+        ("opencode-2.1.2", "write.jsonl", "opencode_json"),
         ("grok-1.0.62", "read-command.jsonl", "streaming_json"),
     ] {
         let source = fixtures().join(dir).join(file);

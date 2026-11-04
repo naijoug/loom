@@ -1,4 +1,5 @@
 mod agent;
+pub mod agent_cli;
 mod app_update;
 mod chat;
 mod chat_context;

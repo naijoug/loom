@@ -198,6 +198,7 @@ pub(super) mod tests {
                 stdin_prompt: false,
                 output_mode: "plain".into(),
                 resumed: false,
+                api: None,
             };
             let snapshot = ChatInvocationSnapshot {
                 agent_id: "fixture".into(),
