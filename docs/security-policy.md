@@ -55,7 +55,7 @@ Agent 层与明确的非 Agent 进程例外见 [Agent 层契约](architecture/ag
 - Agent 只以 `explore`（只读 / plan）权限、cwd = checkout 运行，不接受自定义 CLI；每次运行前后比对 checkout 指纹，变化即判作业失败。这是检测而非 OS 沙箱：实际只读保障取决于各 CLI 的策略实现。
 - 模型输出只按 schema 与引用校验后使用；无效引用以警告样式显示，不静默信任。Markdown 渲染沿用下文的安全规则，`loom-src:` / `loom-wiki:` 仅在 Learn 页面内转为应用内操作。
 - 作业日志沿用 CLI 执行的输出限额和脱敏；`learn_*` 命令仅接受主窗口调用。
-- 新建页的 GitHub 热门与发现对话只由 Rust 访问固定端点 `https://api.github.com/search/repositories`：不跟随重定向，10 s 连接 / 20 s 总超时，响应 ≤ 4 MiB，错误只给受控文案、不回显响应正文；可选读取后端环境变量 `GITHUB_TOKEN` / `GH_TOKEN`（敏感头，不写日志）。Agent 给出的仓库名按 `owner/repo` 字符集校验、搜索词去控制字符并限长，每回合至多 3 次搜索；卡片 URL 由 Loom 按 `https://github.com/<owner>/<name>` 生成，不使用响应中的链接。
+- 新建页的 GitHub 热门与发现对话只由 Rust 访问 `api.github.com` 的固定路径：`/search/repositories`；搜索未命中的 Agent 具名仓库（每回合至多 3 个）再查 `/repos/<owner>/<name>`，仓库改名的 301 只接受响应中 `https://api.github.com/repositories/<数字 id>` 并手动跟随一次。客户端不自动跟随重定向，10 s 连接 / 20 s 总超时，响应 ≤ 4 MiB，错误只给受控文案、不回显响应正文；可选读取后端环境变量 `GITHUB_TOKEN` / `GH_TOKEN`（敏感头，不写日志）。Agent 给出的仓库名按 `owner/repo` 字符集校验、搜索词去控制字符并限长，每回合至多 3 次搜索、3 个具名仓库补查；卡片 URL 由 Loom 按 `https://github.com/<owner>/<name>` 生成，不使用响应中的链接。
 - 发现对话的 Agent 以 `explore`、`needs_tools: false` 运行，cwd 为 `<appData>/learn/discover/workspace/` 空目录；对话历史在提示词中作为非可信资料隔离。执行记录写入 `<appData>/learn/discover/runs/<runId>/`（脱敏 prompt / stdout / stderr / run.json，保留最近 50 个）。
 
 ## Research

@@ -1,8 +1,10 @@
 //! Learn: study a GitHub repository with a local agent CLI and browse the
 //! generated architecture, wiki pages and source references.
 pub mod commands;
+mod discover;
 mod fetch;
 mod generate;
+mod github;
 mod inventory;
 mod jobs;
 pub mod models;

@@ -5,7 +5,8 @@ import { hasTauriRuntime } from "../../hooks/runtime";
 import { useT } from "../../i18n";
 import { useAppState } from "../../state/AppStateContext";
 import { LearnLayout, StudySwitcher } from "./LearnLayout";
-import { NewStudyForm } from "./NewStudyForm";
+import { useDiscoverChat } from "./DiscoverChat";
+import { NewStudyPage } from "./NewStudyPage";
 import { LearnPreviewContext } from "./previewContext";
 import { StudyView } from "./StudyView";
 import "./learn.css";
@@ -27,6 +28,7 @@ export function LearnPage() {
   });
   const [newStudy, setNewStudy] = useState(false);
   const [revision, setRevision] = useState(0);
+  const discover = useDiscoverChat(api);
   useEffect(() => {
     try {
       if (selected) localStorage.setItem("loom-learn-study", selected);
@@ -109,11 +111,12 @@ export function LearnPage() {
           <p>{t("learnDesktopOnly")}</p>
         </div>
       ) : (
-        <NewStudyForm
+        <NewStudyPage
           api={api}
           agents={state.agents}
           diagnostics={state.agentDiagnostics}
           providers={state.providers.providers}
+          chat={discover}
           onCreated={(id) => {
             select(id);
             setRevision((value) => value + 1);

@@ -143,19 +143,47 @@
   white-space: nowrap;
 }
 
-/* New study */
-.learn-new {
+/* New study: start page = form + rising repositories (left), Discover chat (right). */
+.learn-start {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+}
+.learn-start-main {
+  position: relative;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 28px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+.learn-start-main > * {
+  width: min(860px, 100%);
   margin: 0 auto;
-  width: min(620px, 100%);
-  padding: 32px 24px;
+}
+.learn-new {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  overflow-y: auto;
+  padding-top: 12px;
+}
+.learn-new-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.learn-new-head .chat-empty-mark {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  flex: none;
 }
 .learn-new h1 {
-  margin: 0;
-  font-size: 22px;
+  margin: 0 0 2px;
+  font-size: 20px;
   font-weight: 600;
 }
 .learn-new label {
@@ -167,8 +195,9 @@
   font-size: 12.5px;
   color: var(--chat-text-2);
 }
-.learn-new input,
-.learn-new select {
+.learn-start input,
+.learn-start select,
+.learn-start textarea {
   font: inherit;
   font-size: 13.5px;
   color: var(--chat-text);
@@ -181,10 +210,21 @@
 .learn-new input[aria-invalid] {
   border-color: var(--chat-danger);
 }
+.learn-new-url {
+  display: flex;
+  gap: 8px;
+}
+.learn-new-url input {
+  flex: 1;
+}
+.learn-new-url .chat-primary-button {
+  flex: none;
+}
 .learn-new-row {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+  align-items: flex-start;
 }
 .learn-new-agent {
   display: flex;
@@ -206,10 +246,411 @@
   color: var(--chat-text) !important;
 }
 .learn-new-row label {
-  min-width: 160px;
+  min-width: 120px;
+  white-space: nowrap;
 }
-.learn-new .chat-primary-button {
-  align-self: flex-start;
+.learn-new-row select,
+.learn-new-row input {
+  height: 34px;
+  padding-block: 0;
+}
+
+/* Rising repositories */
+.learn-trending {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-top: 1px solid var(--chat-border);
+  padding-top: 20px;
+}
+.learn-trending-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.learn-trending-head h2 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 2px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--chat-text);
+}
+.learn-trending-filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.learn-trending-filters select {
+  height: 30px;
+  padding: 0 8px;
+  font-size: 12.5px;
+}
+.learn-segmented {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--chat-border);
+  border-radius: 8px;
+  background: var(--chat-raised);
+}
+.learn-segmented button {
+  border: 0;
+  background: transparent;
+  color: var(--chat-muted);
+  font: inherit;
+  font-size: 12.5px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.learn-segmented button[aria-checked="true"] {
+  background: var(--chat-surface);
+  color: var(--chat-text);
+  box-shadow: 0 0 0 1px var(--chat-border);
+}
+.learn-repo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 10px;
+  transition: opacity 0.15s;
+}
+.learn-repo-grid[data-stale] {
+  opacity: 0.55;
+}
+
+/* Repository card (rising list and Discover answers) */
+.learn-repo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 11px 12px 9px;
+  border: 1px solid var(--chat-border);
+  border-radius: 10px;
+  background: var(--chat-surface);
+}
+.learn-repo:hover {
+  border-color: var(--chat-border-strong);
+}
+.learn-repo[data-selected] {
+  border-color: var(--chat-accent);
+  box-shadow: 0 0 0 1px var(--chat-accent);
+}
+.learn-repo header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.learn-repo-name {
+  min-width: 0;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--chat-text);
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.learn-repo-name:hover strong {
+  color: var(--chat-accent);
+  text-decoration: underline;
+}
+.learn-repo-owner {
+  color: var(--chat-muted);
+}
+.learn-repo-name strong {
+  font-weight: 600;
+}
+.learn-repo-badge {
+  flex: none;
+  font-size: 11px;
+  color: var(--chat-warn);
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding: 0 6px;
+}
+.learn-repo-desc {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--chat-text-2);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+.learn-repo footer {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.learn-repo-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--chat-muted);
+  white-space: nowrap;
+}
+.learn-repo-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.learn-repo-lang-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--chat-accent);
+}
+.learn-repo-topics {
+  margin: 0;
+  display: flex;
+  gap: 4px;
+  height: 18px;
+  overflow: hidden;
+  flex-wrap: wrap;
+}
+.learn-repo-topics span {
+  max-width: 100%;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--chat-raised);
+  color: var(--chat-muted);
+  font-size: 11px;
+  line-height: 18px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.learn-repo-actions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.learn-repo-study {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 9px;
+  border: 1px solid var(--chat-border-strong);
+  border-radius: 7px;
+  background: var(--chat-surface);
+  color: var(--chat-text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.learn-repo-study:hover,
+.learn-repo-study[aria-pressed="true"] {
+  border-color: var(--chat-accent);
+  color: var(--chat-accent);
+}
+
+/* Discover chat */
+.learn-discover {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--chat-border);
+  background: var(--chat-bg);
+}
+.learn-discover-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px 6px 16px;
+  border-bottom: 1px solid var(--chat-border);
+}
+.learn-discover-head h2 {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--chat-text);
+}
+.learn-discover-close,
+.learn-discover-toggle {
+  display: none !important;
+}
+.learn-discover-list {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.learn-discover-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.learn-discover-examples {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.learn-discover-examples button {
+  text-align: left;
+  border: 1px solid var(--chat-border);
+  background: var(--chat-surface);
+  color: var(--chat-text-2);
+  border-radius: 9px;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.learn-discover-examples button:hover:not(:disabled) {
+  border-color: var(--chat-border-strong);
+  color: var(--chat-text);
+}
+.learn-discover-examples button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.learn-discover-user {
+  align-self: flex-end;
+  max-width: 88%;
+  padding: 8px 11px;
+  border-radius: 12px;
+  background: var(--chat-selected);
+  color: var(--chat-text);
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.learn-discover-answer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  min-width: 0;
+}
+.learn-discover-answer .chat-markdown {
+  font-size: 13px;
+}
+.learn-discover-repos {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.learn-discover-warning {
+  margin: 0;
+  font-size: 12px;
+  color: var(--chat-warn);
+}
+.learn-discover-thinking {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.learn-discover-composer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px 12px;
+  border-top: 1px solid var(--chat-border);
+}
+.learn-discover-composer textarea {
+  resize: none;
+  width: 100%;
+  min-height: 56px;
+  max-height: 160px;
+  line-height: 1.45;
+}
+.learn-discover-composer-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.learn-discover-send {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--chat-send-bg);
+  color: var(--chat-send-fg);
+  cursor: pointer;
+}
+.learn-discover-send:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.learn-discover-composer small {
+  font-size: 11.5px;
+}
+
+/* Below ~1180px the Discover chat becomes a panel opened from a button. */
+@media (max-width: 1179px) {
+  .learn-start {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .learn-discover {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    width: min(380px, 100%);
+    box-shadow: -8px 0 24px rgb(0 0 0 / 0.14);
+    visibility: hidden;
+    transform: translateX(100%);
+    transition:
+      transform 0.18s ease,
+      visibility 0s linear 0.18s;
+  }
+  .learn-start[data-discover-open] .learn-discover {
+    visibility: visible;
+    transform: none;
+    transition-delay: 0s;
+  }
+  .learn-discover-close,
+  .learn-discover-toggle {
+    display: inline-flex !important;
+  }
+  /* Sits in the window bar above the start page. */
+  .learn-discover-toggle {
+    position: absolute;
+    top: -28px;
+    right: 12px;
+    z-index: 5;
+    align-items: center;
+    gap: 6px;
+    height: 24px;
+    padding: 0 10px;
+    border: 1px solid var(--chat-border-strong);
+    border-radius: 999px;
+    background: var(--chat-surface);
+    color: var(--chat-text);
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+  }
 }
 
 /* Study */
@@ -1046,7 +1487,8 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .learn-page .learn-sidebar {
+  .learn-page .learn-sidebar,
+  .learn-discover {
     transition: none;
   }
 }

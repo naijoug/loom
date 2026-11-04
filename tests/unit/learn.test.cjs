@@ -13,6 +13,8 @@ const React = require("react"),
   { renderToStaticMarkup } = require("react-dom/server");
 const { parseSourceTarget, LEARN_ADAPTERS } = require("../../.tmp/test-build/src/api/learn.js");
 const { learnAgents } = require("../../.tmp/test-build/src/features/learn/NewStudyForm.js");
+const { discoverAgents, discoverHistory } = require("../../.tmp/test-build/src/features/learn/DiscoverChat.js");
+const { compactCount, sameRepoUrl } = require("../../.tmp/test-build/src/features/learn/RepoCard.js");
 const { splitError } = require("../../.tmp/test-build/src/components/common/ErrorText.js");
 const { Markdown } = require("../../.tmp/test-build/src/components/Markdown.js");
 const { AppStateProvider, useAppState } = require("../../.tmp/test-build/src/state/AppStateContext.js");
@@ -56,6 +58,41 @@ test("only enabled built-in agents are offered for Learn", () => {
   ]).map((a) => a.id);
   assert.deepEqual(offered, ["c", "g"]);
   assert.equal(LEARN_ADAPTERS.length, 4);
+});
+
+test("Discover offers built-in and direct-API agents and sends only successful turns", () => {
+  const agent = (id, adapterType, enabled = true) => ({ id, adapterType, enabled, available: true });
+  const offered = discoverAgents([
+    agent("api", "api"),
+    agent("c", "claude_code_cli"),
+    agent("x", "custom"),
+    agent("off", "codex_cli", false),
+  ]).map((a) => a.id);
+  assert.deepEqual(offered, ["c", "api"], "CLIs first, direct API last, custom and disabled excluded");
+  const repo = (fullName) => ({ fullName });
+  assert.deepEqual(
+    discoverHistory([
+      { id: "1", role: "user", text: "rust tools" },
+      { id: "2", role: "assistant", text: "Try these", repos: [repo("a/b"), repo("c/d")] },
+      { id: "3", role: "user", text: "smaller?" },
+      { id: "4", role: "assistant", text: "", error: "boom" },
+      { id: "5", role: "assistant", text: "", stopped: true },
+      { id: "6", role: "user", text: "go" },
+    ]),
+    [
+      { role: "user", text: "rust tools" },
+      { role: "assistant", text: "Try these\n\n(Found on GitHub: a/b, c/d)" },
+      { role: "user", text: "smaller?" },
+      { role: "user", text: "go" },
+    ],
+  );
+});
+
+test("repository cards compare URLs loosely and abbreviate star counts", () => {
+  assert.ok(sameRepoUrl("https://github.com/Acme/Tool.git/", "https://github.com/acme/tool"));
+  assert.ok(!sameRepoUrl("", "https://github.com/acme/tool"));
+  assert.ok(!sameRepoUrl("https://github.com/acme/tool2", "https://github.com/acme/tool"));
+  assert.deepEqual([999, 1000, 1250, 12_400, 1_250_000].map(compactCount), ["999", "1k", "1.3k", "12k", "1.3m"]);
 });
 
 test("Chat markdown drops loom links while Learn pages turn them into source and wiki actions", () => {

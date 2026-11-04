@@ -303,3 +303,69 @@ pub struct LearnEvent {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
 }
+
+// ---- start page: GitHub discovery ----
+
+/// One GitHub repository as returned by search; `url` is always built by Loom.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct GithubRepoCard {
+    pub full_name: String,
+    pub owner: String,
+    pub name: String,
+    pub url: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub language: Option<String>,
+    pub stars: u64,
+    pub forks: u64,
+    #[serde(default)]
+    pub topics: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pushed_at: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub created_at: Option<String>,
+    #[serde(default)]
+    pub fork: bool,
+    #[serde(default)]
+    pub archived: bool,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TrendingResult {
+    pub repos: Vec<GithubRepoCard>,
+    /// The GitHub search query, shown so the ranking basis is visible.
+    pub query: String,
+    pub fetched_at_ms: u128,
+    pub cached: bool,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DiscoverMessage {
+    /// `user` or `assistant`.
+    pub role: String,
+    pub text: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DiscoverInput {
+    pub run_id: String,
+    pub agent_id: String,
+    #[serde(default)]
+    pub model: Option<String>,
+    pub language: String,
+    pub messages: Vec<DiscoverMessage>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DiscoverReply {
+    pub reply: String,
+    pub repos: Vec<GithubRepoCard>,
+    pub queries: Vec<String>,
+    pub warnings: Vec<String>,
+}

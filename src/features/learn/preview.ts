@@ -1,6 +1,7 @@
 /** Explicit DEV-only Learn fixture (`?learnFixture=…`). No IPC, network, git or model calls. */
 import {
   parseSourceTarget,
+  type GithubRepoCard,
   type LearnApi,
   type LearnArchitecture,
   type LearnEvent,
@@ -323,6 +324,38 @@ function tree(dir: string): LearnTreeEntry[] {
   );
 }
 
+const repoCard = (fullName: string, stars: number, language: string, description: string, topics: string[] = []) => {
+  const [owner, name] = fullName.split("/");
+  return {
+    fullName,
+    owner,
+    name,
+    url: `https://github.com/${fullName}`,
+    description,
+    language,
+    stars,
+    forks: Math.round(stars / 9),
+    topics,
+    fork: false,
+    archived: false,
+  } satisfies GithubRepoCard;
+};
+const trendingRepos: GithubRepoCard[] = [
+  repoCard("acme/tiny-agent", 8421, "Python", "A 300-line coding agent loop with tools, built for reading.", [
+    "agents",
+    "llm",
+  ]),
+  repoCard("acme/kvlite", 3920, "Rust", "Teaching-sized key-value store with a write-ahead log and LSM compaction.", [
+    "database",
+    "storage",
+  ]),
+  repoCard("acme/forge-ui", 2710, "TypeScript", "Headless React components with a tiny state machine core.", ["react"]),
+  repoCard("acme/hexview", 1544, "Rust", "Colorful terminal hex viewer.", ["cli"]),
+  repoCard("acme/raft-in-go", 1210, "Go", "Readable Raft consensus implementation with visual traces.", ["raft"]),
+  repoCard("acme/zig-shell", 655, "Zig", "A POSIX-ish shell in Zig, small enough to read in a weekend."),
+];
+const discoverRuns = new Map<string, () => void>();
+
 export const previewLearnApi: LearnApi = {
   list: async () => {
     if (scenario === "error") throw Error("Synthetic storage error");
@@ -417,5 +450,41 @@ export const previewLearnApi: LearnApi = {
     return () => {
       listeners.delete(onEvent);
     };
+  },
+  trending: async (period, language) => {
+    if (scenario === "error") throw Error("GitHub search rate limit reached; try again in a minute");
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    const repos = trendingRepos.filter((repo) => !language || repo.language === language);
+    return {
+      repos: period === "day" ? repos.slice(0, 3) : repos,
+      query: `created:>=2026-10-27${language ? ` language:${language}` : ""}`,
+      fetchedAtMs: Date.now(),
+      cached: false,
+    };
+  },
+  discoverSend: (input) =>
+    new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        discoverRuns.delete(input.runId);
+        const zh = input.language === "zh-CN";
+        resolve({
+          reply: zh
+            ? "可以从这两个项目开始：\n\n- **`acme/tiny-agent`**：约 300 行的 Agent 主循环，适合理解工具调用。\n- **`acme/kvlite`**：教学规模的存储引擎，能看到 WAL 与压缩。\n\n想偏向哪种语言？"
+            : "Two good places to start:\n\n- **`acme/tiny-agent`** — a ~300-line agent loop; great for seeing how tool calls work.\n- **`acme/kvlite`** — a teaching-sized storage engine with a WAL and compaction.\n\nAny preferred language?",
+          repos: [trendingRepos[0], trendingRepos[1], trendingRepos[4]],
+          queries: ["minimal coding agent"],
+          warnings: ["Not found on GitHub (may be private or misspelled): acme/ghost"],
+        });
+      }, 900);
+      discoverRuns.set(input.runId, () => {
+        clearTimeout(timer);
+        discoverRuns.delete(input.runId);
+        reject("Stopped");
+      });
+    }),
+  discoverCancel: async (runId) => {
+    const stop = discoverRuns.get(runId);
+    stop?.();
+    return !!stop;
   },
 };

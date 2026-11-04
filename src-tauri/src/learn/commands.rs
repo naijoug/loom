@@ -1,7 +1,8 @@
 //! Tauri commands for Learn. File IO runs on blocking threads; jobs run on the
 //! async runtime and report progress through `loom://learn-event`.
 use super::{
-    fetch,
+    discover::{self, Discover},
+    fetch, github,
     jobs::{self, Emit, Job},
     models::*,
     store::{self, Store},
@@ -317,4 +318,66 @@ pub async fn learn_delete_study(
         },
     );
     Ok(())
+}
+
+/// Rising GitHub repositories: created within the period, sorted by stars.
+#[tauri::command]
+pub async fn learn_github_trending(
+    app: AppHandle,
+    window: WebviewWindow,
+    period: String,
+    language: Option<String>,
+    refresh: Option<bool>,
+) -> Result<TrendingResult, String> {
+    store(&app, &window)?;
+    if !github::PERIODS.contains(&period.as_str()) {
+        return Err("Unsupported period".into());
+    }
+    let language = language
+        .map(|l| l.trim().to_string())
+        .filter(|l| !l.is_empty());
+    let (query, fetched_at_ms, cached, repos) =
+        github::trending(&period, language.as_deref(), refresh.unwrap_or(false)).await?;
+    Ok(TrendingResult {
+        repos,
+        query,
+        fetched_at_ms,
+        cached,
+    })
+}
+
+/// One discover-chat turn: a tool-less agent call, then GitHub lookups.
+/// Built-in CLIs and direct-API agents are accepted.
+#[tauri::command]
+pub async fn learn_discover_send(
+    app: AppHandle,
+    window: WebviewWindow,
+    input: DiscoverInput,
+) -> Result<DiscoverReply, String> {
+    store(&app, &window)?;
+    discover::validate(&input)?;
+    let model = input
+        .model
+        .as_deref()
+        .map(str::trim)
+        .filter(|m| !m.is_empty())
+        .map(str::to_string);
+    let agent = ready_agent(&app, &input.agent_id, model.as_deref()).await?;
+    let app_data = app
+        .path()
+        .app_data_dir()
+        .map_err(|_| "Application data directory unavailable".to_string())?;
+    Discover::new(&app_data)
+        .send(&agent, &input, model.as_deref())
+        .await
+}
+
+#[tauri::command]
+pub async fn learn_discover_cancel(
+    app: AppHandle,
+    window: WebviewWindow,
+    run_id: String,
+) -> Result<bool, String> {
+    store(&app, &window)?;
+    Ok(discover::cancel(&run_id))
 }

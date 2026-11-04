@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type Ref } from "react";
 import { GraduationCap, LoaderCircle } from "lucide-react";
 import {
   LEARN_ADAPTERS,
@@ -29,18 +29,24 @@ export function NewStudyForm({
   agents,
   diagnostics,
   providers = [],
+  url,
+  onUrlChange: setUrl,
+  urlInput,
   onCreated,
 }: {
   api: LearnApi;
   agents: AgentConfig[];
   diagnostics: AgentDiagnostic[];
   providers?: ModelProvider[];
+  /** Controlled so repository cards on the start page can fill it in. */
+  url: string;
+  onUrlChange: (url: string) => void;
+  urlInput?: Ref<HTMLInputElement>;
   onCreated: (studyId: string) => void;
 }) {
   const t = useT();
   const { locale } = useLocale();
   const eligible = learnAgents(agents);
-  const [url, setUrl] = useState("");
   const [gitRef, setGitRef] = useState("");
   const [agentId, setAgentId] = useState(
     () =>
@@ -88,42 +94,53 @@ export function NewStudyForm({
   }
   return (
     <form className="learn-new" onSubmit={submit} aria-labelledby="learn-new-title">
-      <span className="chat-empty-mark">
-        <GraduationCap size={24} />
-      </span>
-      <h1 id="learn-new-title">{t("learnNewTitle")}</h1>
-      <p className="learn-note">{t("learnNewDesc")}</p>
+      <div className="learn-new-head">
+        <span className="chat-empty-mark">
+          <GraduationCap size={20} />
+        </span>
+        <div>
+          <h1 id="learn-new-title">{t("learnNewTitle")}</h1>
+          <p className="learn-note">{t("learnNewDesc")}</p>
+        </div>
+      </div>
       <label>
         {t("learnRepoUrl")}
-        <input
-          type="url"
-          required
-          autoFocus
-          placeholder="https://github.com/owner/repo"
-          value={url}
-          aria-invalid={urlInvalid || undefined}
-          onChange={(event) => setUrl(event.target.value)}
-        />
+        <span className="learn-new-url">
+          <input
+            ref={urlInput}
+            type="url"
+            required
+            autoFocus
+            placeholder="https://github.com/owner/repo"
+            value={url}
+            aria-invalid={urlInvalid || undefined}
+            onChange={(event) => setUrl(event.target.value)}
+          />
+          <button type="submit" className="chat-primary-button" disabled={!canSubmit}>
+            {busy && <LoaderCircle size={14} className="chat-spin" aria-hidden="true" />}
+            {t("learnStart")}
+          </button>
+        </span>
         {urlInvalid && <small className="learn-error">{t("learnRepoUrlInvalid")}</small>}
       </label>
-      <div className="learn-new-agent" role="group" aria-label={t("learnAgent")}>
-        <span>{t("learnAgent")}</span>
-        <div className="learn-new-agent-controls">
-          <AgentPicker
-            agents={pickerAgents(eligible, agents)}
-            diagnostics={diagnostics}
-            providers={providers}
-            needsTools
-            value={agentId}
-            onChange={setAgentId}
-            disabled={busy}
-            placement="down"
-            model={{ value: model, onChange: setModel, invalid: modelInvalid }}
-          />
-        </div>
-        {!eligible.length && <small className="learn-note">{t("learnNoAgent")}</small>}
-      </div>
       <div className="learn-new-row">
+        <div className="learn-new-agent" role="group" aria-label={t("learnAgent")}>
+          <span>{t("learnAgent")}</span>
+          <div className="learn-new-agent-controls">
+            <AgentPicker
+              agents={pickerAgents(eligible, agents)}
+              diagnostics={diagnostics}
+              providers={providers}
+              needsTools
+              value={agentId}
+              onChange={setAgentId}
+              disabled={busy}
+              placement="down"
+              model={{ value: model, onChange: setModel, invalid: modelInvalid }}
+            />
+          </div>
+          {!eligible.length && <small className="learn-note">{t("learnNoAgent")}</small>}
+        </div>
         <label>
           {t("learnLanguage")}
           <select value={language} onChange={(event) => setLanguage(event.target.value as LearnLanguage)}>
@@ -151,10 +168,6 @@ export function NewStudyForm({
       </div>
       {modelShown && <p className="learn-note">{t("learnModelHint")}</p>}
       {error && <ErrorText text={error} alert className="learn-error" />}
-      <button type="submit" className="chat-primary-button" disabled={!canSubmit}>
-        {busy && <LoaderCircle size={14} className="chat-spin" aria-hidden="true" />}
-        {t("learnStart")}
-      </button>
     </form>
   );
 }

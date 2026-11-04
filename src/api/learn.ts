@@ -132,6 +132,48 @@ export interface CreateStudyInput {
 }
 export type LearnLogStream = "stdout" | "stderr" | "prompt";
 
+/** A GitHub repository found by search; `url` is always https://github.com/<owner>/<name>. */
+export interface GithubRepoCard {
+  fullName: string;
+  owner: string;
+  name: string;
+  url: string;
+  description?: string;
+  language?: string;
+  stars: number;
+  forks: number;
+  topics: string[];
+  pushedAt?: string;
+  createdAt?: string;
+  fork: boolean;
+  archived: boolean;
+}
+export type TrendingPeriod = "day" | "week" | "month";
+export interface TrendingResult {
+  repos: GithubRepoCard[];
+  /** GitHub search query behind the list, shown so the ranking basis is visible. */
+  query: string;
+  fetchedAtMs: number;
+  cached: boolean;
+}
+export interface DiscoverMessage {
+  role: "user" | "assistant";
+  text: string;
+}
+export interface DiscoverInput {
+  runId: string;
+  agentId: string;
+  model?: string;
+  language: LearnLanguage;
+  messages: DiscoverMessage[];
+}
+export interface DiscoverReply {
+  reply: string;
+  repos: GithubRepoCard[];
+  queries: string[];
+  warnings: string[];
+}
+
 /** Everything the Learn UI needs; the DEV fixture supplies an in-memory implementation. */
 export interface LearnApi {
   list(): Promise<LearnStudyList>;
@@ -145,6 +187,9 @@ export interface LearnApi {
   readSource(studyId: string, path: string, startLine?: number, endLine?: number): Promise<LearnSourceText>;
   remove(studyId: string): Promise<void>;
   subscribe(onEvent: (event: LearnEvent) => void): Promise<() => void>;
+  trending(period: TrendingPeriod, language?: string, refresh?: boolean): Promise<TrendingResult>;
+  discoverSend(input: DiscoverInput): Promise<DiscoverReply>;
+  discoverCancel(runId: string): Promise<boolean>;
 }
 
 export const tauriLearnApi: LearnApi = {
@@ -161,7 +206,14 @@ export const tauriLearnApi: LearnApi = {
     invokeCommand(TAURI_COMMANDS.learnReadSource, { studyId, path, startLine, endLine }),
   remove: (studyId) => invokeCommand(TAURI_COMMANDS.learnDeleteStudy, { studyId }),
   subscribe: (onEvent) => listenToEvent<LearnEvent>(TAURI_EVENTS.learnEvent, onEvent),
+  trending: (period, language, refresh) =>
+    invokeCommand(TAURI_COMMANDS.learnGithubTrending, { period, language, refresh }),
+  discoverSend: (input) => invokeCommand(TAURI_COMMANDS.learnDiscoverSend, { input }),
+  discoverCancel: (runId) => invokeCommand(TAURI_COMMANDS.learnDiscoverCancel, { runId }),
 };
 
 /** Built-in adapters accept `--model`; custom agents are not offered for Learn. */
 export const LEARN_ADAPTERS = ["claude_code_cli", "codex_cli", "opencode_cli", "grok_cli"];
+
+/** Discover chat accepts built-in CLIs and direct-API agents (it needs no tools). */
+export const DISCOVER_ADAPTERS = [...LEARN_ADAPTERS, "api"];

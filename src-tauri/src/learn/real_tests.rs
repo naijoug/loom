@@ -139,3 +139,131 @@ async fn study(default_command: &str, adapter: &str) {
     );
     assert!(finished.pages.iter().all(|page| page.ready));
 }
+
+/// `LOOM_REAL_LEARN=1 cargo test learn::real_tests::github_trending_live -- --ignored --nocapture`
+/// calls the public GitHub search API (no model usage).
+#[tokio::test]
+#[ignore = "requires LOOM_REAL_LEARN=1 and network access to api.github.com"]
+async fn github_trending_live() {
+    assert_eq!(std::env::var("LOOM_REAL_LEARN").as_deref(), Ok("1"));
+    for (period, language) in [
+        ("week", None),
+        ("day", Some("Rust")),
+        ("month", Some("C++")),
+    ] {
+        let (query, _, cached, repos) = super::github::trending(period, language, false)
+            .await
+            .unwrap_or_else(|error| panic!("{period}/{language:?}: {error}"));
+        assert!(!cached, "first call is not cached");
+        assert!(!repos.is_empty(), "{query} returned no repositories");
+        for repo in &repos {
+            assert_eq!(repo.url, format!("https://github.com/{}", repo.full_name));
+            assert!(super::github::valid_full_name(&repo.full_name));
+        }
+        if let Some(language) = language {
+            let matching = repos
+                .iter()
+                .filter(|repo| repo.language.as_deref() == Some(language))
+                .count();
+            assert!(matching * 2 >= repos.len(), "{query}: mostly {language}");
+        }
+        println!(
+            "{query}: {} repos, top {} ★{}",
+            repos.len(),
+            repos[0].full_name,
+            repos[0].stars
+        );
+        let (_, _, cached, again) = super::github::trending(period, language, false)
+            .await
+            .unwrap();
+        assert!(
+            cached && again.len() == repos.len(),
+            "second call is cached"
+        );
+    }
+}
+
+/// `LOOM_REAL_LEARN=1 cargo test learn::real_tests::claude_discovers_repositories -- --ignored --nocapture`
+/// runs two real Discover turns (consumes model usage) and the GitHub lookups behind them.
+#[tokio::test]
+#[ignore = "requires LOOM_REAL_LEARN=1 and a configured Claude account; consumes model usage"]
+async fn claude_discovers_repositories() {
+    discover("claude", agent::ADAPTER_CLAUDE).await;
+}
+
+#[tokio::test]
+#[ignore = "requires LOOM_REAL_LEARN=1 and a configured Codex account; consumes model usage"]
+async fn codex_discovers_repositories() {
+    discover("codex", agent::ADAPTER_CODEX).await;
+}
+
+async fn discover(command: &str, adapter: &str) {
+    use super::models::{DiscoverInput, DiscoverMessage};
+    assert_eq!(std::env::var("LOOM_REAL_LEARN").as_deref(), Ok("1"));
+    let root = std::env::temp_dir().join(store::next_id("loom-real-discover"));
+    let agent = AgentConfig {
+        id: format!("real-{command}"),
+        name: format!("{command} (real)"),
+        command: command.into(),
+        args: Vec::new(),
+        working_directory_policy: "project_root".into(),
+        capabilities: vec!["planning".into()],
+        adapter_type: adapter.into(),
+        can_write_files: false,
+        can_run_commands: false,
+        enabled: true,
+        available: true,
+        provider_id: None,
+    };
+    let discover = super::discover::Discover::new(&root);
+    let language = std::env::var("LOOM_REAL_LEARN_LANGUAGE").unwrap_or_else(|_| "zh-CN".into());
+    let mut messages = vec![DiscoverMessage {
+        role: "user".into(),
+        text: "I want to learn how a small, well-written terminal text editor is built. Suggest a few repositories.".into(),
+    }];
+    for turn in 0..2 {
+        let input = DiscoverInput {
+            run_id: format!("real-{command}-{turn}"),
+            agent_id: agent.id.clone(),
+            model: None,
+            language: language.clone(),
+            messages: messages.clone(),
+        };
+        let started = Instant::now();
+        let reply = discover.send(&agent, &input, None).await.unwrap();
+        println!(
+            "turn {turn} ({:.1}s)\n{}\nrepos: {:?}\nqueries: {:?}\nwarnings: {:?}\n",
+            started.elapsed().as_secs_f64(),
+            reply.reply,
+            reply.repos.iter().map(|r| &r.full_name).collect::<Vec<_>>(),
+            reply.queries,
+            reply.warnings
+        );
+        assert!(!reply.reply.trim().is_empty());
+        assert!(!reply.reply.contains("```json"), "JSON block is stripped");
+        assert!(!reply.repos.is_empty(), "lookup found real repositories");
+        let run = root.join(format!("learn/discover/runs/{}", input.run_id));
+        let record: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(run.join("run.json")).unwrap()).unwrap();
+        assert_eq!(record["status"], "complete", "{record}");
+        assert!(run.join("prompt.md").is_file() && run.join("stdout.log").is_file());
+        messages.push(DiscoverMessage {
+            role: "assistant".into(),
+            text: format!(
+                "{}\n\n(Found on GitHub: {})",
+                reply.reply,
+                reply
+                    .repos
+                    .iter()
+                    .map(|r| r.full_name.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
+        });
+        messages.push(DiscoverMessage {
+            role: "user".into(),
+            text: "Something similar but written in Rust, please.".into(),
+        });
+    }
+    println!("records: {}", root.display());
+}

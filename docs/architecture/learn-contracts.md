@@ -14,6 +14,9 @@
   architecture.json   # 经校验的架构（schemaVersion 1）
   wiki/overview.md  wiki/architecture.md  wiki/glossary.md  wiki/modules/<moduleId>.md
   jobs/<jobId>/{job.json, prompt.md, stdout.log, stderr.log}
+<appData>/learn/discover/
+  workspace/          # 发现对话 Agent 的空 cwd
+  runs/<runId>/{run.json, prompt.md, stdout.log, stderr.log, result.md}   # 保留最近 50 个
 ```
 
 - `study.json` 原子写入；读取时把上个进程遗留的 `running` 阶段标为 `interrupted`，不自动重启。
@@ -59,8 +62,15 @@
 | `learn_list_tree` | `{ studyId, dir? }` | `TreeEntry[]` |
 | `learn_read_source` | `{ studyId, path, startLine?, endLine? }` | `{ path, text, firstLine, totalLines, truncated, language }` |
 | `learn_delete_study` | `{ studyId }` | — |
+| `learn_github_trending` | `{ period: "day" \| "week" \| "month", language?, refresh? }` | `{ repos: GithubRepoCard[], query, fetchedAtMs, cached }`；进程内缓存 10 分钟 |
+| `learn_discover_send` | `{ input: { runId, agentId, model?, language, messages: [{ role: "user" \| "assistant", text }] } }` | `{ reply, repos: GithubRepoCard[], queries, warnings }` |
+| `learn_discover_cancel` | `{ runId }` | 是否有回合被取消 |
 
-Agent 解析：必须已启用、可用，且适配器声明 `modelSelection`（Claude Code / Codex / OpenCode / Grok 内建适配器）；模型名经 `validate_model_name` 校验后由适配器生成 `--model`。UI 不拼接 CLI 参数。
+`GithubRepoCard`：`{ fullName, owner, name, url, description?, language?, stars, forks, topics, pushedAt?, createdAt?, fork, archived }`，`url` 由 Rust 生成。
+
+发现对话（2026-11-03，见 [Learn 发现计划](../plans/2026-11-03/18:12-learn-discover.md)）：每回合一次全新 Agent 调用（`prompts/discover.md`，最近 12 条消息、≤ 16k 字符，5 分钟超时），Agent 接受内建 CLI 与 `api` 执行器；回答末尾的 ```json `{ repos, queries }` 块由 Rust 解析并从可见文本中去掉，随后至多 3 次 GitHub 搜索（具名仓库合并为一次 `repo:` 查询，搜索词至多 2 条，均按 GitHub 默认相关度排序），`repo:` 未命中的具名仓库（≤ 3 个）再经 `/repos/<名>` 补查并跟随一次改名；只返回真实存在的仓库（≤ 12 张）。改名记为提示，缺少 JSON 块、仓库未找到或搜索失败只记警告。热门列表查询为 `created:>=YYYY-MM-DD [language:X]`（含起始日，UTC）、`sort=stars`。
+
+Agent 解析：必须已启用、可用，且适配器声明 `modelSelection`（Claude Code / Codex / OpenCode / Grok 内建适配器与直连 API `api`）；研究作业以 `needs_tools: true` 调用，直连 API 在调用准备阶段被拒绝，前端研究表单只列出四个内建 CLI；发现对话以 `needs_tools: false` 调用，可使用 `api`。模型名经 `validate_model_name` 校验后由适配器生成 `--model`。UI 不拼接 CLI 参数。
 
 事件 `loom://learn-event`：`{ studyId, jobId?, stage, status, error? }`。`stage = "job"` 表示作业结束，`stage = "study", status = "deleted"` 表示研究已删除。前端收到任何事件后重新读取列表与当前研究。
 
@@ -68,4 +78,5 @@ Agent 解析：必须已启用、可用，且适配器声明 `modelSelection`（
 
 - 入口：左侧功能栏 Learn（⌘2，`src/shell/ActivityRail.tsx`，2026-10-27 P5 起）。Learn 首次访问后保持挂载，显示期间 Chat 容器保持挂载（隐藏），会话、草稿和活动回合不受影响。
 - `src/features/learn/`：研究列表、新建表单、阶段与问题列表、作业日志、Wiki 目录（Overview / Architecture / Level 1–3 / Glossary）、架构图（SVG，节点可点击打开模块页）；源码查看器（目录浏览、行号、范围高亮）自 P6 起为共享 `components/SourceViewer`，Research / Discuss 同用。
+- 新建页 `NewStudyPage.tsx`：左列为表单与 `TrendingList`，右列为 `DiscoverChat`（窗口宽度 < 1180px 时改为从窗口栏按钮打开的面板）；`RepoCard` 的“学习”填入表单 URL，标题与外链按钮在系统浏览器打开 GitHub。对话状态由 `useDiscoverChat` 保存在 `LearnPage`，打开研究再返回不丢失。
 - 非 Tauri 环境显示“仅桌面可用”。DEV 专用 `?fixture=simple-chat&learnFixture=ready|empty|running|failed|error` 注入合成 API，生产构建不包含。
