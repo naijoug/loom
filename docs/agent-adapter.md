@@ -35,11 +35,24 @@ Codex 每轮显式设置 `approval_policy="never"`、cwd 和 sandbox，包括 re
 
 Claude 使用 `--resume <id>`，Codex 使用 `exec … resume --json -- <id> -`，Grok 使用 `--resume <id>`。成功后保存绑定 Agent/命令/项目/权限/参数的原生句柄；换 Agent 或模式清除句柄，保留转录并在下一轮有界重放。OpenCode 使用 `run --session <id>`，从事件的 `sessionID` 捕获原生句柄；官方 1.19.3 临时副本已通过三轮原生续聊、仓储重开和停止后再发，因此能力中启用 nativeResume。
 
-OpenCode 的参数与权限配置依据 [官方 CLI 文档](https://opencode.ai/docs/cli/) 和 [权限文档](https://opencode.ai/docs/permissions/)；本机旧安装无法启动；另用官方验签的 1.19.3 临时副本完成 runtime 验收。模型调用仍使用 CLI 自身的账户配置，不在 Loom 管理凭据。
+OpenCode 的参数与权限配置依据 [官方 CLI 文档](https://opencode.ai/docs/cli/) 和 [权限文档](https://opencode.ai/docs/permissions/)；本机旧安装无法启动；另用官方验签的 1.19.3 临时副本完成 runtime 验收。未配置模型来源时，模型调用使用 CLI 自身的账户配置；配置后按下文“模型来源注入”单次注入，Loom 只管理 `providers.json` 里的 key，不读取 CLI 的订阅凭据。
 
 OpenCode 2.x（本机 2.1.2，2026-11-03 核对）与 1.19.3 不同：`run` 没有 `--dir`，项目目录取自 `PWD` 环境变量（只设进程 cwd 时会落到 Loom 继承的目录）；`OPENCODE_PERMISSION` 被忽略；默认连接共享后台服务，本进程的环境变量不生效。因此 adapter 固定传 `--standalone`，设置 `PWD` 为项目目录，并把单次权限写进 `OPENCODE_CONFIG_CONTENT` 的 `permission`（API Key 模式再在同一份配置里加 `provider.loom`）。2.x 工具名为 `read`/`write`/`edit`/`shell` 等，参数用 `path`；解析器已兼容。
 
 自定义 CLI 使用专用可执行文件，拒绝 `sh/bash/zsh/fish/cmd/powershell/pwsh` 包装；参数按数组传递，支持 `{prompt}`、`{projectPath}` 等已有模板。不承诺自定义工具卡片或原生续聊。
+
+## 模型来源注入（模式 B）
+
+Agent 配置了 `providerId` 时，`agent/injection.rs` 在参数准备之后加入 provider，只作用于这一次调用：不写 `~/.claude`、`~/.codex`、OpenCode 全局配置，key 只进入子进程环境（`secret_environment`），不出现在 argv、执行记录或日志中。核对版本：Claude Code 2.1.317、Codex 0.166.0、OpenCode 2.1.2（2026-11-03）。
+
+| CLI | 可接协议 | 注入方式 | 清理 |
+|---|---|---|---|
+| Claude Code | Anthropic | `ANTHROPIC_BASE_URL`、`ANTHROPIC_API_KEY`；`--model` 加 `ANTHROPIC_DEFAULT_{OPUS,SONNET,HAIKU}_MODEL`、`ANTHROPIC_SMALL_FAST_MODEL` 同为所选模型（后台调用用别名） | 移除继承的 `ANTHROPIC_*`、`CLAUDE_CODE_USE_*`；`ANTHROPIC_AUTH_TOKEN`、`ANTHROPIC_CUSTOM_HEADERS`、`CLAUDE_CODE_USE_{BEDROCK,VERTEX,FOUNDRY}` 设为空，使用户 settings 的 `env` 块不能补回；无 key 的本机网关传占位 key，避免回落到自身登录 |
+| Codex | OpenAI Responses | `exec` 后插入 `--config model_provider="loom"` 与 `model_providers.loom.{name,base_url,wire_api="responses",env_key}`；key 在 `LOOM_PROVIDER_API_KEY` | 移除继承的 `OPENAI_*`。Codex 已删除 `wire_api="chat"`，不能接 Chat Completions |
+| OpenCode | 三种 | 在单次 `OPENCODE_CONFIG_CONTENT` 中加 `provider.loom`（`@ai-sdk/anthropic` / `@ai-sdk/openai` / `@ai-sdk/openai-compatible`，`apiKey` 为 `{env:LOOM_PROVIDER_API_KEY}`），`--model loom/<model>`；与权限配置合并在同一份 JSON | 依赖 `--standalone`，不连接共享后台服务 |
+| Grok / 自定义 CLI | 无 | 不支持；保存或准备调用时拒绝 | — |
+
+模型取 Agent 的模型覆盖，否则取 provider 的默认模型；两者都没有时拒绝启动。直连 API（`adapterType = "api"`）不经过适配器参数，见 [Agent 层契约](architecture/agent-layer.md#执行器--模型来源)。上表为按 CLI 文档与本机参数核对的结果，真实 provider 对话尚未验证（计划 A7）。
 
 ## CLI 实测矩阵（2026-10-20）
 

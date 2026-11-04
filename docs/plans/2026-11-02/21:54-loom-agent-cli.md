@@ -1,7 +1,7 @@
 # Agent 调用层：无窗口 CLI 与 API Key 模式计划
 
 - 创建时间：2026-11-02 21:54，America/Los_Angeles；22:28 参考 magpie 修订（加入 API Key 模式，重排里程碑）。
-- 状态：A0 已完成（2026-11-03 02:04，已提交）；A1 已完成（2026-11-03 06:34，已提交）；A2 已完成（2026-11-03 07:21，已提交）；A3 已完成（2026-11-03 08:28，未提交）；A4 已完成（2026-11-03 08:47，未提交）；A5 已完成（2026-11-03 15:15，未提交；设计稿 `.designs/agent-providers/README.md` 08:49 提交确认，用户回复“Approve, build it”，第 7 节按本稿默认）。2026-11-03 用户接受第 6 节全部推荐答案（“Yes, do A1”），A2 起可按推荐实施。
+- 状态：A0 已完成（2026-11-03 02:04，已提交）；A1 已完成（2026-11-03 06:34，已提交）；A2 已完成（2026-11-03 07:21，已提交）；A3 已完成（2026-11-03 08:28，已提交 `0bec0b3`）；A4 已完成（2026-11-03 08:47，已提交 `0bec0b3`）；A5 已完成（2026-11-03 15:15，已提交 `1c99b45`；设计稿 `.designs/agent-providers/README.md` 08:49 提交确认，用户回复“Approve, build it”，第 7 节按本稿默认）；A6 已完成（2026-11-03 18:20，未提交；`docs/requirements.md` 待用户确认）。2026-11-03 用户接受第 6 节全部推荐答案（“Yes, do A1”），A2 起可按推荐实施。
 - 代码基线：`main` `93c36f9`。2026-11-03 复核：`90cf9f9..93c36f9` 只有 Learn 前端重设计（`d59679c`）、本计划入库（`e62f8fb`）和 Skills 截图（`93c36f9`），`src-tauri/src` 无改动，下文行号仍有效。复核按代码修正了 A1 的文件写入依赖、A3 的取消方式与 HTTP 流读取，并补上 `api` 执行器的配置校验与启动检查（见第 2 节新增行）。
 - 用户要求（2026-11-02）：
   1. 底层有一个 loom CLI，上层交互都能通过它与本机已安装的 Agent CLI 交互；
@@ -221,7 +221,7 @@ magpie 是 Go 单二进制：本地模型网关（`127.0.0.1:3425`，在 OpenAI 
 - 视觉矩阵补 Providers 页（中英文 × 深浅 × 700px）。
 - 依赖：A1–A3；设计稿经用户确认后再写代码。
 
-完成记录（2026-11-03 15:15，未提交）：
+完成记录（2026-11-03 15:15，已提交 `1c99b45`）：
 
 - 设计：按 `.designs/agent-providers/README.md` 实施，第 7 节三项取本稿默认（独立页签；自带登录只显示执行器名；预设即表中六项）。设计稿状态改为“已确认并实现”。
 - 状态与接口：`AppState.providers`（`ModelProviderList`，只含 key 来源，不含 key）与 `providers/loaded`；`useAgentCatalog.loadAgents` 顺带拉 `provider_list`（失败不影响 Agent 加载），新增 `loadProviders`/`saveProvider`/`deleteProvider`/`testProvider`，provider 调用直接抛错交给页面显示。
@@ -236,6 +236,15 @@ magpie 是 Go 单二进制：本地模型网关（`127.0.0.1:3425`，在 OpenAI 
 
 - `scripts/check-layers.mjs`：`agent_cli` 只用 `agent/mod.rs` 再导出及 `storage` / `projects` 公共函数；功能模块不引用 `agent_cli`、不直接用 `reqwest` 调模型；`tests/unit/layerCheck.test.cjs` 加正反例。
 - 文档：新增 `docs/agent-cli.md`（用法、NDJSON、退出码、三种模式）；更新 `docs/architecture/agent-layer.md`（执行器 / 模型来源、两种 runner）、`docs/agent-adapter.md`（各 CLI 注入方式与核对版本）、`docs/security-policy.md`（provider key 存储、环境清理、URL 规则）、`docs/architecture.md`、`docs/testing.md` 验证矩阵、`docs/requirements.md`（用户确认后加入 API Key 模式范围）。
+
+
+完成记录（2026-11-03 18:20，未提交）：
+
+- 门禁：`scripts/check-layers.mjs` 新增三条——`agent_cli.rs` 只引用 `agent` / `models` / `storage` / `projects`（模块名从 `lib.rs` 读取，新模块默认禁止），且不用 Agent 私有子模块；`src/bin/loom-agent.rs` 只调用 `agent_cli`；其它模块都不引用 `agent_cli`。功能模块（chat、chat_context、learn、research、discuss、experiments、skills、workbench）生产代码不得出现 `reqwest`，具名例外 `HTTP_ALLOWLIST`：`learn/github.rs`（另一会话实施中的 Learn 发现）、`skills/github_api.rs`、`skills/translation/remote.rs`。私有子模块判定抽成 `agentPrivatePaths`（加入 `providers`、`api`），原有功能规则改用它。`scripts/lib/rust-layer-rules.mjs` 新增 `usesHttpClient`、`agentPrivatePaths`；`tests/unit/layerCheck.test.cjs` 加正反例（别名、`::reqwest`、字符串与注释、标识符包含 reqwest、`agent_cli` 分组引用）。
+- 文档：新增 `docs/agent-cli.md`（入口、命令、`run` 参数、三种模式、NDJSON、退出码、执行记录、分层）；`docs/architecture/agent-layer.md` 加“执行器 × 模型来源”、`loom-agent` 调用方行与新门禁；`docs/agent-adapter.md` 加“模型来源注入（模式 B）”表并修正“Loom 不管理凭据”的旧表述；`docs/security-policy.md` 加“模型来源与 API Key”；`docs/architecture.md` 模块表加 providers/injection、`agent/api/`、`agent_cli`、Settings 模型来源；`docs/testing.md` 验证矩阵加 Agent 调用层一行。
+- 与本节原文的偏差：`docs/requirements.md` 未改——按原文需用户确认后再加入 API Key 模式范围；HTTP 规则不能区分“调模型”与其它 HTTP，所以按“功能模块不直接用 reqwest + 具名白名单”实现；`skills/translation/remote.rs` 确实直接调模型，早于 Agent 层，本次只登记为例外，没有迁移。
+- 证据：层检查通过；临时探针文件（learn 内用 `reqwest::Client`、chat 内引用 `crate::agent_cli` 与 `agent::providers::`）三条违规均被报告，探针已删除；`layerCheck` 4/4 通过。全量 `pnpm check` 结果见本轮回复（工作区同时含另一会话未提交的 Learn 发现改动）。
+- 未验证：A7 全部内容；文档中模式 B 注入表按代码与 CLI 参数核对，未用真实 provider 对话验证。
 
 ### A7 真实验收
 

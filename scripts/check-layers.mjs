@@ -3,10 +3,13 @@
 // 1. src-tauri/src/agent/ and the loom-agent entry (agent_cli.rs) never import feature modules.
 // 2. Learn, Research and Chat never import each other.
 // 3. Feature modules never spawn processes outside test code; agent CLIs start only through agent::run.
-// 4. Frontend: src/features/<x> never imports src/features/<y> (code or CSS); shared UI lives in src/components,
+// 4. agent_cli reaches only crate::agent re-exports plus the shared models/storage/projects helpers;
+//    nothing but the loom-agent binary and the crate root imports agent_cli.
+// 5. Feature modules never call HTTP APIs themselves (model calls go through crate::agent).
+// 6. Frontend: src/features/<x> never imports src/features/<y> (code or CSS); shared UI lives in src/components,
 //    and src/components, src/hooks and src/api never import features. Only src/shell and the entry wire features together.
 import { productionCode, rustCodeMask } from "./lib/rust-production.mjs";
-import { moduleReferences, spawnsProcess } from "./lib/rust-layer-rules.mjs";
+import { agentPrivatePaths, moduleReferences, spawnsProcess, usesHttpClient } from "./lib/rust-layer-rules.mjs";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -28,6 +31,14 @@ const SPAWNING_FEATURES = [
   "browser_host",
   "repository_sources",
 ];
+// Modules agent_cli may use besides crate::agent.
+const AGENT_CLI_SHARED = ["agent", "models", "storage", "projects"];
+// HTTP calls a feature may still make itself; each entry says why it is not a model call.
+const HTTP_ALLOWLIST = new Map([
+  ["learn/github.rs", "GitHub repository search for the new-study page (Learn discover), not a model call"],
+  ["skills/github_api.rs", "GitHub REST for Skills sources, not a model call"],
+  ["skills/translation/remote.rs", "Skills translation predates crate::agent; move to agent::api before extending it"],
+]);
 // Non-agent processes a feature may start itself.
 const SPAWN_ALLOWLIST = new Map([["learn/fetch.rs", "git clone/fetch for study sources"]]);
 
@@ -52,9 +63,49 @@ for (const shared of ["agent", "tool_process", "research_sources", "rea", "brows
 }
 
 // The headless `loom-agent` entry reaches the agent layer only, like a feature would.
+const crateModules = [
+  ...readFileSync(join(src, "lib.rs"), "utf8").matchAll(/^\s*(?:pub(?:\([a-z]+\))?\s+)?mod\s+(\w+)\s*;/gm),
+].map((match) => match[1]);
 for (const file of rustFiles(join(src, "agent_cli.rs"))) {
-  const hits = referencesModule(productionCode(file, readFileSync(file, "utf8")), FEATURE_MODULES);
-  if (hits.length) report(file, `agent_cli must not import feature modules (${hits.join(", ")}); use crate::agent`);
+  const code = productionCode(file, readFileSync(file, "utf8"));
+  const features = referencesModule(code, FEATURE_MODULES);
+  if (features.length)
+    report(file, `agent_cli must not import feature modules (${features.join(", ")}); use crate::agent`);
+  const others = referencesModule(
+    code,
+    crateModules.filter(
+      (name) => !AGENT_CLI_SHARED.includes(name) && !FEATURE_MODULES.includes(name) && name !== "agent_cli",
+    ),
+  );
+  if (others.length) report(file, `agent_cli may use only ${AGENT_CLI_SHARED.join(", ")} (found ${others.join(", ")})`);
+  if (agentPrivatePaths(code)) report(file, "agent_cli must use crate::agent re-exports, not private submodules");
+}
+for (const file of rustFiles(join(src, "bin", "loom-agent.rs"))) {
+  const code = readFileSync(file, "utf8");
+  const hits = referencesModule(
+    code,
+    crateModules.filter((name) => name !== "agent_cli"),
+  );
+  if (hits.length) report(file, `the loom-agent binary only calls agent_cli (found ${hits.join(", ")})`);
+}
+for (const file of rustFiles(src)) {
+  const path = relative(src, file);
+  if (path === "agent_cli.rs" || path === "lib.rs" || path.startsWith(`bin${sep}`) || path.startsWith("agent_cli_"))
+    continue;
+  if (referencesModule(productionCode(path, readFileSync(file, "utf8")), ["agent_cli"]).length)
+    report(file, "only the loom-agent binary uses agent_cli; share code through crate::agent instead");
+}
+
+for (const entry of FEATURE_MODULES) {
+  for (const file of rustFiles(join(src, entry)).concat(rustFiles(join(src, `${entry}.rs`)))) {
+    const path = relative(src, file);
+    if (HTTP_ALLOWLIST.has(path)) continue;
+    if (usesHttpClient(productionCode(path, readFileSync(file, "utf8"))))
+      report(
+        file,
+        "feature modules must not call HTTP APIs directly; call models through crate::agent (non-model APIs need an HTTP_ALLOWLIST entry)",
+      );
+  }
 }
 
 for (const file of rustFiles(join(src, "learn"))) {
@@ -95,8 +146,7 @@ for (const entry of SPAWNING_FEATURES) {
     const code = rustCodeMask(productionCode(path, readFileSync(file, "utf8")));
     if (/\bprocess_supervisor\b/.test(code))
       report(file, "feature lifecycle must use the agent public API, not process_supervisor");
-    if (/\bagent::(?:registry|diagnostics|runner|invocation|lifecycle|stream|tools|event|capabilities)::/.test(code))
-      report(file, "feature modules must use agent re-exports, not private submodules");
+    if (agentPrivatePaths(code)) report(file, "feature modules must use agent re-exports, not private submodules");
     if (spawnsProcess(code)) {
       report(file, "feature modules must start agent CLIs through agent::run, not spawn processes");
     }

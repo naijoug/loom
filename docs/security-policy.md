@@ -37,6 +37,16 @@ Agent 层与明确的非 Agent 进程例外见 [Agent 层契约](architecture/ag
 - 原生续聊只接受有界 ID，绑定 Agent、程序、参数、项目和权限指纹。不能把存储的命令字符串当 shell 执行；配置改变后清除句柄并重放有界历史。
 - 子进程使用独立进程组。停止/超时先 TERM，再升级 KILL；正常退出等待运行终止与证据保存。历史 PID 只用于诊断，不用于重启后盲杀进程。
 
+## 模型来源与 API Key
+
+- provider 保存在配置目录的私有 `providers.json`（与 `agents.json` 同目录；目录 0700、文件 0600、原子写）。写入持排他锁并校验 `expectedRevision`，桌面与 `loom-agent` 不会交错覆盖；被 Agent 引用的 provider 不能删除。
+- key 来源按优先级：`keyEnv` 指定的环境变量（运行时读取）→ 已保存的 key → 本机/内网网关可无 key。IPC、CLI 列表和诊断只给出“是否有 key、来自哪里”，从不返回 key 或其片段；前端 key 输入框不回填，保存后从状态中丢弃，编辑默认 keep，清除需确认。
+- Base URL：只接受 https；明文 http 仅限 loopback、私有网段、链路本地、`localhost` / `*.localhost` / `*.local`。拒绝 URL 中的用户名密码、query、fragment，长度 ≤2048。请求拒绝重定向（key 不会被转发到其它主机），本机/内网地址不走 shell 代理，连接超时 10 秒。
+- 上游错误按 HTTP 状态分类（认证失败、未找到、限流等），不读取、不回显响应正文；只保留短标识符形式的错误码。`provider test` 只列模型，不消耗 token。
+- 模式 B 注入只作用于单次调用：key 只进入子进程环境，不进 argv、执行记录和日志；清除继承的同族变量（`ANTHROPIC_*`、`OPENAI_*` 等），不写 CLI 的全局配置，不读取 CLI 的订阅登录凭据。各 CLI 的变量见 [适配器](agent-adapter.md#模型来源注入模式-b)。
+- `loom-agent` 没有 `--key` 参数；key 只从管道或文件形式的 stdin 读入（≤16 KiB），stdin 是终端时拒绝。执行记录不存提示词正文、进程环境和 key。
+- 直连 API（模式 C）没有工具与文件访问；需要工具的功能拒绝 `api` Agent。这依赖后端 `needs_tools` 校验，不依赖提示词。
+
 ## Learn
 
 - 只接受 `https://github.com/<owner>/<repo>` 公开仓库与受校验的分支 / tag / 完整 commit；不支持 SSH、私有仓库或其他主机。仓库内容一律视为不可信输入。
@@ -45,6 +55,8 @@ Agent 层与明确的非 Agent 进程例外见 [Agent 层契约](architecture/ag
 - Agent 只以 `explore`（只读 / plan）权限、cwd = checkout 运行，不接受自定义 CLI；每次运行前后比对 checkout 指纹，变化即判作业失败。这是检测而非 OS 沙箱：实际只读保障取决于各 CLI 的策略实现。
 - 模型输出只按 schema 与引用校验后使用；无效引用以警告样式显示，不静默信任。Markdown 渲染沿用下文的安全规则，`loom-src:` / `loom-wiki:` 仅在 Learn 页面内转为应用内操作。
 - 作业日志沿用 CLI 执行的输出限额和脱敏；`learn_*` 命令仅接受主窗口调用。
+- 新建页的 GitHub 热门与发现对话只由 Rust 访问固定端点 `https://api.github.com/search/repositories`：不跟随重定向，10 s 连接 / 20 s 总超时，响应 ≤ 4 MiB，错误只给受控文案、不回显响应正文；可选读取后端环境变量 `GITHUB_TOKEN` / `GH_TOKEN`（敏感头，不写日志）。Agent 给出的仓库名按 `owner/repo` 字符集校验、搜索词去控制字符并限长，每回合至多 3 次搜索；卡片 URL 由 Loom 按 `https://github.com/<owner>/<name>` 生成，不使用响应中的链接。
+- 发现对话的 Agent 以 `explore`、`needs_tools: false` 运行，cwd 为 `<appData>/learn/discover/workspace/` 空目录；对话历史在提示词中作为非可信资料隔离。执行记录写入 `<appData>/learn/discover/runs/<runId>/`（脱敏 prompt / stdout / stderr / run.json，保留最近 50 个）。
 
 ## Research
 

@@ -15,6 +15,18 @@ export function moduleReferences(source, modules) {
   );
 }
 
+// Any path through the reqwest crate (`reqwest::Client`, `use reqwest::{…}`, `use reqwest as http`).
+export function usesHttpClient(source) {
+  return /(?<!\w)reqwest\b/.test(rustCodeMask(source));
+}
+
+// Private agent submodules; callers outside crate::agent go through its re-exports.
+export function agentPrivatePaths(source) {
+  return /\bagent\s*::\s*(?:registry|diagnostics|runner|invocation|lifecycle|stream|tools|event|capabilities|providers|api)\s*::/.test(
+    rustCodeMask(source),
+  );
+}
+
 export function spawnsProcess(source) {
   const code = rustCodeMask(source);
   // Detect fully qualified uses, module aliases and renamed imported Command.

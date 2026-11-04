@@ -22,7 +22,7 @@ Discuss 于 2026-10-27 按用户要求实施 P7：独立存储、并行两轮、
 |---|---|
 | `discuss/{models,store,prompt,jobs,commands}.rs` / `src/features/discuss/` | 2–4 位参与者、两轮并行与汇总、单项失败/重试、调用确认、持久化日志与中断恢复；复用共享 Markdown/AgentPicker/SourceViewer |
 | `src/App.tsx` / `src/shell/` | 外壳：`features.ts` 功能注册表（Chat、Learn、Research、Discuss）、`ActivityRail` 左侧功能栏（底部 Settings，⌘1…4 / ⌘, 切换）、`AppShell` 挂载各功能窗格；Chat 常驻挂载，其它功能首次访问后保持挂载，Settings 仅打开时挂载；切换不打断草稿与活动会话 |
-| `src/components/` / `src/hooks/` / `src/api/` | 跨功能共享：`Markdown`（安全渲染，代码块可由调用方接管；`loom-src:` / `loom-wiki:` 仅在调用方传入链接处理器时成为操作）、`SourceViewer`（目录浏览、行号、范围高亮，经调用方给出的 `SourceReader` 读取）、`AgentPicker`（Agent 菜单与按诊断能力显示的模型输入）、`externalLink`、`common/ErrorText`、`app-update/`；`hooks/inlineCardsSetting`；`api/agents.ts` Agent 命令封装，`api/sourceFiles.ts` 源码引用类型与解析。共享层不引用 `features/`，`features/<x>` 之间不互相引用（`settings→skills` 例外），由 `scripts/check-layers.mjs` 检查 |
+| `src/components/` / `src/hooks/` / `src/api/` | 跨功能共享：`Markdown`（安全渲染，代码块可由调用方接管；`loom-src:` / `loom-wiki:` 仅在调用方传入链接处理器时成为操作）、`SourceViewer`（目录浏览、行号、范围高亮，经调用方给出的 `SourceReader` 读取）、`AgentPicker`（Agent 菜单显示“执行器 · 模型来源”、按诊断能力显示模型输入，`needsTools` 时禁用直连 API）、`externalLink`、`common/ErrorText`、`app-update/`；`hooks/inlineCardsSetting`；`api/agents.ts` Agent 命令封装，`api/sourceFiles.ts` 源码引用类型与解析。共享层不引用 `features/`，`features/<x>` 之间不互相引用（`settings→skills` 例外），由 `scripts/check-layers.mjs` 检查 |
 | `src/styles/workspace.css` | 各功能共用的列表侧栏、主列、按钮与输入基础样式 |
 | `src/features/chat/ProjectTree.tsx` | 最近项目、按需展开会话、搜索、归档过滤、折叠状态；底部只保留归档切换 |
 | `ChatPage` / `useChatBridge` / `ChatProjection` | 会话选择、异步归属、序号补流与快照协调 |
@@ -36,6 +36,10 @@ Discuss 于 2026-10-27 按用户要求实施 P7：独立存储、并行两轮、
 | `agent/invocation.rs` / `chat_context.rs` | CLI 参数、权限、原生续聊和有界历史重放 |
 | `agent/runner.rs` / `agent/event.rs` | 通用 runner `agent::run`：启动并登记进程（`ProcessOwner` 由调用方给出）、stdin、超时/取消/输出限额、进程组清理，输出 `AgentEvent`（文本/工具片段/结束）与 `AgentOutcome`；Chat、Learn、Research、Discuss 都经它启动 Agent CLI |
 | `agent/stream.rs` / `agent/tools.rs` | 各 CLI 流式 JSON 的通用解析、工具片段生成与按 `callId` 合并；不破坏 JSON 信封的日志脱敏 |
+| `agent/providers.rs` / `agent/injection.rs` | 模型来源：私有 `providers.json`（key 来源、revision 与锁、Base URL 规则、引用保护、`provider_*` IPC）；按单次调用把 provider 注入 Claude Code / Codex / OpenCode（模式 B） |
+| `agent/api/` | `api` 执行器（模式 C）：Anthropic / OpenAI Responses / OpenAI Chat 流式请求，无工具，沿用 runner 的停止、超时与输出预算；需要工具的功能拒绝它 |
+| `agent_cli.rs` / `bin/loom-agent.rs` | 无窗口 `loom-agent`：list / doctor / provider / run，NDJSON 与退出码，脱敏执行记录；只经 `crate::agent` 公共接口，见 [Agent 命令行](agent-cli.md) |
+| `src/features/settings/{ProvidersPanel.tsx,providerDraft.ts}` | Settings → 模型来源：预设、协议、Base URL、key（只显示来源）、测试与引用保护；Agents 页的模型来源列与“+ 直连 API” |
 | `chat/{repository,journal,service}.rs` | v2 journal、幂等接收、停止与恢复 |
 | `chat/runtime.rs` / `chat/file_changes.rs` | Chat 薄封装：Chat 进程所有者、可写 Codex 的有界文件差异（作为 runner 的行补充回调），把 `AgentEvent` 映射为 `ChatStreamEvent` |
 | `process_supervisor.rs` | 进程组归属、超时、TERM/KILL、应用退出协调 |

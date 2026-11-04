@@ -45,3 +45,27 @@ test("the real Chat runner remains inside the layer scan after its test module",
   assert.ok(code.includes("agent::run("));
   assert.ok(!code.includes("fn consecutive_text_blocks_become_separate_paragraphs"));
 });
+test("HTTP clients and private agent paths are found behind aliases but not in strings or comments", async () => {
+  const { agentPrivatePaths, moduleReferences, usesHttpClient } =
+    await import("../../scripts/lib/rust-layer-rules.mjs");
+  for (const code of [
+    "fn c() -> reqwest::Client { todo!() }",
+    "use reqwest::{header, Client};",
+    "use reqwest as http;",
+    "let r = ::reqwest::get(url);",
+  ])
+    assert.ok(usesHttpClient(code), code);
+  for (const code of ['let hint = "reqwest::Client";', "// reqwest::Client", "let my_reqwest_count = 1;"])
+    assert.equal(usesHttpClient(code), false, code);
+  for (const code of [
+    "crate::agent::providers::resolve_at(dir, id)",
+    "use crate::agent::registry::read_agents;",
+    "agent :: api :: run(request)",
+  ])
+    assert.ok(agentPrivatePaths(code), code);
+  for (const code of ["use crate::agent::{run, AgentEvent};", "agent::run(request)", '"agent::providers::x"'])
+    assert.equal(agentPrivatePaths(code), false, code);
+  assert.deepEqual(moduleReferences("use crate::{agent, agent_cli::main};", ["agent_cli"]), ["agent_cli"]);
+  assert.deepEqual(moduleReferences("loom_lib::agent_cli::main(&args)", ["agent_cli"]), ["agent_cli"]);
+  assert.deepEqual(moduleReferences("use crate::agent::run;", ["agent_cli"]), []);
+});

@@ -10,6 +10,7 @@
 | 前端局部逻辑/样式 | `pnpm format`、相关 `pnpm test -- tests/unit/<file>.test.cjs`、`pnpm build`；视觉变化查看页面 | 共享状态扩大前端回归 |
 | Rust 局部逻辑 | fmt、相关 cargo test、适用 Clippy | 共享模块扩大 Rust 回归 |
 | IPC/权限/持久化/进程 | 两端契约、失败与恢复、进程 fixture | CLI/OS 保证必须补真实运行 |
+| Agent 调用层 / 模型来源 / `loom-agent` | `node scripts/check-layers.mjs`、`cargo test --manifest-path src-tauri/Cargo.toml agent`（含 `agent_cli`、providers、injection、api 的桩进程与假 SSE 服务）、`node --test tests/unit/agentProviders.test.cjs tests/unit/agentPicker.test.cjs` | 改 CLI 注入或协议时用临时 `LOOM_PROFILE_DIR` 跑真实 CLI/provider，检查 `ps` 参数、执行记录、日志无 key；花费额度，缺 key 记 blocked |
 | 里程碑 | `pnpm check`、`pnpm tauri build --no-bundle` | 按目标补真实桌面验收 |
 | 冻结内核 | 手动选择 `pnpm check:core` | 不属于默认 Chat 门禁 |
 

@@ -1,6 +1,6 @@
-# Agent 调用层（P8 当前实现）
+# Agent 调用层（P8 实现，2026-11-03 补模型来源与 `loom-agent`）
 
-`src-tauri/src/agent/mod.rs` 是 Chat、Learn、Research、Discuss 的公共调用入口。功能模块决定业务流程、数据与提示词；Agent 层负责 CLI 配置/能力、参数、启动检查、执行、流解析和生命周期接口。底层 `process_supervisor` 继续是全应用进程登记与信号处理的唯一实现。
+`src-tauri/src/agent/mod.rs` 是 Chat、Learn、Research、Discuss 与无窗口 [`loom-agent`](../agent-cli.md) 的公共调用入口。功能模块决定业务流程、数据与提示词；Agent 层负责 CLI 配置/能力、参数、启动检查、执行、流解析和生命周期接口。底层 `process_supervisor` 继续是全应用进程登记与信号处理的唯一实现。
 
 ## 公共接口与数据流
 
@@ -28,6 +28,21 @@
 
 `AgentStage` 仍是参数准备的一部分，权限仍通过 `chat_permission_mode` 传入；没有另建计划中的 `Permission / AgentRunSpec / AgentErrorKind`。P8 按既有已验证接口记录契约，不为类型命名重写成功路径。公共接口是 Rust crate 内的分层边界，不是独立 SDK 或第三方 ABI。
 
+## 执行器 × 模型来源
+
+一个 Agent 由两维组成：执行器（`adapterType`：claude / codex / opencode / grok / 自定义 CLI / `api`）与可选的模型来源（`providerId`，指向私有 `providers.json` 的一项）。
+
+| 模式 | 组合 | runner |
+|---|---|---|
+| A 自带登录 | CLI 执行器，无 `providerId` | `agent/runner.rs`：启动并监督 CLI 进程 |
+| B CLI + provider | CLI 执行器 + `providerId` | 同上；`agent/injection.rs` 在 `prepare_invocation` 后按单次调用加入 Base URL、模型和 key（key 只放进 `secret_environment`），并清除继承的同族环境变量 |
+| C 直连 API | `adapterType = "api"` + `providerId` | `agent/api/`：Anthropic Messages、OpenAI Responses、OpenAI Chat Completions 流式请求；不登记进程，沿用操作守卫、停止原因、超时、输出预算和 `AgentOutcome` 语义 |
+
+- 能注入的协议：Claude Code 只接 Anthropic；Codex 只接 OpenAI Responses；OpenCode 三种都接；Grok 与自定义 CLI 不支持模式 B。诊断以 `providerKinds` 报告，Settings 的下拉据此禁用不兼容项。
+- `api` 执行器没有工具、文件访问和原生续聊。功能在请求中声明 `needs_tools`；需要工具时拒绝 `api` Agent。当前 Chat、Learn 作业、Research 需要工具；Discuss 无项目轮次与任何讨论的汇总轮、`loom-agent run` 不需要。
+- provider 的增删改与测试由 `agent/providers.rs` 负责（`provider_list/save/delete/test` 四个 IPC 命令，CLI 用同一组 `*_at(dir)` 函数）。写入持锁并校验 revision，被 Agent 引用的 provider 不能删除。key 的存储与 URL 规则见 [安全策略](../security-policy.md#模型来源与-api-key)。
+- 续聊指纹包含 `providerId`；换 provider 视同换 Agent，清除原生句柄并重放有界历史。
+
 ## 调用方与状态归属
 
 | 调用方 | 进程所有者 | 业务状态与持久化 |
@@ -36,6 +51,7 @@
 | Learn | `ProcessOwner::Learn` | 应用数据目录 study/job；串行阶段、JSON/引用校验、checkout 指纹 |
 | Research | `ProcessOwner::Feature { feature: research }` | research/ 内每问报告/job；原生续接失败回放有预算历史，项目变化记警告 |
 | Discuss | `ProcessOwner::Feature { feature: discuss }` | discuss/ 内轮次/尝试/汇总；每讨论一个编排、并行轮次屏障、显式重试/过时传播 |
+| `loom-agent run` | `ProcessOwner::Feature { feature: cli }`，scope 为 Agent id | 只写 `<config>/cli/runs/<runId>.json` 脱敏执行记录；无会话存储 |
 
 Agent 层不导入功能模块，不决定 Chat 会话、Wiki 页、研究轮次或讨论共识。Chat 的已持久化 `chat_abort / chat_timeout / app_shutdown` 原因字符串保留，其它功能复用这些底层原因并映射自己的状态。
 
@@ -69,6 +85,11 @@ Chat 的停止、准入和全应用退出编排通过 `agent` 公共函数访问
 
 ## 分层验证
 
-`scripts/check-layers.mjs` 接入 `pnpm check`：Agent 不引用功能模块，Chat/Learn/Research/Discuss 不互相引用，功能生产代码不直接 spawn Agent、不访问 supervisor 或 Agent 私有模块（上面的 Learn Git 例外除外）；前端功能互不导入，共享组件/hooks/api 不导入功能，Settings→Skills 为产品结构例外。
+`scripts/check-layers.mjs` 接入 `pnpm check`：
+
+- Agent 不引用功能模块，Chat/Learn/Research/Discuss 不互相引用，功能生产代码不直接 spawn Agent、不访问 supervisor 或 Agent 私有模块（上面的 Learn Git 例外除外）。
+- `agent_cli.rs` 只用 `crate::agent` 再导出与 `models` / `storage` / `projects`，不用 Agent 私有子模块；`src/bin/loom-agent.rs` 只调用 `agent_cli`；其它模块都不引用 `agent_cli`。
+- 功能模块不直接用 `reqwest` 发 HTTP 请求，模型调用经 `crate::agent`。具名例外（`HTTP_ALLOWLIST`）：`learn/github.rs`（Learn 新建页 GitHub 搜索，Learn 发现功能实施中）、`skills/github_api.rs`（Skills GitHub 来源）、`skills/translation/remote.rs`（Skills 远程翻译，早于 Agent 层直接调模型；扩展前应迁到 `agent::api`）。
+- 前端功能互不导入，共享组件/hooks/api 不导入功能，Settings→Skills 为产品结构例外。
 
 `scripts/lib/rust-production.mjs` 屏蔽测试模块、注释和字面量，但保留测试模块之后的生产代码；这是针对仓库惯用源码形态的静态门禁，不是完整 Rust 语义解析器。相关回归在 `tests/unit/layerCheck.test.cjs`。runner 特征快照、取消/退出子进程测试与真实 CLI/桌面证据共同验证行为，详见 [P8 验收](../dogfood/2026-10-28-p8-acceptance.md)。
