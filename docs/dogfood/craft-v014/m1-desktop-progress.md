@@ -18,10 +18,10 @@
 
 1. 自动创建默认工作区；创建会话后实际 core 写入磁盘。
 2. 中文输入后看到实际 Channel 流式增量，界面明确标记 fixture。
-3. 在生成中停止，保留部分文本并显示“已停止”。[AX 与截图](../../../designs/workbench-m1/01-stream-and-stop.ax.txt)。
-4. 重命名、标记、保存笔记、归档，转录不丢失。[归档记录](../../../designs/workbench-m1/02-archive-notes.ax.txt)。
-5. 创建第二个工作区，其列表独立；重启后切回原工作区，名称、旗标、笔记、归档和停止状态正确恢复。[重启记录](../../../designs/workbench-m1/03-restart-restored.ax.txt)。
-6. 在后台回合运行时切到新会话，没有串入输出；结束后列表更新并出现未读，当前草稿保留。[后台记录](../../../designs/workbench-m1/04-background-unread.ax.txt)。
+3. 在生成中停止，保留部分文本并显示“已停止”。[AX 与截图](../../../.designs/workbench-m1/01-stream-and-stop.ax.txt)。
+4. 重命名、标记、保存笔记、归档，转录不丢失。[归档记录](../../../.designs/workbench-m1/02-archive-notes.ax.txt)。
+5. 创建第二个工作区，其列表独立；重启后切回原工作区，名称、旗标、笔记、归档和停止状态正确恢复。[重启记录](../../../.designs/workbench-m1/03-restart-restored.ax.txt)。
+6. 在后台回合运行时切到新会话，没有串入输出；结束后列表更新并出现未读，当前草稿保留。[后台记录](../../../.designs/workbench-m1/04-background-unread.ax.txt)。
 7. 切回后台会话时未读消失，再回到新会话草稿仍在；重命名对话框初始焦点在名称输入框。
 8. 生成中 Cmd+Q 后退出，最终通过生产 core 回读确认新测试回合为 Cancelled 且没有 active owner。[回读记录](m1-desktop-readback.json)。
 

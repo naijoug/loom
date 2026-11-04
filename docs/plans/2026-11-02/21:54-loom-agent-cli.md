@@ -1,7 +1,7 @@
 # Agent 调用层：无窗口 CLI 与 API Key 模式计划
 
 - 创建时间：2026-11-02 21:54，America/Los_Angeles；22:28 参考 magpie 修订（加入 API Key 模式，重排里程碑）。
-- 状态：A0 已完成（2026-11-03 02:04，已提交）；A1 已完成（2026-11-03 06:34，已提交）；A2 已完成（2026-11-03 07:21，已提交）；A3 已完成（2026-11-03 08:28，未提交）；A4 已完成（2026-11-03 08:47，未提交）；A5 已完成（2026-11-03 15:15，未提交；设计稿 `designs/agent-providers/README.md` 08:49 提交确认，用户回复“Approve, build it”，第 7 节按本稿默认）。2026-11-03 用户接受第 6 节全部推荐答案（“Yes, do A1”），A2 起可按推荐实施。
+- 状态：A0 已完成（2026-11-03 02:04，已提交）；A1 已完成（2026-11-03 06:34，已提交）；A2 已完成（2026-11-03 07:21，已提交）；A3 已完成（2026-11-03 08:28，未提交）；A4 已完成（2026-11-03 08:47，未提交）；A5 已完成（2026-11-03 15:15，未提交；设计稿 `.designs/agent-providers/README.md` 08:49 提交确认，用户回复“Approve, build it”，第 7 节按本稿默认）。2026-11-03 用户接受第 6 节全部推荐答案（“Yes, do A1”），A2 起可按推荐实施。
 - 代码基线：`main` `93c36f9`。2026-11-03 复核：`90cf9f9..93c36f9` 只有 Learn 前端重设计（`d59679c`）、本计划入库（`e62f8fb`）和 Skills 截图（`93c36f9`），`src-tauri/src` 无改动，下文行号仍有效。复核按代码修正了 A1 的文件写入依赖、A3 的取消方式与 HTTP 流读取，并补上 `api` 执行器的配置校验与启动检查（见第 2 节新增行）。
 - 用户要求（2026-11-02）：
   1. 底层有一个 loom CLI，上层交互都能通过它与本机已安装的 Agent CLI 交互；
@@ -216,20 +216,20 @@ magpie 是 Go 单二进制：本地模型网关（`127.0.0.1:3425`，在 OpenAI 
 
 ### A5 桌面 Settings 与选择器
 
-- 先在 `designs/` 出设计稿：Settings → Providers 列表与编辑（预设：Anthropic、OpenAI、OpenRouter、OpenAI 兼容、Anthropic 兼容、本机网关），Agent 编辑里增加“模型来源”下拉。
+- 先在 `.designs/` 出设计稿：Settings → Providers 列表与编辑（预设：Anthropic、OpenAI、OpenRouter、OpenAI 兼容、Anthropic 兼容、本机网关），Agent 编辑里增加“模型来源”下拉。
 - `AgentPicker` 显示“执行器 · 模型来源”（如 `Codex · DeepSeek`、`API · Anthropic`）；`needs_tools` 的功能里 `api` 项置灰并说明原因。
 - 视觉矩阵补 Providers 页（中英文 × 深浅 × 700px）。
 - 依赖：A1–A3；设计稿经用户确认后再写代码。
 
 完成记录（2026-11-03 15:15，未提交）：
 
-- 设计：按 `designs/agent-providers/README.md` 实施，第 7 节三项取本稿默认（独立页签；自带登录只显示执行器名；预设即表中六项）。设计稿状态改为“已确认并实现”。
+- 设计：按 `.designs/agent-providers/README.md` 实施，第 7 节三项取本稿默认（独立页签；自带登录只显示执行器名；预设即表中六项）。设计稿状态改为“已确认并实现”。
 - 状态与接口：`AppState.providers`（`ModelProviderList`，只含 key 来源，不含 key）与 `providers/loaded`；`useAgentCatalog.loadAgents` 顺带拉 `provider_list`（失败不影响 Agent 加载），新增 `loadProviders`/`saveProvider`/`deleteProvider`/`testProvider`，provider 调用直接抛错交给页面显示。
 - Settings → 模型来源（`ProvidersPanel.tsx`、`providerDraft.ts`）：列表显示名称、协议 · 地址、默认模型、key 来源（已保存 / `$变量` / 本机无需 / 缺少 key 或“未设置 $变量”）与被引用的 Agent；“测试”结果就地显示，只映射 `outcome` 与 HTTP 状态；被引用时删除禁用并说明。添加表单含六个预设、协议单选、Base URL、默认模型、`type=password` 的 key（不回填，编辑时默认保留，“替换”才出现输入框，“清除”需确认）、环境变量；保存/删除后关闭表单丢弃 key，并刷新 Agents 与诊断；revision 冲突时重新加载并显示横幅，表单输入保留。新 provider 的 id 由名称生成（ASCII slug，重名加序号，非 ASCII 名称为 `provider`）。
 - Settings → Agents：新增“模型来源”列；直连 API 的路径列显示 provider 主机（悬停为完整 URL）、能力列“仅文本回答”、版本位“直连 API”；页头加“+ 直连 API”，表单只有名称和必选 provider（默认名 `API · <provider>`，改 provider 时若名称未改则跟随）；CLI Agent 表单加模型来源下拉，兼容性取诊断里的 `providerKinds`（未诊断时列出全部，由后端校验），不兼容项放在“不兼容”分组并禁用，自定义 CLI 与不支持注入的执行器整个下拉禁用，旁边“管理模型来源”跳到页签。
 - `AgentPicker`：新增 `providers`、`needsTools`；按钮为“执行器 · 来源”（自带登录与直连 API 只显示名称）；菜单第二行写来源与能力，provider 缺 key 时为 `down` 并写“模型来源 X 缺少 key”，`needsTools` 时 `api` 项禁用并说明原因；provider 有默认模型时占位符为“默认：<model>”；`defaultAgentId` 不再选 `api`；导出 `pickerAgents`、`agentProvider`、`agentButtonLabel`。Chat、Learn、Research 传 `needsTools`（Learn/Research 通过 `pickerAgents` 把 `api` Agent 列出但置灰），Discuss 的 `DISCUSS_ADAPTERS` 加入 `api`、`needsTools` 取“是否选了项目”，选了项目又选了 `api` 参与者时不能提交并提示；各功能的提交校验同样排除缺 key 的 provider。
 - 窄窗口：700px 时 Providers 表格变卡片（名称、协议与地址、key 来源与操作），表单单列，预设换行；只用现有 `--chat-*` 令牌。
-- 证据：新增 `tests/unit/agentProviders.test.cjs`（jsdom：菜单在 `needsTools` 下禁用 `api` 并给原因、缺 key 的 CLI 禁用；Providers 列表只显示 key 来源、被引用时删除禁用及提示、编辑默认不出现 key 框、“替换”后 key 框为空；draft → input：空 key 不发送、去空白、id 生成、预设表）与 `agentPicker.test.cjs` 三项（按钮标签、默认不选 `api` 与默认模型占位符、缺 key 为 `down`）。`pnpm check` 通过（前端 156/156、Rust 429 passed / 35 ignored、clippy `-D warnings`、层检查）。`pnpm smoke:visual` 通过：活动栏矩阵新增 Providers 列表与添加表单截图（en / zh-CN × light / dark × 700px，`designs/exports/agent-providers/`），断言卡片布局、无横向滚动、列表页没有 password 输入、添加表单的 key 框为空；首次运行时预览服务被外部 SIGTERM（Vite 退出 143），重跑通过。
+- 证据：新增 `tests/unit/agentProviders.test.cjs`（jsdom：菜单在 `needsTools` 下禁用 `api` 并给原因、缺 key 的 CLI 禁用；Providers 列表只显示 key 来源、被引用时删除禁用及提示、编辑默认不出现 key 框、“替换”后 key 框为空；draft → input：空 key 不发送、去空白、id 生成、预设表）与 `agentPicker.test.cjs` 三项（按钮标签、默认不选 `api` 与默认模型占位符、缺 key 为 `down`）。`pnpm check` 通过（前端 156/156、Rust 429 passed / 35 ignored、clippy `-D warnings`、层检查）。`pnpm smoke:visual` 通过：活动栏矩阵新增 Providers 列表与添加表单截图（en / zh-CN × light / dark × 700px，`.designs/exports/agent-providers/`），断言卡片布局、无横向滚动、列表页没有 password 输入、添加表单的 key 框为空；首次运行时预览服务被外部 SIGTERM（Vite 退出 143），重跑通过。
 - 未验证：没有在桌面 Tauri 窗口里真实保存/测试/删除 provider（预览模式无后端，只用夹具渲染）；没有用真实 provider 发请求（A7）。
 
 ### A6 门禁与文档

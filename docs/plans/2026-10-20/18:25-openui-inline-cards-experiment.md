@@ -128,7 +128,7 @@ OpenUI 让模型用 OpenUI Lang 这种紧凑格式描述界面，再由前端按
 
 - `mockStore.ts` 增加一个含卡片和坏卡片的示例会话。`scripts/simple-chat-smoke.sh` 补充截图：深浅主题、中英文、窄窗口。
 - 在 `scripts/debug.sh web` 下检查网络面板，确认没有 CDN 或遥测请求（S5）。结束后执行 `scripts/debug.sh stop`。
-- 验证：`pnpm smoke:visual`，截图放在 `designs/exports/openui-inline-cards/`。
+- 验证：`pnpm smoke:visual`，截图放在 `.designs/exports/openui-inline-cards/`。
 
 ### O5 真实模型验收与结论
 
@@ -245,7 +245,7 @@ OpenUI 让模型用 OpenUI Lang 这种紧凑格式描述界面，再由前端按
   - “插入到输入框”只写入草稿（会话内卡片数不变，未发送）；查看源码/查看卡片切换；
   - 深色 + 简体中文、700px 窄窗口，无横向溢出；
   - 通过 CDP `Network.requestWillBeSent` 统计非 `127.0.0.1`/`localhost` 请求，结果为 0（S5 开发态）。
-- 截图与结果：`designs/exports/openui-inline-cards/`（`settings-experiments`、`cards-light`、`cards-source`、`cards-dark-zh`、`cards-narrow`、`result.json`）。
+- 截图与结果：`.designs/exports/openui-inline-cards/`（`settings-experiments`、`cards-light`、`cards-source`、`cards-dark-zh`、`cards-narrow`、`result.json`）。
 - 过程问题：首版脚本在设置页渲染前点击“实验”导致落到 Agents 页并误切换 Agent 启用开关；已改为先等待设置页、并用 `.settings-toggle-row` 精确定位实验开关。冷启动 Vite 首次转换 OpenUI chunk 较慢，卡片等待上限放宽到 30 秒。
 - 验证：`pnpm smoke:visual` 通过（原 Simple Chat 冒烟与卡片冒烟均 passed）。运行时工作区含另一会话尚未提交的模式选择器改动（`ModePicker` 等），冒烟脚本 `main()` 已由该会话同步适配；本里程碑只改 `inlineCardsSmoke` 及其辅助参数。
 - 观察：卡片外壳按钮在悬停或键盘聚焦时才显示（O3 设计），静态截图中不可见。

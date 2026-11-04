@@ -12,7 +12,7 @@
 | 检查 | 结果 | 证据 |
 |---|---|---|
 | `pnpm check`（前端测试/build、分层检查、Rust fmt/clippy/test、release 文档检查） | passed | 前端 140 项（含 `tests/unit/research.test.cjs`），`cargo test --lib` 311 项通过、29 项需显式开启（提交前复跑） |
-| `pnpm smoke:visual`（含 Research 矩阵与功能栏 ⌘/Ctrl+3） | passed（synthetic-web-only） | `designs/exports/research/result.json` 与 15 张截图（不入库） |
+| `pnpm smoke:visual`（含 Research 矩阵与功能栏 ⌘/Ctrl+3） | passed（synthetic-web-only） | `.designs/exports/research/result.json` 与 15 张截图（不入库） |
 | `pnpm tauri build --no-bundle` | not-tested | 本阶段未改 Tauri 配置与打包；P8 完整门禁时运行 |
 
 Research 后端单测（13 项）覆盖：ID 格式、过期“运行中”问题标为已中断而存活作业保留、报告与日志路径不逃逸研究目录、提示词占位与引用规则、回放预算、报告标记提取、首问写报告并校验引用、无项目时在研究工作目录运行、追问原生续接与续接失败后回放、Agent 命令变化时回放、项目被写入只警告、失败与取消记录在问题上、长参数省略。前端 4 项覆盖 Agent 过滤、报告与引用渲染、追问与停止、失败重试、新建参数。

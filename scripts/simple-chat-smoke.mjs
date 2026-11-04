@@ -11,10 +11,10 @@ const chrome =
   (process.platform === "darwin" ? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" : "google-chrome");
 const baseUrl = "http://127.0.0.1:1420/?fixture=simple-chat";
 const port = 9331;
-const output = join(process.cwd(), "designs/exports/simple-chat");
-const cardsOutput = join(process.cwd(), "designs/exports/openui-inline-cards");
-const railOutput = join(process.cwd(), "designs/exports/activity-rail");
-const providersOutput = join(process.cwd(), "designs/exports/agent-providers");
+const output = join(process.cwd(), ".designs/exports/simple-chat");
+const cardsOutput = join(process.cwd(), ".designs/exports/openui-inline-cards");
+const railOutput = join(process.cwd(), ".designs/exports/activity-rail");
+const providersOutput = join(process.cwd(), ".designs/exports/agent-providers");
 const userDataDir = join(tmpdir(), `loom-chat-smoke-${process.pid}`);
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -156,7 +156,7 @@ async function waitFor(client, expression, label, attempts = 200) {
   );
 }
 
-// Activity rail matrix (designs/activity-rail/README.md): zh/en × dark/light at 700px. The rail stays 52px wide,
+// Activity rail matrix (.designs/activity-rail/README.md): zh/en × dark/light at 700px. The rail stays 52px wide,
 // marks the current feature, Cmd/Ctrl+number switches features, and switching keeps the open Chat session.
 async function railMatrixSmoke(client, { screenshot }) {
   mkdirSync(railOutput, { recursive: true });
@@ -229,7 +229,7 @@ async function railMatrixSmoke(client, { screenshot }) {
       if ((await evaluate(client, railState)).current !== settingsLabel)
         throw Error(`Rail did not mark Settings (${name})`);
       await screenshot(`settings-${name}`, railOutput);
-      // Model sources (designs/agent-providers/README.md): cards at 700px, key sources only, never a key.
+      // Model sources (.designs/agent-providers/README.md): cards at 700px, key sources only, never a key.
       await evaluate(client, `document.querySelectorAll('.chat-settings nav button')[1].click()`);
       await waitFor(
         client,

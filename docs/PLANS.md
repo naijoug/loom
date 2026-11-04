@@ -121,7 +121,7 @@
 ## 2026-06-26
 
 - 17:38-ui-2026-06-impl.md
-  > （已完成，M0–M6）把 `designs/loom-ui-2026-06/` 深色技术工作台设计（5 个核心流程页面 + 共享 Shell + 设计令牌）落地到现有 Tauri + React 代码：先行落地 `--loom-*` 别名层与重构 AppLayout/Sidebar/Header miniStepper 外壳（M0），再逐页对齐规划讨论室/任务看板/执行中/调试验收/交付总结（M1–M5），仅覆盖视觉与交互层，后端能力与状态机保持现状。验证：`pnpm test` 81/81、`pnpm build`、`cargo test` 123/123、`pnpm smoke:visual` 26 屏全过。（2026-06-26 plan-review 修订：明确令牌为命名空间对齐而非值迁移，定方案 A 别名层、不强制改名存量约 1144 处旧引用；删除冗余 CDN 字体任务、确认 Geist Mono 已 `@fontsource` 自托管；miniStepper 已是 4 段，改为只调状态色 + 标签中文化并列入待确认。）
+  > （已完成，M0–M6）把 `.designs/loom-ui-2026-06/` 深色技术工作台设计（5 个核心流程页面 + 共享 Shell + 设计令牌）落地到现有 Tauri + React 代码：先行落地 `--loom-*` 别名层与重构 AppLayout/Sidebar/Header miniStepper 外壳（M0），再逐页对齐规划讨论室/任务看板/执行中/调试验收/交付总结（M1–M5），仅覆盖视觉与交互层，后端能力与状态机保持现状。验证：`pnpm test` 81/81、`pnpm build`、`cargo test` 123/123、`pnpm smoke:visual` 26 屏全过。（2026-06-26 plan-review 修订：明确令牌为命名空间对齐而非值迁移，定方案 A 别名层、不强制改名存量约 1144 处旧引用；删除冗余 CDN 字体任务、确认 Geist Mono 已 `@fontsource` 自托管；miniStepper 已是 4 段，改为只调状态色 + 标签中文化并列入待确认。）
 
 ## 2026-06-25
 
@@ -160,7 +160,7 @@
 ## 2026-06-05
 
 - 18:47-redesign-impl.md
-  > 把 designs/redesign-2026-06 新 IA 与视觉落到现有 Tauri+React 应用：前端重构覆盖项目侧栏、计划聊天室、loom/speaker Linear 看板、状态化任务详情、多终端测试、6 页设置和 token 迁移，并补闭环后端命令、日志分桶、主 Agent 持久化、Tauri devUrl/preview 修复、真实桌面交互验证、command runner 真实进程闭环 smoke、Codex/Claude 真实 CLI smoke、Amp paid-credits 失败路径识别，以及 `pnpm test` / `pnpm smoke` / `pnpm smoke:interaction` / `pnpm smoke:visual` 自我验收路径。
+  > 把 .designs/redesign-2026-06 新 IA 与视觉落到现有 Tauri+React 应用：前端重构覆盖项目侧栏、计划聊天室、loom/speaker Linear 看板、状态化任务详情、多终端测试、6 页设置和 token 迁移，并补闭环后端命令、日志分桶、主 Agent 持久化、Tauri devUrl/preview 修复、真实桌面交互验证、command runner 真实进程闭环 smoke、Codex/Claude 真实 CLI smoke、Amp paid-credits 失败路径识别，以及 `pnpm test` / `pnpm smoke` / `pnpm smoke:interaction` / `pnpm smoke:visual` 自我验收路径。
 
 ## 2026-05-13
 

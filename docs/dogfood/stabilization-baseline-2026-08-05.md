@@ -73,7 +73,7 @@
 | modified | `tests/unit/taskTimeline.test.cjs` | 测试与工程门禁 | 完整版本 / 审计改动 |
 | modified | `tsconfig.test.json` | 测试与工程门禁 | 完整版本 / 审计改动 |
 | untracked | `.github/` | 测试与工程门禁 | 完整版本 / 审计改动 |
-| untracked | `designs/audits/` | 设计审计 | 完整版本 / 审计改动 |
+| untracked | `.designs/audits/` | 设计审计 | 完整版本 / 审计改动 |
 | untracked | `docs/agent-adapter.md` | 文档 | 完整版本 / 审计改动 |
 | untracked | `docs/architecture.md` | 文档 | 完整版本 / 审计改动 |
 | untracked | `docs/dogfood/complete-version-2026-07-24.md` | 文档 | 完整版本 / 审计改动 |

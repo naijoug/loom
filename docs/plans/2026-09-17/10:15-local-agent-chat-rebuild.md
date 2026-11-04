@@ -78,7 +78,7 @@
 | [backend/types](https://github.com/craft-ai-agents/craft-agents-oss/blob/e8963854c3679edcceb105a42537a06749e6cb64/packages/shared/src/agent/backend/types.ts)、[factory](https://github.com/craft-ai-agents/craft-agents-oss/blob/e8963854c3679edcceb105a42537a06749e6cb64/packages/shared/src/agent/backend/factory.ts) | 统一事件、能力驱动 UI；当前实现为 Claude/Pi backend | Rust CLI adapter 抽象；不把 Craft 当作任意本机 CLI 启动器 |
 | [SessionManager](https://github.com/craft-ai-agents/craft-agents-oss/blob/e8963854c3679edcceb105a42537a06749e6cb64/packages/server-core/src/sessions/SessionManager.ts) | 会话恢复、发送、取消、持久化与 flush | 学习生命周期边界，分模块实现，避免单个巨大管理器 |
 
-只借交互和结构；继续使用 Loom 品牌及现有主题令牌。若实施中引入源代码片段，记录来源和许可证声明。设计稿及视觉验证资源统一放 `designs/local-agent-chat/`。
+只借交互和结构；继续使用 Loom 品牌及现有主题令牌。若实施中引入源代码片段，记录来源和许可证声明。设计稿及视觉验证资源统一放 `.designs/local-agent-chat/`。
 
 ## 5. 目标架构与契约
 
@@ -181,7 +181,7 @@ chat/commands → chat/service → chat/runtime → agent_adapter
 | 0.0 | 新建 `src/api/chatClient.ts`，修正五个 input 信封并接入 `ChatPage.tsx`；更新 `contracts/tauri-contract.json`、`tests/unit/contract.test.cjs`、`tsconfig.test.json`；三项 Chat 镜像测试改为导入实际模块 | — | actual wrapper 逐命令参数断言；生产组件创建失败仍可见错误；桌面 create/update_meta 不需模型即可验 IPC，不以 Mock 替代 |
 | 0.1 | 更新 `docs/requirements.md` 的阶段性 MVP；对齐 `docs/guides/craft-local-chat-prd.md`、`craft-local-chat-ia.md`，明确本计划优先及旧决策变化 | — | Chat 验收不再要求四阶段闭环；保留长期方向 |
 | 0.2 | 在临时测试项目探测 grok/codex/claude 的 version/help、登录可用性、JSON 流、工具、resume、权限；新增 `docs/guides/local-agent-chat-protocols.md`、`tests/fixtures/chat/<adapter>/` | — | 每个 capability 标明版本、证据、通过/未验证/不支持；脱敏 fixture 入库；确定首选 adapter |
-| 0.3 | 冻结 `docs/architecture/chat-contracts.md` 的 v2 模型/IPC/状态机；产出 `designs/local-agent-chat/README.md` 及线框资源 | 0.0、0.1、0.2 | 覆盖调用信封、seq/提交顺序、路径校验、迁移恢复、权限降级和进程 owner |
+| 0.3 | 冻结 `docs/architecture/chat-contracts.md` 的 v2 模型/IPC/状态机；产出 `.designs/local-agent-chat/README.md` 及线框资源 | 0.0、0.1、0.2 | 覆盖调用信封、seq/提交顺序、路径校验、迁移恢复、权限降级和进程 owner |
 
 **退出条件：** 至少一个真实 Agent 在指定 cwd 有可解析输出及有效限制；不满足则记录明确阻塞，不靠 Mock 宣称通过。探针只用测试目录，付费/登录失败单独记录。
 

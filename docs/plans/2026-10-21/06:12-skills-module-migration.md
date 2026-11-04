@@ -497,7 +497,7 @@ G1 的范围声明不是功能删减：CLI/TUI、翻译和迁移仍在本计划�
 - **里程碑门禁**：`pnpm check`、`pnpm tauri build --no-bundle`；不运行冻结内核作为默认门禁。多 binary 引入后确保命令仍指向 Loom 桌面应用。
 - **内容仓库**：迁移前 `bash apps/scripts/skills-quality-check`，迁移后 `bash scripts/skills-quality-check`；命令在各自源仓库根执行。
 - **预览生命周期**：启动前 `scripts/debug.sh stop`；桌面 `scripts/debug.sh desktop`，Web `scripts/debug.sh web`；固定 1420，验证后 `scripts/debug.sh stop`。不并行遗留旧 Manager 预览进程。
-- **UI**：扩展 `pnpm smoke:visual`，覆盖中英文/深浅主题/窄窗口、空库/加载/错误、搜索选择、安装和翻译竞态、Chat 活动回合切换。截图放 `designs/exports/skills/`。
+- **UI**：扩展 `pnpm smoke:visual`，覆盖中英文/深浅主题/窄窗口、空库/加载/错误、搜索选择、安装和翻译竞态、Chat 活动回合切换。截图放 `.designs/exports/skills/`。
 - **安装与安全 fixture**：临时 HOME 和项目；同名不同来源、无效 frontmatter、路径逃逸、目录 symlink、坏链接、缺失源、修改过的 copy、恶意 metadata、部分失败、并发 UI/CLI、Codex/Amp 共享 AGENTS、注入 marker 损坏及卸载源已删除场景。
 - **来源/翻译 fixture**：本地 Git 仓库与合成 HTTP/provider 响应；超时/取消、认证失败、rate limit、truncated tree、默认分支变化、provider 未配置、错误输出和 secret 脱敏。
 - **迁移 fixture**：旧 JSON/TSV、重复 ID、重叠来源、旧 cache/bundle symlink、权限失败、损坏 JSON、半完成迁移、幂等重试和回滚遇到新修改。

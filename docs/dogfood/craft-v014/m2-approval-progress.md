@@ -23,7 +23,7 @@
 | 真实 SDK + 本机模型 fixture | Claude/Pi × allow/deny/cancel/stale/disconnect，共 10/10 通过；允许前没有 probe.txt，拒绝/取消/断线没有写入，允许仅产生精确合成内容，core 的批准消费和终态均被验证。[SDK 机器证据](m2-core-sdk-approval-results.json)。 |
 | 原生 UI 与重启 | 待审批参数可见且 API key 隐藏；单次允许、拒绝、停止和等待期间 Cmd+Q 均通过。退出后新 core 回读证明消费 2 次、拒绝 1 次、撤销 2 次，拒绝/撤销无 ToolCall；最终 app 重启显示旧撤销记录并完成一次新请求。[桌面机器证据](m2-approval-desktop-evidence.json)。 |
 
-原生图片保存在 `designs/workbench-m2/`：[待审批](../../../designs/workbench-m2/01-pending-approval.jpg)、[已使用](../../../designs/workbench-m2/02-consumed-approval.jpg)、[拒绝](../../../designs/workbench-m2/03-denied-approval.jpg)、[撤销](../../../designs/workbench-m2/04-cancelled-approval.jpg)、[最终构建重启](../../../designs/workbench-m2/05-restarted-cancelled.jpg)、[最终构建新授权](../../../designs/workbench-m2/06-final-consumed.jpg)。同名 AX 文本记录了实际按钮与状态。
+原生图片保存在 `.designs/workbench-m2/`：[待审批](../../../.designs/workbench-m2/01-pending-approval.jpg)、[已使用](../../../.designs/workbench-m2/02-consumed-approval.jpg)、[拒绝](../../../.designs/workbench-m2/03-denied-approval.jpg)、[撤销](../../../.designs/workbench-m2/04-cancelled-approval.jpg)、[最终构建重启](../../../.designs/workbench-m2/05-restarted-cancelled.jpg)、[最终构建新授权](../../../.designs/workbench-m2/06-final-consumed.jpg)。同名 AX 文本记录了实际按钮与状态。
 
 桌面证据分别保存首轮和最终构建的 app/源码 SHA；SDK 证据对应最终审批实现。原生桌面使用明确标注的无副作用测试工具，没有调用模型。SDK 测试使用真正的 SDK 与临时写工具，但模型 API 为本机 fixture，没有私人凭据或真实模型账户请求。两者不能合并宣称生产模型已接到桌面。
 

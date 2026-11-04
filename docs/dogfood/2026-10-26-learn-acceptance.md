@@ -13,7 +13,7 @@
 |---|---|---|
 | `pnpm check`（前端测试/build、Rust fmt/clippy/test、release 文档检查） | passed | 前端 130 项（含 `tests/unit/learn.test.cjs`），`cargo test --lib` 290 项通过、27 项需显式开启（2026-10-26 启动前检查修复后复跑） |
 | `pnpm tauri build --no-bundle` | passed | `src-tauri/target/release/loom` |
-| `pnpm smoke:visual`（含 Learn 矩阵） | passed（synthetic-web-only） | `designs/exports/learn/result.json` 与 15 张截图 |
+| `pnpm smoke:visual`（含 Learn 矩阵） | passed（synthetic-web-only） | `.designs/exports/learn/result.json` 与 15 张截图 |
 
 Learn 后端单测覆盖：URL / ref 校验、加固 git 拉取与上限、清单、源码读取的路径逃逸与 symlink、研究存储与中断恢复、架构 JSON 提取与校验、引用解析、作业流水线（伪 CLI：成功、坏 JSON 修复后失败、checkout 被写入检出、取消、计划）。
 

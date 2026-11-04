@@ -122,7 +122,7 @@ flowchart TD
 | `src-tauri/src/browser_host/` | 浏览器专用 profile、端口、目标绑定、关闭与残留诊断 |
 | `src-tauri/src/repository_sources/` | 从 Learn 抽取固定 commit 获取及校验；显式接收调用方 owner，去除 study 专属归属 |
 | `src-tauri/src/experiments/` | 独立实验计划、候选、评测、判定与存储；不调用 research 业务命令 |
-| `src/features/research/` | 目标表单、运行阶段、证据、报告和实验入口；设计资源放 `designs/research/` |
+| `src/features/research/` | 目标表单、运行阶段、证据、报告和实验入口；设计资源放 `.designs/research/` |
 | `src/components/`、`src/api/` | 通用证据查看组件、typed IPC；共享层不反向导入功能 |
 
 所有模型调用继续通过 `agent::prepare_invocation` 与 `agent::run`。REA／浏览器／评测器不是 Agent，不套用 CLI 文本流解析；新增工具通道只包装当前 supervisor，不创建第二套全局进程注册表。
@@ -434,7 +434,7 @@ R1 开始时将 A 线新增范围以“目标／实施中”写入 requirements 
 
 按 [验证矩阵](../../testing.md#开发变更验证矩阵) 执行局部检查。R5 若独立交付单次模式，需 A1–A6/A8、三目标真实单次链路、原生桌面与 `pnpm check`／`pnpm tauri build --no-bundle` 通过，不提前宣称 A7。R7／E2 分别运行完整门禁并完成对应真实链路；全量通过后只因新修改、失败或未解决风险重跑。
 
-预览统一 `scripts/debug.sh stop` → `scripts/debug.sh web` 或 `scripts/debug.sh desktop` → 验证 → `scripts/debug.sh stop`，端口 1420。工具自己的受管 CDP 端口不替代 Loom 预览端口。截图和设计资源放 `designs/research/`，验收证据放 `docs/dogfood/`，不提交原始敏感目标资料。
+预览统一 `scripts/debug.sh stop` → `scripts/debug.sh web` 或 `scripts/debug.sh desktop` → 验证 → `scripts/debug.sh stop`，端口 1420。工具自己的受管 CDP 端口不替代 Loom 预览端口。截图和设计资源放 `.designs/research/`，验收证据放 `docs/dogfood/`，不提交原始敏感目标资料。
 
 每份 dogfood 记录 commit／工作区差异、工具实际版本、输入样本身份、命令摘要、耗时、状态、取消结果、引用覆盖及限制。fixture、真实工具、真实模型、原生桌面证据分列；离线测试通过不等于真实接入通过。
 

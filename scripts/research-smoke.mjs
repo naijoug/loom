@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 // Research visual acceptance against the DEV-only `researchFixture` API: no IPC, git or model calls.
 export async function researchSmoke(client, { evaluate, waitFor, click, screenshot }) {
-  const output = join(process.cwd(), "designs/exports/research");
+  const output = join(process.cwd(), ".designs/exports/research");
   mkdirSync(output, { recursive: true });
   const root = "http://127.0.0.1:1420/?fixture=simple-chat&researchFixture=";
   const checks = [];

@@ -83,7 +83,7 @@
 - 后续新增草稿重新挂载回归：`appUpdate.test.cjs` 4/4 通过；失败重试、重复点击、活动工作提示、草稿保存和 Web 禁用均覆盖。
 - 退出/更新互斥接点补验：Workbench 21 passed、3 ignored；process_supervisor 10/10；app_update 2/2；IPC contracts 6/6。Clippy 无警告。
 - `pnpm tauri build --no-bundle`：通过，生成 `src-tauri/target/release/loom`。这不是可分发 `.app` 或签名包证明。
-- 浏览器视觉：生产弹窗的版本说明、模拟下载→安装状态，以及新工作台的手动检查入口和 Web 禁用状态通过。截图见 [更新弹窗](../../../designs/app-update/ready-preview.png)，复现入口 `http://127.0.0.1:1420/designs/app-update/preview.html`，需通过 debug 脚本启动 Web。
+- 浏览器视觉：生产弹窗的版本说明、模拟下载→安装状态，以及新工作台的手动检查入口和 Web 禁用状态通过。截图见 [更新弹窗](../../../.designs/app-update/ready-preview.png)，复现入口 `http://127.0.0.1:1420/.designs/app-update/preview.html`，需通过 debug 脚本启动 Web。
 - 桌面进程：`scripts/debug.sh desktop` 成功构建并启动本轮 Tauri dev 二进制，未出现插件初始化错误。未将其他已安装 Loom 窗口当作本轮原生 UI 验收证据。
 - YAML 解析与 `git diff --check` 通过。GitHub workflow 未远程运行。
 - 预览结束执行 `scripts/debug.sh stop`，清理本轮服务。

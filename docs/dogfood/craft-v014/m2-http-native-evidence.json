@@ -108,18 +108,18 @@
     "fixtureExitCode": 0
   },
   "nativeArtifactsSha256": {
-    "designs/workbench-m2/http-native-2026-10-10/01-connection-saved.ax.txt": "d851baa61ff0d4b4097e2e58cc156cec93e3833f7b5a70c50c3048ff8e98f3a2",
-    "designs/workbench-m2/http-native-2026-10-10/01-connection-saved.png": "440da1eba55ea9f848af473187ac28776c24ecf314a3c085e382dfe68ab7d108",
-    "designs/workbench-m2/http-native-2026-10-10/02-connection-restarted.ax.txt": "b3b0efcf9530cd1d72d8fc7f7c0f578c2af3b19eb0515542274f9d4d81f0dcb5",
-    "designs/workbench-m2/http-native-2026-10-10/02-connection-restarted.png": "4d9da5e3ec816bd6d22b2f629adf89f2f068d2c523fc207d1527938de3a1262a",
-    "designs/workbench-m2/http-native-2026-10-10/03-sdk-denied.ax.txt": "debebc2a9a4feb844f0f0b1678cc6d6f002d3ee42e2d15f7b957edcfc2612ec4",
-    "designs/workbench-m2/http-native-2026-10-10/03-sdk-denied.png": "4cba719edf20aeeadaff293d02711dc1a7f33fef6ccb719925497ac057c586b5",
-    "designs/workbench-m2/http-native-2026-10-10/04-sdk-stopped.ax.txt": "50edb36decbe52541a5a9f2988c84c689a2ff85e67370a67cce5b8e3f1421e7b",
-    "designs/workbench-m2/http-native-2026-10-10/04-sdk-stopped.png": "4a4d1bd3bb495aff3be987406fbcd1ed69ec01dcfab963b3932ad35c89ddc858",
-    "designs/workbench-m2/http-native-2026-10-10/05-sdk-allowed.ax.txt": "640ee1ebb6856f41abdfb4310eb4e2d070a452dd530140e5272f21eb88d2a6c5",
-    "designs/workbench-m2/http-native-2026-10-10/05-sdk-allowed.png": "1c80c09a1c2b35a14901dce4b45a7e6229fac39ccdb2b48856cda4e7e1de3745",
-    "designs/workbench-m2/http-native-2026-10-10/06-sdk-restarted.ax.txt": "640ee1ebb6856f41abdfb4310eb4e2d070a452dd530140e5272f21eb88d2a6c5",
-    "designs/workbench-m2/http-native-2026-10-10/06-sdk-restarted.png": "0aad911d3007e5bb2d44c294958ffdb0d6a2a591e5b0744fab8f2f069c63457c"
+    ".designs/workbench-m2/http-native-2026-10-10/01-connection-saved.ax.txt": "d851baa61ff0d4b4097e2e58cc156cec93e3833f7b5a70c50c3048ff8e98f3a2",
+    ".designs/workbench-m2/http-native-2026-10-10/01-connection-saved.png": "440da1eba55ea9f848af473187ac28776c24ecf314a3c085e382dfe68ab7d108",
+    ".designs/workbench-m2/http-native-2026-10-10/02-connection-restarted.ax.txt": "b3b0efcf9530cd1d72d8fc7f7c0f578c2af3b19eb0515542274f9d4d81f0dcb5",
+    ".designs/workbench-m2/http-native-2026-10-10/02-connection-restarted.png": "4d9da5e3ec816bd6d22b2f629adf89f2f068d2c523fc207d1527938de3a1262a",
+    ".designs/workbench-m2/http-native-2026-10-10/03-sdk-denied.ax.txt": "debebc2a9a4feb844f0f0b1678cc6d6f002d3ee42e2d15f7b957edcfc2612ec4",
+    ".designs/workbench-m2/http-native-2026-10-10/03-sdk-denied.png": "4cba719edf20aeeadaff293d02711dc1a7f33fef6ccb719925497ac057c586b5",
+    ".designs/workbench-m2/http-native-2026-10-10/04-sdk-stopped.ax.txt": "50edb36decbe52541a5a9f2988c84c689a2ff85e67370a67cce5b8e3f1421e7b",
+    ".designs/workbench-m2/http-native-2026-10-10/04-sdk-stopped.png": "4a4d1bd3bb495aff3be987406fbcd1ed69ec01dcfab963b3932ad35c89ddc858",
+    ".designs/workbench-m2/http-native-2026-10-10/05-sdk-allowed.ax.txt": "640ee1ebb6856f41abdfb4310eb4e2d070a452dd530140e5272f21eb88d2a6c5",
+    ".designs/workbench-m2/http-native-2026-10-10/05-sdk-allowed.png": "1c80c09a1c2b35a14901dce4b45a7e6229fac39ccdb2b48856cda4e7e1de3745",
+    ".designs/workbench-m2/http-native-2026-10-10/06-sdk-restarted.ax.txt": "640ee1ebb6856f41abdfb4310eb4e2d070a452dd530140e5272f21eb88d2a6c5",
+    ".designs/workbench-m2/http-native-2026-10-10/06-sdk-restarted.png": "0aad911d3007e5bb2d44c294958ffdb0d6a2a591e5b0744fab8f2f069c63457c"
   },
   "limitations": [
     "Real model account/TLS/OAuth not tested",

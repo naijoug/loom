@@ -1,6 +1,6 @@
 # Native browser host experiment
 
-This M0 experiment adapts the `cefsimple` example from [tauri-apps/cef-rs](https://github.com/tauri-apps/cef-rs/tree/a712ad9bacd234c050631a95b9745b27d346b7cc/examples/cefsimple), SHA `a712ad9bacd234c050631a95b9745b27d346b7cc`, licensed Apache-2.0 OR MIT. Both license files are retained here. Its example resources are kept in `designs/craft-v0.14.0/cef-probe-resources/`.
+This M0 experiment adapts the `cefsimple` example from [tauri-apps/cef-rs](https://github.com/tauri-apps/cef-rs/tree/a712ad9bacd234c050631a95b9745b27d346b7cc/examples/cefsimple), SHA `a712ad9bacd234c050631a95b9745b27d346b7cc`, licensed Apache-2.0 OR MIT. Both license files are retained here. Its example resources are kept in `resources/`.
 
 Loom changes: isolated required profile, local fixture URL, larger initial window, native close hides the window, stdio commands marshalled to the CEF UI thread, direct CDP/AX results without a public debugging port. This is a feasibility probe, not the final multi-workspace BrowserHost or a production authorization boundary. No external credentials are configured. Main Loom remains Tauri 2.11.1.
 

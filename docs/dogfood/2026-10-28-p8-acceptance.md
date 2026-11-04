@@ -18,7 +18,7 @@
 | `pnpm smoke:visual` | passed | 本轮重新运行全部 Chat / 功能栏 / Learn / Research / Discuss / Skills / OpenUI 合成矩阵；debug.sh 前后清理 |
 | 文档链接与差异检查 | passed | 新/修改文档相对链接、release 文档、计划索引、源码哈希与 git diff --check |
 
-验收文件在 [samples/p8-2026-10-27](samples/p8-2026-10-27/starting-worktree.json)，目录日期为开始日期；原生截图在 `designs/exports/p8-desktop/`。
+验收文件在 [samples/p8-2026-10-27](samples/p8-2026-10-27/starting-worktree.json)，目录日期为开始日期；原生截图在 `.designs/exports/p8-desktop/`。
 
 ## 原生桌面（真实 IPC、真实 CLI）
 
@@ -77,7 +77,7 @@
 
 ## 本轮原生证据
 
-[观察摘要](samples/p8-2026-10-27/native-observations.json)、[Chat 持久化](samples/p8-2026-10-27/native-chat.json)、[Research 持久化](samples/p8-2026-10-27/native-research.json)、[Discuss 持久化](samples/p8-2026-10-27/native-discussion.json)。仅保存本轮创建的合成议题数据，不复制既有学习资料或账号配置。原生 AX 证据同目录，截图本地保存在 `designs/exports/p8-desktop/`。
+[观察摘要](samples/p8-2026-10-27/native-observations.json)、[Chat 持久化](samples/p8-2026-10-27/native-chat.json)、[Research 持久化](samples/p8-2026-10-27/native-research.json)、[Discuss 持久化](samples/p8-2026-10-27/native-discussion.json)。仅保存本轮创建的合成议题数据，不复制既有学习资料或账号配置。原生 AX 证据同目录，截图本地保存在 `.designs/exports/p8-desktop/`。
 
 Research 的长输出（200 点）专用于运行中退出/重试/停止验收，重试约数分钟后主动停止；未把它标作报告生成成功。后续短追问真实完成。所有相关模型运行均未调用工具。
 

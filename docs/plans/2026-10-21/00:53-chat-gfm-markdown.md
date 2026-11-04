@@ -71,7 +71,7 @@
 
 - `pnpm check` 通过：前端单测 92/92，`cargo fmt --check`、`clippy -D warnings`、Rust 测试 153 通过（17 ignored 为真实 CLI 用例）。
 - 体积：主 chunk 52.04 kB → 225.10 kB（gzip 16.21 → 70.25 kB，+54 kB gzip，高于预估 40–50 kB）；OpenUI 懒加载 chunk 不变（gzip 63.09 kB）。本地桌面应用从磁盘加载，暂不拆分；如需收紧，可把 `Markdown` 改为懒加载。
-- `scripts/debug.sh stop` → `pnpm smoke:visual` → `scripts/debug.sh stop` 通过；`designs/exports/simple-chat/chat-{light,dark}.png` 目视确认标题、加粗、表格、链接与字面 `<b>` 显示正常；OpenUI 卡片冒烟同时通过。
+- `scripts/debug.sh stop` → `pnpm smoke:visual` → `scripts/debug.sh stop` 通过；`.designs/exports/simple-chat/chat-{light,dark}.png` 目视确认标题、加粗、表格、链接与字面 `<b>` 显示正常；OpenUI 卡片冒烟同时通过。
 - 未验证：真实 Codex 会话的新回合分隔（单测以 Codex `--json` 事件格式覆盖，旧会话中已粘连的正文不会被改写）。
 
 提交前复核（2026-10-26，当前分支已含 Skills 迁移）：

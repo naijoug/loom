@@ -120,7 +120,7 @@
 | 4.1 | 引入最小 React 组件测试运行时，优先覆盖 Planning、Implementation Review、Testing gate、Done summary 和 Settings 保存 | `package.json`, `tests/components/`, M3 feature modules | M3 | 关键操作断言 typed client 请求、loading/error/disabled 状态和恢复路径 |
 | 4.2 | 新增 command-level 集成 harness，用临时项目调用 Rust service/command 内核 | `src-tauri/tests/`, `task_repository.rs`, `process_supervisor.rs` | M2 | 四阶段 happy path、blocker、两轮 repair、暂停/重启均可 headless 重放 |
 | 4.3 | 建立真实 Tauri 桌面 smoke，验证 invoke/listen、窗口重启和历史恢复；真实 Agent 凭据继续作为显式 canary | `tests/e2e/`, `scripts/start-local.sh` | 4.1, 4.2 | 无真实凭据可跑确定性路径；有凭据时可额外跑 Codex/Claude canary |
-| 4.4 | 将视觉 smoke 升级为基线图差异与失败 artifact，保留 DOM/尺寸检查 | `scripts/visual-smoke.sh`, `designs/audits/` or test artifacts | 3.5 | 人为引入布局偏移、主题色回退时测试失败并输出 diff 图 |
+| 4.4 | 将视觉 smoke 升级为基线图差异与失败 artifact，保留 DOM/尺寸检查 | `scripts/visual-smoke.sh`, `.designs/audits/` or test artifacts | 3.5 | 人为引入布局偏移、主题色回退时测试失败并输出 diff 图 |
 | 4.5 | CI 拆成 fast check、browser smoke、兼容性/桌面矩阵；避免每个 PR 都重复构建 release | `.github/workflows/ci.yml` | 4.1–4.4 | PR 门禁时间可控；主干/定时任务保留完整 artifact 和失败日志 |
 
 ### M5 — 降低用户认知负担并补运行诊断

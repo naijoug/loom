@@ -194,5 +194,5 @@ Rust 侧门禁本身是扎实的（`lifecycle.rs:246-278`、`implementation_revi
 
 - **未运行任何测试或构建**，本报告所有结论基于静态阅读；`docs/PLANS.md` 记录的"117 项 core 测试通过""21 项宿主测试通过"等数字未复跑验证。
 - 未做真实 CLI / 真实模型账户的运行时验收，`docs/plans/2026-09-30/13:17-craft-parity-rebuild.md` 第 24 节列出的 blocked 项（Pi SDK 原生停止/再发、真实 Guarded、Windows 进程树、发行包 Bun/worker）状态未变。
-- `designs/`、`experiments/`、`third-party/`、`scripts/` 未审。
+- `.designs/`、`experiments/`、`third-party/`、`scripts/` 未审。
 - 视觉/响应式/可访问性未做实际渲染验证，`requirements-audit.md` 声称的 26 屏 visual smoke 未复跑。

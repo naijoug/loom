@@ -25,7 +25,7 @@ linux-x11 = ["dep:x11-dl"]
 
 [package.metadata.cef.bundle]
 helper_name = "loom-browser-helper"
-resources_path = "../../designs/craft-v0.14.0/cef-probe-resources"
+resources_path = "resources"
 
 [dependencies]
 cef = { version = "=154.3.0", default-features = false, features = ["build-util"] }

@@ -1,7 +1,7 @@
 # Learn 界面与交互重设计计划
 
 - 创建时间：2026-11-02 21:36，America/Los_Angeles。
-- 状态：**U1–U3 已完成**（2026-11-02，用户确认 U0 设计稿与第 5 节三项决定后实施）；U4 自动验收完成（2026-11-03），桌面端目视查看待用户确认。设计稿见 [designs/learn](../../../designs/learn/README.md)，截图在 `designs/exports/learn-redesign/`（不入库）。
+- 状态：**U1–U3 已完成**（2026-11-02，用户确认 U0 设计稿与第 5 节三项决定后实施）；U4 自动验收完成（2026-11-03），桌面端目视查看待用户确认。设计稿见 [.designs/learn](../../../.designs/learn/README.md)，截图在 `.designs/exports/learn-redesign/`（不入库）。
 - 代码基线：`main` `90cf9f9`，加上本轮 i18n 改名。
 - 用户要求（2026-11-02，桌面实测截图）：左侧 “Studies” 改为 Learn；Learn 的 UI / UX 必须重新设计。
 - 范围：只改 `src/features/learn/` 前端、i18n、Learn 视觉矩阵与设计稿；不改 Rust 存储、作业流水线、IPC 契约和已有学习资料。不新增依赖（图布局不引入 ELK / dagre）。
@@ -31,7 +31,7 @@
 
 | 阶段 | 内容 | 出口 |
 |---|---|---|
-| U0 · 设计稿 | 基于 `learnFixture` 合成数据，在 `designs/learn/` 产出两栏布局、Overview 学习入口、未生成页、架构图悬停态的设计稿（亮 / 暗、1280 / 700） | 用户确认方向后再写代码 |
+| U0 · 设计稿 | 基于 `learnFixture` 合成数据，在 `.designs/learn/` 产出两栏布局、Overview 学习入口、未生成页、架构图悬停态的设计稿（亮 / 暗、1280 / 700） | 用户确认方向后再写代码 |
 | U1 · 布局与头部 | 两栏布局、学习切换器、进度指示与弹层、“更多”菜单 | 旧功能全部可达；Learn 视觉矩阵更新通过 |
 | U2 · 学习路径与按页生成 | Overview 入口页、上一页 / 下一页、已读状态、未生成页生成按钮、目录状态图标 | 合成矩阵覆盖已读 / 未生成 / 生成中 |
 | U3 · 架构图 | 层名上置、全名换行、悬停 / 聚焦高亮依赖、去重正文 | 截图中的 mini-swe-agent 规模（10 模块 / 4 层）无截断、默认无交叉边 |
@@ -76,7 +76,7 @@
 
 ## 4. 验证
 
-- 每阶段：`pnpm test`、`pnpm build`、`pnpm smoke:visual`（Learn 矩阵，截图 `designs/exports/learn/`）。
+- 每阶段：`pnpm test`、`pnpm build`、`pnpm smoke:visual`（Learn 矩阵，截图 `.designs/exports/learn/`）。
 - U4：完整 `pnpm check`；`scripts/debug.sh stop` → `scripts/debug.sh desktop` 打开已有学习（只读，不生成、不删除）→ `scripts/debug.sh stop`。
 - 不改 Rust 与契约，因此不需要重跑真实 Agent 学习。
 

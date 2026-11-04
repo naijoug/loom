@@ -176,9 +176,9 @@
     "binary rich viewer"
   ],
   "screenshots": [
-    "designs/workbench-m1/06-legacy-import-result.jpg",
-    "designs/workbench-m1/07-imported-chat.jpg",
-    "designs/workbench-m1/08-imported-resource.jpg",
-    "designs/workbench-m1/09-import-offline-restart.jpg"
+    ".designs/workbench-m1/06-legacy-import-result.jpg",
+    ".designs/workbench-m1/07-imported-chat.jpg",
+    ".designs/workbench-m1/08-imported-resource.jpg",
+    ".designs/workbench-m1/09-import-offline-restart.jpg"
   ]
 }

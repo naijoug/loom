@@ -19,7 +19,7 @@
 | `pnpm smoke:visual` | passed；Chat、功能栏、Skills、Learn、Research、Discuss、OpenUI 全部合成矩阵；[Discuss 结果](samples/discuss-2026-10-27/visual.json) |
 | 原生桌面 | not-tested；待验证真实运行切功能、退出中断、恢复重试与原生窗口交互 |
 
-合成截图位于 `designs/exports/discuss/`。人工查看宽屏独立回答和 700px 中文深色截图：并排/堆叠符合布局，无横向溢出。旧 Skills 截图重复生成的差异未计入本次代码修改。
+合成截图位于 `.designs/exports/discuss/`。人工查看宽屏独立回答和 700px 中文深色截图：并排/堆叠符合布局，无横向溢出。旧 Skills 截图重复生成的差异未计入本次代码修改。
 
 ## 双 CLI 真实讨论
 

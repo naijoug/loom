@@ -1,4 +1,4 @@
-/* App frame: activity rail + feature panes. Layout spec: designs/activity-rail/README.md. */
+/* App frame: activity rail + feature panes. Layout spec: .designs/activity-rail/README.md. */
 .app-shell {
   display: flex;
   height: 100vh;

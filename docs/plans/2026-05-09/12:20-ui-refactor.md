@@ -3,7 +3,7 @@
 - **日期**：2026-05-09
 - **作者**：Gemini CLI
 - **状态**：可执行 (Ready)
-- **关联设计**：`designs/loom.pen` (Option 4: Themed Hybrid)
+- **关联设计**：`.designs/loom.pen` (Option 4: Themed Hybrid)
 
 ## 目标
 
@@ -34,7 +34,7 @@
 
 - 核心产品流程和状态机定义已经在 `docs/requirements.md` 和 MVP 计划中明确。
 - 基础的 React + Vite + Tauri v2 框架已搭建完毕（见 `package.json`、`src-tauri/`）。
-- 全新的设计原稿已就绪（`designs/loom.pen`，包含 Light/Dark 双主题与 9 个 token）。
+- 全新的设计原稿已就绪（`.designs/loom.pen`，包含 Light/Dark 双主题与 9 个 token）。
 - 当前 `src/App.tsx`（~234 行）与 `src/App.css`（~507 行）已包含 M1 spike UI：Tauri `health_check` 调用、spike runner 启停、`loom://spike-log` 实时日志监听和基础工作台布局。UI 视觉层需要重构为设计稿结构，但 Tauri bridge、日志流状态逻辑与 `src/domain/` 领域模型需要保留并迁移。
 - 依赖现状：仅有 `react`、`react-dom`、`@tauri-apps/*`，**未安装** `lucide-react`。本计划批准在 M2.3 引入 `lucide-react`，理由：设计稿明确使用 Lucide 图标（`hexagon`、`folder`、`bot`、`check`、`loader`、`circle`、`chevron-right`、`send`），自绘 8+ 个 SVG 会增加维护成本且偏离前端设计约定。
 
@@ -107,7 +107,7 @@
 
 ## 验证策略
 
-- **视觉回归**：将开发好的组件截图或并排对比 `designs/loom.pen`，确保 Paddings、Gaps、Colors 的严格还原；基准视口固定 1200×800。
+- **视觉回归**：将开发好的组件截图或并排对比 `.designs/loom.pen`，确保 Paddings、Gaps、Colors 的严格还原；基准视口固定 1200×800。
 - **状态测试**：通过 React DevTools 手动更改主题 Context 的值，确保全局所有界面组件在 `light` 和 `dark` 之间过渡自然，没有遗漏的硬编码颜色；用 `grep -rE "#[0-9A-Fa-f]{3,8}" src/components` 抽检无散落色值。
 - **响应式测试**：在 1024 / 1200 / 1440 三档宽度下，确保分栏布局使用 flex 或 grid 正常收缩，不会出现严重的文字溢出或横向滚动。
 - **Tauri bridge 回归**：确认健康检查按钮仍能调用 `health_check`；spike run 能启动/停止；`loom://spike-log` 事件能实时追加到 Debug/Logs 面板。

@@ -72,7 +72,7 @@
     - 新 Chat 回合的错误文本格式变化（旧：`agent exited with status exit status: N; stderr: …`），旧会话由 `ErrorText` 兼容读取。
 
 - **P5 完成（2026-10-27）**：
-  - 布局稿 `designs/activity-rail/README.md`（按“默认决策执行”的指示直接实施，未单独确认）。
+  - 布局稿 `.designs/activity-rail/README.md`（按“默认决策执行”的指示直接实施，未单独确认）。
   - `src/shell/`：
     - `features.ts` 功能注册表（Chat、Learn，懒加载），`AppView = FeatureId | "settings"`；
     - `ActivityRail.tsx` 左侧 52px 功能栏：注册表顺序在上、Settings 置底，当前项 `aria-current="page"`，提示含快捷键，按钮带 `data-view`；macOS 顶部 38px 拖拽区；
@@ -87,7 +87,7 @@
   - `check-layers.mjs` 规则 4：`features/<x>` 不引用其它功能的代码或 CSS，`components` / `hooks` / `api` 不引用 `features/`；已用临时违规导入验证脚本会失败。
   - 验证：
     - `pnpm check` 通过（前端 136，新增注册表 / 快捷键 / 切换保留 Chat 草稿、模型输入随能力显示共 4 项；Rust 298 通过 / 27 忽略）；
-    - `pnpm smoke:visual` 通过：新增功能栏矩阵（zh/en × 深浅 × 700px：52px、当前项、⌘/Ctrl+2 与 ⌘/Ctrl+, 切换、无横向溢出）与 S6（1280px 打开会话写草稿，切到 Learn 再回来会话与草稿保持），截图在 `designs/exports/activity-rail/`（不入库）；Learn / Skills / 内联卡片 smoke 改由功能栏进入后通过。
+    - `pnpm smoke:visual` 通过：新增功能栏矩阵（zh/en × 深浅 × 700px：52px、当前项、⌘/Ctrl+2 与 ⌘/Ctrl+, 切换、无横向溢出）与 S6（1280px 打开会话写草稿，切到 Learn 再回来会话与草稿保持），截图在 `.designs/exports/activity-rail/`（不入库）；Learn / Skills / 内联卡片 smoke 改由功能栏进入后通过。
     - 未做：桌面人工检查“切换功能时进行中的 Chat 回合不中断”。Chat 常驻挂载由单测与 S6 覆盖，但真实流式回合未在桌面上切换验证。
   - 与计划的偏差：
     - `AgentPicker` 未加权限参数：Chat 的权限仍由 `ModePicker` 负责，Learn 固定只读，没有调用方需要。
@@ -97,7 +97,7 @@
     - 共享组件的类名沿用 `chat-` 前缀，避免大面积改样式；新组件用 `activity-rail-*`、`app-shell-*`、`agent-model-input`。
     - 计划未列出的移动：`app-update` 放 `components/app-update/`，`inlineCardsSetting` 放 `hooks/`。
 - **P6 完成（2026-10-27）**：
-  - 范围按 §8-2 默认决策执行（未单独确认）：可选项目 + 单 Agent + 带引用报告 + 追问；数据只在应用数据目录 `research/<id>/`，不写入项目。需求文档新增“Research 范围”并注明来源；布局稿 `designs/research/README.md`。
+  - 范围按 §8-2 默认决策执行（未单独确认）：可选项目 + 单 Agent + 带引用报告 + 追问；数据只在应用数据目录 `research/<id>/`，不写入项目。需求文档新增“Research 范围”并注明来源；布局稿 `.designs/research/README.md`。
   - Rust `research/`：
     - `store.rs`：`research.json`、每问 `turns/<n>.md`、`jobs/<job>/` 日志与 `job.json`；原子写；启动时把无存活作业的“运行中”问题标为已中断；每个研究同时只有一个作业；
     - `prompt.rs` + `prompts/{report,followup}.md`：报告 / 追问提示词（`PROMPT_VERSION` 1），`<<<LOOM_REPORT` 标记提取，回放历史按 24k 字符预算保留最新问答；
@@ -109,7 +109,7 @@
   - 文档：`docs/architecture/research-contracts.md`（新）、`architecture.md`、`learn-contracts.md`、`security-policy.md`、`testing.md`、`scripts/README.md`、功能栏布局稿。
   - 验证：
     - 单测：Rust Research 13 项（存储、提示词、引用、追问续接与回放、命令变化回放、项目写入警告、失败与取消）；前端 Research 4 项与功能栏测试更新；
-    - `pnpm smoke:visual` 通过：新增 `research-smoke.mjs`（截图在 `designs/exports/research/`，不入库），功能栏矩阵加 ⌘/Ctrl+3；
+    - `pnpm smoke:visual` 通过：新增 `research-smoke.mjs`（截图在 `.designs/exports/research/`，不入库），功能栏矩阵加 ⌘/Ctrl+3；
     - `pnpm check` 通过（前端 140；Rust 311 通过 / 29 忽略）；
     - 真实 Codex 0.164.0 通过：首问 165 s、25 条引用全部有效；追问原生续接 116 s、19 条全部有效；项目无变化，见 [Research 验收记录](../../dogfood/2026-10-27-research-acceptance.md)。
     - 未做：Claude 真实用例（未运行；Learn 验收时本机 Claude 代理认证失败，本轮未重试）；桌面人工检查（功能栏进入、真实运行中停止、重启后中断显示）。
@@ -126,7 +126,7 @@
   - D1：独立 `discuss/` 存储与 IPC。参与者使用内部 `p1`–`p4` 路径键，2–4 个不同 Agent/模型组合；第一人为主持。后端校验预计调用数 `2N+1` 的显式确认。
   - D2：首轮并行 → 次轮并行 → 主持汇总。每次经 `agent::run` 以 explore 执行，最多 4 并发、单次 15 分钟；启动检查失败也作为该项失败，其余继续。空回答为失败；日志、参数、状态与每次尝试持久化。
   - D3：每讨论仅一个活动编排；停止取消所有活动调用并标记未运行项；重启只恢复可读历史，不自动花费额度续跑。失败/停止/中断项可单独重试，明确确认 1 次调用；上游重试令相关下游结果标为过时，保留旧报告并允许显式重新生成，禁止静默追加调用。
-  - D4：功能栏第 4 项、参与者/模型/项目/语言表单、调用确认、按轮次对照、缺席/过时提示、汇总、日志、源码引用和删除确认；中英文、深浅与窄窗口。布局记录在 `designs/discuss/`。
+  - D4：功能栏第 4 项、参与者/模型/项目/语言表单、调用确认、按轮次对照、缺席/过时提示、汇总、日志、源码引用和删除确认；中英文、深浅与窄窗口。布局记录在 `.designs/discuss/`。
   - D5：伪 CLI 验证真实并发、轮次屏障、部分失败、启动失败、取消、单项重试与过时传播、重启恢复、路径/确认校验；前端组件测试和合成矩阵；完整 check、Tauri no-bundle；Codex + 另一 CLI 的 opt-in 真实讨论（环境受限如实 blocked）。
   - 产出：需求、Discuss 契约、测试指南、验收记录及计划索引同步；P8 的总体收尾不冒充本阶段完成。
 
@@ -322,7 +322,7 @@ src/
   - 不可用的 Agent 显示原因，不能提交；
   - Chat 继续用它（不显示模型输入，保持现状）；Learn、Research、Discuss 显示模型输入；
   - UI 只传 `agentId` / `model` / `permission`，不拼接 CLI 参数。
-- **设计稿**：先在 `designs/` 画图标栏与四个功能的布局稿（深浅色、窄窗口），确认后再实现。
+- **设计稿**：先在 `.designs/` 画图标栏与四个功能的布局稿（深浅色、窄窗口），确认后再实现。
 
 ### 5.3 Research（MVP，默认决策见 §8）
 
@@ -401,7 +401,7 @@ src/
 ### P5 前端外壳与左侧功能栏
 
 - **产出**：
-  - `designs/` 布局稿；
+  - `.designs/` 布局稿；
   - `src/shell/`（`ActivityRail`、`AppShell`、`features.ts`）；
   - `src/components/`（`Markdown`、`externalLink`、`ErrorText`、`AgentPicker`），并把 `features/*` 之间的引用全部改为引用 `components/`；
   - `api/agents.ts`；

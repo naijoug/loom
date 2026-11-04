@@ -28,9 +28,9 @@
 | 双端契约 | passed | 第 22 个 Skills 命令及 MigrationPreview 样本；初次命令排序不一致已修正后复验 |
 | 完整工作区 `pnpm check` | passed | 前端 128、Rust 275；25 ignored；build、fmt、Clippy、文档检查包括在内。无真实模型调用 |
 | release app bundle | passed | `pnpm tauri build --bundles app`；未签名/公证/发布 |
-| `pnpm smoke:visual` | passed | 合成页面新增显式迁移预览、配置存在性及无 Apply 入口；包含既有 Chat/Skills 矩阵。截图 [网页预览](../../designs/exports/skills/migration-preview.png) |
+| `pnpm smoke:visual` | passed | 合成页面新增显式迁移预览、配置存在性及无 Apply 入口；包含既有 Chat/Skills 矩阵。截图 [网页预览](../../.designs/exports/skills/migration-preview.png) |
 | 实际随包 CLI | passed | 同一临时旧库与临时项目连跑两次，preview 相同；旧文件/权限不变，新的 Loom 数据目录不出现；fake key 不在输出；[结构化记录](samples/skills-migration/m4-readonly-cli.json) |
-| 原生主窗口 | passed | 新 profile，显式输入临时旧库，global 未勾选；来源 alias/缓存被识别，仅显示 key/model 存在性，无执行按钮；扫描前后旧样本哈希/权限不变；没有注册来源或导入配置。[原生记录](samples/skills-migration/m4-readonly-native.json)、[截图](../../designs/exports/skills/migration-preview-native.png) |
+| 原生主窗口 | passed | 新 profile，显式输入临时旧库，global 未勾选；来源 alias/缓存被识别，仅显示 key/model 存在性，无执行按钮；扫描前后旧样本哈希/权限不变；没有注册来源或导入配置。[原生记录](samples/skills-migration/m4-readonly-native.json)、[截图](../../.designs/exports/skills/migration-preview-native.png) |
 
 测试只使用本轮合成旧数据，未读取真实私人旧库作为样本，不替换 HOME/CODEX_HOME，不调用任何账号。GUI 进入 Skills 时原有来源列表可能初始化隔离 profile 中的空库目录；迁移预览服务自身不创建任何文件，CLI 的零初始化由目录前后对比单独证明。
 

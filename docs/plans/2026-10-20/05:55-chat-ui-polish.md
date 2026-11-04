@@ -38,7 +38,7 @@
 ## 4. 验证
 
 - 合成网页：`scripts/debug.sh stop` → `scripts/debug.sh web` → 打开 `?fixture=simple-chat`，分别截图检查深色、浅色、窄屏（小于 760px）、新会话页和设置页，结束后执行 `scripts/debug.sh stop`。
-- `pnpm smoke:visual`：既有断言保持通过，截图更新到 `designs/exports/simple-chat/`。
+- `pnpm smoke:visual`：既有断言保持通过，截图更新到 `.designs/exports/simple-chat/`。
 - `pnpm test`、`pnpm build`。
 - 桌面验收：不在本计划内，仍按验收记录的“下一步”执行；应用内提示条替换 `window.confirm` 后，桌面验收需补看这两处确认。
 
@@ -57,7 +57,7 @@
 验证（2026-10-20）：
 
 - 内置浏览器手动检查 `?fixture=simple-chat`：深色/浅色会话页、新会话页、工具卡片展开、Auto-run 提示条（开启）、`/agent` 切换提示条（Esc 取消）、斜杠菜单、Agent 菜单、设置页 Agents/外观；700px 宽度下无横向溢出。
-- `pnpm smoke:visual` 通过（`kind: synthetic-web-only`），截图已更新到 `designs/exports/simple-chat/`。
+- `pnpm smoke:visual` 通过（`kind: synthetic-web-only`），截图已更新到 `.designs/exports/simple-chat/`。
 - `pnpm test` 82/82、`pnpm build`、`pnpm docs:release:check`/`docs:release:test` 通过。本轮未改 Rust，未重跑 cargo、clippy 和 tauri build。
 - 桌面（2026-10-20，用户手动）：`scripts/debug.sh desktop` 启动 Tauri 开发版，用户确认 Auto-run 首次确认和切换 Agent 两个应用内提示条在 WKWebView 中正常显示和生效；结束后执行 `scripts/debug.sh stop`。其余界面的桌面检查未单独记录。
 - 测试改动：`tests/unit/chatExport.test.cjs` 按 `aria-label` 定位导出按钮（导出按钮改为图标按钮）。

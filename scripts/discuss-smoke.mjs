@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 // Synthetic DEV fixtures, never IPC or model calls.
 export async function discussSmoke(client, { evaluate, waitFor, click, clickText, screenshot }) {
-  const output = join(process.cwd(), "designs/exports/discuss");
+  const output = join(process.cwd(), ".designs/exports/discuss");
   mkdirSync(output, { recursive: true });
   const checks = [];
   const open = async (scenario = "ready", locale = "en", theme = "light", width = 1280) => {

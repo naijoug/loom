@@ -25,7 +25,7 @@
 | 8.1 入口“与 Chat、Settings 并列” | Chat 侧边栏底部 Learn 按钮切换到 `learn` 视图（Settings 入口同在侧边栏底部） | 现有 Chat 布局没有独立顶栏 |
 | L5 可选导出 Wiki | 未做 | 可选项 |
 
-验证（详见验收记录）：`pnpm check`、`pnpm tauri build --no-bundle`、`pnpm smoke:visual`（含 Learn 矩阵，截图在 `designs/exports/learn/`）通过；Codex 真实研究 hexyl 通过（825 s，11 个阶段，211 条引用全部有效，checkout 未变）；Claude Code 因本机 CLI 认证失败 blocked；用户桌面验收待进行。
+验证（详见验收记录）：`pnpm check`、`pnpm tauri build --no-bundle`、`pnpm smoke:visual`（含 Learn 矩阵，截图在 `.designs/exports/learn/`）通过；Codex 真实研究 hexyl 通过（825 s，11 个阶段，211 条引用全部有效，checkout 未变）；Claude Code 因本机 CLI 认证失败 blocked；用户桌面验收待进行。
 
 ## 1. 目标
 
@@ -243,7 +243,7 @@ Rust 校验：id 唯一且合法、`dependsOn`/`moduleIds` 指向存在的模块
 
 ### L7 视觉回归、真实验收与资料
 
-- 产出：`pnpm smoke:visual` 增加 Learn 矩阵（新建、进度、Wiki 目录、引用跳转、无效引用、深浅主题、中英文、窄窗口），截图放 `designs/exports/learn/`；真实桌面验收清单写入 `docs/testing.md`；验收记录 `docs/dogfood/2026-10-xx-learn-acceptance.md`；回填本计划状态与 `docs/PLANS.md`。
+- 产出：`pnpm smoke:visual` 增加 Learn 矩阵（新建、进度、Wiki 目录、引用跳转、无效引用、深浅主题、中英文、窄窗口），截图放 `.designs/exports/learn/`；真实桌面验收清单写入 `docs/testing.md`；验收记录 `docs/dogfood/2026-10-xx-learn-acceptance.md`；回填本计划状态与 `docs/PLANS.md`。
 - 依赖：L5（L6 若做）。
 - 验证：`pnpm check`、`pnpm tauri build --no-bundle`、`smoke:visual`；Claude Code 与 Codex 至少各一次完整真实研究。
 

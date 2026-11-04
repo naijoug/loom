@@ -18,7 +18,7 @@ Skills 原生验收可先用 `pnpm tauri build --debug --bundles app` 构建，�
 | `pnpm check` | 分层检查（`scripts/check-layers.mjs`）、Prettier 格式检查（`pnpm format:check`，修复用 `pnpm format`）、release 文档校验、OpenUI 提示词同步检查、前端测试/build、Rust fmt/clippy/test |
 | `pnpm tauri build --no-bundle` | 编译桌面程序，不做发布或分发验收 |
 | `pnpm smoke:chat` | 生产 Chat 仓储/runtime 的真实本地 fixture 进程，无模型请求 |
-| `pnpm smoke:visual` | `simple-chat-smoke.sh`：按规定启动/停止预览，Chrome 检查新会话、分组、工具差异、主题、语言和窄窗口；功能栏矩阵（zh/en × 深浅 × 700px：52px 宽、当前项、⌘/Ctrl+2 与 ⌘/Ctrl+, 切换，以及切换后会话和草稿保持）截图在 `designs/exports/activity-rail/` |
+| `pnpm smoke:visual` | `simple-chat-smoke.sh`：按规定启动/停止预览，Chrome 检查新会话、分组、工具差异、主题、语言和窄窗口；功能栏矩阵（zh/en × 深浅 × 700px：52px 宽、当前项、⌘/Ctrl+2 与 ⌘/Ctrl+, 切换，以及切换后会话和草稿保持）截图在 `.designs/exports/activity-rail/` |
 | `pnpm smoke` / `pnpm smoke:interaction` | 同一简化 Chat 浏览器门禁的兼容别名，无需重复执行 |
 | `pnpm smoke:diagnostics` | Chat 诊断包的离线 Rust 回归 |
 | `pnpm e2e:complete` | 完整工程门禁和浏览器检查；可选发布构建仍需独立分发验证 |
@@ -27,7 +27,7 @@ Skills 原生验收可先用 `pnpm tauri build --debug --bundles app` 构建，�
 | `node scripts/check-layers.mjs` | 分层规则。Rust：`agent/` 不引用功能模块；Chat、Learn、Research 互不引用；chat/learn/research 生产代码不直接起进程（`#[cfg(test)]` 模块除外）（白名单：`learn/fetch.rs` 的 git），Agent CLI 只经 `agent::run` 启动。前端：`src/features/<x>` 不引用其它功能的代码或 CSS（白名单 `settings→skills`），`src/components`、`src/hooks`、`src/api` 不引用 `features/` |
 | `pnpm check:core` | 显式选择冻结内核检查，不属于主门禁 |
 
-网页截图与机器结果位于 `designs/exports/simple-chat/`。Chrome 可用 `CHROME` 覆盖可执行文件；截图是合成界面证据，不能替代真实 CLI 或 Tauri 交互。
+网页截图与机器结果位于 `.designs/exports/simple-chat/`。Chrome 可用 `CHROME` 覆盖可执行文件；截图是合成界面证据，不能替代真实 CLI 或 Tauri 交互。`.designs/` 整体被 `.gitignore` 忽略，只作为本机输出，不要用 `git add -f` 提交。
 
 真实 CLI 测试通过 `LOOM_REAL_CHAT=1 cargo test --manifest-path src-tauri/Cargo.toml <test-name> -- --ignored --nocapture` 显式启用，会消耗模型额度。测试名和当前结果见 [测试指南](../docs/testing.md) 与 [本轮验收](../docs/dogfood/2026-10-20-simple-chat-acceptance.md)。
 
@@ -35,17 +35,17 @@ Skills 原生验收可先用 `pnpm tauri build --debug --bundles app` 构建，�
 
 Research 新 R0 使用 `research-target-probe.mjs --node <兼容Node绝对路径> --rea <固定包入口绝对路径> --output <全新临时目录>`，网站检查另传 `--chrome <Chrome绝对路径>`。探针创建自己的 JS App／本机网页，并验证 MCP、静态分析、Evidence 导出、错误／超限／取消；不安装依赖、不改用户 MCP，浏览器只使用专用 profile。`research-cli-probe.mjs <临时目录> <模型名>` 调用真实 Claude 无工具 profile，会使用当前账号额度；不提供模型名时沿用 CLI 配置。结果与实际限制见 [R0 验收](../docs/dogfood/2026-10-28-research-targets-r0.md)。这两项为显式验收脚本，不属于日常默认 CI。
 
-Skills 视觉验收由 `pnpm smoke:visual` 同轮运行 `skills-smoke.mjs`。仅 DEV 的 `?fixture=simple-chat&skillsFixture=ready` 注入合成 API，可选 empty/loading/error/cancel；生产构建不包含该 fixture。截图和机器结果位于 `designs/exports/skills/`。
+Skills 视觉验收由 `pnpm smoke:visual` 同轮运行 `skills-smoke.mjs`。仅 DEV 的 `?fixture=simple-chat&skillsFixture=ready` 注入合成 API，可选 empty/loading/error/cancel；生产构建不包含该 fixture。截图和机器结果位于 `.designs/exports/skills/`。
 
-Learn 视觉验收同样由 `pnpm smoke:visual` 同轮运行 `learn-smoke.mjs`。仅 DEV 的 `?fixture=simple-chat&learnFixture=ready` 注入合成 Learn API（不调用 IPC、git 或模型），可选 empty/running/failed/error；截图和机器结果位于 `designs/exports/learn/`。
+Learn 视觉验收同样由 `pnpm smoke:visual` 同轮运行 `learn-smoke.mjs`。仅 DEV 的 `?fixture=simple-chat&learnFixture=ready` 注入合成 Learn API（不调用 IPC、git 或模型），可选 empty/running/failed/error；截图和机器结果位于 `.designs/exports/learn/`。
 
-Research 视觉验收同样由 `pnpm smoke:visual` 同轮运行 `research-smoke.mjs`。仅 DEV 的 `?fixture=simple-chat&researchFixture=ready` 注入合成 Research API（不调用 IPC、git 或模型），可选 empty/running/failed/error；截图和机器结果位于 `designs/exports/research/`。
+Research 视觉验收同样由 `pnpm smoke:visual` 同轮运行 `research-smoke.mjs`。仅 DEV 的 `?fixture=simple-chat&researchFixture=ready` 注入合成 Research API（不调用 IPC、git 或模型），可选 empty/running/failed/error；截图和机器结果位于 `.designs/exports/research/`。
 
 原生源码隔离探针可给 `LOOM_PREVIEW_BINARY` 搭配绝对 `LOOM_PREVIEW_SANDBOX_PROFILE`，debug.sh 在 macOS 用 sandbox-exec 启动准确 binary。2026-10-22 当前主机上即使 allow-default profile 也无法由原生自动化识别窗口，普通启动正常；因此此探针暂不能作为 G1 桌面通过证据，详见 Skills 当日验收。
 
 ### Discuss 合成矩阵
 
-`discuss-smoke.mjs` 由 `pnpm smoke:visual` 调用，只操作 DEV `discussFixture`。覆盖两轮/汇总、失败/重试/取消、调用确认、引用/日志、中英文/深浅/窄窗口和 Chat 草稿保持。截图与结果在 `designs/exports/discuss/`；真实 CLI 入口见 [测试指南](../docs/testing.md#discussp7)。
+`discuss-smoke.mjs` 由 `pnpm smoke:visual` 调用，只操作 DEV `discussFixture`。覆盖两轮/汇总、失败/重试/取消、调用确认、引用/日志、中英文/深浅/窄窗口和 Chat 草稿保持。截图与结果在 `.designs/exports/discuss/`；真实 CLI 入口见 [测试指南](../docs/testing.md#discussp7)。
 
 ### P8 原生验收边界
 

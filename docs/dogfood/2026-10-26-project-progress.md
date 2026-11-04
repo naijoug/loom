@@ -37,7 +37,7 @@
 | `pnpm smoke:visual` | passed | 补充脚本后运行；Chat 10 项、Skills 5 项、OpenUI 10 项分类检查通过，均为 synthetic-web-only |
 | `scripts/debug.sh status` | 已清理 | smoke 使用 debug.sh 启停；网页与桌面 dev 均未运行 |
 
-持久化证据：[机器摘要](samples/progress-2026-10-26/summary.json)、[完整门禁日志](samples/progress-2026-10-26/check.log)、[构建日志](samples/progress-2026-10-26/build.log)、[合成回归日志](samples/progress-2026-10-26/visual.log)。各矩阵 JSON 同目录保存。日志 SHA-256 和补充脚本 SHA-256 写入摘要；截图生成于 `designs/exports/`，本轮无界面修改，未保留重复生成的 PNG 差异。
+持久化证据：[机器摘要](samples/progress-2026-10-26/summary.json)、[完整门禁日志](samples/progress-2026-10-26/check.log)、[构建日志](samples/progress-2026-10-26/build.log)、[合成回归日志](samples/progress-2026-10-26/visual.log)。各矩阵 JSON 同目录保存。日志 SHA-256 和补充脚本 SHA-256 写入摘要；截图生成于 `.designs/exports/`，本轮无界面修改，未保留重复生成的 PNG 差异。
 
 ## 文档与代码差异及处理
 

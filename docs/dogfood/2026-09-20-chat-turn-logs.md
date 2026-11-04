@@ -34,7 +34,7 @@
 
 ## 视觉与交互
 
-通过 `scripts/debug.sh web` 在固定端口 1420 查看 [视觉样例](../../designs/chat-run-log-preview.html)，使用生产 ChatRunDetails 与明确标注的合成数据，**不是桌面 IPC 或真实 CLI 验收**。CUA 实际展开面板、加载更多、切换 stderr，核对正常和 360px 内容区的换行/按钮与日志。截图观察保留在本任务工具输出，没有宣称已生成独立截图文件。
+通过 `scripts/debug.sh web` 在固定端口 1420 查看 [视觉样例](../../.designs/chat-run-log-preview.html)，使用生产 ChatRunDetails 与明确标注的合成数据，**不是桌面 IPC 或真实 CLI 验收**。CUA 实际展开面板、加载更多、切换 stderr，核对正常和 360px 内容区的换行/按钮与日志。截图观察保留在本任务工具输出，没有宣称已生成独立截图文件。
 
 预览首次因沙箱禁止监听端口而启动失败；获准启动本地服务后，将预览绑定到活动工具进程完成检查。结束时已关闭预览页并执行 `scripts/debug.sh stop`；未操作用户的 Loom 窗口。
 

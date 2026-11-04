@@ -24,7 +24,7 @@
 | 前端/脚本定向回归 | `pnpm test -- tests/unit/debugScript.test.cjs tests/unit/connectionSettings.test.cjs tests/unit/workbenchSdk.test.cjs`，6/6。新增 bundled SDK 路径初始化及无效路径拒绝回归。 |
 | 脚本检查 | Bash 语法、Python 编译、静态 inventory 校验通过。 |
 
-原生验收沿用已有 Workbench debug app，本轮没有修改 Rust/React 应用代码或重建发行包；机器摘要保存实际使用的 app/probe hash、来源 hash、持久化终态与文件 hash，见 [证据清单](m2-http-native-evidence.json)。截图及 AX 在 [原生资源目录](../../../designs/workbench-m2/http-native-2026-10-10/)，其中 [连接保存](../../../designs/workbench-m2/http-native-2026-10-10/01-connection-saved.png)、[停止](../../../designs/workbench-m2/http-native-2026-10-10/04-sdk-stopped.png)、[允许](../../../designs/workbench-m2/http-native-2026-10-10/05-sdk-allowed.png) 和 [重启](../../../designs/workbench-m2/http-native-2026-10-10/06-sdk-restarted.png) 均留存。截图已检查；没有录屏。
+原生验收沿用已有 Workbench debug app，本轮没有修改 Rust/React 应用代码或重建发行包；机器摘要保存实际使用的 app/probe hash、来源 hash、持久化终态与文件 hash，见 [证据清单](m2-http-native-evidence.json)。截图及 AX 在 [原生资源目录](../../../.designs/workbench-m2/http-native-2026-10-10/)，其中 [连接保存](../../../.designs/workbench-m2/http-native-2026-10-10/01-connection-saved.png)、[停止](../../../.designs/workbench-m2/http-native-2026-10-10/04-sdk-stopped.png)、[允许](../../../.designs/workbench-m2/http-native-2026-10-10/05-sdk-allowed.png) 和 [重启](../../../.designs/workbench-m2/http-native-2026-10-10/06-sdk-restarted.png) 均留存。截图已检查；没有录屏。
 
 ## 复现
 

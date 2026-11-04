@@ -66,7 +66,7 @@ M3-01 配置切片通过；M3-02 四 provider 实际执行/超时/取消、M3-03
 - 共用操作列表改为返回最近 1000 条终态及全部运行中任务，不再因磁盘记录超过 1000 条报错。取得已退出 owner 的锁后重新读取记录，避免把刚完成的操作误标 interrupted。
 - 回归覆盖 1001 条无关操作、1601 条翻译、超过 3000 个文件、老运行中任务保留、身份不匹配、中断恢复、旧历史保全和重新打开入口。
 - 最终 release 原生包使用隔离 profile：先完成一次真实 IPC → 合成 Codex 子进程 → 结果持久化；停止后加入 1601 条合成历史。库中共 1604 个操作记录、3204 个翻译文件，重启后显示旧结果且 Translate 可用，再次点击成功产生新的结果。源文档哈希不变，所有 1601 条历史保留。此处“真实 IPC/原生”不代表调用了真实模型。
-- 证据：[大历史原生记录](samples/skills-migration/m3-large-history-native.json)、[原生截图](../../designs/exports/skills/native-large-history.png)。
+- 证据：[大历史原生记录](samples/skills-migration/m3-large-history-native.json)、[原生截图](../../.designs/exports/skills/native-large-history.png)。
 
 ### M3-02/03 功能与验证
 
@@ -100,7 +100,7 @@ M3-01 配置切片通过；M3-02 四 provider 实际执行/超时/取消、M3-03
 
 - 完整 `pnpm check`：前端 125、Rust 265 通过，25 ignored；包含 build/fmt/Clippy/文档检查。其后新增本机取消用例独立复验，最终计数与退出码见本段后续补记。
 - 最终 `pnpm tauri build --bundles app` 通过，包含 release 编译；没有签名、公证、发布。本轮未另称执行了 no-bundle 命令。
-- `pnpm smoke:visual` 最终通过，包含原 Chat/OpenUI 检查和新的 Skills 矩阵。最初自动化因页面切换等待与按钮文案选择器失败，修正后重跑；不是生产安装失败。截图均在 `designs/exports/skills/`。
+- `pnpm smoke:visual` 最终通过，包含原 Chat/OpenUI 检查和新的 Skills 矩阵。最初自动化因页面切换等待与按钮文案选择器失败，修正后重跑；不是生产安装失败。截图均在 `.designs/exports/skills/`。
 - 受限 sandbox 首次禁止 loopback/进程组检查，经运行环境批准后完整复验；未把受限运行失败隐去或记为通过。开发期间修正了 CommonJS 单测不能直接编译 `import.meta` 的 fixture 注入问题，最终仅由 main 的 DEV 分支注入，生产默认无 mock。
 - 日志：`/tmp/loom-skills-m3-g1-check.log`、`/tmp/loom-skills-m3-g1-bundle.log`、`/tmp/loom-skills-g1-visual.log`、`/tmp/loom-skills-{github,gitlab}-git-acceptance.log`、`/tmp/loom-skills-local-cancel-final.log`。关键结果另存上述 JSON；临时日志不是唯一证据。
 - 预览已按 debug.sh stop 停止，临时安装已卸载。继续保留临时库供复核；没有删除真实历史来解决容量问题。

@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 // Learn visual acceptance against the DEV-only `learnFixture` API: no IPC, git or model calls.
 export async function learnSmoke(client, { evaluate, waitFor, click, clickText, screenshot }) {
-  const output = join(process.cwd(), "designs/exports/learn");
+  const output = join(process.cwd(), ".designs/exports/learn");
   mkdirSync(output, { recursive: true });
   const root = "http://127.0.0.1:1420/?fixture=simple-chat&learnFixture=";
   const checks = [];

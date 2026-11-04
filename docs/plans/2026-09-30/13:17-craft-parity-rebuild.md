@@ -81,7 +81,7 @@
 | F01 | 首次启动、连接选择、登录/重认证、引导 | `renderer/components/onboarding/` | M2–3：空配置启动→连接测试→Workspace→首次会话；取消/失败可恢复。 | partial | [连接切片](../../dogfood/craft-v014/m2-connections-progress.md)与[原生补验](../../dogfood/craft-v014/m2-http-native-progress.md)：目录、Keychain、保存/留空保留/重启已有证据。登录、重认证和引导未做。 |
 | F02 | Workspace 与 Project 管理，本地/远程切换、默认值 | `shared/workspaces/`、`shared/projects/` | M1/M3/M7：可无 Project 聊天；切换不串配置、草稿和资源。 | partial | [内核](../../dogfood/craft-v014/m1-core-progress.md)、[桌面](../../dogfood/craft-v014/m1-desktop-progress.md)：可无 Project。远程切换未做。 |
 | F03 | 多列 Shell、导航历史、窗口/分栏、搜索与命令入口 | `renderer/components/app-shell/`、`contexts/NavigationContext.tsx` | M3：分栏尺寸、前进后退、多窗口、空态、持久化与快捷键。 | not-tested | 无多列 Shell、导航历史或分栏证据。调试开关下的基础 Shell 不计入。 |
-| F04 | Inbox、会话状态、归档、旗标、标签/值、筛选、未读 | `SessionList.tsx`、`shared/statuses/`、`shared/labels/` | M3：多窗口状态一致；后台结束出现未读；重启与过滤结果一致。 | partial | [桌面接线](../../dogfood/craft-v014/m1-desktop-progress.md)：后台完成未读、标记、归档及旗标/归档重启恢复已验证。[归档证据](../../../designs/workbench-m1/02-archive-notes.ax.txt)、[重启证据](../../../designs/workbench-m1/03-restart-restored.ax.txt)。标签/值、完整筛选行为和多窗口状态一致性仍未验收。 |
+| F04 | Inbox、会话状态、归档、旗标、标签/值、筛选、未读 | `SessionList.tsx`、`shared/statuses/`、`shared/labels/` | M3：多窗口状态一致；后台结束出现未读；重启与过滤结果一致。 | partial | [桌面接线](../../dogfood/craft-v014/m1-desktop-progress.md)：后台完成未读、标记、归档及旗标/归档重启恢复已验证。[归档证据](../../../.designs/workbench-m1/02-archive-notes.ax.txt)、[重启证据](../../../.designs/workbench-m1/03-restart-restored.ax.txt)。标签/值、完整筛选行为和多窗口状态一致性仍未验收。 |
 | F05 | Composer、草稿、附件、来源/技能引用、模型/thinking | `input/FreeFormInput.tsx` | M3–4：拖放/粘贴/引用真实生效；IME、发送键、模式循环按参考测试。 | partial | [桌面接线](../../dogfood/craft-v014/m1-desktop-progress.md)：按会话草稿。`tests/unit/workbenchApp.test.cjs` 覆盖 IME Enter 不发送，不是原生 IME 验收。附件、引用和 thinking 未做。 |
 | F06 | 流式文本/thinking/tool、停止、排队/steering、重试 | `server/sessions/SessionManager.ts`、`shared/agent/backend/types.ts` | M2–3：三轮追问、工具卡片、生成中输入、停止后再发、会话切换。 | partial | [运行桥](../../dogfood/craft-v014/m2-core-bridge-progress.md)、[宿主调度](../../dogfood/craft-v014/m2-desktop-sdk-progress.md)：队列、停止、取消和跨会话已测。[原生 Claude](../../dogfood/craft-v014/m2-http-native-progress.md)拒绝/停止/再发/允许/重启已测；Claude/Pi 本机 HTTP 10/10。steer、重试和真实模型账户未测。 |
 | F07 | 历史、搜索、分支/压缩、笔记、导入导出、跨工作区转移 | `shared/sessions/`、`server/handlers/rpc/{sessions,transfer}.ts` | M1/M3/M7：长历史冷启动、断线补流、分支隔离、导入幂等、损坏记录可诊断。 | partial | [导入](../../dogfood/craft-v014/m1-legacy-import-progress.md)：macOS 导入、幂等和源离线可读。搜索、分支、压缩、导出包和跨工作区转移未做。 |
@@ -207,7 +207,7 @@ PoC 必须验证会话窗口关闭后隐藏保留、多个 Workspace、Agent 调
 依赖：本轮参考包已准备。
 
 1. 用隔离的测试配置运行固定版本 Craft，逐页枚举导航、菜单、settings、tool catalog、provider/认证与功能开关。任何真实账户调用单独记录凭据条件和证据。
-2. 建立完整 F01–F23 子案例及截图基线，放 `designs/craft-v0.14.0/`；收集窗口尺寸、字体、主题、焦点、滚动和异常态。
+2. 建立完整 F01–F23 子案例及截图基线，放 `.designs/craft-v0.14.0/`；收集窗口尺寸、字体、主题、焦点、滚动和异常态。
 3. SDK 双向审批 PoC：工具可见→请求审批→拒绝无副作用→允许执行→停止→恢复；覆盖 Claude/Pi，不只测文本。
 4. BrowserHost PoC：受控窗口、CDP/AX、输入/焦点、cookie、显示隐藏、崩溃、安装包；做平台差异表。
 5. 托管服务盘点：分享/Page publish、OAuth relay、更新/遥测/反馈、决策服务；标出源码位置、账户、可替换 endpoint、需新建服务。

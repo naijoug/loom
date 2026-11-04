@@ -96,7 +96,7 @@ Craft 原本地版本 `c310624fda0530722f5d4c6d1f8f2b7ba172090e` / v0.9.3 保存
 - `packages/core/src/types/page.ts` 定义 static/interactive/live Pages；sandbox iframe 渲染，刷新脚本写快照，特权 action 经过 grant/lease broker。`shared/src/pages/`、`server-core/src/pages/` 实现存储、刷新、授权和发布；SQLite 是脚本私有工作数据，跨进程读 `snapshot.json`。
 - `server-core/src/tasks/TaskRunner.ts` 调度 task.yaml DAG 的 ready 节点，以子会话执行并由 onSessionComplete 推进，保存 run log，支持验证/修复机制。源码明确 route/loop/approval 等控制流节点可解析但尚未执行，不把预留 schema 计为上游已交付功能。
 - `shared/src/automations/automation-system.ts` 的 `AutomationSystem` 将 workspace 事件交给 prompt/webhook/script/event-log handlers，包含 SchedulerTick、Page refresh；不是仅做 cron 提示。
-- 移植：设计与截图放 `designs/craft-v0.14.0/`；区分 Session、TaskSpec/TaskRun、Automation，旧 Loom 固定四阶段工作流不作为新 DAG 内核。
+- 移植：设计与截图放 `.designs/craft-v0.14.0/`；区分 Session、TaskSpec/TaskRun、Automation，旧 Loom 固定四阶段工作流不作为新 DAG 内核。
 
 ### 远程、消息渠道与托管服务
 

@@ -1,11 +1,11 @@
 # Loom 2026-06 重构落地实施计划（前端 IA 重构 + 换肤）
 
-> 关联设计：`designs/redesign-2026-06/`（`README.md` 为权威索引，`html/app.css` 为设计 token 与组件样式权威来源，`shots/` 为 30 张视觉基准，`html/loom.html` 为可交互原型）。
+> 关联设计：`.designs/redesign-2026-06/`（`README.md` 为权威索引，`html/app.css` 为设计 token 与组件样式权威来源，`shots/` 为 30 张视觉基准，`html/loom.html` 为可交互原型）。
 > 关联需求：`docs/requirements.md`（产品范围依据）。
 
 ## 1. 目标
 
-把 `designs/redesign-2026-06` 的新信息架构与视觉，落到现有 Tauri + React 应用上，并能**端到端跑通整个开发闭环**：
+把 `.designs/redesign-2026-06` 的新信息架构与视觉，落到现有 Tauri + React 应用上，并能**端到端跑通整个开发闭环**：
 `新建任务 → ① 计划聊天室 → ② 任务看板 → ③ 执行中(Agent session) → ④ 测试(多终端 + Debug 循环) → ⑤ 完成总结 →（Follow-up）`。
 同时建立**可自我验收**的测试体系（单元 / 组件 / Rust / 类型 / 端到端 / 视觉回归），让实施者或 Agent 在每个里程碑结束时能自证"做对了"。
 
@@ -215,7 +215,7 @@ Rust 各模块均带 `#[cfg(test)]` 单测（agents/projects/tasks/command_runne
 | 构建 | vite | 产物可构建 | `pnpm build` |
 | 端到端 | 手动 + 脚本 | 见 7.2 闭环清单；主屏/Settings URL smoke | `pnpm smoke` |
 | 交互 smoke | Chrome CDP | Add Project / New Task / Settings / session / testing 的真实点击与输入 | `pnpm smoke:interaction` |
-| 视觉回归 | Chrome headless + 人工对照 | 关键页 vs `designs/redesign-2026-06/shots/`；dark/light 双主题 DOM 关键文案 + 截图非空；覆盖 loom 与 speaker 两个项目看板 | `pnpm smoke:visual` |
+| 视觉回归 | Chrome headless + 人工对照 | 关键页 vs `.designs/redesign-2026-06/shots/`；dark/light 双主题 DOM 关键文案 + 截图非空；覆盖 loom 与 speaker 两个项目看板 | `pnpm smoke:visual` |
 
 > 组件测试统一 mock `@tauri-apps/api` 的 `invoke`，断言"某 UI 动作 → 调用了正确的后端命令 + 正确参数"，从而在不起 Tauri 的情况下自证接线正确。
 

@@ -68,7 +68,7 @@
 | 新会话只有模式卡片，按所选 Agent 创建 | partial（合成网页） | | | |
 | 默认英文，切中文后重启保留 | partial（单测 + 合成网页 reload） | | | |
 
-sample 均位于 [`samples/simple-chat/`](samples/simple-chat/)，文件名为 `<名称>.txt`。合成网页结果见 [browser-result.json](samples/simple-chat/browser-result.json)，截图见 `designs/exports/simple-chat/`。
+sample 均位于 [`samples/simple-chat/`](samples/simple-chat/)，文件名为 `<名称>.txt`。合成网页结果见 [browser-result.json](samples/simple-chat/browser-result.json)，截图见 `.designs/exports/simple-chat/`。
 
 ## 真实 CLI 运行明细与失败记录
 

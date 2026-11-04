@@ -59,14 +59,14 @@
   "nativeEvidence": {
     "mode": "explicit local fixture; no real model account",
     "screenshots": [
-      "designs/workbench-m1/01-stream-and-stop.ax.txt",
-      "designs/workbench-m1/01-stream-and-stop.jpg",
-      "designs/workbench-m1/02-archive-notes.ax.txt",
-      "designs/workbench-m1/02-archive-notes.jpg",
-      "designs/workbench-m1/03-restart-restored.ax.txt",
-      "designs/workbench-m1/03-restart-restored.jpg",
-      "designs/workbench-m1/04-background-unread.ax.txt",
-      "designs/workbench-m1/04-background-unread.jpg"
+      ".designs/workbench-m1/01-stream-and-stop.ax.txt",
+      ".designs/workbench-m1/01-stream-and-stop.jpg",
+      ".designs/workbench-m1/02-archive-notes.ax.txt",
+      ".designs/workbench-m1/02-archive-notes.jpg",
+      ".designs/workbench-m1/03-restart-restored.ax.txt",
+      ".designs/workbench-m1/03-restart-restored.jpg",
+      ".designs/workbench-m1/04-background-unread.ax.txt",
+      ".designs/workbench-m1/04-background-unread.jpg"
     ],
     "readback": "m1-desktop-readback.json",
     "observations": [

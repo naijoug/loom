@@ -282,7 +282,7 @@ completed 表示这次预算内的实验结束；`resultVerification = verified 
 
 任务：
 
-1. 新增 `src/workbench/experiments/`，实现列表、配置/预检、运行详情、结果表、日志/diff、空态/不可用/失败/恢复态；设计资源保存在 `designs/experiments/`。
+1. 新增 `src/workbench/experiments/`，实现列表、配置/预检、运行详情、结果表、日志/diff、空态/不可用/失败/恢复态；设计资源保存在 `.designs/experiments/`。
 2. UI 操作只发用户意图，依据宿主状态和 revision 展示，不用前端计时器推进阶段或推导最佳分数。
 3. 导出内容只读受验证资源，补丁覆盖原始基线至最终最佳的累计差异；包含版本/数据/环境/判定/限制，排除凭据与非允许路径。
 4. 完成暂停与立即停止语义、预算超调说明、未最终验证结果标识；支持键盘操作和非颜色状态区分。
@@ -353,6 +353,6 @@ completed 表示这次预算内的实验结束；`resultVerification = verified 
 
 产品方向无阻塞问题。首版按“macOS、可信本地项目、Node CPU 模板、单 Agent、单指标、串行、导出补丁”推进设计。模板计时开销、适配器工具限制和孤儿进程处理属于 E0 工程验证事项，无需用户替工程实现猜测。
 
-本轮完成：正式计划与索引；配套概览见 [设计说明](../../../designs/experiments/implementation-overview.html)。未修改生产代码、启动预览、执行 benchmark、调用模型或宣称任何里程碑通过。
+本轮完成：正式计划与索引；配套概览见 [设计说明](../../../.designs/experiments/implementation-overview.html)。未修改生产代码、启动预览、执行 benchmark、调用模型或宣称任何里程碑通过。
 
 本轮文档验证：计划必需章节、6 个里程碑、Markdown 围栏/表格/尾随空白、8 个本地链接及锚点、索引 30 个文件存在性与日期/同日时间倒序均通过；`git diff --check` 通过。概览 HTML 生成成功，文本检查 0 warnings；未运行桌面视觉验收。E0–E5 实施证据：暂无。

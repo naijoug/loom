@@ -38,7 +38,7 @@
 4. 正常停止、同目录重启并加载会话，历史显示两项会话授权均已撤销，不再显示有效授权列表。
 5. 重启后的新请求再次弹审批，选择拒绝；最终停止预览，进程句柄 exit 0。
 
-[原生事件与观察](m2-remember-native-results.json)确认两次记住决定、一次自动复用、用户清除与运行实例结束撤销；journal 不含 fixture 原始凭据。截图当场检查，布局记录见 [原生 UI 观察](../../../designs/workbench-m2/remember-ui-2026-10-09.md)，未另存像素文件。
+[原生事件与观察](m2-remember-native-results.json)确认两次记住决定、一次自动复用、用户清除与运行实例结束撤销；journal 不含 fixture 原始凭据。截图当场检查，布局记录见 [原生 UI 观察](../../../.designs/workbench-m2/remember-ui-2026-10-09.md)，未另存像素文件。
 
 ## 差异和边界
 

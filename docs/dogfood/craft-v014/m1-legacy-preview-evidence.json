@@ -129,7 +129,7 @@
     "Cmd+Q exit"
   ],
   "screenshots": [
-    "designs/workbench-m1/05-legacy-preview.jpg",
-    "designs/workbench-m1/05-legacy-preview.ax.txt"
+    ".designs/workbench-m1/05-legacy-preview.jpg",
+    ".designs/workbench-m1/05-legacy-preview.ax.txt"
   ]
 }

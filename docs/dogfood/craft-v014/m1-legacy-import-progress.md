@@ -24,7 +24,7 @@
 | 原生端到端 | 合成项目预检 2 可读 + 1 损坏；首次导入 2 新增 + 1 跳过，重复执行 0 新增 + 2 已有 + 1 跳过；打开历史对话、展开 Read 输入输出、打开归档 Task 和计划文本；Explore 与无运行状态均可见。 |
 | 源离线与重启 | 退出应用，将合成源目录改名为 project-offline，再重启同一 app。历史会话和旧计划仍可读。随后通过真实 Core JSONL API 在源仍离线时读取两个会话及所有资源，逐项校验 SHA-256。源目录最终恢复，五份源文件哈希与导入前相同。 |
 
-原生截图：[导入结果](../../../designs/workbench-m1/06-legacy-import-result.jpg)、[历史对话与工具](../../../designs/workbench-m1/07-imported-chat.jpg)、[计划资源](../../../designs/workbench-m1/08-imported-resource.jpg)、[源离线重启](../../../designs/workbench-m1/09-import-offline-restart.jpg)。同名 `.ax.txt` 保存可访问性树。
+原生截图：[导入结果](../../../.designs/workbench-m1/06-legacy-import-result.jpg)、[历史对话与工具](../../../.designs/workbench-m1/07-imported-chat.jpg)、[计划资源](../../../.designs/workbench-m1/08-imported-resource.jpg)、[源离线重启](../../../.designs/workbench-m1/09-import-offline-restart.jpg)。同名 `.ax.txt` 保存可访问性树。
 
 预览全部走 `scripts/debug.sh`，开始/结束均执行 stop，最终应用退出。仅使用 `.tmp/legacy-import-desktop-2026-09-30` 的合成数据，未调用真实模型或外部服务。没有执行用户旧项目迁移。
 

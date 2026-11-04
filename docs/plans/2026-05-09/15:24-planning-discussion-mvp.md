@@ -3,7 +3,7 @@
 - **日期**：2026-05-09
 - **作者**：Codex
 - **状态**：已实施；真实 CLI adapter 切片已在 2026-05-11 补齐
-- **关联设计**：`designs/loom.pen` 中 `appComp` 的计划阶段版本；导出图 `designs/exports/lGxnq.png`
+- **关联设计**：`.designs/loom.pen` 中 `appComp` 的计划阶段版本；导出图 `.designs/exports/lGxnq.png`
 - **布局方向**：参考 Codex App，左侧只做项目维度列表，右侧为 Agent 讨论输出流，底部固定需求输入框与 `@agent` 选择入口。
 
 ## 目标
@@ -40,7 +40,7 @@
 - dummy Agent 仅作为 `adapterType: "dummy"` 的测试 fixture；旧 `run_dummy_planning` bridge 已移除。
 - 任务可从 planning 推进到 `plan_review`，展示 final plan；用户确认后生成 todo 并进入 `ready_to_implement`。
 - `docs/requirements.md`：明确要求多 Agent 讨论、共识/冲突/风险汇总和最终计划文档。
-- `designs/loom.pen`：已更新为 Codex App 风格计划阶段 UI，包括左侧项目列表、右侧讨论输出、底部 composer、`@agent` 选择和确认计划入口。
+- `.designs/loom.pen`：已更新为 Codex App 风格计划阶段 UI，包括左侧项目列表、右侧讨论输出、底部 composer、`@agent` 选择和确认计划入口。
 
 ## 实施结果（2026-05-11）
 

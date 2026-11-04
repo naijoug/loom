@@ -34,7 +34,7 @@ JSON 保留所选已提交序号的完整会话模型，Markdown 使用动态代
 
 [回滚指南](../guides/chat-export-rollback.md) 明确停止回合、检查 manifest、备份整个 `.loom/chat/`、旧版只读原 v1、返回新版时历史不自动合并的流程与限制。
 
-通过 `scripts/debug.sh web` 和 CUA 查看 [生产组件视觉样例](../../designs/chat-export-preview.html)：实际展开会话菜单、点击导出入口并观察结果、路径、运行中提示与缺失日志列表，布局无截断。样例响应是明确标注的本地合成数据，没有写文件或调用 Agent，不能当成桌面 IPC 验收。截图在任务工具输出中；没有虚构独立截图文件。
+通过 `scripts/debug.sh web` 和 CUA 查看 [生产组件视觉样例](../../.designs/chat-export-preview.html)：实际展开会话菜单、点击导出入口并观察结果、路径、运行中提示与缺失日志列表，布局无截断。样例响应是明确标注的本地合成数据，没有写文件或调用 Agent，不能当成桌面 IPC 验收。截图在任务工具输出中；没有虚构独立截图文件。
 
 ## 未完成门禁
 

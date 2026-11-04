@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 export async function skillsSmoke(client, { evaluate, waitFor, click, clickText, screenshot }) {
-  const output = join(process.cwd(), "designs/exports/skills");
+  const output = join(process.cwd(), ".designs/exports/skills");
   mkdirSync(output, { recursive: true });
   const root = "http://127.0.0.1:1420/?fixture=simple-chat&skillsFixture=";
   const checks = [];

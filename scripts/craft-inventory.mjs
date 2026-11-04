@@ -108,7 +108,7 @@ const output = {
   externalServiceSources: endpoints,
   sourceHashes: Object.fromEntries([...inputs].sort(([a], [b]) => a.localeCompare(b))),
 };
-const destination = join(root, "designs/craft-v0.14.0/inventory.json");
+const destination = join(root, ".designs/craft-v0.14.0/inventory.json");
 const rendered = JSON.stringify(output, null, 2) + "\n";
 if (process.argv.includes("--check")) {
   if (readFileSync(destination, "utf8") !== rendered) throw new Error("Inventory changed; review before regenerating");
