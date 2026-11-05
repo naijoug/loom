@@ -528,10 +528,16 @@ pub(crate) async fn run(
             .into_iter()
             .rev()
             .collect();
-        let summary = status
-            .code()
-            .map(|code| format!("agent exited with code {code}"))
-            .unwrap_or_else(|| "agent was stopped by a signal".into());
+        let summary = output
+            .reported_error
+            .take()
+            .filter(|error| !error.trim().is_empty())
+            .unwrap_or_else(|| {
+                status
+                    .code()
+                    .map(|code| format!("agent exited with code {code}"))
+                    .unwrap_or_else(|| "agent was stopped by a signal".into())
+            });
         let error = AgentError::new(summary)
             .with_details(diagnostic)
             .to_string();
@@ -589,8 +595,62 @@ pub(crate) async fn run(
 }
 
 #[cfg(test)]
-mod stop_tests {
+mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn protocol_error_wins_over_exit_status_and_startup_warnings() {
+        for (exit, frame, expected) in [
+            (
+                17,
+                r#"{"type":"turn.failed","error":{"message":"Model unavailable","api_key":"fixture-secret"}}"#,
+                "Model unavailable",
+            ),
+            (
+                0,
+                r#"{"type":"turn.failed","error":{"message":"Model unavailable"}}"#,
+                "Model unavailable",
+            ),
+            (17, "", "agent exited with code 17"),
+        ] {
+            let outcome = run(
+                RunSpec {
+                    prepared: PreparedAgentInvocation {
+                        program: "/bin/sh".into(),
+                        args: vec!["-c".into(), format!("printf '%s\\n' '{frame}'; echo 'plugin startup warning' >&2; exit {exit}")],
+                        cwd: std::env::temp_dir().to_string_lossy().into_owned(),
+                        environment: Default::default(),
+                        environment_remove_prefixes: Vec::new(),
+                        secret_environment: Default::default(),
+                        stdin_prompt: false,
+                        output_mode: "codex_json".into(),
+                        resumed: false,
+                        api: None,
+                    },
+                    run_id: format!("protocol-error-{}-{exit}-{}", crate::models::now_ms(), frame.len()),
+                    owner: ProcessOwner::Feature { feature: "fixture".into(), scope_id: "errors".into(), run_id: "error".into() },
+                    kind: ProcessKind::Feature,
+                    stdin_text: None,
+                    limits: Limits { timeout: Duration::from_secs(5), ..Default::default() },
+                    enrich: None,
+                },
+                || None,
+                |_| Ok(()),
+                |_| Ok(()),
+            ).await.unwrap();
+            assert_eq!(outcome.status, "error");
+            assert_eq!(outcome.exit_code, Some(exit));
+            let summary = outcome.error_summary.as_deref().unwrap();
+            assert_eq!(summary.lines().next(), Some(expected));
+            if exit != 0 {
+                assert!(summary.contains("\n\nplugin startup warning"), "{summary}");
+                assert!(outcome.parts.iter().any(|part| matches!(part,
+                    MessagePart::Error { message, code: Some(code) }
+                    if code == "agent_exit_failed" && message == summary)));
+            }
+            assert!(!format!("{outcome:?}").contains("fixture-secret"));
+        }
+    }
 
     #[test]
     fn default_timeout_is_within_the_chat_product_window() {

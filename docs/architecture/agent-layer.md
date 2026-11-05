@@ -40,7 +40,7 @@
 
 - 能注入的协议：Claude Code 只接 Anthropic；Codex 只接 OpenAI Responses；OpenCode 三种都接；Grok 与自定义 CLI 不支持模式 B。诊断以 `providerKinds` 报告，Settings 的下拉据此禁用不兼容项。
 - `api` 执行器没有工具、文件访问和原生续聊。功能在请求中声明 `needs_tools`；需要工具时拒绝 `api` Agent。当前 Chat、Learn 作业、Research 需要工具；Discuss 无项目轮次与任何讨论的汇总轮、`loom-agent run` 不需要。
-- provider 的增删改与测试由 `agent/providers.rs` 负责（`provider_list/save/delete/test` 四个 IPC 命令，CLI 用同一组 `*_at(dir)` 函数）。写入持锁并校验 revision，被 Agent 引用的 provider 不能删除。key 的存储与 URL 规则见 [安全策略](../security-policy.md#模型来源与-api-key)。
+- provider 的增删改与测试由 `agent/providers.rs` 负责（`provider_list/save/delete/test` 四个 IPC 命令，CLI 用同一组 `*_at(dir)` 函数）。写入持锁并校验 revision，被 Agent 引用的 provider 不能删除。测试只检查模型列表：`ok` 不证明对话可用，404/405/501 归为 `model_list_unavailable`，不据此禁用 provider 或自动发起可能收费的对话。key 的存储与 URL 规则见 [安全策略](../security-policy.md#模型来源与-api-key)。
 - 续聊指纹包含 `providerId`；换 provider 视同换 Agent，清除原生句柄并重放有界历史。
 
 ## 调用方与状态归属
@@ -62,13 +62,13 @@ Agent 层不导入功能模块，不决定 Chat 会话、Wiki 页、研究轮次
 - 成功结果按 Agent id 缓存，键包含解析后的可执行文件路径与修改时间；失败不缓存。保存配置、重新检测、运行失败清除。`load_agents` 当前会保存合并后的配置，因此也会触发缓存失效；不要把缓存描述为所有连续调用都能命中。
 - 版本成功只说明可启动，登录/模型/额度在真实调用中判定。不得把 `available` 或 `ready` 当作完整真实验收。
 - `evidenceOnly` 诊断能力默认不声明；仅验证 Claude 2.1.311 且无额外 argv 时为 true。此能力是工具隔离配置，不保证所选模型可用；生产调用前还需 `verify_evidence_profile`，不可把前端布尔值当执行凭据。R0 真实测试与限制见 [验收记录](../dogfood/2026-10-28-research-targets-r0.md)。
-- runner 对非零退出记录摘要与 stderr 尾部；CLI 的 `turn.failed` / `result.is_error` 同样判失败。读取/写入/解析/取消失败不自动做通用重试；仅业务层定义的重试行为生效。
+- runner 对非零退出优先采用已解析且非空的协议错误摘要（如 `turn.failed`），没有协议错误时使用退出码/信号摘要，并附脱敏 stderr 最后 2000 字符；保留真实退出码和终止原因。退出码为 0 时，CLI 的 `turn.failed` / `result.is_error` 仍判失败。读取/写入/解析/取消失败不自动做通用重试；仅业务层定义的重试行为生效。
 
 ## 执行与输出边界
 
 默认 timeout 10 分钟、输出合计 8 MiB、20,000 行、单行 512 KiB；超时/取消先 TERM、必要时 KILL，标准清理预算为 terminate 1 s、drain 300 ms、reap 2 s。Learn 按阶段覆盖为 30/15/10 分钟并使用 64 MiB/4 MiB/200k 行；Research 20 分钟及同大输出限额；Discuss 15 分钟及默认输出限额。
 
-模型提示词尽量走 stdin；必要的长参数在执行记录中省略。结构化日志先保持协议 JSON，再脱敏字段；不保存完整进程环境。实际只读保障来自 CLI 的 sandbox/plan 策略，不来自提示词或 Loom 独立 OS 沙箱。具体参数映射见 [适配器](../agent-adapter.md)。
+模型提示词尽量走 stdin；必要的长参数在执行记录中省略。结构化日志先保持协议 JSON，再脱敏字段；`loom-agent --verbose` 和执行记录 `stderrTail` 同样使用 JSON 感知脱敏，保留 `usage.input_tokens` 等非密钥字段。非 JSON 日志继续按文本脱敏；不保存完整进程环境。实际只读保障来自 CLI 的 sandbox/plan 策略，不来自提示词或 Loom 独立 OS 沙箱。具体参数映射见 [适配器](../agent-adapter.md)。
 
 ## 生命周期与明确例外
 

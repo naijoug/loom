@@ -204,7 +204,7 @@ export function ProvidersPanel({
                           disabled={busy || test === "running"}
                           onClick={() => void runTest(provider.id)}
                         >
-                          {t("test")}
+                          {t("providerCheckModels")}
                         </button>
                         <button
                           type="button"

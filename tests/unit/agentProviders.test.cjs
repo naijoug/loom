@@ -21,11 +21,29 @@ const {
   draftFromPreset,
   draftFromProvider,
   PROVIDER_PRESETS,
+  providerTestLabel,
 } = require("../../.tmp/test-build/src/features/settings/providerDraft.js");
 const { translate } = require("../../.tmp/test-build/src/i18n/index.js");
 global.IS_REACT_ACT_ENVIRONMENT = true;
 
 const t = (key, values) => translate("en", key, values);
+
+test("model-list checks never claim to verify conversations in either locale", () => {
+  for (const locale of ["en", "zh-CN"]) {
+    const localize = (key, values) => translate(locale, key, values);
+    for (const result of [
+      { outcome: "ok", httpStatus: 200 },
+      { outcome: "model_list_unavailable", httpStatus: 404 },
+      { outcome: "model_list_unavailable", httpStatus: 405 },
+      { outcome: "model_list_unavailable", httpStatus: 501 },
+    ]) {
+      const label = providerTestLabel(result, localize);
+      assert.match(label, locale === "en" ? /chat not tested/ : /未测试对话/);
+      if (result.outcome !== "ok") assert.ok(label.includes(String(result.httpStatus)));
+      assert.doesNotMatch(label, /URL or model not found|地址或模型不存在/);
+    }
+  }
+});
 const agent = (id, adapterType, extra = {}) => ({
   id,
   name: id,

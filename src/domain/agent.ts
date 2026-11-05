@@ -75,7 +75,7 @@ export interface ModelProviderTestResult {
     | "ok"
     | "key_missing"
     | "auth_failed"
-    | "not_found"
+    | "model_list_unavailable"
     | "rate_limited"
     | "http_error"
     | "invalid_response"

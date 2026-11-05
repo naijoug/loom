@@ -72,7 +72,7 @@ LOOM_PROFILE_DIR=<临时 profile> LOOM_REAL_DISCUSS=1 LOOM_REAL_DISCUSS_ROOT=<�
 
 1. **`provider test` 对部分 Anthropic 兼容端点误报**：测试用 `GET /v1/models`，DeepSeek `/anthropic` 没有这个接口，返回 404 → `not_found`，但对话正常。暂未修改，文档补了说明。
 2. **日志脱敏过度**：`--verbose` 日志行、执行记录 `stderrTail` 和 Codex 错误片段用按行脱敏（`agent::redact_sensitive_text`），整行只要含 `token` 就截断到第一个 `:`。于是带 `usage.input_tokens` 的 Claude 结果帧变成 `{"api_error_status": [REDACTED]`，Codex 的 “Incomplete response returned, reason: …” 原因（推测为 `max_output_tokens`）也被遮住。这不是泄露，但降低了诊断价值；JSON 感知的 `redact_stream_line` 已存在，只是 CLI 日志没用它。
-3. **错误摘要取到无关行**：Codex 模式 B 失败时 `errorSummary` 取的是 stderr 第一行（用户 `~/.codex` 中 MCP 服务的 `rmcp` 握手错误），真正原因在 stdout 的 `turn.failed`。模式 B 不改 CLI 全局配置，所以用户自己的 MCP 服务照常加载，这符合设计，但摘要会误导。
+3. **错误摘要未优先采用协议错误**：Codex 模式 B 失败时展示了用户 MCP 服务的 stderr 握手错误，而真正原因在 stdout 的 `turn.failed`。11-05 对照代码更正：当时实现为通用退出摘要 + stderr 最后 2000 字符，并非取 stderr 首行。模式 B 不改 CLI 全局配置，所以用户自己的 MCP 服务照常加载，这符合设计，但摘要会误导。
 4. **Claude Code 对非 Claude 模型名打印 `unrecognized_model`**：只是 stderr 警告，不影响结果。
 5. **Codex 的模型元数据**：`gpt-5-mini` 在 Codex 0.166.0 里没有元数据，走回退后响应不完整；`gpt-5.4-mini` 正常。provider 默认模型应选 Codex 认识的名称。
 
@@ -82,3 +82,7 @@ LOOM_PROFILE_DIR=<临时 profile> LOOM_REAL_DISCUSS=1 LOOM_REAL_DISCUSS_ROOT=<�
 - OpenCode 与 Grok 的真实模式 A/B、自定义 CLI。
 - 桌面窗口里通过 Settings 保存 / 测试 provider 后走真实对话（本轮只用 `loom-agent` 与 Discuss 测试管线）。
 - magpie 网关内部的上游路由。
+
+## 2026-11-05 修复跟进
+
+本页上方保留 11-03 的真实运行结果，不将修复写成重新真实验收。发现 1–3 的修复、回归证据和文档同步见 [P2 修复记录](2026-11-05-agent-diagnostics-fixes.md)：模型列表不可用与对话可用性分开，CLI 日志保留结构化字段，非零退出优先采用协议错误。

@@ -590,12 +590,16 @@ async fn provider(dir: &Path, command: ProviderCommand, io: &mut Io<'_>) -> Resu
                 .http_status
                 .map(|s| format!(" (HTTP {s})"))
                 .unwrap_or_default();
-            writeln!(io.out, "{}{status}", outcome.as_str().unwrap_or("unknown"))
-                .map_err(|e| e.to_string())?;
+            writeln!(
+                io.out,
+                "model list: {}{status}; conversation not tested",
+                outcome.as_str().unwrap_or("unknown")
+            )
+            .map_err(|e| e.to_string())?;
             if result.outcome == agent::ProviderTestOutcome::Ok {
                 Ok(())
             } else {
-                Err(format!("provider '{id}' did not answer correctly"))
+                Err(format!("model-list check for provider '{id}' did not succeed; conversation support is unknown"))
             }
         }
     }
@@ -758,7 +762,7 @@ impl Sink<'_, '_> {
                 Ok(())
             }
             Observation::Log { stderr, line } => {
-                let line = agent::redact_sensitive_text(&line);
+                let line = agent::redact_stream_line(&line);
                 if stderr {
                     if self.stderr_tail.len() == STDERR_TAIL_LINES {
                         self.stderr_tail.pop_front();

@@ -160,8 +160,8 @@ export function providerTestLabel(result: ModelProviderTestResult, t: Translate)
       return t("providerTestKey_missing");
     case "auth_failed":
       return t("providerTestAuth_failed", { status });
-    case "not_found":
-      return t("providerTestNot_found");
+    case "model_list_unavailable":
+      return t("providerTestModel_list_unavailable", { status });
     case "rate_limited":
       return t("providerTestRate_limited");
     case "http_error":

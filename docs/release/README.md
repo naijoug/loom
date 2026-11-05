@@ -2,6 +2,8 @@
 
 本目录记录 Loom 从个人 dogfood 稳定版进入邀请制 Beta 前需要给试用者阅读、确认和回传的信息。
 
+当前配置状态按 [2026-10-16 更新记录](app-updates.md#已配置状态2026-10-16)：本机签名与公证凭据、CI 配置已准备；历史探针中的“缺少公证凭据”不再代表最新配置状态。真实 runner 签名/公证、同一候选产物安装及两版升级仍待验收，分发保持 `Distribution decision: Hold`。本次文档同步未重新访问账号或验证凭据。
+
 ## 应用内更新
 
 - [macOS 应用内更新与 GitHub Releases](app-updates.md)：更新行为、发布流水线、签名/公证配置与真实升级验收；不改变现有分发 Hold。
@@ -18,8 +20,8 @@
 - [Artifact Integrity Check](artifact-integrity-check.md)：复核候选 DMG 的 checksum、只读挂载、bundle 元数据和当前签名 / Gatekeeper 状态。
 - [Signing Gate Decision](signing-gate-decision.md)：记录当前候选 DMG 因 invalid-signature / Gatekeeper hold 不进入公开或默认邀请制分发，并给出下一步签名修复路径。
 - [Signing Repair Probe](signing-repair-probe.md)：记录 ad-hoc signing 探针，确认重新签名可修复严格 `codesign` 错误，但仍不能通过 Gatekeeper 分发门禁。
-- [Developer ID / Notarization Probe](developer-id-notarization-probe.md)：记录 Developer ID signing 探针，确认本机可完成 Developer ID 签名，但因缺少 notarization credential 仍被 Gatekeeper 判定为 `Unnotarized Developer ID`。
-- [Notarization Credential Preflight](notarization-credential-preflight.md)：记录 `notarytool` 与 keychain profile 预检，确认本机有 notarization CLI，但尚未配置 `loom-beta-notary` credential profile。
+- [Developer ID / Notarization Probe](developer-id-notarization-probe.md)：记录历史 Developer ID signing 探针，当时因缺少 notarization credential 被 Gatekeeper 判定为 `Unnotarized Developer ID`。
+- [Notarization Credential Preflight](notarization-credential-preflight.md)：记录历史 `notarytool` 与 keychain profile 预检，当时尚未配置 `loom-beta-notary`；后续配置见 `app-updates.md`。
 - [Notarized DMG Gate](notarized-dmg-gate.md)：把 credential 可用后的重打 DMG、checksum、`hdiutil`、严格 `codesign`、`spctl` 和 staple validate 拆成下一轮可执行命令梯。
 - [Local Desktop Smoke Record](local-desktop-smoke-record.md)：记录 signing hold 期间不扩大分发的维护者本机 release app 启动 / 重启 smoke，作为本机验证证据而不是分发 pass。
 - [Beta Release Review Checklist](beta-release-review-checklist.md)：把 scope、安全、artifact、credential、notarized DMG、smoke、诊断包、安装文档和隐私边界汇总成分发前复核表；当前结论仍为 `Distribution decision: Hold`。
@@ -49,7 +51,7 @@
 4. 维护者用 `release-build-record.md` 对齐候选构建的 commit、工具链、checksum 和剩余门禁，再用 `artifact-integrity-check.md` 判断 DMG 完整性、bundle 元数据和签名 / Gatekeeper 状态。
 5. 如果签名 / Gatekeeper 状态不是 pass，先读 `signing-gate-decision.md`；当前候选 DMG 只能保留为本机验证 artifact，不进入公开或默认邀请制分发。
 6. 如需修复签名，先读 `signing-repair-probe.md`：ad-hoc signing 已证明严格 `codesign` 错误可修复，但 Gatekeeper 分发仍需要 Developer ID / notarization 或明确接受未公证边界。
-7. 再读 `developer-id-notarization-probe.md`：Developer ID signing 已可用，当前剩余 blocker 是 notarization credential 未配置导致 `Unnotarized Developer ID`。
+7. 阅读 `developer-id-notarization-probe.md` 的历史失败，再按 `app-updates.md` 查看后续凭据配置；当前仍需针对候选产物完成签名、公证与升级验收。
 8. 如果准备解除 hold，先按 `notarization-credential-preflight.md` 检查 `notarytool` 和 keychain profile；credential 缺失时不要重打普通 Beta DMG。
 9. Credential 可用后按 `notarized-dmg-gate.md` 重打新候选 DMG，并把 pass / fail 证据写回 release record；不要覆盖旧 hold 证据。
 10. Credential 缺失但需要继续本机验证时，只能参考 `local-desktop-smoke-record.md` 这类维护者本机 smoke；它不能替代普通试用者分发 gate。
@@ -61,4 +63,4 @@
 
 ## 发布门禁
 
-这些文档覆盖邀请制 Beta 的 M0 边界、M1 可复现构建记录、产物完整性复核、签名 gate 决策、ad-hoc 修复探针、Developer ID / notarization 探针、notarization credential 预检、credential 可用后的 notarized DMG gate 命令梯、signing hold 期间的维护者本机桌面 smoke、分发前 release review checklist、M2 安装/卸载/smoke 路径、同一候选 artifact 的安装 / 卸载 smoke record 和首次启动 smoke record，以及 M3 隐私、Agent 账号责任、诊断包安全复核、工程脱敏证据、UI smoke 流程和真实桌面导出记录。公开下载、notarization / staple、正式 UI 诊断包导出 pass 记录、针对已公证候选 DMG 的安装 / 卸载 pass 记录和首次启动 smoke 结果仍需后续里程碑实际填写；当前 `artifact-integrity-check.md` 已确认 DMG 可校验和挂载，但签名 / Gatekeeper assessment 处于 hold，`signing-gate-decision.md` 已明确不接受当前 invalid-signature DMG 作为公开或默认邀请制分发物，`signing-repair-probe.md` 确认 ad-hoc signing 可以修复严格 `codesign` 错误但不能解除 Gatekeeper 分发门禁，`developer-id-notarization-probe.md` 进一步确认 Developer ID signing 可用但缺少 notarization credential，`notarization-credential-preflight.md` 确认本机有 `notarytool` 但缺少 `loom-beta-notary` keychain profile；`notarized-dmg-gate.md` 已把下一次 pass 所需命令和证据字段拆好，`local-desktop-smoke-record.md` 仅证明当前 release app 可在维护者本机启动 / 重启两轮，`install-uninstall-smoke-record.md` 与 `beta-first-run-smoke-record.md` 当前仍无已公证候选 DMG 的 pass 记录，`beta-release-review-checklist.md` 将当前分发结论固定为 `Distribution decision: Hold`，`diagnostic-bundle-engineering-proof.md` 证明后端脱敏 fixture 与 headless 文件写入 / 读回 harness 通过，`pnpm smoke:interaction` 现在覆盖诊断 UI 入口 / 日志开关存在性，但 `diagnostic-bundle-smoke-record.md` 当前仍没有同一候选 artifact 的真实桌面导出 pass 记录。
+这些文档覆盖邀请制 Beta 的 M0 边界、M1 可复现构建记录、产物完整性复核、签名 gate 决策、ad-hoc 修复探针、Developer ID / notarization 探针、notarization credential 预检、credential 可用后的 notarized DMG gate 命令梯、signing hold 期间的维护者本机桌面 smoke、分发前 release review checklist、M2 安装/卸载/smoke 路径、同一候选 artifact 的安装 / 卸载 smoke record 和首次启动 smoke record，以及 M3 隐私、Agent 账号责任、诊断包安全复核、工程脱敏证据、UI smoke 流程和真实桌面导出记录。公开下载、notarization / staple、正式 UI 诊断包导出 pass 记录、针对已公证候选 DMG 的安装 / 卸载 pass 记录和首次启动 smoke 结果仍需后续里程碑实际填写；当前 `artifact-integrity-check.md` 已确认 DMG 可校验和挂载，但签名 / Gatekeeper assessment 处于 hold，`signing-gate-decision.md` 已明确不接受当前 invalid-signature DMG 作为公开或默认邀请制分发物，`signing-repair-probe.md` 确认 ad-hoc signing 可以修复严格 `codesign` 错误但不能解除 Gatekeeper 分发门禁，`developer-id-notarization-probe.md` 和 `notarization-credential-preflight.md` 保存当时缺少公证凭据的历史证据，后续 `app-updates.md` 已记录凭据配置完成，但尚无新候选产物的完整分发验收；`notarized-dmg-gate.md` 已把下一次 pass 所需命令和证据字段拆好，`local-desktop-smoke-record.md` 仅证明当前 release app 可在维护者本机启动 / 重启两轮，`install-uninstall-smoke-record.md` 与 `beta-first-run-smoke-record.md` 当前仍无已公证候选 DMG 的 pass 记录，`beta-release-review-checklist.md` 将当前分发结论固定为 `Distribution decision: Hold`，`diagnostic-bundle-engineering-proof.md` 证明后端脱敏 fixture 与 headless 文件写入 / 读回 harness 通过，`pnpm smoke:interaction` 现在覆盖诊断 UI 入口 / 日志开关存在性，但 `diagnostic-bundle-smoke-record.md` 当前仍没有同一候选 artifact 的真实桌面导出 pass 记录。

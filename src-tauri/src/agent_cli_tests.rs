@@ -308,6 +308,59 @@ async fn human_output_prints_the_answer_on_stdout_only() {
 }
 
 #[tokio::test]
+async fn verbose_logs_and_records_keep_usage_fields_but_remove_secrets() {
+    for json_output in [true, false] {
+        let dir = test_root("structured-logs");
+        let agent = stub_agent(&dir, false);
+        let frame = json!({"type":"result", "usage":{"input_tokens":123}, "message":"diagnostic detail", "api_key":KEY,
+            "nested":[{"authorization":"Bearer fixture-bearer"}]}).to_string();
+        std::fs::write(&agent.command, format!("#!/bin/sh\nprintf '%s\\n' '{frame}'\nprintf '%s\\n' '{frame}' >&2\necho 'api_key=plain-fixture-secret' >&2\n")).unwrap();
+        let mut words = vec![
+            "run",
+            "--agent",
+            "agent-stub",
+            "--prompt",
+            PROMPT,
+            "--verbose",
+        ];
+        if json_output {
+            words.push("--json");
+        }
+        let output = call(&dir, &words, "", false).await;
+        assert_eq!(output.code, EXIT_OK, "{}", output.err);
+        let frames: Vec<Value> = if json_output {
+            ndjson(&output.out)
+                .iter()
+                .filter(|e| e["type"] == "log")
+                .filter_map(|e| serde_json::from_str(e["line"].as_str().unwrap()).ok())
+                .collect()
+        } else {
+            output
+                .err
+                .lines()
+                .filter_map(|line| serde_json::from_str(line).ok())
+                .collect()
+        };
+        assert_eq!(frames.len(), 2);
+        for value in frames {
+            assert_eq!(value["usage"]["input_tokens"], 123);
+            assert_eq!(value["message"], "diagnostic detail");
+            assert_eq!(value["api_key"], "[REDACTED]");
+            assert_eq!(value["nested"][0]["authorization"], "[REDACTED]");
+        }
+        let saved = records(&dir).join("\n");
+        let record: Value = serde_json::from_str(&saved).unwrap();
+        let tail: Value = serde_json::from_str(record["stderrTail"][0].as_str().unwrap()).unwrap();
+        assert_eq!(tail["usage"]["input_tokens"], 123);
+        assert_eq!(tail["message"], "diagnostic detail");
+        for secret in [KEY, "fixture-bearer", "plain-fixture-secret"] {
+            assert!(!format!("{}{}{}", output.out, output.err, saved).contains(secret));
+        }
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+}
+
+#[tokio::test]
 async fn keys_and_prompts_are_never_read_from_a_terminal() {
     let dir = test_root("terminal");
     let added = call(

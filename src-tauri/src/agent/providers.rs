@@ -144,7 +144,7 @@ pub enum ProviderTestOutcome {
     Ok,
     KeyMissing,
     AuthFailed,
-    NotFound,
+    ModelListUnavailable,
     RateLimited,
     HttpError,
     InvalidResponse,
@@ -152,7 +152,7 @@ pub enum ProviderTestOutcome {
     Unreachable,
 }
 
-/// Classified result of one minimal request; never carries the upstream body.
+/// Model-list check only, not proof of conversation support. Never carries the upstream body.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ProviderTestResult {
@@ -568,7 +568,9 @@ async fn test_with_client(
     let classified = match status {
         200..=299 => None,
         401 | 403 => Some(ProviderTestOutcome::AuthFailed),
-        404 => Some(ProviderTestOutcome::NotFound),
+        // Compatible conversation endpoints may omit model listing. A wrong
+        // base URL can look identical; neither case proves chat is unusable.
+        404 | 405 | 501 => Some(ProviderTestOutcome::ModelListUnavailable),
         429 => Some(ProviderTestOutcome::RateLimited),
         _ => Some(ProviderTestOutcome::HttpError),
     };
@@ -1002,7 +1004,9 @@ mod tests {
                 r#"{"error":"bad key sk-echo"}"#,
                 ProviderTestOutcome::AuthFailed,
             ),
-            (404, "{}", ProviderTestOutcome::NotFound),
+            (404, "{}", ProviderTestOutcome::ModelListUnavailable),
+            (405, "{}", ProviderTestOutcome::ModelListUnavailable),
+            (501, "{}", ProviderTestOutcome::ModelListUnavailable),
             (429, "{}", ProviderTestOutcome::RateLimited),
             (500, "{}", ProviderTestOutcome::HttpError),
             (

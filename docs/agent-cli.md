@@ -11,7 +11,7 @@ cargo build --manifest-path src-tauri/Cargo.toml --bin loom-agent
 src-tauri/target/debug/loom-agent --help
 ```
 
-配置目录与桌面相同（`storage::system_config_dir()`）；设 `LOOM_PROFILE_DIR=/absolute/dir` 可隔离到临时 profile，验收时应这样做。`loom-agent` 是 `src-tauri/Cargo.toml` 的第二个 `[[bin]]`，入口 `src/bin/loom-agent.rs` 只调用 `agent_cli::main`。
+配置目录与桌面相同（`storage::system_config_dir()`）；设 `LOOM_PROFILE_DIR=/absolute/dir` 可隔离到临时 profile，验收时应这样做。`loom-agent` 是 `src-tauri/Cargo.toml` 声明的独立 `[[bin]]`（另有 `loom`、`loom-skills`），入口 `src/bin/loom-agent.rs` 只调用 `agent_cli::main`。
 
 ## 命令
 
@@ -23,7 +23,7 @@ src-tauri/target/debug/loom-agent --help
 | `provider add ID --kind KIND --base-url URL [--name NAME] [--model MODEL] [--key-env VAR]` | 新建 provider；KIND 为 `anthropic`、`openai-responses`、`openai-chat`。只新建，修改已有项用 Settings 或删除后重建 |
 | `provider set-key ID [--clear]` | 从管道或文件形式的 stdin 读 key（≤16 KiB）并保存；`--clear` 删除已保存的 key。stdin 是终端时拒绝 |
 | `provider remove ID` | 删除未被任何 Agent 引用的 provider |
-| `provider test ID` | 一次最小请求（列模型，不消耗 token）；只报告分类结果与 HTTP 状态。没有模型列表的兼容端点（如 DeepSeek `/anthropic`）会报 `not_found`，但对话可用 |
+| `provider test ID` | 只检查模型列表，不调用模型、不消耗生成 token；`ok` 仅代表列表可访问。HTTP 404/405/501 返回 `model_list_unavailable`（原 `not_found`）：端点可能不支持列表，也可能 URL 配置错误，无法据此判断对话能力。不改变 provider 的配置状态。人读模式检查未成功时退出 1；`--json` 输出分类结果与 HTTP 状态，沿用成功输出 JSON 即退出 0，调用方需检查 `outcome` |
 | `run [options]` | 跑一个提示词 |
 
 没有 `--key` 参数；key 只能经 stdin 进入，避免出现在 argv、shell 历史和 `ps` 中：
