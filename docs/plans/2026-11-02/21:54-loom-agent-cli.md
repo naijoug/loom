@@ -1,7 +1,7 @@
 # Agent 调用层：无窗口 CLI 与 API Key 模式计划
 
 - 创建时间：2026-11-02 21:54，America/Los_Angeles；22:28 参考 magpie 修订（加入 API Key 模式，重排里程碑）。
-- 状态：A0 已完成（2026-11-03 02:04，已提交）；A1 已完成（2026-11-03 06:34，已提交）；A2 已完成（2026-11-03 07:21，已提交）；A3 已完成（2026-11-03 08:28，已提交 `0bec0b3`）；A4 已完成（2026-11-03 08:47，已提交 `0bec0b3`）；A5 已完成（2026-11-03 15:15，已提交 `1c99b45`；设计稿 `.designs/agent-providers/README.md` 08:49 提交确认，用户回复“Approve, build it”，第 7 节按本稿默认）；A6 已完成（2026-11-03 18:20，已提交；`docs/requirements.md` 待用户确认）；A7 真实验收已完成（2026-11-03 18:59，未提交；Z.ai blocked，`.app` 打包未复核）。2026-11-03 用户接受第 6 节全部推荐答案（“Yes, do A1”），A2 起可按推荐实施。
+- 状态：A0 已完成（2026-11-03 02:04，已提交）；A1 已完成（2026-11-03 06:34，已提交）；A2 已完成（2026-11-03 07:21，已提交）；A3 已完成（2026-11-03 08:28，已提交 `0bec0b3`）；A4 已完成（2026-11-03 08:47，已提交 `0bec0b3`）；A5 已完成（2026-11-03 15:15，已提交 `1c99b45`；设计稿 `.designs/agent-providers/README.md` 08:49 提交确认，用户回复“Approve, build it”，第 7 节按本稿默认）；A6 已完成（2026-11-03 18:20，已提交 `7597540`；`docs/requirements.md` 待用户确认）；A7 真实验收已完成（2026-11-03 18:59，已提交 `7dfafef`；Z.ai blocked，`.app` 打包未复核）。2026-11-03 用户接受第 6 节全部推荐答案（“Yes, do A1”），A2 起可按推荐实施。
 - 代码基线：`main` `93c36f9`。2026-11-03 复核：`90cf9f9..93c36f9` 只有 Learn 前端重设计（`d59679c`）、本计划入库（`e62f8fb`）和 Skills 截图（`93c36f9`），`src-tauri/src` 无改动，下文行号仍有效。复核按代码修正了 A1 的文件写入依赖、A3 的取消方式与 HTTP 流读取，并补上 `api` 执行器的配置校验与启动检查（见第 2 节新增行）。
 - 用户要求（2026-11-02）：
   1. 底层有一个 loom CLI，上层交互都能通过它与本机已安装的 Agent CLI 交互；
@@ -252,7 +252,7 @@ magpie 是 Go 单二进制：本地模型网关（`127.0.0.1:3425`，在 OpenAI 
 - 每次检查 `ps` 参数、执行记录、日志无 key；Ctrl-C 后无残留进程组。
 - 结果写 `docs/dogfood/2026-11-xx-agent-modes.md`，注明 CLI 版本、provider、哪些是合成测试、哪些是真实模型；没有 key 的 provider 记 blocked，不写成通过。
 
-完成记录（2026-11-03 18:59，未提交）：
+完成记录（2026-11-03 18:59，已提交 `7dfafef`）：
 
 - 记录：[`docs/dogfood/2026-11-03-agent-modes.md`](../../dogfood/2026-11-03-agent-modes.md)，全部为真实模型调用，临时 `LOOM_PROFILE_DIR` + 临时项目，key 只经 `--key-env` 引用。
 - 通过：模式 A Codex；模式 B Claude Code + OpenRouter（Anthropic 兼容）、Claude Code + magpie 网关、Codex + OpenAI Responses（`gpt-5.4-mini`）；模式 C DeepSeek（OpenAI 兼容与 `/anthropic` 各一）、OpenAI Responses、magpie 网关；Discuss 无项目两位 `api` 参与者 5/5（新增可选真实测试 `api_participants_complete_without_project`）。
