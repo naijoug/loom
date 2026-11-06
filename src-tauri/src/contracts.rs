@@ -81,6 +81,7 @@ const COMMANDS: &[&str] = &[
     "research_list_tree",
     "research_read_source",
     "research_delete",
+    "research_target_capabilities",
     "research_preflight",
     "research_start_run",
     "research_get_run",
@@ -184,6 +185,8 @@ fn persisted_model_samples_round_trip_through_rust_types() {
     assert_model_sample::<crate::learn::models::LearnEvent>(samples, "learnEvent");
     assert_model_sample::<crate::research::models::Research>(samples, "research");
     assert_model_sample::<crate::research::target_models::RunView>(samples, "researchTargetRun");
+    assert_model_sample::<crate::research::target_models::RunView>(samples, "researchGithubRun");
+    assert_model_sample::<crate::research::target_models::RunView>(samples, "researchWebsiteRun");
     assert_model_sample::<crate::research::target_models::Material>(samples, "researchMaterial");
     assert_model_sample::<crate::research::target_models::TargetEvent>(
         samples,

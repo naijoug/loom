@@ -1,8 +1,8 @@
 # Research 多目标研究与自动实验实施计划
 
 - 创建时间：2026-10-28 04:41，America/Los_Angeles。
-- 修订时间：2026-10-28 05:46，America/Los_Angeles；补齐开工审查的四项契约，复审记录见 §14。
-- 状态：**实施中：R0–R2 后端阶段通过；R3–R7、E0–E2 待实施，尚未整体验收**。用户已授权按计划实施。R0 在隔离临时目录准备了固定 REA／兼容 Node，系统工具和全局 MCP 配置未改；证据见 [R0 验收](../../dogfood/2026-10-28-research-targets-r0.md)。原计划阶段的“仅文档”范围已由本次实施授权更新。
+- 修订时间：2026-11-06；R3 后端出口已记录，复审记录仍见 §14。
+- 状态：**实施中：R0–R5 单次界面阶段通过（合成 UI；真实三目标 CLI 与原生桌面未测）；R6–R7、E0–E2 待实施，尚未整体验收**。用户已授权按计划实施。R0 在隔离临时目录准备了固定 REA／兼容 Node，系统工具和全局 MCP 配置未改；证据见 [R0 验收](../../dogfood/2026-10-28-research-targets-r0.md)。R3 证据见 [GitHub 获取记录](../../dogfood/2026-11-06-research-targets-r3.md)，R4 证据见 [网站研究记录](../../dogfood/2026-11-06-research-targets-r4.md)，R5 证据见 [单次界面记录](../../dogfood/2026-11-06-research-targets-r5.md)。原计划阶段的“仅文档”范围已由本次实施授权更新。开发开关 `LOOM_RESEARCH_TARGETS` 仍默认关闭；打开后只启用单次目标研究。`researchIteration` 与 `researchExperiments` 保持关闭。
 - 代码基线：`main`，HEAD `8e56fbdfc3d101348884c091ee0aad3d876681a7`，加上当前工作区已有改动。当前存在 Agent 生命周期、Discuss、WebView 恢复等未提交内容，不能用 HEAD 单独代表本计划读取到的能力；实施前重新核对状态，保留用户改动。
 - 用户目标：Research 除 GitHub／源码之外，可以输入网站或选择 App，以 REA 研究其实现与行为；借鉴 autoresearch 的假设、验证、记录和迭代机制。
 - 当前依据：[需求](../../requirements.md)、[架构](../../architecture.md)、[Agent 层](../../architecture/agent-layer.md)、[Research 契约](../../architecture/research-contracts.md)、[安全策略](../../security-policy.md)、[验证矩阵](../../testing.md#开发变更验证矩阵)。以下新增能力均为目标，不代表已实现。
@@ -45,7 +45,7 @@ REA 是工具提供者，不是模型或 Agent Adapter。autoresearch 是方法�
 | Research 输入问题、Agent／模型与可选项目 | [NewResearchForm](../../../src/features/research/NewResearchForm.tsx)、[models](../../../src-tauri/src/research/models.rs) | 显式目标、执行模式、预检结果和预算 |
 | 首问、原生续聊／历史回放、停止与重试 | [jobs](../../../src-tauri/src/research/jobs.rs)、[commands](../../../src-tauri/src/research/commands.rs) | 多步骤研究、计划校验、阶段恢复与总预算 |
 | Markdown 报告和源码引用 | [prompt](../../../src-tauri/src/research/prompt.rs)、[source_files](../../../src-tauri/src/source_files.rs) | Evidence、截图、目标指纹、覆盖率与未知项 |
-| GitHub 导入位于 Learn | [fetch](../../../src-tauri/src/learn/fetch.rs)、[NewStudyForm](../../../src/features/learn/NewStudyForm.tsx) | 抽取共享获取服务；Research 不导入 Learn |
+| GitHub 导入原位于 Learn，R3 已抽到共享获取 | [repository_sources](../../../src-tauri/src/repository_sources/mod.rs)、[Learn wrapper](../../../src-tauri/src/learn/fetch.rs) | Research 固定 commit 快照已接入；R5 单次界面按 reportId 打开该快照 |
 | Agent CLI 统一调用与进程生命周期 | [agent/mod.rs](../../../src-tauri/src/agent/mod.rs)、[生命周期](../../../src-tauri/src/agent/lifecycle.rs) | 新增独立工具进程通道，不用 Agent 流解析器解析 REA JSON-RPC |
 | 冻结 REA MCP 客户端、固定 6.5.0 catalog | [rea.rs](../../../crates/loom-runtime/src/rea.rs) | 按当前桌面架构选择性移植、重新验证；不得直接依赖冻结 crate |
 
@@ -378,7 +378,7 @@ Node 评测会执行用户代码，首版不是恶意代码隔离环境。评测
 
 每个里程碑提交代码、相关契约与验证证据；未通过出口不更新为完成。下表为完整执行范围。
 
-执行状态（2026-10-28）：R0–R2 的后端阶段通过。R1 包括 evidenceOnly、v2/租约/幂等、快照与材料、磁盘/恢复、直接 Tauri invoke 与退出检查；R2 包括目录、独立 JS、ASAR 源码归一化、固定 REA、partial Evidence 与真实模型/取消。`pnpm check`（前端 149、Rust 381 passed/35 ignored）及 `pnpm tauri build --no-bundle` 通过。证据及 MockRuntime/原生 UI 的边界见 [后端阶段记录](../../dogfood/2026-10-28-research-targets-r1-backend.md#r1r2-阶段出口)。下一步 R3；R4–R7 和 E0–E2 仍保持完整范围，开发开关默认关闭。
+执行状态（2026-11-06）：R0–R5 的单次界面阶段通过（合成 UI；真实三目标 CLI 与原生桌面未测）。R3 将 Learn Git 获取抽到 `repository_sources`，报告按固定 commit 绑定引用根。R4 启动独立 Chromium profile，校验 loopback 调试端口属于本次进程，观察页面/脚本并保存不进入文本提示的截图；跨 origin、端口伪装、取消和浏览器退出都有可区分错误。R5 接入单次目标表单和证据界面：停止、追问和重试走目标命令，源码与证据绑定 reportId。证据见 [R5 记录](../../dogfood/2026-11-06-research-targets-r5.md)。下一步 R6；R6–R7 和 E0–E2 仍保持完整范围。开发开关默认关闭，打开后也只启用单次模式。
 
 | 阶段 | 依赖 | 具体任务与主要产物 | 出口 |
 |---|---|---|---|

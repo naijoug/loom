@@ -2,7 +2,7 @@
 
 状态：2026-10-27 实现（[Agent 调用层与左侧功能栏计划](../plans/2026-10-26/22:42-agent-layer-and-activity-rail.md) P6，按 §8-2 默认决策）。范围见 [需求文档](../requirements.md) 的“Research 范围”，安全边界见 [安全策略](../security-policy.md#research)。命令、事件与模型样本由 `contracts/tauri-contract.json` 两端共同校验。
 
-2026-10-28 扩展状态：普通 Research 保留原问答行为，存储已支持 v1 读取与首次写入备份升级到 v2。目标 Research 的存储、跨进程租约、材料分页和独立 IPC 已接入；App 后端链路已有真实验证，开发入口通过 `LOOM_RESEARCH_TARGETS=1` 显式启用、默认关闭，前端尚未接入。GitHub／网站／连续调研与实验仍按 [多目标计划](../plans/2026-10-28/04:41-research-targets-and-experiments.md) 实施，R1/R2 后端出口和工程门禁已通过；原生 UI 验收仍由 R5–R7 执行。
+2026-11-06 扩展状态：普通 Research 保留原问答行为，存储已支持 v1 读取与首次写入备份升级到 v2。目标 Research 的存储、跨进程租约、材料分页和独立 IPC 已接入；App 与 GitHub 后端链路已有验证。网站目标在 R4 使用独立 Chromium profile 和本次 loopback 调试端口，保存页面/脚本证据与不进入文本提示的截图。R5 在 macOS 且 `LOOM_RESEARCH_TARGETS=1` 时打开单次目标界面，默认关闭；连续调研与实验仍关闭。原生三目标真实链路仍按 [多目标计划](../plans/2026-10-28/04:41-research-targets-and-experiments.md) 留到后续验收。
 
 ## 存储
 
@@ -66,20 +66,24 @@
 
 - 入口：左侧功能栏 Research（⌘3）；首次访问后保持挂载，Chat 保持挂载（隐藏）。
 - `src/features/research/`：研究列表、新建表单（共享 `AgentPicker`，模型输入随诊断能力显示）、问答列表（上下文标签、警告、错误摘要、报告）、追问框、停止 / 重试 / 删除、作业日志；源码查看器为共享 `components/SourceViewer`。
-- 非 Tauri 环境显示“仅桌面可用”。DEV 专用 `?fixture=simple-chat&researchFixture=ready|empty|running|failed|error` 注入合成 API，生产构建不包含。
+- 非 Tauri 环境显示“仅桌面可用”。DEV 专用 `?fixture=simple-chat&researchFixture=ready|empty|running|failed|error|targets` 注入合成 API，生产构建不包含。`targets` 只模拟单次目标界面，不启动浏览器、Git 或模型。
 
 
-## 目标 Research 后端（实施中，未开放 UI）
+## 目标 Research（单次界面已接入，连续调研与实验仍关闭）
 
-- `workflow = legacy | target` 不可原地切换；旧 ask/retry/cancel、turn、日志及源码入口对 target 返回 `workflow_mismatch`。普通创建输入拒绝未知的 target 字段。
-- 目标命令：`research_preflight/start_run/ask_run/retry_run/resume_run/cancel_run/get_run/list_runs/read_report/list_report_tree/read_report_source/list_evidence/read_evidence/export`。全部检查主窗口。新运行须开启开发开关；已保存资料读取不依赖开关。`research_export` 取得同一 writer lease，在应用受管目录导出 Markdown 和脱敏材料；显式 includeRaw 才包含经 hash 校验的原始 Evidence，并返回分享前审查提示。
+- `workflow = legacy | target` 不可原地切换；旧 ask/retry/cancel、turn、日志及源码入口对 target 返回 `workflow_mismatch`。普通创建输入拒绝未知的 target 字段。界面在读到 `workflow = target` 后改用目标命令，不调用上述旧执行入口。
+- `research_target_capabilities` 只报告开关：`singleShot` 在 macOS 且 `LOOM_RESEARCH_TARGETS=1` 时为真；`iteration` 与 `experiments` 固定为假。关闭时仍可阅读已保存的目标报告、证据和快照，但不能预检、开始、追问、重试或恢复。停止活动 run 不依赖该开关。
+- 目标命令：`research_target_capabilities/preflight/start_run/ask_run/retry_run/resume_run/cancel_run/get_run/list_runs/read_report/list_report_tree/read_report_source/list_evidence/read_evidence/export`。全部检查主窗口。新运行须开启开发开关；已保存资料读取不依赖开关。`research_export` 取得同一 writer lease，在应用受管目录导出 Markdown 和脱敏材料；显式 includeRaw 才包含经 hash 校验的原始 Evidence，并返回分享前审查提示。
+- 单次表单只提交 `mode = single`。网站在预检前和预检结果里都写明会加载页面并运行脚本。证据区只显示脱敏文本；截图不作为图片渲染。源码查看器只读取当前 reportId 的快照。
 - 预检冻结规范路径、Agent 配置、工具身份、预算和 5 分钟期限；开始只接受 preflightId/requestId。重复 requestId 不重启进程；失败请求也保存，换请求体报冲突。已消费的预检不能通过新 requestId 再启动。
 - target 的 `runs/<runId>/events.jsonl` 为权威记录，`state.json` 为可重建投影。读者忽略半条尾记录；恢复持有 writer 后修复尾部、保守扣除未知调用预留。retry/resume 不清零用量；模型补读上限同样持久化。
 - 报告 manifest 绑定 run 与已发布 snapshot/evidence 集合，report ID 包含 manifest 摘要；快照按清单及源码内容 hash 验证，缺失或篡改不会回退 workspace。只读追问复制 parentReport 的固定材料 ID，采集预算为 0，不访问当前目标。
 - 模型仅可返回严格的 `answer` / `need_material` JSON。每交换最多 4 个读取、源码窗口最多 200 行、序列化材料最多 48,000 字符；读取范围超过文件末尾时与共享源码查看器一样裁到 EOF，起点越界仍拒绝。每报告 3 次补读、1 次纠错、最多 5 次模型调用。
 - `loom://research-event` 的 target 事件包含 researchId/runId、status/phase、progress、stopReason/error；读取磁盘状态仍是恢复依据。旧事件形状保持兼容。
 - 当前 App 链路使用固定 REA 6.8.0 私有 MCP、固定工具枚举和 schema 校验，先静态识别，再 JS 分析、保存 Evidence 与源码快照，最后通过 evidenceOnly CLI 生成报告。原始 Evidence 与模型视图分开 hash；默认材料读取只提供派生视图。App 不执行，原生引擎只提供诊断。
-- 尚待完成的约束与验证见 [后端实施记录](../dogfood/2026-10-28-research-targets-r1-backend.md)，不能将默认关闭的后端切片描述为完整目标研究产品交付。
+- GitHub 目标不调用 REA。预检只接受公开 `https://github.com/<owner>/<repo>` 和受校验 ref，并清空 tools。采集经 `repository_sources` 浅克隆并固定 commit，再把文本路径发布为不可变快照；符号链接、二进制、vendored 目录和超过 1 MiB 的文件不进入快照。模型用已有 `tree` / `source` 材料分页读取，`nextCursor` 表示未读完的路径。`research_list_report_tree` / `research_read_report_source` 只接受 researchId 与 reportId，从该报告的 `defaultSourceSnapshotId` 解析，不接受调用方传入的根目录或 snapshotId。
+- 网站目标需要 REA 6.8.0 和本机 Chrome/Chromium。预检规范化 `http(s)` URL，拒绝 `file:`、`javascript:`、凭据和私网字面地址，并记录将要启动的浏览器路径。采集使用新的 user-data-dir 和自动分配的 loopback 调试端口，确认监听套接字属于本次进程树后才把该端口交给 `list_browser_targets` / `inspect_web_page`。根页面落到其他 origin 时返回 `cross_origin_redirect` 或 `cross_origin_navigation`。截图 PNG 只进原始证据。模型视图去掉 cookie、Authorization 和 URL 查询串。
+- 尚待完成的约束与验证见 [R1/R2 记录](../dogfood/2026-10-28-research-targets-r1-backend.md)、[R3 记录](../dogfood/2026-11-06-research-targets-r3.md) 和 [R4 记录](../dogfood/2026-11-06-research-targets-r4.md)。不能将默认关闭的后端切片描述为完整目标研究产品交付。
 
 
 ### R1 持久化与恢复补充

@@ -7,8 +7,9 @@ use super::{
     target_store::{digest, TargetStore, Writer},
 };
 use crate::{
+    browser_host,
     models::{now_ms, AgentConfig},
-    research_sources,
+    repository_sources, research_sources,
 };
 use serde::{Deserialize, Serialize};
 
@@ -109,6 +110,11 @@ fn agent_digest(agent: &AgentConfig) -> Result<String, String> {
     crate::agent::evidence_execution_identity(agent)
 }
 pub(super) fn target_identity(input: &TargetInput) -> Result<String, String> {
+    match &input.target {
+        Target::Github { .. } => return github_identity(input),
+        Target::Website { .. } => return website_identity(input),
+        Target::App { .. } => {}
+    }
     let Target::App { path } = &input.target else {
         return Err("unsupported_target_collector".into());
     };
@@ -151,6 +157,37 @@ pub(super) fn target_identity(input: &TargetInput) -> Result<String, String> {
         .map_err(|e| e.to_string())?,
     ))
 }
+
+fn website_identity(input: &TargetInput) -> Result<String, String> {
+    let Target::Website { url, browser } = &input.target else {
+        return Err("unsupported_target_collector".into());
+    };
+    let site = browser_host::normalize_website_url(url)?;
+    let browser = browser_host::resolve_browser(browser.as_deref().map(std::path::Path::new))?;
+    let tools_identity = input
+        .tools
+        .as_ref()
+        .map(|tools| tools.fingerprint())
+        .transpose()?;
+    Ok(digest(
+        &serde_json::to_vec(&("website", site.origin, site.url, browser, tools_identity))
+            .map_err(|error| error.to_string())?,
+    ))
+}
+
+fn github_identity(input: &TargetInput) -> Result<String, String> {
+    let Target::Github { url, git_ref } = &input.target else {
+        return Err("unsupported_target_collector".into());
+    };
+    let repo = repository_sources::parse_github_url(url)?;
+    if let Some(git_ref) = git_ref {
+        repository_sources::validate_ref(git_ref)?;
+    }
+    Ok(digest(
+        &serde_json::to_vec(&("github", repo.clone_url, git_ref)).map_err(|e| e.to_string())?,
+    ))
+}
+
 pub fn preflight(
     store: &Store,
     mut input: TargetInput,
@@ -194,22 +231,83 @@ pub fn preflight(
     {
         return Err("target_disk_budget_too_small_for_collector".into());
     }
-    match &mut input.target {
+    let (operations, limitations) = match &mut input.target {
         Target::App { path } => {
             *path = research_sources::inspect_app(path)?
                 .root
                 .to_string_lossy()
                 .into_owned();
+            input.tools = Some(
+                input
+                    .tools
+                    .as_ref()
+                    .ok_or("rea_runtime_required")?
+                    .inspect()?,
+            );
+            (
+                vec![
+                    "Inspect selected App statically; for ASAR, read only declared source members and their .unpacked companions".into(),
+                    "Analyze JavaScript without executing the App".into(),
+                    "Save source snapshots and redacted evidence; send bounded text to selected CLI".into(),
+                ],
+                vec![
+                    "Native engines are diagnostic only; static observations do not prove runtime behavior".into(),
+                    "Tool and model readiness are rechecked when starting".into(),
+                ],
+            )
         }
-        _ => return Err("unsupported_target_collector".into()),
-    }
-    input.tools = Some(
-        input
-            .tools
-            .as_ref()
-            .ok_or("rea_runtime_required")?
-            .inspect()?,
-    );
+        Target::Github { url, git_ref } => {
+            let repo = repository_sources::parse_github_url(url)?;
+            *url = repo.url;
+            if let Some(git_ref) = git_ref.as_mut() {
+                repository_sources::validate_ref(git_ref)?;
+                if repository_sources::is_full_commit(git_ref) {
+                    *git_ref = git_ref.to_ascii_lowercase();
+                }
+            }
+            input.tools = None;
+            (
+                vec![
+                    "Fetch the public GitHub repository over HTTPS and pin one commit".into(),
+                    "Publish an immutable source snapshot, path manifest and paged excerpts".into(),
+                    "Do not run repository code; send only bounded excerpts to the selected CLI"
+                        .into(),
+                ],
+                vec![
+                    "Citations resolve only through the report's pinned snapshot".into(),
+                    "Symlinks, binaries, vendored directories and files over 1 MiB are omitted"
+                        .into(),
+                    "A later commit is a new snapshot and cannot rewrite this report".into(),
+                ],
+            )
+        }
+        Target::Website { url, browser } => {
+            let site = browser_host::normalize_website_url(url)?;
+            let resolved =
+                browser_host::resolve_browser(browser.as_deref().map(std::path::Path::new))?;
+            *url = site.url;
+            *browser = Some(resolved.to_string_lossy().into_owned());
+            input.tools = Some(
+                input
+                    .tools
+                    .as_ref()
+                    .ok_or("rea_runtime_required")?
+                    .inspect()?,
+            );
+            (
+                vec![
+                    "Launch an isolated Chromium profile and bind its loopback debugging port to this run".into(),
+                    "Load the page, observe it and its scripts, and save one screenshot outside the text prompt".into(),
+                    "Do not attach to or close an already running user browser".into(),
+                ],
+                vec![
+                    "Loading the page runs its scripts and contacts the network; this is not a read-only action".into(),
+                    "A cross-origin navigation stops collection after it is observed. Subresource requests are not an egress sandbox".into(),
+                    "Screenshots stay in local evidence and are not pasted into the text model prompt".into(),
+                ],
+            )
+        }
+    };
     let identity = target_identity(&input)?;
     let agent_digest = agent_digest(agent)?;
     let spec_digest = digest(
@@ -223,16 +321,8 @@ pub fn preflight(
         budget,
         digest: spec_digest,
         expires_at_ms: now_ms() + 300_000,
-        operations: vec![
-            "Inspect selected App statically; for ASAR, read only declared source members and their .unpacked companions".into(),
-            "Analyze JavaScript without executing the App".into(),
-            "Save source snapshots and redacted evidence; send bounded text to selected CLI".into(),
-        ],
-        limitations: vec![
-            "Native engines are diagnostic only; static observations do not prove runtime behavior"
-                .into(),
-            "Tool and model readiness are rechecked when starting".into(),
-        ],
+        operations,
+        limitations,
     };
     files::write_json(
         &files::path(
@@ -640,6 +730,105 @@ mod tests {
             );
         }
         assert!(store.list().items.is_empty());
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn github_preflight_normalizes_without_rea_and_rejects_other_targets() {
+        let (root, store, mut input, agent) = fixture();
+        input.tools = None;
+        input.target = Target::Github {
+            url: "https://github.com/sharkdp/hexyl.git/".into(),
+            git_ref: Some("Main".into()),
+        };
+        let ready = preflight(&store, input.clone(), None, &agent).unwrap();
+        match ready.input.target {
+            Target::Github { url, git_ref } => {
+                assert_eq!(url, "https://github.com/sharkdp/hexyl");
+                assert_eq!(git_ref.as_deref(), Some("Main"));
+            }
+            other => panic!("unexpected target {other:?}"),
+        }
+        assert!(ready.input.tools.is_none());
+        assert!(ready
+            .operations
+            .iter()
+            .any(|item| item.contains("pin one commit")));
+        input.target = Target::Github {
+            url: "https://github.com/sharkdp/hexyl".into(),
+            git_ref: Some("A".repeat(40)),
+        };
+        let pinned = preflight(&store, input.clone(), None, &agent).unwrap();
+        match pinned.input.target {
+            Target::Github { git_ref, .. } => {
+                assert_eq!(git_ref.as_deref(), Some("a".repeat(40).as_str()))
+            }
+            other => panic!("unexpected target {other:?}"),
+        }
+        for target in [
+            Target::Github {
+                url: "git@github.com:a/b.git".into(),
+                git_ref: None,
+            },
+            Target::Github {
+                url: "https://github.com/a/b".into(),
+                git_ref: Some("--upload-pack=x".into()),
+            },
+            Target::Github {
+                url: "https://github.com/a/../../etc".into(),
+                git_ref: None,
+            },
+        ] {
+            input.target = target;
+            assert!(preflight(&store, input.clone(), None, &agent).is_err());
+        }
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn website_preflight_records_the_browser_and_rejects_unsafe_urls() {
+        let (root, store, mut input, agent) = fixture();
+        let browser = root.join("chrome-bin");
+        std::fs::write(&browser, "#!/bin/sh\nexit 0\n").unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&browser, std::fs::Permissions::from_mode(0o755)).unwrap();
+        }
+        input.target = Target::Website {
+            url: "https://example.com/docs?token=secret".into(),
+            browser: Some(browser.to_string_lossy().into_owned()),
+        };
+        let ready = preflight(&store, input.clone(), None, &agent).unwrap();
+        match &ready.input.target {
+            Target::Website { url, browser } => {
+                assert_eq!(url, "https://example.com/docs?token=secret");
+                assert!(browser.as_ref().unwrap().ends_with("chrome-bin"));
+            }
+            other => panic!("unexpected target {other:?}"),
+        }
+        assert!(ready
+            .limitations
+            .iter()
+            .any(|item| item.contains("scripts")));
+        assert!(ready.input.tools.is_some());
+        for url in [
+            "file:///tmp/x",
+            "javascript:alert(1)",
+            "https://user:pw@example.com/a",
+            "http://10.1.2.3/",
+            "http://192.168.0.2/admin",
+            "http://169.254.1.1/",
+        ] {
+            input.target = Target::Website {
+                url: url.into(),
+                browser: Some(browser.to_string_lossy().into_owned()),
+            };
+            assert!(
+                preflight(&store, input.clone(), None, &agent).is_err(),
+                "{url}"
+            );
+        }
         std::fs::remove_dir_all(root).unwrap();
     }
 }

@@ -23,6 +23,11 @@ test('layer scanner keeps production after inline tests and ignores literal/comm
  assert.ok(code.includes('agent::runner::run'));assert.equal(code.split('\n').length,source.split('\n').length);
  assert.equal(productionCode('real_tests.rs',source),'');
 });
+test('shared git fetch is not a feature spawn exception',()=>{
+ const text=readFileSync('scripts/check-layers.mjs','utf8');
+ assert.equal(text.includes('learn/fetch.rs'),false);
+ assert.equal(text.includes('SPAWN_ALLOWLIST'),false);
+});
 test('the real Chat runner remains inside the layer scan after its test module',async()=>{
  const {productionCode}=await import('../../scripts/lib/rust-production.mjs');
  const text=readFileSync('src-tauri/src/chat/runtime.rs','utf8');

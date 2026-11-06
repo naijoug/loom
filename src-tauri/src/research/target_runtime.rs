@@ -6,7 +6,7 @@ use super::{
     target_models::*,
     target_store::{TargetStore, Writer},
 };
-use crate::{agent, models::AgentConfig, rea, research_sources};
+use crate::{agent, browser_host, models::AgentConfig, rea, repository_sources, research_sources};
 use serde_json::json;
 use std::time::{Duration, Instant};
 
@@ -20,6 +20,8 @@ pub struct Runtime {
     starting_usage: u64,
     emit: Option<std::sync::Arc<dyn Fn(TargetEvent) + Send + Sync>>,
     operation: Option<agent::OperationGuard<'static>>,
+    #[cfg(test)]
+    fixture_clone_url: Option<String>,
 }
 impl Runtime {
     pub fn new(
@@ -51,7 +53,14 @@ impl Runtime {
             starting_usage,
             emit: None,
             operation: Some(operation),
+            #[cfg(test)]
+            fixture_clone_url: None,
         })
+    }
+    #[cfg(test)]
+    pub(super) fn with_fixture_clone(mut self, url: impl Into<String>) -> Self {
+        self.fixture_clone_url = Some(url.into());
+        self
     }
     pub fn with_emitter(mut self, emit: std::sync::Arc<dyn Fn(TargetEvent) + Send + Sync>) -> Self {
         self.emit = Some(emit);
@@ -174,6 +183,12 @@ impl Runtime {
         }
         if super::target_service::target_identity(&self.spec.input)? != self.spec.target_identity {
             return Err("target_changed_repeat_preflight".into());
+        }
+        if matches!(self.spec.input.target, Target::Github { .. }) {
+            return self.collect_github().await;
+        }
+        if matches!(self.spec.input.target, Target::Website { .. }) {
+            return self.collect_website().await;
         }
         let Target::App { path } = &self.spec.input.target else {
             return Err("unsupported_target_collector".into());
@@ -326,6 +341,340 @@ impl Runtime {
         self.writer.settle_area(&area)?;
         diagnostics?;
         outcome
+    }
+
+    async fn collect_website(&self) -> Result<(), String> {
+        let Target::Website { url, browser } = &self.spec.input.target else {
+            return Err("unsupported_target_collector".into());
+        };
+        let site = browser_host::normalize_website_url(url)?;
+        let executable =
+            browser_host::resolve_browser(browser.as_deref().map(std::path::Path::new))?;
+        let available = self.writer.available_disk(&self.spec.run_id)?;
+        let capacity = available
+            .saturating_sub(16 * 1024 * 1024)
+            .min(256 * 1024 * 1024);
+        if capacity < 48 * 1024 * 1024 {
+            return Err("target_disk_budget_too_small_for_collector".into());
+        }
+        let area = self
+            .writer
+            .reserve_area(&self.spec.run_id, "workspace", capacity)?;
+        let profile = area.path.join("browser-profile");
+        let started = self.reserve("collection", 120_000)?;
+        let launched = browser_host::launch(
+            &executable,
+            &profile,
+            &site,
+            self.owner(),
+            &super::store::next_id("browser"),
+            &|| self.cancelled(),
+        )
+        .await;
+        self.settle(started)?;
+        let outcome = match launched {
+            Ok(mut session) => {
+                let checked = crate::tool_process::directory_bytes(&profile, capacity);
+                let observed = if checked.is_ok() {
+                    self.observe_website(&mut session, &site, &area.path).await
+                } else {
+                    checked.map(|_| ())
+                };
+                let closed = session.close().await;
+                observed?;
+                closed
+            }
+            Err(error) => Err(error),
+        };
+        let settled = self.writer.settle_area(&area);
+        outcome?;
+        settled
+    }
+
+    async fn observe_website(
+        &self,
+        session: &mut browser_host::Session,
+        site: &browser_host::Site,
+        workspace: &std::path::Path,
+    ) -> Result<(), String> {
+        let config = self
+            .spec
+            .input
+            .tools
+            .as_ref()
+            .ok_or("rea_runtime_required")?;
+        let area = self
+            .writer
+            .reserve_area(&self.spec.run_id, "workspace", 32 * 1024 * 1024)?;
+        let opened = self.reserve("collection", 30_000)?;
+        let client = rea::Client::open(
+            config,
+            &area.path,
+            &super::store::next_id("rea"),
+            self.owner(),
+            std::time::Duration::from_secs(120),
+            area.capacity,
+            &|| self.cancelled(),
+        )
+        .await;
+        self.settle(opened)?;
+        let mut client = client?;
+        let observed = async {
+            let started = self.reserve("collection", 120_000)?;
+            let listed = client
+                .call(
+                    rea::Tool::ListBrowserTargets,
+                    serde_json::json!({
+                        "cdp_endpoint": session.endpoint(),
+                        "allowed_origins": [site.origin],
+                    }),
+                    &|| self.cancelled(),
+                )
+                .await;
+            self.settle(started)?;
+            let listed = listed?;
+            let bound = listed_targets(&listed).into_iter().any(|(id, url)| {
+                id == session.page_id() && browser_host::origin_of(&url).ok().as_deref() == Some(site.origin.as_str())
+            });
+            if !bound {
+                return Err("browser_target_mismatch".into());
+            }
+            let started = self.reserve("collection", 120_000)?;
+            let page = client
+                .call(
+                    rea::Tool::InspectWebPage,
+                    serde_json::json!({
+                        "cdp_endpoint": session.endpoint(),
+                        "target_id": session.page_id(),
+                        "allowed_origins": [site.origin],
+                        "include_script_sources": true,
+                        "include_accessibility_text": true,
+                        "observation_ms": 200
+                    }),
+                    &|| self.cancelled(),
+                )
+                .await;
+            self.settle(started)?;
+            let page = page?;
+            let page_url = page
+                .pointer("/normalized_result/url")
+                .and_then(|value| value.as_str())
+                .unwrap_or(session.page_url());
+            if browser_host::origin_of(page_url).ok().as_deref() != Some(site.origin.as_str()) {
+                return Err(format!(
+                    "cross_origin_navigation:{}",
+                    browser_host::origin_of(page_url).unwrap_or_else(|_| "unparsed".into())
+                ));
+            }
+            let scripts = script_files(&page);
+            if !scripts.is_empty() {
+                let root = workspace.join("page-scripts");
+                std::fs::create_dir_all(&root).map_err(|error| error.to_string())?;
+                let mut paths = Vec::new();
+                for (index, (name, text)) in scripts.iter().enumerate() {
+                    let relative = if repository_sources::validate_repo_path(name).is_ok() {
+                        name.clone()
+                    } else {
+                        format!("script-{index}.js")
+                    };
+                    std::fs::write(root.join(&relative), text).map_err(|error| error.to_string())?;
+                    paths.push(relative);
+                }
+                self.writer.snapshot_from(
+                    &root,
+                    &paths,
+                    &format!("website-scripts:{}:{}", site.origin, paths.len()),
+                    self.writer.available_disk(&self.spec.run_id)?,
+                )?;
+            }
+            let raw = serde_json::to_vec(&page).map_err(|error| error.to_string())?;
+            let view = serde_json::to_string(&research_sources::model_view(&page))
+                .map_err(|error| error.to_string())?;
+            self.publish_website_evidence(
+                "loom.website-page",
+                &raw,
+                &view,
+                "partial",
+                vec![
+                    "Page scripts were observed after navigation; third-party requests are not blocked."
+                        .into(),
+                    "Cookies, authorization headers and request bodies are removed from the model view."
+                        .into(),
+                ],
+            )?;
+            let started = self.reserve("collection", 120_000)?;
+            let shot = session.screenshot(&|| self.cancelled()).await;
+            self.settle(started)?;
+            let shot = shot?;
+            self.publish_website_evidence(
+                "loom.website-screenshot",
+                &shot,
+                &serde_json::json!({
+                    "kind": "website_screenshot",
+                    "origin": site.origin,
+                    "bytes": shot.len(),
+                    "includedInTextPrompt": false,
+                    "note": "PNG bytes stay in raw evidence and are not copied into the text prompt."
+                })
+                .to_string(),
+                "partial",
+                vec![
+                    "Screenshot may contain page content and is omitted from the text model."
+                        .into(),
+                ],
+            )?;
+            Ok(())
+        }
+        .await;
+        client.close().await?;
+        self.writer.settle_area(&area)?;
+        observed
+    }
+
+    fn publish_website_evidence(
+        &self,
+        tool: &str,
+        raw: &[u8],
+        model_view: &str,
+        coverage: &str,
+        limitations: Vec<String>,
+    ) -> Result<(), String> {
+        self.writer.publish_evidence(
+            &self.spec.run_id,
+            EvidenceRecord {
+                evidence_id: String::new(),
+                run_id: self.spec.run_id.clone(),
+                source_id: None,
+                tool: tool.into(),
+                tool_version: rea::VERSION.into(),
+                raw_sha256: String::new(),
+                model_sha256: String::new(),
+                bytes: 0,
+                coverage: coverage.into(),
+                limitations,
+                created_at_ms: 0,
+            },
+            raw,
+            model_view,
+        )?;
+        Ok(())
+    }
+
+    async fn collect_github(&self) -> Result<(), String> {
+        let Target::Github { url, git_ref } = &self.spec.input.target else {
+            return Err("unsupported_target_collector".into());
+        };
+        let parsed = repository_sources::parse_github_url(url)?;
+        if !parsed.clone_url.starts_with("https://github.com/")
+            || !parsed.clone_url.ends_with(".git")
+        {
+            return Err("unsupported_repository_url".into());
+        }
+        #[cfg(test)]
+        let repo = {
+            let mut repo = parsed;
+            if let Some(url) = &self.fixture_clone_url {
+                if !url.starts_with("file:///") || url.bytes().any(|byte| byte.is_ascii_control()) {
+                    return Err("invalid_test_repository".into());
+                }
+                repo.clone_url = url.clone();
+            }
+            repo
+        };
+        #[cfg(not(test))]
+        let repo = parsed;
+        if let Some(git_ref) = git_ref {
+            repository_sources::validate_ref(git_ref)?;
+        }
+        let available = self.writer.available_disk(&self.spec.run_id)?;
+        let content_cap = available.saturating_sub(8 * 1024 * 1024) / 3;
+        if content_cap < 256 * 1024 {
+            return Err("target_disk_budget_too_small_for_collector".into());
+        }
+        let workspace_cap = content_cap
+            .saturating_mul(2)
+            .min(available.saturating_sub(4 * 1024 * 1024));
+        let area = self
+            .writer
+            .reserve_area(&self.spec.run_id, "workspace", workspace_cap)?;
+        let checkout = area.path.join("checkout");
+        let cancelled = || self.cancelled();
+        let request = repository_sources::GitRequest {
+            owner: self.owner(),
+            kind: agent::ProcessKind::Tool,
+            operation_prefix: "research-git",
+            cancelled: &cancelled,
+            file_limit: repository_sources::MAX_TRACKED_FILES,
+            byte_limit: content_cap,
+            disk_root: Some((checkout.clone(), workspace_cap)),
+        };
+        let started = self.reserve("collection", 120_000)?;
+        let fetched =
+            repository_sources::fetch(&request, &repo, git_ref.as_deref(), &checkout).await;
+        self.settle(started)?;
+        let commit = fetched?;
+        self.writer.settle_area(&area)?;
+        let listed_started = self.reserve("collection", 30_000)?;
+        let listed = repository_sources::git(&request, &checkout, &["ls-files", "-z"]).await;
+        self.settle(listed_started)?;
+        let listed = listed?;
+        let remaining = self
+            .writer
+            .available_disk(&self.spec.run_id)?
+            .saturating_sub(2 * 1024 * 1024);
+        let inventory = repository_sources::select_sources(&checkout, &listed, remaining)?;
+        self.writer.snapshot_from(
+            &checkout,
+            &inventory.paths,
+            &format!("github:{}:{commit}", repo.url),
+            remaining,
+        )?;
+        let provenance = json!({
+            "kind": "github_snapshot",
+            "url": repo.url,
+            "commit": commit,
+            "gitRef": git_ref,
+            "included": inventory.paths.len(),
+            "excluded": inventory.excluded,
+            "truncated": inventory.truncated,
+            "bytes": inventory.bytes,
+        });
+        let raw = serde_json::to_vec(&provenance).map_err(|e| e.to_string())?;
+        let view = serde_json::to_string(&research_sources::model_view(&provenance))
+            .map_err(|e| e.to_string())?;
+        let mut limitations = vec![
+            "Pinned commit only; other commits stay in their own snapshots.".into(),
+            "Symlinks, binaries, vendored directories and files over 1 MiB are omitted.".into(),
+            "Repository code was not executed.".into(),
+        ];
+        if inventory.truncated {
+            limitations
+                .push("The snapshot stopped at the disk budget; omitted paths are unknown.".into());
+        }
+        self.writer.publish_evidence(
+            &self.spec.run_id,
+            EvidenceRecord {
+                evidence_id: String::new(),
+                run_id: self.spec.run_id.clone(),
+                source_id: None,
+                tool: "loom.github-snapshot".into(),
+                tool_version: "1".into(),
+                raw_sha256: String::new(),
+                model_sha256: String::new(),
+                bytes: 0,
+                coverage: if inventory.truncated {
+                    "partial"
+                } else {
+                    "inventory"
+                }
+                .into(),
+                limitations,
+                created_at_ms: 0,
+            },
+            &raw,
+            &view,
+        )?;
+        Ok(())
     }
 
     fn initial_context(&self) -> Result<materials::Context, String> {
@@ -653,6 +1002,141 @@ impl Runtime {
         Ok(())
     }
 }
+
+fn listed_targets(value: &serde_json::Value) -> Vec<(String, String)> {
+    value
+        .pointer("/normalized_result/targets")
+        .and_then(|targets| targets.as_array())
+        .into_iter()
+        .flatten()
+        .filter_map(|target| {
+            let id = target
+                .get("target_id")
+                .or_else(|| target.get("id"))?
+                .as_str()?;
+            let url = target.get("url")?.as_str()?;
+            Some((id.to_string(), url.to_string()))
+        })
+        .collect()
+}
+
+fn script_files(value: &serde_json::Value) -> Vec<(String, String)> {
+    value
+        .pointer("/normalized_result/scripts")
+        .and_then(|scripts| scripts.as_array())
+        .into_iter()
+        .flatten()
+        .enumerate()
+        .filter_map(|(index, script)| {
+            let text = script.get("text")?.as_str()?.to_string();
+            let name = script
+                .get("url")
+                .and_then(|url| url.as_str())
+                .and_then(|url| url.rsplit(['/', '?']).next())
+                .filter(|name| !name.is_empty())
+                .map(|name| name.to_string())
+                .unwrap_or_else(|| format!("script-{index}.js"));
+            Some((name, text))
+        })
+        .collect()
+}
+
+#[cfg(test)]
+const FAKE_REA: &str = r#"#!/usr/bin/env python3
+import json, pathlib, sys, urllib.request
+catalog = "4748bd4d8c81aaecf7fceceecfbaf14302cab6cb99cd878c0141b30b9eb577b2"
+schemas = json.loads(pathlib.Path(__file__).with_name("schemas.json").read_text())
+tools = [{"name": item["name"], "inputSchema": item["inputSchema"], "annotations": item.get("annotations", {"destructiveHint": False})} for item in schemas]
+while len(tools) < 229:
+    tools.append({"name": f"loom_pad_{len(tools)}", "inputSchema": {"type": "object", "additionalProperties": False}, "annotations": {"destructiveHint": False}})
+def send(message):
+    sys.stdout.write(json.dumps(message) + "\n")
+    sys.stdout.flush()
+for line in sys.stdin:
+    message = json.loads(line)
+    if "id" not in message: continue
+    method, mid = message.get("method"), message["id"]
+    if method == "initialize":
+        send({"jsonrpc":"2.0","id":mid,"result":{"protocolVersion":"2025-06-18","capabilities":{},"serverInfo":{"name":"rea","version":"6.8.0"}}})
+    elif method == "tools/list":
+        send({"jsonrpc":"2.0","id":mid,"result":{"tools":tools}})
+    elif method == "tools/call":
+        name = message["params"]["name"]
+        args = message["params"].get("arguments") or {}
+        if name == "binary_session":
+            result = {"server_identity":{"catalog":{"digests":{"combined_sha256":catalog}}}}
+        elif name == "list_browser_targets":
+            endpoint = args.get("cdp_endpoint", "")
+            if not endpoint.startswith("http://127.0.0.1:"):
+                send({"jsonrpc":"2.0","id":mid,"result":{"isError":True,"structuredContent":{"error":{"code":"bad_endpoint"}}}})
+                continue
+            rows = json.load(urllib.request.urlopen(endpoint + "/json/list", timeout=3))
+            result = {"normalized_result":{"targets":[{"target_id":row["id"],"url":row["url"]} for row in rows if row.get("type")=="page"]}}
+        elif name == "inspect_web_page":
+            origin = args["allowed_origins"][0]
+            script = urllib.request.urlopen(origin + "/app.js", timeout=3).read().decode()
+            result = {"evidence_id":"ev_" + "ab"*32,"normalized_result":{"url":origin + "/","scripts":[{"url":origin + "/app.js","text":script}],"cookie":"session=super-secret-cookie","authorization":"Bearer super-secret-token"}}
+        elif name == "get_evidence_bundle":
+            result = {"records":[]}
+        else:
+            result = {"ok": True}
+        send({"jsonrpc":"2.0","id":mid,"result":{"structuredContent":{"result":result}}})
+    else:
+        send({"jsonrpc":"2.0","id":mid,"error":{"code":-32601,"message":"unsupported"}})
+"#;
+
+#[cfg(test)]
+fn write_runtime_browser(path: &std::path::Path) {
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::write(path, FAKE_BROWSER).unwrap();
+    std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755)).unwrap();
+}
+
+#[cfg(test)]
+const FAKE_BROWSER: &str = r#"#!/usr/bin/env python3
+import base64, hashlib, json, socket
+from pathlib import Path
+import sys
+args = sys.argv[1:]
+profile = next(arg.split("=",1)[1] for arg in args if arg.startswith("--user-data-dir="))
+url = args[-1]
+Path(profile).mkdir(parents=True, exist_ok=True)
+sock = socket.socket(); sock.bind(("127.0.0.1", 0)); port = sock.getsockname()[1]
+Path(profile, "DevToolsActivePort").write_text(f"{port}\n/devtools/browser/fake\n")
+sock.listen(32)
+png = base64.b64encode(bytes.fromhex("89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000a49444154789c63000100000500010d0a2db40000000049454e44ae426082")).decode()
+def frames(conn, data):
+    text = data.decode("latin1")
+    if "Upgrade: websocket" in text:
+        key = next(line.split(":",1)[1].strip() for line in text.split("\r\n") if line.lower().startswith("sec-websocket-key:"))
+        accept = base64.b64encode(hashlib.sha1((key+"258EAFA5-E914-47DA-95CA-C5AB0DC85B11").encode()).digest()).decode()
+        conn.send(f"HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: {accept}\r\n\r\n".encode())
+        while True:
+            header = conn.recv(2)
+            if len(header) < 2: return
+            length = header[1] & 127
+            if length == 126: length = int.from_bytes(conn.recv(2), "big")
+            mask = conn.recv(4); payload = bytes(b ^ mask[i%4] for i,b in enumerate(conn.recv(length)))
+            message = json.loads(payload.decode())
+            body = json.dumps({"id": message["id"], "result": {"data": png} if message.get("method")=="Page.captureScreenshot" else {}}).encode()
+            conn.send(bytes([0x81, len(body)]) + body)
+        return
+    path = text.split(" ")[1]
+    body = {"Browser":"FakeChrome/1","webSocketDebuggerUrl":f"ws://127.0.0.1:{port}/devtools/browser/fake"} if path.startswith("/json/version") else [{"id":"page-owned","type":"page","url":url,"webSocketDebuggerUrl":f"ws://127.0.0.1:{port}/devtools/page/page-owned"}] if path.startswith("/json/list") else {}
+    raw = json.dumps(body).encode()
+    conn.send(b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: %d\r\nConnection: close\r\n\r\n"%len(raw)+raw)
+while True:
+    conn,_ = sock.accept(); data=b""; conn.settimeout(5)
+    try:
+        while b"\r\n\r\n" not in data and len(data)<65536:
+            chunk=conn.recv(4096)
+            if not chunk: break
+            data += chunk
+        if data: frames(conn, data)
+    except Exception:
+        pass
+    conn.close()
+"#;
 
 #[cfg(test)]
 mod tests {
@@ -988,5 +1472,377 @@ mod tests {
             run.state.usage.calls,
             root.display()
         );
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn github_reports_pin_each_commit_and_reject_foreign_paths() {
+        use std::os::unix::fs::PermissionsExt;
+        let root = super::super::store::tests::temp_root();
+        let source = root.join("source");
+        std::fs::create_dir_all(source.join("src")).unwrap();
+        let git = |args: &[&str]| {
+            let status = std::process::Command::new("git")
+                .args([
+                    "-c",
+                    "user.name=F",
+                    "-c",
+                    "user.email=f@example.invalid",
+                    "-c",
+                    "commit.gpgsign=false",
+                ])
+                .args(args)
+                .current_dir(&source)
+                .output()
+                .unwrap();
+            assert!(
+                status.status.success(),
+                "{}",
+                String::from_utf8_lossy(&status.stderr)
+            );
+        };
+        git(&["init", "--quiet", "-b", "v1"]);
+        std::fs::write(source.join("src/item.rs"), "fn version() -> i32 { 1 }\n").unwrap();
+        std::fs::write(source.join("src/other.rs"), "fn other() {}\n").unwrap();
+        std::os::unix::fs::symlink("/etc/passwd", source.join("src/linked.rs")).unwrap();
+        git(&["add", "."]);
+        git(&["commit", "--quiet", "-m", "v1"]);
+        git(&["branch", "v2"]);
+        git(&["checkout", "--quiet", "v2"]);
+        std::fs::write(source.join("src/item.rs"), "fn version() -> i32 { 2 }\n").unwrap();
+        git(&["add", "src/item.rs"]);
+        git(&["commit", "--quiet", "-m", "v2"]);
+        std::fs::write(root.join("secret.txt"), "super-secret-token\n").unwrap();
+        let script = root.join("fake-claude");
+        std::fs::write(
+            &script,
+            r#"#!/usr/bin/env python3
+import json, os, re, sys
+if "--version" in sys.argv[1:]:
+    print("2.1.311 (Claude Code)")
+    raise SystemExit(0)
+prompt = sys.stdin.read()
+state = os.path.join(os.path.dirname(os.path.abspath(__file__)), "turns.txt")
+count = int(open(state).read() or "0") if os.path.exists(state) else 0
+count += 1
+open(state, "w").write(str(count))
+print(json.dumps({"type":"system","subtype":"init","tools":[],"mcp_servers":[]}), flush=True)
+if count == 1:
+    snap = re.search(r"snapshot-[0-9a-f]+", prompt).group(0)
+    body = {"kind":"need_material","requests":[
+        {"kind":"source","snapshotId":snap,"path":"src/item.rs","startLine":1,"endLine":1},
+        {"kind":"tree","snapshotId":snap,"offset":0,"limit":1}]}
+else:
+    body = {"kind":"answer","markdown":"Pinned source is [item](loom-src:src/item.rs#L1-L1)."}
+text = json.dumps(body, ensure_ascii=False)
+print(json.dumps({"type":"assistant","message":{"content":[{"type":"text","text":text}]}}), flush=True)
+print(json.dumps({"type":"result","is_error":False,"result":text}), flush=True)
+"#,
+        )
+        .unwrap();
+        std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let agent = AgentConfig {
+            id: "github-agent".into(),
+            name: "Fake".into(),
+            command: script.to_string_lossy().into_owned(),
+            args: vec![],
+            working_directory_policy: "project_root".into(),
+            capabilities: vec![],
+            adapter_type: "claude_code_cli".into(),
+            can_write_files: false,
+            can_run_commands: false,
+            enabled: true,
+            available: true,
+        };
+        let store = Store::new(&root);
+        let clone_url = format!("file://{}", source.display());
+        let mut reports = Vec::new();
+        let mut research_id = None;
+        for (request, branch, marker) in
+            [("request-v1", "v1", "{ 1 }"), ("request-v2", "v2", "{ 2 }")]
+        {
+            let _ = std::fs::remove_file(root.join("turns.txt"));
+            let input = TargetInput {
+                target: Target::Github {
+                    url: "https://github.com/example/fixture.git".into(),
+                    git_ref: Some(branch.into()),
+                },
+                question: "What does version return? Cite the pinned source line.".into(),
+                agent_id: agent.id.clone(),
+                model: None,
+                language: "en".into(),
+                mode: ResearchMode::Single,
+                budget: None,
+                tools: None,
+            };
+            let preflight =
+                target_service::preflight(&store, input, research_id.clone(), &agent).unwrap();
+            let admitted =
+                target_service::admit(store.clone(), &preflight.preflight_id, request, &agent)
+                    .unwrap();
+            research_id = Some(admitted.view.spec.research_id.clone());
+            let target = admitted.target.clone();
+            let run_id = admitted.view.spec.run_id.clone();
+            Runtime::new(
+                admitted.target,
+                admitted.writer.unwrap(),
+                admitted.view.spec,
+                agent.clone(),
+                None,
+            )
+            .unwrap()
+            .with_fixture_clone(clone_url.clone())
+            .execute()
+            .await
+            .unwrap();
+            let run = target.run(&run_id).unwrap();
+            assert_eq!(
+                run.state.status,
+                RunStatus::Completed,
+                "{:?}",
+                run.state.error
+            );
+            assert_eq!(run.state.exchange.reads, 1, "{:?}", run.state.error);
+            assert_eq!(run.state.snapshot_ids.len(), 1);
+            let report_id = run.state.report_ids.last().unwrap().clone();
+            let report = target.report(&report_id).unwrap();
+            assert!(report.markdown.contains("loom-src:src/item.rs#L1-L1"));
+            assert_eq!(
+                report.report.default_source_snapshot_id.as_deref(),
+                Some(run.state.snapshot_ids[0].as_str())
+            );
+            let text = target
+                .report_source(&report_id, "src/item.rs", 1, 1)
+                .unwrap()
+                .text;
+            assert!(text.contains(marker), "{text}");
+            assert!(!text.contains("super-secret-token"));
+            let page = target
+                .material(
+                    &run_id,
+                    &MaterialRequest::Tree {
+                        snapshot_id: run.state.snapshot_ids[0].clone(),
+                        offset: 0,
+                        limit: 1,
+                    },
+                )
+                .unwrap();
+            assert_eq!(page.next_cursor, Some(1));
+            assert!(page.truncated);
+            for path in [
+                "../secret.txt",
+                "src/../../secret.txt",
+                "/etc/passwd",
+                "src/linked.rs",
+            ] {
+                let err = target.report_source(&report_id, path, 1, 1).unwrap_err();
+                assert!(!err.contains("super-secret-token"), "{err}");
+            }
+            reports.push((run_id, report_id, run.state.snapshot_ids[0].clone()));
+        }
+        let target = super::super::target_store::TargetStore::open(
+            store.clone(),
+            research_id.as_deref().unwrap(),
+        )
+        .unwrap();
+        let first = target
+            .report_source(&reports[0].1, "src/item.rs", 1, 1)
+            .unwrap();
+        let second = target
+            .report_source(&reports[1].1, "src/item.rs", 1, 1)
+            .unwrap();
+        assert!(first.text.contains("{ 1 }") && !first.text.contains("{ 2 }"));
+        assert!(second.text.contains("{ 2 }") && !second.text.contains("{ 1 }"));
+        assert_ne!(reports[0].2, reports[1].2);
+        assert!(target
+            .material(
+                &reports[1].0,
+                &MaterialRequest::Source {
+                    snapshot_id: reports[0].2.clone(),
+                    path: "src/item.rs".into(),
+                    start_line: 1,
+                    end_line: 1,
+                },
+            )
+            .unwrap_err()
+            .contains("material_scope_mismatch"));
+        let legacy = root.join("legacy-project");
+        std::fs::create_dir_all(legacy.join("src")).unwrap();
+        std::fs::write(legacy.join("src/item.rs"), "fn version() -> i32 { 9 }\n").unwrap();
+        let current =
+            crate::source_files::read_source(&legacy, "src/item.rs", Some(1), Some(1)).unwrap();
+        assert!(current.text.contains("{ 9 }"));
+        assert!(
+            crate::source_files::read_source(&legacy, "../secret.txt", Some(1), Some(1)).is_err()
+        );
+        std::fs::remove_dir_all(target.root().unwrap().join("snapshots").join(&reports[0].2))
+            .unwrap();
+        assert_eq!(
+            target
+                .report_source(&reports[0].1, "src/item.rs", 1, 1)
+                .unwrap_err(),
+            "snapshot_unavailable"
+        );
+        assert!(target
+            .report(&reports[0].1)
+            .unwrap()
+            .markdown
+            .contains("loom-src:"));
+        assert!(target
+            .report_source(&reports[1].1, "src/item.rs", 1, 1)
+            .unwrap()
+            .text
+            .contains("{ 2 }"));
+        let pinned = target
+            .root()
+            .unwrap()
+            .join("snapshots")
+            .join(&reports[1].2)
+            .join("files/src/item.rs");
+        std::fs::write(&pinned, "fn version() -> i32 { 8 }\n").unwrap();
+        assert_eq!(
+            target
+                .report_source(&reports[1].1, "src/item.rs", 1, 1)
+                .unwrap_err(),
+            "snapshot_integrity_mismatch"
+        );
+        assert!(target.report(&reports[1].1).is_ok());
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn website_run_publishes_redacted_page_script_and_screenshot() {
+        use std::io::{Read, Write};
+        use std::os::unix::fs::PermissionsExt;
+        let root = super::super::store::tests::temp_root();
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+        std::thread::spawn(move || {
+            for stream in listener.incoming().take(16) {
+                let Ok(mut stream) = stream else { continue };
+                let mut buffer = [0; 2048];
+                let _ = stream.read(&mut buffer);
+                let request = String::from_utf8_lossy(&buffer);
+                let (kind, body) = if request.contains("GET /app.js") {
+                    ("text/javascript", "window.loomProbe = \"site-marker\";\n")
+                } else {
+                    (
+                        "text/html",
+                        "<!doctype html><script src=\"/app.js\"></script>",
+                    )
+                };
+                let _ = write!(stream, "HTTP/1.1 200 OK\r\nContent-Type: {kind}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len());
+            }
+        });
+        let browser = root.join("fake-chrome");
+        super::write_runtime_browser(&browser);
+        let package = root.join("rea");
+        std::fs::create_dir_all(package.join("scripts")).unwrap();
+        std::fs::write(
+            package.join("package.json"),
+            r#"{"name":"rea-agents","version":"6.8.0"}"#,
+        )
+        .unwrap();
+        std::fs::copy(
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../tests/fixtures/research/rea-6.8.0-selected-schemas.json"),
+            package.join("scripts/schemas.json"),
+        )
+        .unwrap();
+        std::fs::write(package.join("scripts/rea.mjs"), super::FAKE_REA).unwrap();
+        let node = root.join("fake-node");
+        std::fs::write(
+            &node,
+            "#!/usr/bin/env python3\nimport pathlib, sys\nsys.argv = sys.argv[1:]\nscript = sys.argv[0]\nexec(pathlib.Path(script).read_text(), {'__file__': script, '__name__': '__main__'})\n",
+        )
+        .unwrap();
+        std::fs::set_permissions(&node, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let script = root.join("fake-claude");
+        std::fs::write(&script, "#!/usr/bin/env python3\nimport json,sys\nif '--version' in sys.argv[1:]:\n print('2.1.311 (Claude Code)'); raise SystemExit(0)\nprompt=sys.stdin.read()\nif 'super-secret-cookie' in prompt or 'super-secret-token' in prompt: raise SystemExit(2)\nif 'site-marker' not in prompt: raise SystemExit(3)\ntext=json.dumps({'kind':'answer','markdown':'Observed [page](loom-evidence:published).'})\nprint(json.dumps({'type':'system','subtype':'init','tools':[],'mcp_servers':[]}))\nprint(json.dumps({'type':'assistant','message':{'content':[{'type':'text','text':text}]}}))\nprint(json.dumps({'type':'result','is_error':False,'result':text}))\n").unwrap();
+        std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let agent = AgentConfig {
+            id: "web-agent".into(),
+            name: "Fake".into(),
+            command: script.to_string_lossy().into_owned(),
+            args: vec![],
+            working_directory_policy: "project_root".into(),
+            capabilities: vec![],
+            adapter_type: "claude_code_cli".into(),
+            can_write_files: false,
+            can_run_commands: false,
+            enabled: true,
+            available: true,
+        };
+        let store = Store::new(&root);
+        let input = TargetInput {
+            target: Target::Website {
+                url: format!("http://127.0.0.1:{port}/"),
+                browser: Some(browser.to_string_lossy().into_owned()),
+            },
+            question: "What marker does the page script set?".into(),
+            agent_id: agent.id.clone(),
+            model: None,
+            language: "en".into(),
+            mode: ResearchMode::Single,
+            budget: None,
+            tools: Some(rea::Config {
+                node,
+                entry: package.join("scripts/rea.mjs"),
+            }),
+        };
+        let preflight = target_service::preflight(&store, input, None, &agent).unwrap();
+        let admitted =
+            target_service::admit(store, &preflight.preflight_id, "website-request", &agent)
+                .unwrap();
+        let target = admitted.target.clone();
+        let run_id = admitted.view.spec.run_id.clone();
+        Runtime::new(
+            admitted.target,
+            admitted.writer.unwrap(),
+            admitted.view.spec,
+            agent,
+            None,
+        )
+        .unwrap()
+        .execute()
+        .await
+        .unwrap();
+        let run = target.run(&run_id).unwrap();
+        assert_eq!(
+            run.state.status,
+            RunStatus::Completed,
+            "{:?}",
+            run.state.error
+        );
+        let mut saw_marker = false;
+        let mut saw_png = false;
+        for id in &run.state.evidence_ids {
+            let (record, view) = target.evidence(id).unwrap();
+            assert!(!view.contains("super-secret-cookie"), "{view}");
+            assert!(!view.contains("super-secret-token"), "{view}");
+            if view.contains("site-marker") {
+                saw_marker = true;
+            }
+            if record.tool == "loom.website-screenshot" {
+                let raw = std::fs::read(
+                    target
+                        .root()
+                        .unwrap()
+                        .join(format!("evidence/{id}/source.bundle.json")),
+                )
+                .unwrap();
+                assert!(raw.starts_with(b"\x89PNG"));
+                saw_png = true;
+            }
+        }
+        assert!(saw_marker && saw_png, "{:?}", run.state.evidence_ids);
+        let report = target.report(run.state.report_ids.last().unwrap()).unwrap();
+        assert!(report.markdown.contains("loom-evidence:"));
+        let source = target
+            .report_source(&report.report.report_id, "app.js", 1, 1)
+            .unwrap();
+        assert!(source.text.contains("site-marker"));
+        std::fs::remove_dir_all(root).unwrap();
     }
 }

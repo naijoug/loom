@@ -6,9 +6,28 @@ use super::{
     target_service::{self, Preflight},
     target_store::TargetStore,
 };
+use serde::Serialize;
 #[cfg(test)]
 use tauri::Manager;
 use tauri::{AppHandle, Emitter, WebviewWindow};
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TargetCapabilities {
+    pub single_shot: bool,
+    pub iteration: bool,
+    pub experiments: bool,
+}
+
+/// Reads the single-shot switch. Iteration and experiments stay off until R6/E2.
+pub fn target_capabilities() -> TargetCapabilities {
+    TargetCapabilities {
+        single_shot: cfg!(target_os = "macos")
+            && std::env::var("LOOM_RESEARCH_TARGETS").as_deref() == Ok("1"),
+        iteration: false,
+        experiments: false,
+    }
+}
 
 fn enabled<R: tauri::Runtime>(app: &AppHandle<R>) -> Result<(), String> {
     #[cfg(test)]
@@ -26,6 +45,16 @@ fn enabled<R: tauri::Runtime>(app: &AppHandle<R>) -> Result<(), String> {
     }
 }
 #[tauri::command]
+pub async fn research_target_capabilities<R: tauri::Runtime>(
+    window: WebviewWindow<R>,
+) -> Result<TargetCapabilities, String> {
+    if window.label() != "main" {
+        return Err("Research access requires the main window".into());
+    }
+    Ok(target_capabilities())
+}
+
+#[tauri::command]
 pub async fn research_preflight<R: tauri::Runtime>(
     app: AppHandle<R>,
     window: WebviewWindow<R>,
@@ -40,7 +69,9 @@ pub async fn research_preflight<R: tauri::Runtime>(
     }
     let agent = ready_target_agent(&app, &spec.agent_id, spec.model.as_deref()).await?;
     crate::agent::verify_evidence_profile(&agent).await?;
-    verify_tools(&store, &spec).await?;
+    if !matches!(spec.target, Target::Github { .. }) {
+        verify_tools(&store, &spec).await?;
+    }
     blocking(move || target_service::preflight(&store, spec, research_id, &agent)).await
 }
 #[tauri::command]
@@ -370,4 +401,20 @@ async fn ready_target_agent<R: tauri::Runtime>(
         .into_iter()
         .find(|a| a.id == agent_id && a.enabled && a.available)
         .ok_or_else(|| "target_agent_unavailable".into())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::target_capabilities;
+
+    #[test]
+    fn capability_response_keeps_iteration_and_experiments_off() {
+        let caps = target_capabilities();
+        assert!(!caps.iteration && !caps.experiments);
+        if !cfg!(target_os = "macos")
+            || std::env::var("LOOM_RESEARCH_TARGETS").as_deref() != Ok("1")
+        {
+            assert!(!caps.single_shot);
+        }
+    }
 }

@@ -432,7 +432,7 @@ pub(crate) fn handle_event(app: &AppHandle, event: &tauri::RunEvent) -> bool {
         .map(|s| s.phase)
         .unwrap_or("idle");
     match event {
-        tauri::RunEvent::ExitRequested { code, api, .. }
+        tauri::RunEvent::ExitRequested { code, .. }
             if phase == "restarting" && *code == Some(tauri::RESTART_EXIT_CODE) =>
         {
             true

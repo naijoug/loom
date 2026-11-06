@@ -16,7 +16,23 @@
 .research-new { margin: 0 auto; width: min(620px, 100%); padding: 32px 24px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
 .research-new h1 { margin: 0; font-size: 22px; font-weight: 600; }
 .research-new label { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; font-size: 12.5px; color: var(--chat-text-2); }
-.research-new textarea, .research-new select { font: inherit; font-size: 13.5px; color: var(--chat-text); border: 1px solid var(--chat-border-strong); background: var(--chat-input); border-radius: 7px; padding: 8px 10px; min-width: 0; }
+.research-new textarea, .research-new select, .research-new input:not([type="radio"]):not([type="checkbox"]) { font: inherit; font-size: 13.5px; color: var(--chat-text); border: 1px solid var(--chat-border-strong); background: var(--chat-input); border-radius: 7px; padding: 8px 10px; min-width: 0; }
+.research-mode { margin: 0; padding: 0; border: 0; display: flex; flex-wrap: wrap; gap: 8px 14px; }
+.research-mode legend { width: 100%; font-size: 12.5px; color: var(--chat-text-2); }
+.research-mode label { flex-direction: row; align-items: center; gap: 6px; }
+.research-warning { color: var(--chat-warn); }
+.research-preflight, .research-evidence, .research-export { display: flex; flex-direction: column; gap: 8px; max-width: 820px; }
+.research-preflight { padding: 10px 12px; border: 1px solid var(--chat-border); border-radius: 8px; }
+.research-preflight h2, .research-preflight h3, .research-evidence h2 { margin: 0; font-size: 13px; font-weight: 600; }
+.research-preflight ul, .research-evidence ul { margin: 0; padding-left: 18px; }
+.research-evidence ul { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.research-evidence-item { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; text-align: left; border: 1px solid var(--chat-border); border-radius: 8px; padding: 8px 10px; background: transparent; color: inherit; }
+.research-evidence-item[aria-current="true"] { border-color: var(--chat-accent); }
+.research-evidence pre { margin: 0; max-height: 220px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; color: var(--chat-text-2); }
+.research-report-select, .research-export label { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--chat-text-2); }
+.research-report-select select { font: inherit; color: var(--chat-text); background: var(--chat-input); border: 1px solid var(--chat-border-strong); border-radius: 7px; padding: 6px 8px; }
+.research-export label { flex-direction: row; align-items: center; }
+.research-followup-block { display: flex; flex-direction: column; gap: 8px; max-width: 820px; }
 .research-new textarea { resize: vertical; min-height: 84px; line-height: 1.5; }
 .research-new-row { display: flex; gap: 12px; flex-wrap: wrap; }
 .research-new-row label { min-width: 160px; }
@@ -30,7 +46,7 @@
 .research-head { display: flex; align-items: center; gap: 12px; padding: 4px 18px 10px; border-bottom: 1px solid var(--chat-border); }
 .research-title { flex: 1; min-width: 0; }
 .research-title h1 { margin: 0; font-size: 17px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.research-title small { color: var(--chat-muted); font-size: 12px; }
+.research-title small { display: block; color: var(--chat-muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .research-actions { display: flex; align-items: center; gap: 4px; }
 .research-actions > button:not(.chat-icon-button) { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; }
 .research-banner { display: flex; align-items: center; gap: 8px; margin: 10px 18px 0; padding: 8px 12px; border: 1px solid var(--chat-banner-border); background: var(--chat-banner-bg); color: var(--chat-banner-text); border-radius: 8px; font-size: 13px; }

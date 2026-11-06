@@ -60,7 +60,7 @@ Chat 的停止、准入和全应用退出编排通过 `agent` 公共函数访问
 
 保留以下非通用 Agent-runner 路径：
 
-1. `learn/fetch.rs`：经加固 Git 拉取公开仓库，直接使用 supervisor 管理 Git 子进程；不启动 Agent CLI。分层检查有具名白名单。
+1. `repository_sources`：经 `tool_process::run_bounded` 加固拉取公开 GitHub 仓库，调用方传入 `ProcessOwner`（Learn 为 study/job，Research 为 research/run）。不启动 Agent CLI。Learn 不再直接 spawn，分层检查不再为 `learn/fetch.rs` 保留白名单。
 2. `skills/translation/local.rs`：使用原始 stdout 做翻译，不走 Agent 配置；不能直接换为会逐行解析/脱敏内容的 runner。仍有 supervisor、时间/输出上限和取消。Skills 不在四功能 S1 runner 门禁范围。
 3. `lib.rs`：Tauri `generate_handler!` 注册命令需要引用 `agent::registry` / `diagnostics` 所在模块；功能调用方只能用再导出。
 4. 应用级 updater、非 Agent Git/项目分析和底层诊断使用自己的进程/生命周期能力；不因这次分层变为 Agent 调用。
@@ -69,6 +69,6 @@ Chat 的停止、准入和全应用退出编排通过 `agent` 公共函数访问
 
 ## 分层验证
 
-`scripts/check-layers.mjs` 接入 `pnpm check`：Agent 不引用功能模块，Chat/Learn/Research/Discuss 不互相引用，功能生产代码不直接 spawn Agent、不访问 supervisor 或 Agent 私有模块（上面的 Learn Git 例外除外）；前端功能互不导入，共享组件/hooks/api 不导入功能，Settings→Skills 为产品结构例外。
+`scripts/check-layers.mjs` 接入 `pnpm check`：Agent 不引用功能模块，Chat/Learn/Research/Discuss 不互相引用，功能生产代码不直接 spawn Agent、不访问 supervisor 或 Agent 私有模块；Git 获取走 `tool_process`。前端功能互不导入，共享组件/hooks/api 不导入功能，Settings→Skills 为产品结构例外。
 
 `scripts/lib/rust-production.mjs` 屏蔽测试模块、注释和字面量，但保留测试模块之后的生产代码；这是针对仓库惯用源码形态的静态门禁，不是完整 Rust 语义解析器。相关回归在 `tests/unit/layerCheck.test.cjs`。runner 特征快照、取消/退出子进程测试与真实 CLI/桌面证据共同验证行为，详见 [P8 验收](../dogfood/2026-10-28-p8-acceptance.md)。

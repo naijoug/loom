@@ -1,5 +1,6 @@
 mod agent;
 mod app_update;
+mod browser_host;
 mod chat;
 mod chat_context;
 #[cfg(test)]
@@ -15,6 +16,7 @@ pub mod models;
 pub mod process_supervisor;
 mod projects;
 mod rea;
+mod repository_sources;
 mod research;
 mod research_sources;
 mod session_capture;
@@ -142,6 +144,7 @@ pub fn run() {
             research::commands::research_list_tree,
             research::commands::research_read_source,
             research::commands::research_delete,
+            research::target_commands::research_target_capabilities,
             research::target_commands::research_preflight,
             research::target_commands::research_start_run,
             research::target_commands::research_get_run,

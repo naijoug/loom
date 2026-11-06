@@ -1,7 +1,7 @@
 import { TAURI_COMMANDS, TAURI_EVENTS } from "./contract";
 import { invokeCommand, listenToEvent } from "./tauriClient";
 
-export type ResearchTarget = { kind: "app"; path: string } | { kind: "github"; url: string; gitRef: string | null } | { kind: "website"; url: string };
+export type ResearchTarget = { kind: "app"; path: string } | { kind: "github"; url: string; gitRef: string | null } | { kind: "website"; url: string; browser?: string | null };
 export interface TargetBudget { maxRounds: number; maxCalls: number; maxCollections: number; maxActiveMs: number; maxDiskBytes: number }
 export interface TargetInput {
   target: ResearchTarget; question: string; agentId: string; model: string | null;
@@ -42,7 +42,17 @@ export interface EvidenceRecord {
 }
 export interface Material { text: string; nextCursor: number | null; truncated: boolean }
 export interface TargetExport { directory: string; files: string[]; includesRaw: boolean; warning: string | null }
+export interface TargetCapabilities { singleShot: boolean; iteration: boolean; experiments: boolean }
+
+/** Lowercase request id accepted by `valid_id`. A new id is required for every start, follow-up, retry, and resume. */
+export function researchRequestId() {
+  const bytes = new Uint8Array(8);
+  globalThis.crypto.getRandomValues(bytes);
+  return `req-${[...bytes].map(byte => byte.toString(16).padStart(2, "0")).join("")}`;
+}
+
 export const targetResearchApi = {
+  capabilities: () => invokeCommand<TargetCapabilities>(TAURI_COMMANDS.researchTargetCapabilities),
   subscribe: (onEvent: (event: TargetEvent) => void) => listenToEvent<TargetEvent>(TAURI_EVENTS.researchEvent, event => { if (event.runId) onEvent(event); }),
   export: (researchId: string, reportId: string, evidenceIds: string[] = [], includeRaw = false) => invokeCommand<TargetExport>(TAURI_COMMANDS.researchExport, { researchId, input: { reportId, evidenceIds, includeRaw } }),
   preflight: (spec: TargetInput, researchId?: string) => invokeCommand<TargetPreflight>(TAURI_COMMANDS.researchPreflight, { spec, researchId }),

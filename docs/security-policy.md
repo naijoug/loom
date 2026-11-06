@@ -40,7 +40,7 @@ Agent 层与明确的非 Agent 进程例外见 [Agent 层契约](architecture/ag
 ## Learn
 
 - 只接受 `https://github.com/<owner>/<repo>` 公开仓库与受校验的分支 / tag / 完整 commit；不支持 SSH、私有仓库或其他主机。仓库内容一律视为不可信输入。
-- 拉取复用 `git_fetch.rs` 加固配置（禁用 hooks、fsmonitor、ext 传输、子模块递归和 LFS/smudge 过滤器，`.git/info/attributes` 关闭过滤属性）；先 `--no-checkout` 浅克隆，`ls-tree` 校验文件数与体积上限后才检出。Git stderr 只以受控分类持久化。
+- 拉取由 `repository_sources` 经 `tool_process` 执行，复用 `git_fetch.rs` 加固配置（禁用 hooks、fsmonitor、ext 传输、子模块递归和 LFS/smudge 过滤器，`.git/info/attributes` 关闭过滤属性）；先 `--no-checkout` 浅克隆，`ls-tree` 校验文件数与体积上限后才检出。Git stderr 只以受控分类持久化。调用方传入进程 owner，Learn 不再直接启动 Git。
 - 研究数据只写 `<appData>/learn/studies/<studyId>/`；研究 ID 为受限单段标识，研究目录与源码读取路径拒绝 symlink 和逃逸。Loom 不运行被研究项目的任何代码。
 - Agent 只以 `explore`（只读 / plan）权限、cwd = checkout 运行，不接受自定义 CLI；每次运行前后比对 checkout 指纹，变化即判作业失败。这是检测而非 OS 沙箱：实际只读保障取决于各 CLI 的策略实现。
 - 模型输出只按 schema 与引用校验后使用；无效引用以警告样式显示，不静默信任。Markdown 渲染沿用下文的安全规则，`loom-src:` / `loom-wiki:` 仅在 Learn 页面内转为应用内操作。
@@ -49,6 +49,8 @@ Agent 层与明确的非 Agent 进程例外见 [Agent 层契约](architecture/ag
 ## Research
 
 - 研究数据只写 `<appData>/research/<researchId>/`；研究 ID 为受限单段标识。未选项目时 cwd 是该目录下的空 `workspace/`。
+- 目标 Research 的公开 GitHub 输入只接受 `https://github.com/<owner>/<repo>` 与受校验 ref。检出固定 commit 后发布不可变快照；`loom-src:` 只相对该报告的 `defaultSourceSnapshotId` 解析。同路径不同 commit 不串读，缺失或 hash 不符返回不可用/完整性错误，不回退最新检出或重新联网。路径逃逸、绝对路径和 `.git` 被拒绝；符号链接不跟随、不进入快照。仓库代码不执行。开发开关默认关闭。单次界面只在 macOS 且开关打开时接受新的目标运行；已保存结果仍可阅读。追问走 `research_ask_run`，采集预算为 0。`loom-evidence:` 只打开该 reportId 下的脱敏文本，不渲染目标 HTML、JS 或 SVG，也不把截图画进页面。
+- 网站研究只启动本次新建 profile 的 Chromium，调试端口必须是 loopback 且套接字属于该进程树。不接收调用方传入的 CDP 地址，不附着、不关闭用户已经打开的浏览器。`file:`、`javascript:`、带凭据 URL 和私网字面地址在生产构建中拒绝。跨 origin 的最终页面会停止采集；这不能阻止页面脚本联系第三方，也没有对 DNS 解析结果做私网拦截。Cookie、Authorization 和查询串不进入模型视图，截图字节不进入文本提示。
 - 只能选择已在 Loom 打开的项目（规范路径匹配项目列表）；开始、追问、重试、校验报告引用与读取源码前都重新确认，项目移出列表后不再读取它。
 - Agent 只以 `explore`（只读 / plan）权限运行，不接受自定义 CLI。选了项目时运行前后比对 `git status --porcelain` 与 HEAD，变化只记警告：用户可能同时在改项目，且这是检测而非 OS 沙箱，实际只读保障取决于各 CLI 的策略实现。Loom 不运行项目代码。
 - 报告引用经 `source_files.rs` 校验（拒绝逃逸与 symlink），无效引用以警告样式显示；外部链接只接受 `http(s)` 并在系统浏览器打开。
