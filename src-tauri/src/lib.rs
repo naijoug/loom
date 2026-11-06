@@ -144,6 +144,7 @@ pub fn run() {
             research::commands::research_list_tree,
             research::commands::research_read_source,
             research::commands::research_delete,
+            research::target_commands::research_target_capabilities,
             research::target_commands::research_preflight,
             research::target_commands::research_start_run,
             research::target_commands::research_get_run,

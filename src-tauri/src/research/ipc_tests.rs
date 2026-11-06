@@ -44,6 +44,7 @@ fn app(root: &Path, agents: Vec<AgentConfig>) -> tauri::App<MockRuntime> {
             research_read_source,
             research_read_job_logs,
             research_delete,
+            research_target_capabilities,
             research_preflight,
             research_start_run,
             research_get_run,
@@ -268,8 +269,15 @@ fn actual_invoke_enforces_workflow_window_and_report_scope() {
         "research_retry_run",
         "research_resume_run",
         "research_start_run",
+        "research_target_capabilities",
     ] {
         assert_error(&secondary, command, shared.clone(), "main window");
+    }
+    let caps = invoke(&main, "research_target_capabilities", json!({})).unwrap();
+    assert_eq!(caps["iteration"], false);
+    assert_eq!(caps["experiments"], false);
+    if !cfg!(target_os = "macos") {
+        assert_eq!(caps["singleShot"], false);
     }
     assert_error(
         &secondary,

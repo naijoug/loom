@@ -83,6 +83,7 @@ export const TAURI_COMMANDS = {
   researchListTree: "research_list_tree",
   researchReadSource: "research_read_source",
   researchDelete: "research_delete",
+  researchTargetCapabilities: "research_target_capabilities",
   researchPreflight: "research_preflight",
   researchStartRun: "research_start_run",
   researchGetRun: "research_get_run",

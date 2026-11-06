@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { FolderTree, LoaderCircle, RotateCcw, ScrollText, Send, Square, Trash2 } from "lucide-react";
 import { lastTurn, type Research, type ResearchApi, type ResearchLogStream, type ResearchTurn, type ResearchTurnContent } from "../../api/research";
+import { targetResearchApi } from "../../api/researchTargets";
+import { TargetResearchView } from "./TargetResearchView";
 import { parseSourceTarget, type SourceReader, type SourceTarget } from "../../api/sourceFiles";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -10,7 +12,9 @@ import { SourceViewer } from "../../components/SourceViewer";
 
 const RETRYABLE = ["failed", "cancelled", "interrupted"];
 
-export function ResearchView({ api, researchId, revision, onDeleted }: { api: ResearchApi; researchId: string; revision: number; onDeleted: () => void }) {
+export function ResearchView({ api, targets, canStart, researchId, revision, onDeleted }: {
+  api: ResearchApi; targets: typeof targetResearchApi; canStart: boolean; researchId: string; revision: number; onDeleted: () => void;
+}) {
   const t = useT();
   const [research, setResearch] = useState<Research | null>(null);
   const [error, setError] = useState("");
@@ -46,6 +50,7 @@ export function ResearchView({ api, researchId, revision, onDeleted }: { api: Re
   }), [api, researchId]);
   if (error) return <div className="research-main-empty"><p className="research-error" role="alert">{error}</p></div>;
   if (!research || research.researchId !== researchId) return <div className="research-main-empty" role="status">{t("loading")}</div>;
+  if (research.workflow === "target") return <TargetResearchView research={research} targets={targets} canStart={canStart} legacy={api} revision={revision} onDeleted={onDeleted} />;
   const last = lastTurn(research);
   const running = last?.status === "running";
   const retryable = !!last && RETRYABLE.includes(last.status);

@@ -76,6 +76,7 @@
     "research_list_tree",
     "research_read_source",
     "research_delete",
+    "research_target_capabilities",
     "research_preflight",
     "research_start_run",
     "research_get_run",
