@@ -15,6 +15,7 @@ pub mod models;
 pub mod process_supervisor;
 mod projects;
 mod rea;
+mod repository_sources;
 mod research;
 mod research_sources;
 mod session_capture;

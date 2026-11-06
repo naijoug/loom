@@ -17,8 +17,6 @@ const src = join(root, "src-tauri", "src");
 const FEATURE_MODULES = ["chat", "chat_context", "learn", "research", "discuss", "experiments", "skills", "workbench"];
 const CHAT_MODULES = ["chat", "chat_context"];
 const SPAWNING_FEATURES = ["chat", "chat_context.rs", "learn", "research", "discuss", "experiments", "research_sources", "rea", "browser_host", "repository_sources"];
-// Non-agent processes a feature may start itself.
-const SPAWN_ALLOWLIST = new Map([["learn/fetch.rs", "git clone/fetch for study sources"]]);
 
 function rustFiles(path) {
   if (!existsSync(path)) return [];
@@ -69,7 +67,6 @@ for (const file of rustFiles(join(src, "discuss"))) {
 for (const entry of SPAWNING_FEATURES) {
   for (const file of rustFiles(join(src, entry))) {
     const path = relative(src, file);
-    if (SPAWN_ALLOWLIST.has(path)) continue;
     const code = rustCodeMask(productionCode(path, readFileSync(file, "utf8")));
     if (/\bprocess_supervisor\b/.test(code)) report(file, "feature lifecycle must use the agent public API, not process_supervisor");
     if (/\bagent::(?:registry|diagnostics|runner|invocation|lifecycle|stream|tools|event|capabilities)::/.test(code)) report(file, "feature modules must use agent re-exports, not private submodules");

@@ -6,7 +6,7 @@ use super::{
     target_models::*,
     target_store::{TargetStore, Writer},
 };
-use crate::{agent, models::AgentConfig, rea, research_sources};
+use crate::{agent, models::AgentConfig, rea, repository_sources, research_sources};
 use serde_json::json;
 use std::time::{Duration, Instant};
 
@@ -20,6 +20,8 @@ pub struct Runtime {
     starting_usage: u64,
     emit: Option<std::sync::Arc<dyn Fn(TargetEvent) + Send + Sync>>,
     operation: Option<agent::OperationGuard<'static>>,
+    #[cfg(test)]
+    fixture_clone_url: Option<String>,
 }
 impl Runtime {
     pub fn new(
@@ -51,7 +53,14 @@ impl Runtime {
             starting_usage,
             emit: None,
             operation: Some(operation),
+            #[cfg(test)]
+            fixture_clone_url: None,
         })
+    }
+    #[cfg(test)]
+    pub(super) fn with_fixture_clone(mut self, url: impl Into<String>) -> Self {
+        self.fixture_clone_url = Some(url.into());
+        self
     }
     pub fn with_emitter(mut self, emit: std::sync::Arc<dyn Fn(TargetEvent) + Send + Sync>) -> Self {
         self.emit = Some(emit);
@@ -174,6 +183,9 @@ impl Runtime {
         }
         if super::target_service::target_identity(&self.spec.input)? != self.spec.target_identity {
             return Err("target_changed_repeat_preflight".into());
+        }
+        if matches!(self.spec.input.target, Target::Github { .. }) {
+            return self.collect_github().await;
         }
         let Target::App { path } = &self.spec.input.target else {
             return Err("unsupported_target_collector".into());
@@ -326,6 +338,123 @@ impl Runtime {
         self.writer.settle_area(&area)?;
         diagnostics?;
         outcome
+    }
+
+    async fn collect_github(&self) -> Result<(), String> {
+        let Target::Github { url, git_ref } = &self.spec.input.target else {
+            return Err("unsupported_target_collector".into());
+        };
+        let parsed = repository_sources::parse_github_url(url)?;
+        if !parsed.clone_url.starts_with("https://github.com/")
+            || !parsed.clone_url.ends_with(".git")
+        {
+            return Err("unsupported_repository_url".into());
+        }
+        #[cfg(test)]
+        let repo = {
+            let mut repo = parsed;
+            if let Some(url) = &self.fixture_clone_url {
+                if !url.starts_with("file:///") || url.bytes().any(|byte| byte.is_ascii_control()) {
+                    return Err("invalid_test_repository".into());
+                }
+                repo.clone_url = url.clone();
+            }
+            repo
+        };
+        #[cfg(not(test))]
+        let repo = parsed;
+        if let Some(git_ref) = git_ref {
+            repository_sources::validate_ref(git_ref)?;
+        }
+        let available = self.writer.available_disk(&self.spec.run_id)?;
+        let content_cap = available.saturating_sub(8 * 1024 * 1024) / 3;
+        if content_cap < 256 * 1024 {
+            return Err("target_disk_budget_too_small_for_collector".into());
+        }
+        let workspace_cap = content_cap
+            .saturating_mul(2)
+            .min(available.saturating_sub(4 * 1024 * 1024));
+        let area = self
+            .writer
+            .reserve_area(&self.spec.run_id, "workspace", workspace_cap)?;
+        let checkout = area.path.join("checkout");
+        let cancelled = || self.cancelled();
+        let request = repository_sources::GitRequest {
+            owner: self.owner(),
+            kind: agent::ProcessKind::Tool,
+            operation_prefix: "research-git",
+            cancelled: &cancelled,
+            file_limit: repository_sources::MAX_TRACKED_FILES,
+            byte_limit: content_cap,
+            disk_root: Some((checkout.clone(), workspace_cap)),
+        };
+        let started = self.reserve("collection", 120_000)?;
+        let fetched =
+            repository_sources::fetch(&request, &repo, git_ref.as_deref(), &checkout).await;
+        self.settle(started)?;
+        let commit = fetched?;
+        self.writer.settle_area(&area)?;
+        let listed_started = self.reserve("collection", 30_000)?;
+        let listed = repository_sources::git(&request, &checkout, &["ls-files", "-z"]).await;
+        self.settle(listed_started)?;
+        let listed = listed?;
+        let remaining = self
+            .writer
+            .available_disk(&self.spec.run_id)?
+            .saturating_sub(2 * 1024 * 1024);
+        let inventory = repository_sources::select_sources(&checkout, &listed, remaining)?;
+        self.writer.snapshot_from(
+            &checkout,
+            &inventory.paths,
+            &format!("github:{}:{commit}", repo.url),
+            remaining,
+        )?;
+        let provenance = json!({
+            "kind": "github_snapshot",
+            "url": repo.url,
+            "commit": commit,
+            "gitRef": git_ref,
+            "included": inventory.paths.len(),
+            "excluded": inventory.excluded,
+            "truncated": inventory.truncated,
+            "bytes": inventory.bytes,
+        });
+        let raw = serde_json::to_vec(&provenance).map_err(|e| e.to_string())?;
+        let view = serde_json::to_string(&research_sources::model_view(&provenance))
+            .map_err(|e| e.to_string())?;
+        let mut limitations = vec![
+            "Pinned commit only; other commits stay in their own snapshots.".into(),
+            "Symlinks, binaries, vendored directories and files over 1 MiB are omitted.".into(),
+            "Repository code was not executed.".into(),
+        ];
+        if inventory.truncated {
+            limitations
+                .push("The snapshot stopped at the disk budget; omitted paths are unknown.".into());
+        }
+        self.writer.publish_evidence(
+            &self.spec.run_id,
+            EvidenceRecord {
+                evidence_id: String::new(),
+                run_id: self.spec.run_id.clone(),
+                source_id: None,
+                tool: "loom.github-snapshot".into(),
+                tool_version: "1".into(),
+                raw_sha256: String::new(),
+                model_sha256: String::new(),
+                bytes: 0,
+                coverage: if inventory.truncated {
+                    "partial"
+                } else {
+                    "inventory"
+                }
+                .into(),
+                limitations,
+                created_at_ms: 0,
+            },
+            &raw,
+            &view,
+        )?;
+        Ok(())
     }
 
     fn initial_context(&self) -> Result<materials::Context, String> {
@@ -988,5 +1117,241 @@ mod tests {
             run.state.usage.calls,
             root.display()
         );
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn github_reports_pin_each_commit_and_reject_foreign_paths() {
+        use std::os::unix::fs::PermissionsExt;
+        let root = super::super::store::tests::temp_root();
+        let source = root.join("source");
+        std::fs::create_dir_all(source.join("src")).unwrap();
+        let git = |args: &[&str]| {
+            let status = std::process::Command::new("git")
+                .args([
+                    "-c",
+                    "user.name=F",
+                    "-c",
+                    "user.email=f@example.invalid",
+                    "-c",
+                    "commit.gpgsign=false",
+                ])
+                .args(args)
+                .current_dir(&source)
+                .output()
+                .unwrap();
+            assert!(
+                status.status.success(),
+                "{}",
+                String::from_utf8_lossy(&status.stderr)
+            );
+        };
+        git(&["init", "--quiet", "-b", "v1"]);
+        std::fs::write(source.join("src/item.rs"), "fn version() -> i32 { 1 }\n").unwrap();
+        std::fs::write(source.join("src/other.rs"), "fn other() {}\n").unwrap();
+        std::os::unix::fs::symlink("/etc/passwd", source.join("src/linked.rs")).unwrap();
+        git(&["add", "."]);
+        git(&["commit", "--quiet", "-m", "v1"]);
+        git(&["branch", "v2"]);
+        git(&["checkout", "--quiet", "v2"]);
+        std::fs::write(source.join("src/item.rs"), "fn version() -> i32 { 2 }\n").unwrap();
+        git(&["add", "src/item.rs"]);
+        git(&["commit", "--quiet", "-m", "v2"]);
+        std::fs::write(root.join("secret.txt"), "super-secret-token\n").unwrap();
+        let script = root.join("fake-claude");
+        std::fs::write(
+            &script,
+            r#"#!/usr/bin/env python3
+import json, os, re, sys
+if "--version" in sys.argv[1:]:
+    print("2.1.311 (Claude Code)")
+    raise SystemExit(0)
+prompt = sys.stdin.read()
+state = os.path.join(os.path.dirname(os.path.abspath(__file__)), "turns.txt")
+count = int(open(state).read() or "0") if os.path.exists(state) else 0
+count += 1
+open(state, "w").write(str(count))
+print(json.dumps({"type":"system","subtype":"init","tools":[],"mcp_servers":[]}), flush=True)
+if count == 1:
+    snap = re.search(r"snapshot-[0-9a-f]+", prompt).group(0)
+    body = {"kind":"need_material","requests":[
+        {"kind":"source","snapshotId":snap,"path":"src/item.rs","startLine":1,"endLine":1},
+        {"kind":"tree","snapshotId":snap,"offset":0,"limit":1}]}
+else:
+    body = {"kind":"answer","markdown":"Pinned source is [item](loom-src:src/item.rs#L1-L1)."}
+text = json.dumps(body, ensure_ascii=False)
+print(json.dumps({"type":"assistant","message":{"content":[{"type":"text","text":text}]}}), flush=True)
+print(json.dumps({"type":"result","is_error":False,"result":text}), flush=True)
+"#,
+        )
+        .unwrap();
+        std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let agent = AgentConfig {
+            id: "github-agent".into(),
+            name: "Fake".into(),
+            command: script.to_string_lossy().into_owned(),
+            args: vec![],
+            working_directory_policy: "project_root".into(),
+            capabilities: vec![],
+            adapter_type: "claude_code_cli".into(),
+            can_write_files: false,
+            can_run_commands: false,
+            enabled: true,
+            available: true,
+        };
+        let store = Store::new(&root);
+        let clone_url = format!("file://{}", source.display());
+        let mut reports = Vec::new();
+        let mut research_id = None;
+        for (request, branch, marker) in
+            [("request-v1", "v1", "{ 1 }"), ("request-v2", "v2", "{ 2 }")]
+        {
+            let _ = std::fs::remove_file(root.join("turns.txt"));
+            let input = TargetInput {
+                target: Target::Github {
+                    url: "https://github.com/example/fixture.git".into(),
+                    git_ref: Some(branch.into()),
+                },
+                question: "What does version return? Cite the pinned source line.".into(),
+                agent_id: agent.id.clone(),
+                model: None,
+                language: "en".into(),
+                mode: ResearchMode::Single,
+                budget: None,
+                tools: None,
+            };
+            let preflight =
+                target_service::preflight(&store, input, research_id.clone(), &agent).unwrap();
+            let admitted =
+                target_service::admit(store.clone(), &preflight.preflight_id, request, &agent)
+                    .unwrap();
+            research_id = Some(admitted.view.spec.research_id.clone());
+            let target = admitted.target.clone();
+            let run_id = admitted.view.spec.run_id.clone();
+            Runtime::new(
+                admitted.target,
+                admitted.writer.unwrap(),
+                admitted.view.spec,
+                agent.clone(),
+                None,
+            )
+            .unwrap()
+            .with_fixture_clone(clone_url.clone())
+            .execute()
+            .await
+            .unwrap();
+            let run = target.run(&run_id).unwrap();
+            assert_eq!(
+                run.state.status,
+                RunStatus::Completed,
+                "{:?}",
+                run.state.error
+            );
+            assert_eq!(run.state.exchange.reads, 1, "{:?}", run.state.error);
+            assert_eq!(run.state.snapshot_ids.len(), 1);
+            let report_id = run.state.report_ids.last().unwrap().clone();
+            let report = target.report(&report_id).unwrap();
+            assert!(report.markdown.contains("loom-src:src/item.rs#L1-L1"));
+            assert_eq!(
+                report.report.default_source_snapshot_id.as_deref(),
+                Some(run.state.snapshot_ids[0].as_str())
+            );
+            let text = target
+                .report_source(&report_id, "src/item.rs", 1, 1)
+                .unwrap()
+                .text;
+            assert!(text.contains(marker), "{text}");
+            assert!(!text.contains("super-secret-token"));
+            let page = target
+                .material(
+                    &run_id,
+                    &MaterialRequest::Tree {
+                        snapshot_id: run.state.snapshot_ids[0].clone(),
+                        offset: 0,
+                        limit: 1,
+                    },
+                )
+                .unwrap();
+            assert_eq!(page.next_cursor, Some(1));
+            assert!(page.truncated);
+            for path in [
+                "../secret.txt",
+                "src/../../secret.txt",
+                "/etc/passwd",
+                "src/linked.rs",
+            ] {
+                let err = target.report_source(&report_id, path, 1, 1).unwrap_err();
+                assert!(!err.contains("super-secret-token"), "{err}");
+            }
+            reports.push((run_id, report_id, run.state.snapshot_ids[0].clone()));
+        }
+        let target = super::super::target_store::TargetStore::open(
+            store.clone(),
+            research_id.as_deref().unwrap(),
+        )
+        .unwrap();
+        let first = target
+            .report_source(&reports[0].1, "src/item.rs", 1, 1)
+            .unwrap();
+        let second = target
+            .report_source(&reports[1].1, "src/item.rs", 1, 1)
+            .unwrap();
+        assert!(first.text.contains("{ 1 }") && !first.text.contains("{ 2 }"));
+        assert!(second.text.contains("{ 2 }") && !second.text.contains("{ 1 }"));
+        assert_ne!(reports[0].2, reports[1].2);
+        assert!(target
+            .material(
+                &reports[1].0,
+                &MaterialRequest::Source {
+                    snapshot_id: reports[0].2.clone(),
+                    path: "src/item.rs".into(),
+                    start_line: 1,
+                    end_line: 1,
+                },
+            )
+            .unwrap_err()
+            .contains("material_scope_mismatch"));
+        let legacy = root.join("legacy-project");
+        std::fs::create_dir_all(legacy.join("src")).unwrap();
+        std::fs::write(legacy.join("src/item.rs"), "fn version() -> i32 { 9 }\n").unwrap();
+        let current =
+            crate::source_files::read_source(&legacy, "src/item.rs", Some(1), Some(1)).unwrap();
+        assert!(current.text.contains("{ 9 }"));
+        assert!(
+            crate::source_files::read_source(&legacy, "../secret.txt", Some(1), Some(1)).is_err()
+        );
+        std::fs::remove_dir_all(target.root().unwrap().join("snapshots").join(&reports[0].2))
+            .unwrap();
+        assert_eq!(
+            target
+                .report_source(&reports[0].1, "src/item.rs", 1, 1)
+                .unwrap_err(),
+            "snapshot_unavailable"
+        );
+        assert!(target
+            .report(&reports[0].1)
+            .unwrap()
+            .markdown
+            .contains("loom-src:"));
+        assert!(target
+            .report_source(&reports[1].1, "src/item.rs", 1, 1)
+            .unwrap()
+            .text
+            .contains("{ 2 }"));
+        let pinned = target
+            .root()
+            .unwrap()
+            .join("snapshots")
+            .join(&reports[1].2)
+            .join("files/src/item.rs");
+        std::fs::write(&pinned, "fn version() -> i32 { 8 }\n").unwrap();
+        assert_eq!(
+            target
+                .report_source(&reports[1].1, "src/item.rs", 1, 1)
+                .unwrap_err(),
+            "snapshot_integrity_mismatch"
+        );
+        assert!(target.report(&reports[1].1).is_ok());
+        std::fs::remove_dir_all(root).unwrap();
     }
 }

@@ -1,7 +1,7 @@
 //! Bounded non-Agent stdio sessions. Uses the application's sole supervisor.
 //! Callers supply argv, never shell text, and retain the session until cleanup.
-pub use crate::process_supervisor::ProcessOwner;
-use crate::process_supervisor::{self, OperationGuard, ProcessKind, ProcessMetadata};
+use crate::process_supervisor::{self, OperationGuard, ProcessMetadata};
+pub use crate::process_supervisor::{ProcessKind, ProcessOwner};
 use std::{collections::BTreeMap, path::PathBuf, process::Stdio, time::Duration};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -11,8 +11,9 @@ use tokio::{
     time::Instant,
 };
 
-/// Bounded, no-symlink accounting for a host-owned file or directory. A missing
-/// path consumes zero bytes; permission/shape failures never look like zero.
+/// Bounded accounting for a host-owned file or directory. Symlinks are counted
+/// as their own nodes and never followed. A missing path consumes zero bytes;
+/// permission or shape failures never look like zero.
 pub fn directory_bytes(path: &std::path::Path, limit: u64) -> Result<u64, String> {
     fn visit(
         path: &std::path::Path,
@@ -27,8 +28,17 @@ pub fn directory_bytes(path: &std::path::Path, limit: u64) -> Result<u64, String
             Err(e) => return Err(format!("disk_accounting_failed: {e}")),
         };
         *count += 1;
-        if depth > 64 || *count > 100_000 || meta.file_type().is_symlink() {
+        if depth > 64 || *count > 100_000 {
             return Err("unsafe_or_excessive_disk_tree".into());
+        }
+        if meta.file_type().is_symlink() {
+            *bytes = bytes
+                .checked_add(meta.len())
+                .ok_or("disk_budget_overflow")?;
+            if *bytes > limit {
+                return Err("disk_budget_exhausted".into());
+            }
+            return Ok(());
         }
         if meta.is_file() {
             *bytes = bytes
@@ -79,6 +89,149 @@ pub async fn confirm_exit(process_id: u32) -> Result<(), String> {
         let _ = process_id;
         Err("group_confirmation_unsupported".into())
     }
+}
+
+pub type RegisteredHook = Box<dyn Fn(&ProcessMetadata) + Send + Sync>;
+
+pub struct BoundedCommand {
+    pub operation_id: String,
+    pub owner: ProcessOwner,
+    pub kind: ProcessKind,
+    pub program: String,
+    pub args: Vec<String>,
+    pub cwd: PathBuf,
+    pub timeout: Duration,
+    pub max_stdout: usize,
+    pub max_stderr: usize,
+    pub disk_root: Option<(PathBuf, u64)>,
+    pub env: BTreeMap<String, String>,
+    pub remove_env: Vec<String>,
+    pub on_registered: Option<RegisteredHook>,
+}
+
+pub struct BoundedOutput {
+    pub success: bool,
+    pub stdout: Vec<u8>,
+    pub stderr: Vec<u8>,
+}
+
+/// One-shot argv execution. The caller owns the program name, arguments and
+/// process owner; this only applies the supervisor, limits and cleanup.
+pub async fn run_bounded(
+    spec: BoundedCommand,
+    cancelled: &(dyn Fn() -> bool + Sync),
+) -> Result<BoundedOutput, String> {
+    if spec.timeout.is_zero()
+        || spec.timeout > Duration::from_secs(600)
+        || spec.max_stdout == 0
+        || spec.max_stdout > 16 * 1024 * 1024
+        || spec.max_stderr == 0
+        || spec.max_stderr > 64 * 1024
+        || spec.operation_id.is_empty()
+        || spec.program != "git"
+        || !spec.cwd.is_absolute()
+        || matches!(spec.owner, ProcessOwner::Unscoped)
+    {
+        return Err("invalid_tool_process_spec".into());
+    }
+    if cancelled() {
+        return Err("tool_cancelled".into());
+    }
+    if let Some((root, limit)) = &spec.disk_root {
+        directory_bytes(root, *limit)?;
+    }
+    let mut operation = process_supervisor::supervisor().begin_operation()?;
+    let mut command = Command::new(&spec.program);
+    command
+        .args(&spec.args)
+        .current_dir(&spec.cwd)
+        .envs(&spec.env)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .kill_on_drop(true);
+    for key in &spec.remove_env {
+        command.env_remove(key);
+    }
+    process_supervisor::configure_process_group(&mut command);
+    let mut child = command
+        .spawn()
+        .map_err(|error| format!("tool_spawn_failed: {error}"))?;
+    let pid = child.id().ok_or("tool_pid_missing")?;
+    if let Err(error) = operation.register(ProcessMetadata::owned(
+        &spec.operation_id,
+        spec.owner.clone(),
+        spec.kind,
+        pid,
+        spec.timeout.as_millis().min(u64::MAX as u128) as u64,
+    )) {
+        let _ = child.kill().await;
+        let _ = process_supervisor::force_terminate_process_group(pid);
+        return Err(error);
+    }
+    if let Some(callback) = &spec.on_registered {
+        if let Some(metadata) = process_supervisor::supervisor().metadata(&spec.operation_id) {
+            callback(&metadata);
+        }
+    }
+    let stdout_task = tokio::spawn(drain_capped(
+        child.stdout.take().ok_or("tool_stdout_missing")?,
+        spec.max_stdout,
+    ));
+    let stderr_task = tokio::spawn(drain_capped(
+        child.stderr.take().ok_or("tool_stderr_missing")?,
+        spec.max_stderr,
+    ));
+    let began = Instant::now();
+    let status = loop {
+        tokio::select! {
+            result = child.wait() => break result.map_err(|error| error.to_string()),
+            _ = tokio::time::sleep(Duration::from_millis(50)) => {
+                if cancelled() { break Err("tool_cancelled".into()); }
+                if process_supervisor::supervisor().is_shutting_down() { break Err("tool_stopped".into()); }
+                if began.elapsed() > spec.timeout { break Err("tool_timeout".into()); }
+                if let Some((root, limit)) = &spec.disk_root {
+                    if let Err(error) = directory_bytes(root, *limit) { break Err(error); }
+                }
+            }
+        }
+    };
+    if status.is_err() {
+        let _ = child.start_kill();
+    }
+    let _ = tokio::time::timeout(Duration::from_secs(2), child.wait()).await;
+    let cleanup = process_supervisor::cleanup_reaped_group(pid).await;
+    process_supervisor::supervisor().complete(&spec.operation_id);
+    let stdout = tokio::time::timeout(Duration::from_secs(2), stdout_task)
+        .await
+        .ok()
+        .and_then(Result::ok)
+        .unwrap_or_default();
+    let stderr = tokio::time::timeout(Duration::from_secs(2), stderr_task)
+        .await
+        .ok()
+        .and_then(Result::ok)
+        .unwrap_or_default();
+    cleanup?;
+    let status = status?;
+    Ok(BoundedOutput {
+        success: status.success(),
+        stdout,
+        stderr,
+    })
+}
+
+async fn drain_capped(mut reader: impl tokio::io::AsyncRead + Unpin, cap: usize) -> Vec<u8> {
+    let mut captured = Vec::new();
+    let mut buffer = [0; 8192];
+    while let Ok(n) = reader.read(&mut buffer).await {
+        if n == 0 {
+            break;
+        }
+        let keep = n.min(cap.saturating_sub(captured.len()));
+        captured.extend_from_slice(&buffer[..keep]);
+    }
+    captured
 }
 
 pub struct Spec {
@@ -481,5 +634,56 @@ mod tests {
         assert_eq!(session.frame(|| false).await.unwrap(), b"ready");
         session.close().await.unwrap();
         assert!(!process_supervisor::process_group_exists(pid).unwrap());
+    }
+
+    #[tokio::test]
+    async fn bounded_git_records_the_caller_owner_and_reaps() {
+        let root = std::env::temp_dir().join(format!(
+            "loom-bounded-git-{}-{}",
+            std::process::id(),
+            crate::models::now_ms()
+        ));
+        std::fs::create_dir(&root).unwrap();
+        let seen = std::sync::Arc::new(std::sync::Mutex::new(None));
+        let owner = ProcessOwner::Learn {
+            study_id: "study-t".into(),
+            job_id: "job-t".into(),
+        };
+        let output = super::run_bounded(
+            super::BoundedCommand {
+                operation_id: "bounded-git-version".into(),
+                owner: owner.clone(),
+                kind: ProcessKind::Learn,
+                program: "git".into(),
+                args: vec!["--version".into()],
+                cwd: root.clone(),
+                timeout: Duration::from_secs(30),
+                max_stdout: 4096,
+                max_stderr: 1024,
+                disk_root: None,
+                env: BTreeMap::new(),
+                remove_env: vec!["GIT_DIR".into()],
+                on_registered: Some(Box::new({
+                    let seen = seen.clone();
+                    move |metadata| *seen.lock().unwrap() = Some(metadata.owner.clone())
+                })),
+            },
+            &|| false,
+        )
+        .await
+        .unwrap();
+        assert!(
+            output.success,
+            "{:?}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert!(String::from_utf8_lossy(&output.stdout)
+            .to_ascii_lowercase()
+            .contains("git"));
+        assert_eq!(seen.lock().unwrap().clone(), Some(owner));
+        assert!(process_supervisor::supervisor()
+            .metadata("bounded-git-version")
+            .is_none());
+        std::fs::remove_dir_all(root).unwrap();
     }
 }

@@ -40,7 +40,9 @@ pub async fn research_preflight<R: tauri::Runtime>(
     }
     let agent = ready_target_agent(&app, &spec.agent_id, spec.model.as_deref()).await?;
     crate::agent::verify_evidence_profile(&agent).await?;
-    verify_tools(&store, &spec).await?;
+    if !matches!(spec.target, Target::Github { .. }) {
+        verify_tools(&store, &spec).await?;
+    }
     blocking(move || target_service::preflight(&store, spec, research_id, &agent)).await
 }
 #[tauri::command]
