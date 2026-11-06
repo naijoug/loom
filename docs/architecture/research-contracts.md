@@ -2,7 +2,7 @@
 
 状态：2026-10-27 实现（[Agent 调用层与左侧功能栏计划](../plans/2026-10-26/22:42-agent-layer-and-activity-rail.md) P6，按 §8-2 默认决策）。范围见 [需求文档](../requirements.md) 的“Research 范围”，安全边界见 [安全策略](../security-policy.md#research)。命令、事件与模型样本由 `contracts/tauri-contract.json` 两端共同校验。
 
-2026-11-06 扩展状态：普通 Research 保留原问答行为，存储已支持 v1 读取与首次写入备份升级到 v2。目标 Research 的存储、跨进程租约、材料分页和独立 IPC 已接入；App 后端链路已有真实验证。公开 GitHub 目标在 R3 使用共享 `repository_sources` 固定 commit 快照，清单、摘录和分页按 reportId 绑定，不读取最新检出。开发入口通过 `LOOM_RESEARCH_TARGETS=1` 显式启用、默认关闭，前端尚未接入。网站／连续调研与实验仍按 [多目标计划](../plans/2026-10-28/04:41-research-targets-and-experiments.md) 实施；原生 UI 验收仍由 R5–R7 执行。
+2026-11-06 扩展状态：普通 Research 保留原问答行为，存储已支持 v1 读取与首次写入备份升级到 v2。目标 Research 的存储、跨进程租约、材料分页和独立 IPC 已接入；App 与 GitHub 后端链路已有验证。网站目标在 R4 使用独立 Chromium profile 和本次 loopback 调试端口，保存页面/脚本证据与不进入文本提示的截图。开发入口通过 `LOOM_RESEARCH_TARGETS=1` 显式启用、默认关闭，前端尚未接入。连续调研与实验仍按 [多目标计划](../plans/2026-10-28/04:41-research-targets-and-experiments.md) 实施；原生 UI 验收仍由 R5–R7 执行。
 
 ## 存储
 
@@ -80,7 +80,8 @@
 - `loom://research-event` 的 target 事件包含 researchId/runId、status/phase、progress、stopReason/error；读取磁盘状态仍是恢复依据。旧事件形状保持兼容。
 - 当前 App 链路使用固定 REA 6.8.0 私有 MCP、固定工具枚举和 schema 校验，先静态识别，再 JS 分析、保存 Evidence 与源码快照，最后通过 evidenceOnly CLI 生成报告。原始 Evidence 与模型视图分开 hash；默认材料读取只提供派生视图。App 不执行，原生引擎只提供诊断。
 - GitHub 目标不调用 REA。预检只接受公开 `https://github.com/<owner>/<repo>` 和受校验 ref，并清空 tools。采集经 `repository_sources` 浅克隆并固定 commit，再把文本路径发布为不可变快照；符号链接、二进制、vendored 目录和超过 1 MiB 的文件不进入快照。模型用已有 `tree` / `source` 材料分页读取，`nextCursor` 表示未读完的路径。`research_list_report_tree` / `research_read_report_source` 只接受 researchId 与 reportId，从该报告的 `defaultSourceSnapshotId` 解析，不接受调用方传入的根目录或 snapshotId。
-- 尚待完成的约束与验证见 [后端实施记录](../dogfood/2026-10-28-research-targets-r1-backend.md) 和 [R3 记录](../dogfood/2026-11-06-research-targets-r3.md)。不能将默认关闭的后端切片描述为完整目标研究产品交付。网站目标仍返回 `unsupported_target_collector`。
+- 网站目标需要 REA 6.8.0 和本机 Chrome/Chromium。预检规范化 `http(s)` URL，拒绝 `file:`、`javascript:`、凭据和私网字面地址，并记录将要启动的浏览器路径。采集使用新的 user-data-dir 和自动分配的 loopback 调试端口，确认监听套接字属于本次进程树后才把该端口交给 `list_browser_targets` / `inspect_web_page`。根页面落到其他 origin 时返回 `cross_origin_redirect` 或 `cross_origin_navigation`。截图 PNG 只进原始证据。模型视图去掉 cookie、Authorization 和 URL 查询串。
+- 尚待完成的约束与验证见 [R1/R2 记录](../dogfood/2026-10-28-research-targets-r1-backend.md)、[R3 记录](../dogfood/2026-11-06-research-targets-r3.md) 和 [R4 记录](../dogfood/2026-11-06-research-targets-r4.md)。不能将默认关闭的后端切片描述为完整目标研究产品交付。
 
 
 ### R1 持久化与恢复补充

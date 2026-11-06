@@ -2,7 +2,7 @@
 
 - 创建时间：2026-10-28 04:41，America/Los_Angeles。
 - 修订时间：2026-11-06；R3 后端出口已记录，复审记录仍见 §14。
-- 状态：**实施中：R0–R3 后端阶段通过；R4–R7、E0–E2 待实施，尚未整体验收**。用户已授权按计划实施。R0 在隔离临时目录准备了固定 REA／兼容 Node，系统工具和全局 MCP 配置未改；证据见 [R0 验收](../../dogfood/2026-10-28-research-targets-r0.md)。R3 证据见 [GitHub 获取记录](../../dogfood/2026-11-06-research-targets-r3.md)。原计划阶段的“仅文档”范围已由本次实施授权更新。开发开关 `LOOM_RESEARCH_TARGETS` 仍默认关闭。
+- 状态：**实施中：R0–R4 后端阶段通过；R5–R7、E0–E2 待实施，尚未整体验收**。用户已授权按计划实施。R0 在隔离临时目录准备了固定 REA／兼容 Node，系统工具和全局 MCP 配置未改；证据见 [R0 验收](../../dogfood/2026-10-28-research-targets-r0.md)。R3 证据见 [GitHub 获取记录](../../dogfood/2026-11-06-research-targets-r3.md)，R4 证据见 [网站研究记录](../../dogfood/2026-11-06-research-targets-r4.md)。原计划阶段的“仅文档”范围已由本次实施授权更新。开发开关 `LOOM_RESEARCH_TARGETS` 仍默认关闭。
 - 代码基线：`main`，HEAD `8e56fbdfc3d101348884c091ee0aad3d876681a7`，加上当前工作区已有改动。当前存在 Agent 生命周期、Discuss、WebView 恢复等未提交内容，不能用 HEAD 单独代表本计划读取到的能力；实施前重新核对状态，保留用户改动。
 - 用户目标：Research 除 GitHub／源码之外，可以输入网站或选择 App，以 REA 研究其实现与行为；借鉴 autoresearch 的假设、验证、记录和迭代机制。
 - 当前依据：[需求](../../requirements.md)、[架构](../../architecture.md)、[Agent 层](../../architecture/agent-layer.md)、[Research 契约](../../architecture/research-contracts.md)、[安全策略](../../security-policy.md)、[验证矩阵](../../testing.md#开发变更验证矩阵)。以下新增能力均为目标，不代表已实现。
@@ -378,7 +378,7 @@ Node 评测会执行用户代码，首版不是恶意代码隔离环境。评测
 
 每个里程碑提交代码、相关契约与验证证据；未通过出口不更新为完成。下表为完整执行范围。
 
-执行状态（2026-11-06）：R0–R3 的后端阶段通过。R1 包括 evidenceOnly、v2/租约/幂等、快照与材料、磁盘/恢复、直接 Tauri invoke 与退出检查；R2 包括目录、独立 JS、ASAR 源码归一化、固定 REA、partial Evidence 与真实模型/取消；R3 将 Learn Git 获取抽到 `repository_sources`，Research 按固定 commit 发布快照，并用 reportId 绑定引用根。证据见 [R3 记录](../../dogfood/2026-11-06-research-targets-r3.md)。下一步 R4；R4–R7 和 E0–E2 仍保持完整范围，开发开关默认关闭，目标 UI 未开放。
+执行状态（2026-11-06）：R0–R4 的后端阶段通过。R3 将 Learn Git 获取抽到 `repository_sources`，报告按固定 commit 绑定引用根。R4 启动独立 Chromium profile，校验 loopback 调试端口属于本次进程，观察页面/脚本并保存不进入文本提示的截图；跨 origin、端口伪装、取消和浏览器退出都有可区分错误。证据见 [R4 记录](../../dogfood/2026-11-06-research-targets-r4.md)。下一步 R5；R5–R7 和 E0–E2 仍保持完整范围，开发开关默认关闭，目标 UI 未开放。
 
 | 阶段 | 依赖 | 具体任务与主要产物 | 出口 |
 |---|---|---|---|

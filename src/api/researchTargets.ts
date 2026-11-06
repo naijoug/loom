@@ -1,7 +1,7 @@
 import { TAURI_COMMANDS, TAURI_EVENTS } from "./contract";
 import { invokeCommand, listenToEvent } from "./tauriClient";
 
-export type ResearchTarget = { kind: "app"; path: string } | { kind: "github"; url: string; gitRef: string | null } | { kind: "website"; url: string };
+export type ResearchTarget = { kind: "app"; path: string } | { kind: "github"; url: string; gitRef: string | null } | { kind: "website"; url: string; browser?: string | null };
 export interface TargetBudget { maxRounds: number; maxCalls: number; maxCollections: number; maxActiveMs: number; maxDiskBytes: number }
 export interface TargetInput {
   target: ResearchTarget; question: string; agentId: string; model: string | null;

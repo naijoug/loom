@@ -120,6 +120,8 @@ fn supported_node(version: &str) -> bool {
 pub enum Tool {
     InspectApp,
     AnalyzeJavascript,
+    ListBrowserTargets,
+    InspectWebPage,
     EvidenceBundle,
 }
 impl Tool {
@@ -127,6 +129,8 @@ impl Tool {
         match self {
             Self::InspectApp => "inspect_desktop_application",
             Self::AnalyzeJavascript => "analyze_javascript_application",
+            Self::ListBrowserTargets => "list_browser_targets",
+            Self::InspectWebPage => "inspect_web_page",
             Self::EvidenceBundle => "get_evidence_bundle",
         }
     }

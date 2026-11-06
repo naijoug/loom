@@ -1087,6 +1087,71 @@ researchGithubRun: {
     }
   }
 } satisfies TargetRun,
+researchWebsiteRun: {
+  "spec": {
+    "schemaVersion": 2,
+    "researchId": "research-website",
+    "runId": "run-website",
+    "kind": "initial",
+    "input": {
+      "target": {
+        "kind": "website",
+        "url": "https://example.com/docs",
+        "browser": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+      },
+      "question": "How does the page load its scripts?",
+      "agentId": "agent-claude",
+      "model": null,
+      "language": "en",
+      "mode": "single",
+      "budget": null,
+      "tools": {
+        "node": "/tools/node",
+        "entry": "/tools/rea/scripts/rea.mjs"
+      }
+    },
+    "budget": {
+      "maxRounds": 1,
+      "maxCalls": 12,
+      "maxCollections": 8,
+      "maxActiveMs": 1200000,
+      "maxDiskBytes": 536870912
+    },
+    "configDigest": "fixture-config",
+    "agentConfigDigest": "fixture-agent",
+    "targetIdentity": "fixture-website",
+    "parentReportId": null,
+    "sourceSnapshots": [],
+    "sourceEvidence": [],
+    "createdAtMs": 1
+  },
+  "state": {
+    "runId": "run-website",
+    "status": "queued",
+    "attempt": 1,
+    "sequence": 0,
+    "usage": {
+      "calls": 0,
+      "collections": 0,
+      "rounds": 0,
+      "activeMs": 0,
+      "diskBytes": 0,
+      "reservationMs": 0,
+      "diskReservedBytes": 0
+    },
+    "snapshotIds": [],
+    "evidenceIds": [],
+    "reportIds": [],
+    "stopReason": null,
+    "error": null,
+    "updatedAtMs": 1,
+    "exchange": {
+      "calls": 0,
+      "reads": 0,
+      "corrections": 0
+    }
+  }
+} satisfies TargetRun,
 researchTargetEvent: {
   "researchId": "research-target",
   "runId": "run-target",

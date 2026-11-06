@@ -19,6 +19,9 @@ pub enum Target {
     },
     Website {
         url: String,
+        /// Resolved browser executable. Callers omit it; preflight fills it.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        browser: Option<String>,
     },
     App {
         path: String,

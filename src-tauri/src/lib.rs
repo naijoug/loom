@@ -1,5 +1,6 @@
 mod agent;
 mod app_update;
+mod browser_host;
 mod chat;
 mod chat_context;
 #[cfg(test)]

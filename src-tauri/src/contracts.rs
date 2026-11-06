@@ -185,6 +185,7 @@ fn persisted_model_samples_round_trip_through_rust_types() {
     assert_model_sample::<crate::research::models::Research>(samples, "research");
     assert_model_sample::<crate::research::target_models::RunView>(samples, "researchTargetRun");
     assert_model_sample::<crate::research::target_models::RunView>(samples, "researchGithubRun");
+    assert_model_sample::<crate::research::target_models::RunView>(samples, "researchWebsiteRun");
     assert_model_sample::<crate::research::target_models::Material>(samples, "researchMaterial");
     assert_model_sample::<crate::research::target_models::TargetEvent>(
         samples,
