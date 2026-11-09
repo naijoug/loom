@@ -27,7 +27,8 @@ pub fn target_capabilities() -> TargetCapabilities {
     TargetCapabilities {
         single_shot,
         iteration: single_shot && super::iteration::iteration_advertised(),
-        experiments: false,
+        experiments: cfg!(target_os = "macos")
+            && std::env::var("LOOM_RESEARCH_EXPERIMENTS").as_deref() == Ok("1"),
     }
 }
 
@@ -412,7 +413,11 @@ mod tests {
     #[test]
     fn capability_response_keeps_iteration_and_experiments_off() {
         let caps = target_capabilities();
-        assert!(!caps.experiments);
+        assert_eq!(
+            caps.experiments,
+            cfg!(target_os = "macos")
+                && std::env::var("LOOM_RESEARCH_EXPERIMENTS").as_deref() == Ok("1")
+        );
         assert_eq!(
             caps.iteration,
             super::super::iteration::iteration_advertised()

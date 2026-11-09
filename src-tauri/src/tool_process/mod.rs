@@ -109,6 +109,14 @@ pub struct BoundedCommand {
     pub on_registered: Option<RegisteredHook>,
 }
 
+fn allowed_tool_program(program: &str) -> bool {
+    if program == "git" {
+        return true;
+    }
+    let path = std::path::Path::new(program);
+    path.is_absolute() && path.file_name().and_then(|name| name.to_str()) == Some("node")
+}
+
 pub struct BoundedOutput {
     pub success: bool,
     pub stdout: Vec<u8>,
@@ -128,7 +136,7 @@ pub async fn run_bounded(
         || spec.max_stderr == 0
         || spec.max_stderr > 64 * 1024
         || spec.operation_id.is_empty()
-        || spec.program != "git"
+        || !allowed_tool_program(&spec.program)
         || !spec.cwd.is_absolute()
         || matches!(spec.owner, ProcessOwner::Unscoped)
     {

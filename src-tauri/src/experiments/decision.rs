@@ -1,4 +1,5 @@
 //! Deterministic node-cpu-v1 decisions. Durations are integer nanoseconds.
+#![allow(dead_code)]
 //! Comparisons use cross-multiplication, not floating point.
 
 pub const SPREAD_NUMERATOR: u128 = 2;

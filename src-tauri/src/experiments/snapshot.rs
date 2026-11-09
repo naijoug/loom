@@ -1,4 +1,5 @@
 //! Copy an explicit file list into a managed directory. The source project is only read.
+#![allow(dead_code)]
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{fs, path::Path};
