@@ -451,7 +451,7 @@ R1 开始时将 A 线新增范围以“目标／实施中”写入 requirements 
 | 优化指标被投机或噪声误导 | 固定正确性与评测器、保存样本、同期复测、最终复测；只接受可信本地代码 |
 | 存储升级与二进制回退 | 保留 v1 备份；v2 新数据仅由新版读取；禁用新功能保留只读查看，不假定旧版本可安全写 v2 |
 
-使用独立 `researchTargets`、`researchIteration`、`researchExperiments` 开关，默认开发期关闭；开关不是权限边界。R5 可仅开启单次目标研究；R6 另开 `LOOM_RESEARCH_ITERATION` 后才接受有限连续循环；E2 单独开启实验。关闭时先拒绝新 admission，停止活动运行，保留资料；不为回滚删除 Evidence、旧研究或用户工作区。
+使用独立 `researchTargets`、`researchIteration`、`researchExperiments` 开关，默认开发期关闭；开关不是权限边界。R5 可仅开启单次目标研究；R6 另开 `LOOM_RESEARCH_ITERATION` 后才接受有限连续循环；E0 起 `LOOM_RESEARCH_EXPERIMENTS` 控制实验准入但默认关闭，E2 才提供实验界面。关闭时先拒绝新 admission，停止活动运行，保留资料；不为回滚删除 Evidence、旧研究或用户工作区。
 
 ## 12. 待确认问题与实施前探针
 
