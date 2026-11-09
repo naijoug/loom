@@ -494,4 +494,6 @@ export const zhCN: Messages = {
   researchResume: "恢复",
   researchTargetOff: "单次目标研究未开启。已保存的报告、证据和快照仍可阅读。",
   researchTargetLabel: "目标",
+  researchIteration: "连续调研",
+  researchIterationHint: "最多 5 轮。预算用尽，或连续两轮没有新证据时停止。实验保持关闭。",
 };

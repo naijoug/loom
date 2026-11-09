@@ -13,14 +13,15 @@ export function researchAgents(agents: AgentConfig[]) {
 
 type TargetKind = "github" | "website" | "app";
 
-export function NewResearchForm({ api, targets, targetsEnabled, agents, diagnostics, projects, onCreated }: {
-  api: ResearchApi; targets: typeof targetResearchApi; targetsEnabled: boolean;
+export function NewResearchForm({ api, targets, targetsEnabled, iterationEnabled, agents, diagnostics, projects, onCreated }: {
+  api: ResearchApi; targets: typeof targetResearchApi; targetsEnabled: boolean; iterationEnabled: boolean;
   agents: AgentConfig[]; diagnostics: AgentDiagnostic[]; projects: ProjectSummary[]; onCreated: (researchId: string) => void;
 }) {
   const t = useT();
   const { locale } = useLocale();
   const eligible = researchAgents(agents);
   const [mode, setMode] = useState<"question" | "target">("question");
+  const [continuous, setContinuous] = useState(false);
   const [kind, setKind] = useState<TargetKind>("github");
   const [githubUrl, setGithubUrl] = useState("");
   const [gitRef, setGitRef] = useState("");
@@ -54,7 +55,7 @@ export function NewResearchForm({ api, targets, targetsEnabled, agents, diagnost
       : { kind: "app" as const, path: appPath.trim() };
     return {
       target, question: question.trim(), agentId, model: modelShown ? model.trim() || null : null, language,
-      mode: "single", budget: null, tools: kind === "github" ? null : { node: nodePath.trim(), entry: reaEntry.trim() },
+      mode: targetMode && iterationEnabled && continuous ? "iterative" : "single", budget: null, tools: kind === "github" ? null : { node: nodePath.trim(), entry: reaEntry.trim() },
     };
   }
   function clearPreflight() { setPreflight(null); setPreflightKey(""); }
@@ -127,6 +128,8 @@ export function NewResearchForm({ api, targets, targetsEnabled, agents, diagnost
         <label>{t("researchReaEntry")}<input id="research-rea-entry" type="text" required value={reaEntry} disabled={busy} onChange={event => { setReaEntry(event.target.value); clearPreflight(); }} /></label>
       </div>}
       <p className="research-note">{t("researchReaHint")}</p>
+      {iterationEnabled && <label className="research-iteration"><input id="research-iteration" type="checkbox" checked={continuous} disabled={busy} onChange={event => { setContinuous(event.target.checked); clearPreflight(); }} />{t("researchIteration")}</label>}
+      {iterationEnabled && <p className="research-note">{t("researchIterationHint")}</p>}
     </>}
     <label>{t("researchQuestion")}
       <textarea required autoFocus={!targetMode} rows={4} placeholder={t("researchQuestionPlaceholder")} value={question} maxLength={8000}

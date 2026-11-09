@@ -19,12 +19,14 @@ pub struct TargetCapabilities {
     pub experiments: bool,
 }
 
-/// Reads the single-shot switch. Iteration and experiments stay off until R6/E2.
+/// Single-shot follows `LOOM_RESEARCH_TARGETS`. Continuous mode also needs
+/// `LOOM_RESEARCH_ITERATION` on macOS. Experiments stay off.
 pub fn target_capabilities() -> TargetCapabilities {
+    let single_shot =
+        cfg!(target_os = "macos") && std::env::var("LOOM_RESEARCH_TARGETS").as_deref() == Ok("1");
     TargetCapabilities {
-        single_shot: cfg!(target_os = "macos")
-            && std::env::var("LOOM_RESEARCH_TARGETS").as_deref() == Ok("1"),
-        iteration: false,
+        single_shot,
+        iteration: single_shot && super::iteration::iteration_advertised(),
         experiments: false,
     }
 }
@@ -410,7 +412,11 @@ mod tests {
     #[test]
     fn capability_response_keeps_iteration_and_experiments_off() {
         let caps = target_capabilities();
-        assert!(!caps.iteration && !caps.experiments);
+        assert!(!caps.experiments);
+        assert_eq!(
+            caps.iteration,
+            super::super::iteration::iteration_advertised()
+        );
         if !cfg!(target_os = "macos")
             || std::env::var("LOOM_RESEARCH_TARGETS").as_deref() != Ok("1")
         {

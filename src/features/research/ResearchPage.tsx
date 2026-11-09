@@ -19,6 +19,7 @@ export function ResearchPage() {
   const targets = targetPreview ?? targetResearchApi;
   const available = !!preview || hasTauriRuntime();
   const [canStart, setCanStart] = useState(Boolean(targetPreview));
+  const [iteration, setIteration] = useState(false);
   const [items, setItems] = useState<ResearchSummary[]>([]);
   const [listError, setListError] = useState("");
   const [selected, setSelected] = useState<string | null>(() => { try { return localStorage.getItem("loom-research-item"); } catch { return null; } });
@@ -43,10 +44,10 @@ export function ResearchPage() {
     return () => { disposed = true; unlisten?.(); };
   }, [api, available]);
   useEffect(() => {
-    if (targetPreview) { setCanStart(true); return; }
+    if (targetPreview) { setCanStart(true); setIteration(false); return; }
     if (!available || preview) return;
     let disposed = false;
-    targetResearchApi.capabilities().then(caps => { if (!disposed) setCanStart(caps.singleShot); }).catch(() => { if (!disposed) setCanStart(false); });
+    targetResearchApi.capabilities().then(caps => { if (!disposed) { setCanStart(caps.singleShot); setIteration(caps.singleShot && caps.iteration && !caps.experiments); } }).catch(() => { if (!disposed) { setCanStart(false); setIteration(false); } });
     return () => { disposed = true; };
   }, [available, preview, targetPreview]);
   const showForm = creating || selected === null;
@@ -73,7 +74,7 @@ export function ResearchPage() {
     <main className="chat-main research-main">
       <div className="chat-window-bar" data-tauri-drag-region />
       {!available ? <div className="research-main-empty"><span className="chat-empty-mark"><Telescope size={24} /></span><p>{t("researchDesktopOnly")}</p></div>
-        : showForm ? <NewResearchForm api={api} targets={targets} targetsEnabled={canStart} agents={state.agents} diagnostics={state.agentDiagnostics} projects={state.projects.recent} onCreated={id => { setCreating(false); setSelected(id); setRevision(value => value + 1); }} />
+        : showForm ? <NewResearchForm api={api} targets={targets} targetsEnabled={canStart} iterationEnabled={iteration} agents={state.agents} diagnostics={state.agentDiagnostics} projects={state.projects.recent} onCreated={id => { setCreating(false); setSelected(id); setRevision(value => value + 1); }} />
         : <ResearchView api={api} targets={targets} canStart={canStart} researchId={selected!} revision={revision} onDeleted={() => { setSelected(null); setRevision(value => value + 1); }} />}
     </main>
   </div>;

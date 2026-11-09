@@ -22,7 +22,7 @@ test('only enabled built-in agents are offered for Research',()=>{
  assert.equal(lastTurn({turns:[{index:1},{index:2}]}).index,2);
 });
 
-function setup(t,{research,turns,targets=false,runs=[],reports={},evidence={},sources={},evidenceText={}}){
+function setup(t,{research,turns,targets=false,iteration=false,runs=[],reports={},evidence={},sources={},evidenceText={}}){
  const dom=new JSDOM('<div id="root"></div>',{url:'http://localhost'});
  global.window=dom.window;global.document=dom.window.document;global.navigator=dom.window.navigator;global.localStorage=dom.window.localStorage;
  window.matchMedia=()=>({matches:false,addEventListener(){},removeEventListener(){}});
@@ -39,7 +39,7 @@ function setup(t,{research,turns,targets=false,runs=[],reports={},evidence={},so
   if(command==='diagnose_agents')return [{agentId:'agent-codex',status:'ready',authStatus:'unknown',detail:'',checkedAtMs:1,capabilities:{structuredStream:true,toolEvents:true,nativeResume:true,inlineCards:false,modelSelection:true,modes:[]}}];
   if(command==='load_app_settings')return {};
   if(command==='health_check')return {version:'test'};
-  if(command==='research_target_capabilities')return {singleShot:targets,iteration:false,experiments:false};
+  if(command==='research_target_capabilities')return {singleShot:targets,iteration:!!iteration,experiments:false};
   if(command==='research_list'){
     if(!state.research)return {items:[],storageErrors:[]};
     if(state.research.workflow==='target'){const status=state.runs.at(-1)?.state.status??'completed';return {items:[{researchId:state.research.researchId,title:state.research.title,agentName:'Codex',workflow:'target',status,turns:state.runs.length,updatedAtMs:2}],storageErrors:[]};}
@@ -245,4 +245,20 @@ test('a failed target run retries through research_retry_run',async t=>{
  assert.equal(retry.args.runId,'run-1');
  assert.match(retry.args.requestId,/^req-[0-9a-f]{16}$/);
  assert.equal(calls.some(call=>call.command==='research_retry'),false);
+});
+
+test('continuous mode is sent only after the iteration switch is chosen',async t=>{
+ const {calls,settle,setValue,click,render}=setup(t,{research:null,turns:{},targets:true,iteration:true});
+ await render();
+ const form=document.querySelector('.research-new');
+ await click(form.querySelector('input[name=research-mode][value=target]'));
+ await act(async()=>{setValue(form.querySelector('#research-github-url'),'https://github.com/acme/loom');setValue(form.querySelector('textarea'),'What changed?');});
+ await act(async()=>form.dispatchEvent(new window.Event('submit',{bubbles:true,cancelable:true})));
+ await settle();
+ assert.equal(calls.find(call=>call.command==='research_preflight').args.spec.mode,'single');
+ await click(document.querySelector('#research-iteration'));
+ await act(async()=>form.dispatchEvent(new window.Event('submit',{bubbles:true,cancelable:true})));
+ await settle();
+ assert.deepEqual(calls.filter(call=>call.command==='research_preflight').map(call=>call.args.spec.mode),['single','iterative']);
+ assert.equal(calls.some(call=>call.command==='research_start_run'),false);
 });

@@ -32,20 +32,11 @@ pub enum AllowedAction {
     Finish { markdown: String },
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct LoopState {
     pub stagnant_rounds: u32,
     pub identities: BTreeSet<String>,
     pub hypotheses: Vec<Hypothesis>,
-}
-impl Default for LoopState {
-    fn default() -> Self {
-        Self {
-            stagnant_rounds: 0,
-            identities: BTreeSet::new(),
-            hypotheses: Vec::new(),
-        }
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -115,13 +106,11 @@ pub fn iteration_allowed() -> bool {
         return false;
     }
     #[cfg(test)]
-    {
-        return true;
-    }
+    let allowed = true;
     #[cfg(not(test))]
-    {
-        cfg!(target_os = "macos") && std::env::var("LOOM_RESEARCH_TARGETS").as_deref() == Ok("1")
-    }
+    let allowed = cfg!(target_os = "macos")
+        && std::env::var("LOOM_RESEARCH_TARGETS").as_deref() == Ok("1");
+    allowed
 }
 
 /// Advertised to the UI. Linux tests can admit a loop without showing the switch.
@@ -212,7 +201,7 @@ pub fn decide(text: &str, bounds: &Bounds<'_>, loop_state: &LoopState) -> Result
             | AllowedAction::CapturePage
             | AllowedAction::InspectWebScripts
     ) && !loop_state.identities.contains(&identity);
-    if !adds_coverage && loop_state.stagnant_rounds.saturating_add(1) >= NO_PROGRESS_LIMIT {
+    if !adds_coverage && loop_state.stagnant_rounds >= NO_PROGRESS_LIMIT {
         return Ok(Step::Stop {
             reason: "no_progress",
         });
@@ -480,12 +469,23 @@ mod tests {
         };
         assert!(no_progress);
         apply_continue(&mut state, identity, true, hypotheses);
+        let Step::Continue {
+            identity,
+            no_progress,
+            ..
+        } = decide(raw, &bounds, &state).unwrap()
+        else {
+            panic!("the second empty round still runs; the third is refused");
+        };
+        assert!(no_progress);
+        apply_continue(&mut state, identity, true, Vec::new());
         assert!(matches!(
             decide(raw, &bounds, &state).unwrap(),
             Step::Stop {
                 reason: "no_progress"
             }
         ));
+        assert_eq!(state.stagnant_rounds, 2);
         assert!(matches!(state.hypotheses[0].verdict, Verdict::Unknown));
     }
 
@@ -542,5 +542,85 @@ mod tests {
         assert_eq!(loaded.stagnant_rounds, 1);
         assert_eq!(loaded.hypotheses, state.hypotheses);
         assert!(loaded.identities.contains("read_evidence\nevidence-a"));
+    }
+
+    #[test]
+    fn a_new_attempt_keeps_rounds_and_hypotheses() {
+        let previous = std::env::var("LOOM_RESEARCH_ITERATION").ok();
+        std::env::set_var("LOOM_RESEARCH_ITERATION", "1");
+        let root = super::super::store::tests::temp_root();
+        let store = super::super::store::Store::new(&root);
+        let agent = crate::models::AgentConfig {
+            id: "agent".into(),
+            name: "Fixture".into(),
+            command: "/bin/sh".into(),
+            args: vec![],
+            working_directory_policy: "project_root".into(),
+            capabilities: vec![],
+            adapter_type: "codex_cli".into(),
+            can_write_files: false,
+            can_run_commands: false,
+            enabled: true,
+            available: true,
+        };
+        let input = TargetInput {
+            target: Target::Github {
+                url: "https://github.com/example/fixture".into(),
+                git_ref: None,
+            },
+            question: "What is pinned?".into(),
+            agent_id: agent.id.clone(),
+            model: None,
+            language: "en".into(),
+            mode: ResearchMode::Iterative,
+            budget: None,
+            tools: None,
+        };
+        let preflight =
+            super::super::target_service::preflight(&store, input, None, &agent).unwrap();
+        let mut admitted = super::super::target_service::admit(
+            store.clone(),
+            &preflight.preflight_id,
+            "request-loop",
+            &agent,
+        )
+        .unwrap();
+        let run_id = admitted.view.spec.run_id.clone();
+        let research_id = admitted.view.spec.research_id.clone();
+        let writer = admitted.writer.take().unwrap();
+        let mut failed = admitted.view.state.clone();
+        failed.usage.rounds = 2;
+        failed.status = RunStatus::Failed;
+        writer.save_state(failed, "failed-loop").unwrap();
+        let mut loop_state = LoopState::default();
+        loop_state.hypotheses.push(Hypothesis {
+            id: "h-unknown".into(),
+            claim: "Not observed.".into(),
+            verdict: Verdict::Unknown,
+            evidence_ids: vec![],
+            round: 2,
+        });
+        save(&admitted.target, &run_id, &loop_state).unwrap();
+        drop(writer);
+        let retried = super::super::target_service::continue_run(
+            store,
+            &research_id,
+            super::super::target_service::RunAction::Retry {
+                run_id: run_id.clone(),
+            },
+            "request-retry",
+            &agent,
+        )
+        .unwrap();
+        assert_eq!(retried.view.state.attempt, 2);
+        assert_eq!(retried.view.state.usage.rounds, 2);
+        assert_eq!(
+            load(&retried.target, &run_id).unwrap().hypotheses[0].verdict,
+            Verdict::Unknown
+        );
+        match previous {
+            Some(value) => std::env::set_var("LOOM_RESEARCH_ITERATION", value),
+            None => std::env::remove_var("LOOM_RESEARCH_ITERATION"),
+        }
     }
 }

@@ -556,6 +556,8 @@ export const en = {
   researchResume: "Resume",
   researchTargetOff: "Single-shot target research is off. Saved reports, evidence, and snapshots stay readable.",
   researchTargetLabel: "Target",
+  researchIteration: "Continuous research",
+  researchIterationHint: "At most 5 rounds. It stops when the budget runs out or two rounds add no new evidence. Experiments stay off.",
 } as const;
 
 export type MessageKey = keyof typeof en;

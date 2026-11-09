@@ -210,7 +210,7 @@ pub fn preflight(
     if input.agent_id != agent.id {
         return Err("agent_identity_mismatch".into());
     }
-    if input.mode != ResearchMode::Single {
+    if input.mode == ResearchMode::Iterative && !super::iteration::iteration_allowed() {
         return Err("research_iteration_not_enabled".into());
     }
     if let Some(model) = &input.model {
