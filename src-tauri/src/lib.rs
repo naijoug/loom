@@ -9,6 +9,7 @@ mod contracts;
 mod desktop_menu;
 mod diagnostics;
 mod discuss;
+mod experiments;
 mod git_fetch;
 mod learn;
 mod migrations;
