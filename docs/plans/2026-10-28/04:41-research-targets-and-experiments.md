@@ -2,7 +2,7 @@
 
 - 创建时间：2026-10-28 04:41，America/Los_Angeles。
 - 修订时间：2026-11-06；R3 后端出口已记录，复审记录仍见 §14。
-- 状态：**实施中：R0–R5 单次界面阶段通过（合成 UI；真实三目标 CLI 与原生桌面未测）；R6–R7、E0–E2 待实施，尚未整体验收**。用户已授权按计划实施。R0 在隔离临时目录准备了固定 REA／兼容 Node，系统工具和全局 MCP 配置未改；证据见 [R0 验收](../../dogfood/2026-10-28-research-targets-r0.md)。R3 证据见 [GitHub 获取记录](../../dogfood/2026-11-06-research-targets-r3.md)，R4 证据见 [网站研究记录](../../dogfood/2026-11-06-research-targets-r4.md)，R5 证据见 [单次界面记录](../../dogfood/2026-11-06-research-targets-r5.md)。原计划阶段的“仅文档”范围已由本次实施授权更新。开发开关 `LOOM_RESEARCH_TARGETS` 仍默认关闭；打开后只启用单次目标研究。`researchIteration` 与 `researchExperiments` 保持关闭。
+- 状态：**实施中：R0–R6 有限连续调研已接入（本地 Git 样本两轮；真实模型、联网仓库与原生桌面未测）；R7、E0–E2 待实施，尚未整体验收**。用户已授权按计划实施。R0 在隔离临时目录准备了固定 REA／兼容 Node，系统工具和全局 MCP 配置未改；证据见 [R0 验收](../../dogfood/2026-10-28-research-targets-r0.md)。R3 证据见 [GitHub 获取记录](../../dogfood/2026-11-06-research-targets-r3.md)，R4 证据见 [网站研究记录](../../dogfood/2026-11-06-research-targets-r4.md)，R5 证据见 [单次界面记录](../../dogfood/2026-11-06-research-targets-r5.md)，R6 证据见 [连续调研记录](../../dogfood/2026-11-09-research-targets-r6.md)。原计划阶段的“仅文档”范围已由本次实施授权更新。`LOOM_RESEARCH_TARGETS` 仍默认关闭。连续模式另需 macOS 上的 `LOOM_RESEARCH_ITERATION=1`。`researchExperiments` 保持关闭。
 - 代码基线：`main`，HEAD `8e56fbdfc3d101348884c091ee0aad3d876681a7`，加上当前工作区已有改动。当前存在 Agent 生命周期、Discuss、WebView 恢复等未提交内容，不能用 HEAD 单独代表本计划读取到的能力；实施前重新核对状态，保留用户改动。
 - 用户目标：Research 除 GitHub／源码之外，可以输入网站或选择 App，以 REA 研究其实现与行为；借鉴 autoresearch 的假设、验证、记录和迭代机制。
 - 当前依据：[需求](../../requirements.md)、[架构](../../architecture.md)、[Agent 层](../../architecture/agent-layer.md)、[Research 契约](../../architecture/research-contracts.md)、[安全策略](../../security-policy.md)、[验证矩阵](../../testing.md#开发变更验证矩阵)。以下新增能力均为目标，不代表已实现。
@@ -378,7 +378,7 @@ Node 评测会执行用户代码，首版不是恶意代码隔离环境。评测
 
 每个里程碑提交代码、相关契约与验证证据；未通过出口不更新为完成。下表为完整执行范围。
 
-执行状态（2026-11-06）：R0–R5 的单次界面阶段通过（合成 UI；真实三目标 CLI 与原生桌面未测）。R3 将 Learn Git 获取抽到 `repository_sources`，报告按固定 commit 绑定引用根。R4 启动独立 Chromium profile，校验 loopback 调试端口属于本次进程，观察页面/脚本并保存不进入文本提示的截图；跨 origin、端口伪装、取消和浏览器退出都有可区分错误。R5 接入单次目标表单和证据界面：停止、追问和重试走目标命令，源码与证据绑定 reportId。证据见 [R5 记录](../../dogfood/2026-11-06-research-targets-r5.md)。下一步 R6；R6–R7 和 E0–E2 仍保持完整范围。开发开关默认关闭，打开后也只启用单次模式。
+执行状态（2026-11-09）：R0–R6 已接入。R5 是单次界面。R6 增加有限连续循环：NextAction 只接受固定动作和已发布材料，假设记录支持／反驳／unknown，连续两轮没有新证据或超出轮数预算时停在部分报告，重试保留轮数和假设。证据见 [R6 记录](../../dogfood/2026-11-09-research-targets-r6.md)。下一步 R7；E0–E2 仍未开始。`researchExperiments` 保持关闭。
 
 | 阶段 | 依赖 | 具体任务与主要产物 | 出口 |
 |---|---|---|---|
@@ -451,7 +451,7 @@ R1 开始时将 A 线新增范围以“目标／实施中”写入 requirements 
 | 优化指标被投机或噪声误导 | 固定正确性与评测器、保存样本、同期复测、最终复测；只接受可信本地代码 |
 | 存储升级与二进制回退 | 保留 v1 备份；v2 新数据仅由新版读取；禁用新功能保留只读查看，不假定旧版本可安全写 v2 |
 
-使用独立 `researchTargets`、`researchIteration`、`researchExperiments` 开关，默认开发期关闭；开关不是权限边界。R5 可仅开启单次目标研究；R7 开启有限迭代；E2 单独开启实验。关闭时先拒绝新 admission，停止活动运行，保留资料；不为回滚删除 Evidence、旧研究或用户工作区。
+使用独立 `researchTargets`、`researchIteration`、`researchExperiments` 开关，默认开发期关闭；开关不是权限边界。R5 可仅开启单次目标研究；R6 另开 `LOOM_RESEARCH_ITERATION` 后才接受有限连续循环；E2 单独开启实验。关闭时先拒绝新 admission，停止活动运行，保留资料；不为回滚删除 Evidence、旧研究或用户工作区。
 
 ## 12. 待确认问题与实施前探针
 

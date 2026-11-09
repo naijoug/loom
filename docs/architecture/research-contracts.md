@@ -2,7 +2,7 @@
 
 状态：2026-10-27 实现（[Agent 调用层与左侧功能栏计划](../plans/2026-10-26/22:42-agent-layer-and-activity-rail.md) P6，按 §8-2 默认决策）。范围见 [需求文档](../requirements.md) 的“Research 范围”，安全边界见 [安全策略](../security-policy.md#research)。命令、事件与模型样本由 `contracts/tauri-contract.json` 两端共同校验。
 
-2026-11-06 扩展状态：普通 Research 保留原问答行为，存储已支持 v1 读取与首次写入备份升级到 v2。目标 Research 的存储、跨进程租约、材料分页和独立 IPC 已接入；App 与 GitHub 后端链路已有验证。网站目标在 R4 使用独立 Chromium profile 和本次 loopback 调试端口，保存页面/脚本证据与不进入文本提示的截图。R5 在 macOS 且 `LOOM_RESEARCH_TARGETS=1` 时打开单次目标界面，默认关闭；连续调研与实验仍关闭。原生三目标真实链路仍按 [多目标计划](../plans/2026-10-28/04:41-research-targets-and-experiments.md) 留到后续验收。
+2026-11-06 扩展状态：普通 Research 保留原问答行为，存储已支持 v1 读取与首次写入备份升级到 v2。目标 Research 的存储、跨进程租约、材料分页和独立 IPC 已接入；App 与 GitHub 后端链路已有验证。网站目标在 R4 使用独立 Chromium profile 和本次 loopback 调试端口，保存页面/脚本证据与不进入文本提示的截图。R5 在 macOS 且 `LOOM_RESEARCH_TARGETS=1` 时打开单次目标界面，默认关闭。R6 的连续模式还要 `LOOM_RESEARCH_ITERATION=1`；实验开关保持关闭。原生三目标真实链路仍按 [多目标计划](../plans/2026-10-28/04:41-research-targets-and-experiments.md) 留到后续验收。
 
 ## 存储
 
@@ -74,7 +74,8 @@
 - `workflow = legacy | target` 不可原地切换；旧 ask/retry/cancel、turn、日志及源码入口对 target 返回 `workflow_mismatch`。普通创建输入拒绝未知的 target 字段。界面在读到 `workflow = target` 后改用目标命令，不调用上述旧执行入口。
 - `research_target_capabilities` 只报告开关：`singleShot` 在 macOS 且 `LOOM_RESEARCH_TARGETS=1` 时为真；`iteration` 与 `experiments` 固定为假。关闭时仍可阅读已保存的目标报告、证据和快照，但不能预检、开始、追问、重试或恢复。停止活动 run 不依赖该开关。
 - 目标命令：`research_target_capabilities/preflight/start_run/ask_run/retry_run/resume_run/cancel_run/get_run/list_runs/read_report/list_report_tree/read_report_source/list_evidence/read_evidence/export`。全部检查主窗口。新运行须开启开发开关；已保存资料读取不依赖开关。`research_export` 取得同一 writer lease，在应用受管目录导出 Markdown 和脱敏材料；显式 includeRaw 才包含经 hash 校验的原始 Evidence，并返回分享前审查提示。
-- 单次表单只提交 `mode = single`。网站在预检前和预检结果里都写明会加载页面并运行脚本。证据区只显示脱敏文本；截图不作为图片渲染。源码查看器只读取当前 reportId 的快照。
+- 单次表单默认提交 `mode = single`。只有能力接口同时报告 `singleShot` 和 `iteration`，且 `experiments` 为假时，表单才多一个连续调研选项，并提交 `mode = iterative`。网站在预检前和预检结果里都写明会加载页面并运行脚本。证据区只显示脱敏文本；截图不作为图片渲染。源码查看器只读取当前 reportId 的快照。
+- 连续循环只接受 `next_action`：`inspect_app`、`analyze_js`、`capture_page`、`inspect_web_scripts`、`read_evidence`、`finish`。动作必须匹配已冻结目标，证据和假设里的 ID 必须已经发布。带 shell、任意路径、另一条 URL 或预算字段的 JSON 无效。错误目标动作停在 `unsupported`，不执行。重复读取同一证据不计新进展；连续两轮没有新覆盖后停在 `no_progress`。轮数不能超过预检预算，超出后写 `budget_exhausted` 部分报告。假设裁决只有 `support`、`refute`、`unknown`。假设和进展写在 `runs/<runId>/iteration.json`，重试沿用同一 run 的轮数和这份记录。追问仍强制单次且采集额度为 0。
 - 预检冻结规范路径、Agent 配置、工具身份、预算和 5 分钟期限；开始只接受 preflightId/requestId。重复 requestId 不重启进程；失败请求也保存，换请求体报冲突。已消费的预检不能通过新 requestId 再启动。
 - target 的 `runs/<runId>/events.jsonl` 为权威记录，`state.json` 为可重建投影。读者忽略半条尾记录；恢复持有 writer 后修复尾部、保守扣除未知调用预留。retry/resume 不清零用量；模型补读上限同样持久化。
 - 报告 manifest 绑定 run 与已发布 snapshot/evidence 集合，report ID 包含 manifest 摘要；快照按清单及源码内容 hash 验证，缺失或篡改不会回退 workspace。只读追问复制 parentReport 的固定材料 ID，采集预算为 0，不访问当前目标。
