@@ -2,7 +2,7 @@
 
 - 创建时间：2026-10-28 04:41，America/Los_Angeles。
 - 修订时间：2026-11-06；R3 后端出口已记录，复审记录仍见 §14。
-- 状态：**实施中：R0–R6 有限连续调研已接入（本地 Git 样本两轮；真实模型、联网仓库与原生桌面未测）；R7、E0–E2 待实施，尚未整体验收**。用户已授权按计划实施。R0 在隔离临时目录准备了固定 REA／兼容 Node，系统工具和全局 MCP 配置未改；证据见 [R0 验收](../../dogfood/2026-10-28-research-targets-r0.md)。R3 证据见 [GitHub 获取记录](../../dogfood/2026-11-06-research-targets-r3.md)，R4 证据见 [网站研究记录](../../dogfood/2026-11-06-research-targets-r4.md)，R5 证据见 [单次界面记录](../../dogfood/2026-11-06-research-targets-r5.md)，R6 证据见 [连续调研记录](../../dogfood/2026-11-09-research-targets-r6.md)。原计划阶段的“仅文档”范围已由本次实施授权更新。`LOOM_RESEARCH_TARGETS` 仍默认关闭。连续模式另需 macOS 上的 `LOOM_RESEARCH_ITERATION=1`。`researchExperiments` 保持关闭。
+- 状态：**实施中：R0–R6 与 E0 基础已接入；R7 与 E1–E2 未做，尚未整体验收**。用户已授权按计划实施。R0 在隔离临时目录准备了固定 REA／兼容 Node，系统工具和全局 MCP 配置未改；证据见 [R0 验收](../../dogfood/2026-10-28-research-targets-r0.md)。R3 证据见 [GitHub 获取记录](../../dogfood/2026-11-06-research-targets-r3.md)，R4 证据见 [网站研究记录](../../dogfood/2026-11-06-research-targets-r4.md)，R5 证据见 [单次界面记录](../../dogfood/2026-11-06-research-targets-r5.md)，R6 证据见 [连续调研记录](../../dogfood/2026-11-09-research-targets-r6.md)。原计划阶段的“仅文档”范围已由本次实施授权更新。`LOOM_RESEARCH_TARGETS` 仍默认关闭。连续模式另需 macOS 上的 `LOOM_RESEARCH_ITERATION=1`。`researchExperiments` 保持关闭。
 - 代码基线：`main`，HEAD `8e56fbdfc3d101348884c091ee0aad3d876681a7`，加上当前工作区已有改动。当前存在 Agent 生命周期、Discuss、WebView 恢复等未提交内容，不能用 HEAD 单独代表本计划读取到的能力；实施前重新核对状态，保留用户改动。
 - 用户目标：Research 除 GitHub／源码之外，可以输入网站或选择 App，以 REA 研究其实现与行为；借鉴 autoresearch 的假设、验证、记录和迭代机制。
 - 当前依据：[需求](../../requirements.md)、[架构](../../architecture.md)、[Agent 层](../../architecture/agent-layer.md)、[Research 契约](../../architecture/research-contracts.md)、[安全策略](../../security-policy.md)、[验证矩阵](../../testing.md#开发变更验证矩阵)。以下新增能力均为目标，不代表已实现。
@@ -378,7 +378,7 @@ Node 评测会执行用户代码，首版不是恶意代码隔离环境。评测
 
 每个里程碑提交代码、相关契约与验证证据；未通过出口不更新为完成。下表为完整执行范围。
 
-执行状态（2026-11-09）：R0–R6 已接入。R5 是单次界面。R6 增加有限连续循环：NextAction 只接受固定动作和已发布材料，假设记录支持／反驳／unknown，连续两轮没有新证据或超出轮数预算时停在部分报告，重试保留轮数和假设。证据见 [R6 记录](../../dogfood/2026-11-09-research-targets-r6.md)。下一步 R7；E0–E2 仍未开始。`researchExperiments` 保持关闭。
+执行状态（2026-11-09）：R0–R6 已接入。R7 暂不在本环境执行。E0 已接入独立实验基础：快照不改原项目，node-cpu-v1 判定 fixture 与基线失败说明可在无模型下验证。证据见 [E0 记录](../../dogfood/2026-11-09-research-experiments-e0.md)。E1–E2 未开始。`LOOM_RESEARCH_EXPERIMENTS` 默认关闭，且没有实验界面入口。
 
 | 阶段 | 依赖 | 具体任务与主要产物 | 出口 |
 |---|---|---|---|

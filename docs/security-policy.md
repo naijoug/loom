@@ -49,7 +49,7 @@ Agent 层与明确的非 Agent 进程例外见 [Agent 层契约](architecture/ag
 ## Research
 
 - 研究数据只写 `<appData>/research/<researchId>/`；研究 ID 为受限单段标识。未选项目时 cwd 是该目录下的空 `workspace/`。
-- 目标 Research 的公开 GitHub 输入只接受 `https://github.com/<owner>/<repo>` 与受校验 ref。检出固定 commit 后发布不可变快照；`loom-src:` 只相对该报告的 `defaultSourceSnapshotId` 解析。同路径不同 commit 不串读，缺失或 hash 不符返回不可用/完整性错误，不回退最新检出或重新联网。路径逃逸、绝对路径和 `.git` 被拒绝；符号链接不跟随、不进入快照。仓库代码不执行。开发开关默认关闭。单次界面只在 macOS 且开关打开时接受新的目标运行；已保存结果仍可阅读。连续模式还要 `LOOM_RESEARCH_ITERATION=1`。NextAction 不能携带 shell、任意路径、另一条 URL 或新预算；不匹配冻结目标的动作直接停住。追问走 `research_ask_run`，采集预算为 0。`loom-evidence:` 只打开该 reportId 下的脱敏文本，不渲染目标 HTML、JS 或 SVG，也不把截图画进页面。实验开关不开启代码执行。
+- 目标 Research 的公开 GitHub 输入只接受 `https://github.com/<owner>/<repo>` 与受校验 ref。检出固定 commit 后发布不可变快照；`loom-src:` 只相对该报告的 `defaultSourceSnapshotId` 解析。同路径不同 commit 不串读，缺失或 hash 不符返回不可用/完整性错误，不回退最新检出或重新联网。路径逃逸、绝对路径和 `.git` 被拒绝；符号链接不跟随、不进入快照。仓库代码不执行。开发开关默认关闭。单次界面只在 macOS 且开关打开时接受新的目标运行；已保存结果仍可阅读。连续模式还要 `LOOM_RESEARCH_ITERATION=1`。NextAction 不能携带 shell、任意路径、另一条 URL 或新预算；不匹配冻结目标的动作直接停住。追问走 `research_ask_run`，采集预算为 0。`loom-evidence:` 只打开该 reportId 下的脱敏文本，不渲染目标 HTML、JS 或 SVG，也不把截图画进页面。`LOOM_RESEARCH_EXPERIMENTS` 默认关闭。打开后也没有实验界面。实验快照只复制允许的普通文本，不把原项目当作工作目录，不自动 stash 或提交。Node 基线会执行受管副本里的 `compute`，这不是恶意代码沙箱。
 - 网站研究只启动本次新建 profile 的 Chromium，调试端口必须是 loopback 且套接字属于该进程树。不接收调用方传入的 CDP 地址，不附着、不关闭用户已经打开的浏览器。`file:`、`javascript:`、带凭据 URL 和私网字面地址在生产构建中拒绝。跨 origin 的最终页面会停止采集；这不能阻止页面脚本联系第三方，也没有对 DNS 解析结果做私网拦截。Cookie、Authorization 和查询串不进入模型视图，截图字节不进入文本提示。
 - 只能选择已在 Loom 打开的项目（规范路径匹配项目列表）；开始、追问、重试、校验报告引用与读取源码前都重新确认，项目移出列表后不再读取它。
 - Agent 只以 `explore`（只读 / plan）权限运行，不接受自定义 CLI。选了项目时运行前后比对 `git status --porcelain` 与 HEAD，变化只记警告：用户可能同时在改项目，且这是检测而非 OS 沙箱，实际只读保障取决于各 CLI 的策略实现。Loom 不运行项目代码。

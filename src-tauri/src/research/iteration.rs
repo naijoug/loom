@@ -108,8 +108,8 @@ pub fn iteration_allowed() -> bool {
     #[cfg(test)]
     let allowed = true;
     #[cfg(not(test))]
-    let allowed = cfg!(target_os = "macos")
-        && std::env::var("LOOM_RESEARCH_TARGETS").as_deref() == Ok("1");
+    let allowed =
+        cfg!(target_os = "macos") && std::env::var("LOOM_RESEARCH_TARGETS").as_deref() == Ok("1");
     allowed
 }
 
